@@ -13,8 +13,8 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Real-time updates via WebSocket (placeholder URL)
-  const { lastMessage } = useWebSocket('ws://backend/dashboard/stream');
+  // Real-time updates via WebSocket (environment-driven URL)
+  const { lastMessage } = useWebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/dashboard');
 
   useEffect(() => {
     const fetchData = async () => {
