@@ -25,10 +25,13 @@ def sync_tenant_data(integration_id):
         )
 
     # 2. Sync Work Items
+    from .engine.compliance import ComplianceEngine
+    engine = ComplianceEngine()
+    
     work_items_data = connector.fetch_work_items(last_sync=integration.last_sync_at)
     for wi_data in work_items_data:
         # Simple mapping for demonstration
-        WorkItem.objects.update_or_create(
+        item, created = WorkItem.objects.update_or_create(
             external_id=wi_data['external_id'],
             defaults={
                 'integration': integration,
@@ -39,6 +42,8 @@ def sync_tenant_data(integration_id):
                 'updated_at': wi_data['updated_at'],
             }
         )
+        # Trigger compliance check
+        engine.check_compliance(item)
 
     # Update last sync timestamp
     integration.last_sync_at = timezone.now()
