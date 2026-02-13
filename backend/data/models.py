@@ -94,3 +94,14 @@ class AIInsight(models.Model):
 
     def __str__(self):
         return f"AI Insight for {self.integration} at {self.created_at}"
+
+class RetentionPolicy(models.Model):
+    tenant = models.OneToOneField('customers.Client', on_delete=models.CASCADE, related_name='retention_policy')
+    work_items_months = models.IntegerField(default=12)
+    ai_insights_months = models.IntegerField(default=6)
+    pull_requests_months = models.IntegerField(default=12)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Retention Policy for {self.tenant}"

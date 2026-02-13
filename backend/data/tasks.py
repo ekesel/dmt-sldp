@@ -62,3 +62,8 @@ def run_all_integrations_sync():
     for integration in active_integrations:
         sync_tenant_data.delay(integration.id)
     return f"Triggered sync for {active_integrations.count()} integrations"
+
+@shared_task
+def run_retention_cleanup():
+    from django.core.management import call_command
+    call_command('cleanup_old_data')
