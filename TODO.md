@@ -1,14 +1,12 @@
-# TODO.md — Technical Debt & Deferred Items
+# TODO.md
 
-## Technical Debt (High Priority)
-- [ ] **AI Resilience**: Implement exponential backoff and circuit breakers for `GeminiAIProvider` in `backend/data/ai/service.py`. Currently lacks robust error handling for API rate limits.
-- [ ] **Compliance Engine Hardening**: Extend `ComplianceEngine` rules in `backend/data/engine/compliance.py` to check for specific PR merge status and CI/CD pass/fail signals. Current logic is "PR exists".
+## Critical Path
+- [ ] **Jira OAuth Flow**: Research and implement OAuth2 for Jira (currently using basic/mocked auth).
+- [ ] **CI/CD Signal Extraction**: Extend GitHub connector to fetch `CheckSuites` and `Status` signals for compliance verification.
+- [ ] **Asynchronous AI Processing**: Move AI insight generation to a dedicated event-driven queue.
 
-## Enhancements (v1.2)
-- [ ] **Configurable Policy Engine**: Refactor compliance rules into a tenant-configurable policy engine instead of hardcoded class methods.
-- [ ] **Typed Telemetry**: Formalize WebSocket message schemas into `TypedDict` or `pydantic` models for better frontend/backend synchronization.
-- [ ] **GitHub Author Resolution**: Enhance `GitHubConnector` to resolve authors via GitHub API if the email is hidden in the PR payload.
-
-## Maintenance
-- [ ] **Retention Documentation**: Document the `cleanup_old_data` management command and its default retention periods.
-- [ ] **Audit Logs**: Implement a multi-tenant audit logger for all configuration changes in `Integration` and `Tenant` models.
+## Backlog
+- [ ] **Typed Telemetry**: Migrate internal message bus to strictly typed models.
+- [ ] **GitHub Author Resolution**: Map GitHub usernames to internal `DMT-User` identities.
+- [ ] Configure Docker environment (Scaling).
+- [ ] Setup Next.js frontend projects (Refinement).
