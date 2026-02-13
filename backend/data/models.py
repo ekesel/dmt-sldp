@@ -105,3 +105,23 @@ class RetentionPolicy(models.Model):
 
     def __str__(self):
         return f"Retention Policy for {self.tenant}"
+
+class TaskLog(models.Model):
+    TASK_STATUS = (
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    )
+    
+    task_name = models.CharField(max_length=255)
+    target_id = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=TASK_STATUS, default='pending')
+    error_message = models.TextField(null=True, blank=True)
+    execution_time_ms = models.IntegerField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.task_name} - {self.status} ({self.created_at})"
