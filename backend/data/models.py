@@ -15,6 +15,7 @@ class Integration(models.Model):
     base_url = models.URLField()
     api_key = models.CharField(max_length=255, help_text="Encrypted or stored safely in production")
     workspace_id = models.CharField(max_length=100, blank=True, null=True)
+    credentials = models.JSONField(default=dict, blank=True)
     
     is_active = models.BooleanField(default=True)
     last_sync_at = models.DateTimeField(null=True, blank=True)
@@ -82,6 +83,18 @@ class PullRequest(models.Model):
     def __str__(self):
         return f"PR #{self.external_id}: {self.title}"
 
+class PullRequestStatus(models.Model):
+    pull_request = models.ForeignKey(PullRequest, on_delete=models.CASCADE, related_name='statuses')
+    name = models.CharField(max_length=255) # e.g., "build", "lint", "test"
+    state = models.CharField(max_length=50) # e.g., "success", "failure", "pending"
+    target_url = models.URLField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.pull_request} - {self.name}: {self.state}"
+
 class AIInsight(models.Model):
     integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='ai_insights')
     summary = models.TextField()
@@ -96,7 +109,7 @@ class AIInsight(models.Model):
         return f"AI Insight for {self.integration} at {self.created_at}"
 
 class RetentionPolicy(models.Model):
-    tenant = models.OneToOneField('customers.Client', on_delete=models.CASCADE, related_name='retention_policy')
+    tenant = models.OneToOneField('tenants.Tenant', on_delete=models.CASCADE, related_name='retention_policy')
     work_items_months = models.IntegerField(default=12)
     ai_insights_months = models.IntegerField(default=6)
     pull_requests_months = models.IntegerField(default=12)

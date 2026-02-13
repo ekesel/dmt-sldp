@@ -60,7 +60,7 @@ def sync_tenant_data(integration_id):
 
         # 3. Sync Pull Requests (Git Sources)
         import re
-        from .models import PullRequest
+        from .models import PullRequest, PullRequestStatus
         
         # ID patterns: [JIRA-123], JIRA-123, #123 (mapped to external_id)
         ID_PATTERN = re.compile(r'([A-Z]+-\d+|#\d+)', re.IGNORECASE)
@@ -74,7 +74,7 @@ def sync_tenant_data(integration_id):
                 item_id = match.group(1).replace('#', '').upper()
                 work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
 
-            PullRequest.objects.update_or_create(
+            pr, created = PullRequest.objects.update_or_create(
                 external_id=pr_data['external_id'],
                 defaults={
                     'integration': integration,
@@ -90,6 +90,24 @@ def sync_tenant_data(integration_id):
                     'merged_at': pr_data.get('merged_at'),
                 }
             )
+
+            # NEW: Sync Status Checks for active PRs
+            if pr.status == 'open' and hasattr(connector, 'fetch_status_checks'):
+                checks = connector.fetch_status_checks(pr.external_id)
+                for check in checks:
+                    PullRequestStatus.objects.update_or_create(
+                        pull_request=pr,
+                        name=check['name'],
+                        defaults={
+                            'state': check['state'],
+                            'target_url': check.get('target_url'),
+                            'description': check.get('description'),
+                        }
+                    )
+            
+            # Recalculate compliance for linked WorkItem if PR status/checks changed
+            if work_item:
+                engine.check_compliance(work_item)
 
         # Update last sync timestamp
         integration.last_sync_at = timezone.now()

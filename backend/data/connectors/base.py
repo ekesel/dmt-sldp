@@ -7,6 +7,7 @@ class BaseConnector(ABC):
             'base_url': integration.base_url,
             'api_key': integration.api_key,
             'workspace_id': integration.workspace_id,
+            'credentials': integration.credentials,
         }
 
     @abstractmethod

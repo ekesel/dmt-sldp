@@ -63,6 +63,57 @@ class GitHubConnector(BaseConnector):
             return 'merged'
         return pr['state'] # open or closed
 
+    def fetch_status_checks(self, pr_number):
+        """
+        Fetch status checks (check runs) for a specific pull request.
+        We fetch the head commit SHA first.
+        """
+        api_key = self.integration.api_key
+        headers = {
+            "Authorization": f"token {api_key}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        # 1. Get PR details to find the head SHA
+        pr_url = f"{self.integration.base_url}/pulls/{pr_number}"
+        try:
+            response = requests.get(pr_url, headers=headers)
+            response.raise_for_status()
+            pr_data = response.json()
+            head_sha = pr_data['head']['sha']
+        except Exception as e:
+            logger.error(f"Failed to fetch PR {pr_number} head SHA: {e}")
+            return []
+
+        # 2. Get check runs for this commit
+        checks_url = f"{self.integration.base_url}/commits/{head_sha}/check-runs"
+        try:
+            response = requests.get(checks_url, headers=headers)
+            response.raise_for_status()
+            checks_data = response.json()
+            
+            results = []
+            for run in checks_data.get('check_runs', []):
+                results.append({
+                    'name': run['name'],
+                    'state': self._map_check_state(run['status'], run['conclusion']),
+                    'target_url': run.get('html_url'),
+                    'description': run.get('output', {}).get('summary') or run.get('name')
+                })
+            return results
+        except Exception as e:
+            logger.error(f"Failed to fetch check runs for {head_sha}: {e}")
+            return []
+
+    def _map_check_state(self, status, conclusion):
+        if status != 'completed':
+            return 'pending'
+        if conclusion == 'success':
+            return 'success'
+        if conclusion in ['failure', 'timed_out', 'cancelled']:
+            return 'failure'
+        return 'error'
+
     def validate_connection(self):
         headers = {
             "Authorization": f"token {self.integration.api_key}",

@@ -16,8 +16,15 @@ class ComplianceEngine:
         if prs.exists() and not prs.filter(status='merged').exists():
             failures.append("missing_merged_pr")
 
-        # Rule 3: CI/CD Signal Check (Placeholder for v1.2 expansion)
-        # TODO: Implement signal-based quality gates
+        # Rule 3: CI/CD Signal Check
+        if prs.exists():
+            from ..models import PullRequestStatus
+            failing_statuses = PullRequestStatus.objects.filter(
+                pull_request__in=prs,
+                state__in=['failure', 'error']
+            )
+            if failing_statuses.exists():
+                failures.append("failing_ci_checks")
             
         work_item.is_compliant = len(failures) == 0
         work_item.compliance_reason = {
