@@ -24,6 +24,7 @@ SHARED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'channels',
 ]
 
 TENANT_APPS = [
@@ -69,6 +70,7 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = 'core.asgi.application'
 WSGI_APPLICATION = 'core.wsgi.application'
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
@@ -120,3 +122,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(os.environ.get('REDIS_HOST', 'redis'), 6379)],
+        },
+    },
+}
