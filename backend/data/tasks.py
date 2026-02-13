@@ -26,6 +26,10 @@ def sync_tenant_data(integration_id):
     try:
         connector = ConnectorFactory.get_connector(integration)
         
+        # Proactively refresh token if needed (e.g., for Jira OAuth2)
+        if hasattr(connector, 'refresh_access_token'):
+            connector.refresh_access_token()
+        
         # 1. Sync Sprints
         sprints_data = connector.fetch_sprints()
         for s_data in sprints_data:
