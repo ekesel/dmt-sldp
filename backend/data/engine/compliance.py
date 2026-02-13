@@ -8,13 +8,17 @@ class ComplianceEngine:
         failures = []
         
         # Rule 1: Must have at least one linked Pull Request
-        pr_count = work_item.pull_requests.count()
-        if pr_count == 0:
+        prs = work_item.pull_requests.all()
+        if not prs.exists():
             failures.append("missing_pr")
             
-        # Rule 2: Must be in a terminal status if PRs exist
-        # (This is a simplified rule for the v1.1 foundation)
-        
+        # Rule 2: At least one PR must be merged (Solidification)
+        if prs.exists() and not prs.filter(status='merged').exists():
+            failures.append("missing_merged_pr")
+
+        # Rule 3: CI/CD Signal Check (Placeholder for v1.2 expansion)
+        # TODO: Implement signal-based quality gates
+            
         work_item.is_compliant = len(failures) == 0
         work_item.compliance_reason = {
             "failures": failures,
