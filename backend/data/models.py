@@ -81,3 +81,16 @@ class PullRequest(models.Model):
 
     def __str__(self):
         return f"PR #{self.external_id}: {self.title}"
+
+class AIInsight(models.Model):
+    integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='ai_insights')
+    summary = models.TextField()
+    suggestions = models.JSONField()  # List of {title, impact, description}
+    forecast = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"AI Insight for {self.integration} at {self.created_at}"

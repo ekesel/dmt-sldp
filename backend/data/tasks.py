@@ -49,6 +49,10 @@ def sync_tenant_data(integration_id):
     integration.last_sync_at = timezone.now()
     integration.save()
     
+    # 3. Refresh AI Insights
+    from .ai.tasks import refresh_ai_insights
+    refresh_ai_insights.delay(integration.id)
+    
     return f"Successfully synced {integration.name}"
 
 @shared_task
