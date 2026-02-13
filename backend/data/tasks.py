@@ -45,11 +45,44 @@ def sync_tenant_data(integration_id):
         # Trigger compliance check
         engine.check_compliance(item)
 
+    # 3. Sync Pull Requests (Git Sources)
+    import re
+    from .models import PullRequest
+    
+    # ID patterns: [JIRA-123], JIRA-123, #123 (mapped to external_id)
+    ID_PATTERN = re.compile(r'([A-Z]+-\d+|\#\d+)', re.IGNORECASE)
+    
+    prs_data = connector.fetch_pull_requests()
+    for pr_data in prs_data:
+        # Find matching WorkItem
+        work_item = None
+        match = ID_PATTERN.search(pr_data['title']) or ID_PATTERN.search(pr_data['source_branch'])
+        if match:
+            item_id = match.group(1).replace('#', '').upper()
+            work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
+
+        PullRequest.objects.update_or_create(
+            external_id=pr_data['external_id'],
+            defaults={
+                'integration': integration,
+                'work_item': work_item,
+                'title': pr_data['title'],
+                'author_email': pr_data['author_email'],
+                'status': pr_data['status'],
+                'repository_name': pr_data['repository_name'],
+                'source_branch': pr_data['source_branch'],
+                'target_branch': pr_data['target_branch'],
+                'created_at': pr_data['created_at'],
+                'updated_at': pr_data['updated_at'],
+                'merged_at': pr_data.get('merged_at'),
+            }
+        )
+
     # Update last sync timestamp
     integration.last_sync_at = timezone.now()
     integration.save()
     
-    # 3. Refresh AI Insights
+    # 4. Refresh AI Insights
     from .ai.tasks import refresh_ai_insights
     refresh_ai_insights.delay(integration.id)
     
