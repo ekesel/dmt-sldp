@@ -1,6 +1,7 @@
 import React from 'react';
 import MetricCard from '../../components/metrics/MetricCard';
 import ComplianceChart from '../../components/charts/ComplianceChart';
+import AIInsightsPanel from './AIInsightsPanel';
 
 export default function DashboardPage() {
   return (
@@ -16,7 +17,10 @@ export default function DashboardPage() {
         <MetricCard label="Sprint Velocity" value="42 pts" color="amber" />
       </div>
 
-      <ComplianceChart />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ComplianceChart />
+        <AIInsightsPanel />
+      </div>
     </div>
   );
 }
