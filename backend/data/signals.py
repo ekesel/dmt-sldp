@@ -1,9 +1,12 @@
 from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.dispatch import receiver, Signal
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import connection
 from .models import WorkItem, AIInsight
+
+# Custom signals
+data_sync_completed = Signal()
 
 @receiver(post_save, sender=WorkItem)
 def work_item_telemetry_signal(sender, instance, **kwargs):
@@ -64,3 +67,11 @@ def ai_insight_telemetry_signal(sender, instance, created, **kwargs):
             "message": message
         }
     )
+
+@receiver(data_sync_completed)
+def trigger_ai_refresh(sender, integration_id, schema_name, **kwargs):
+    """
+    Triggers AI insight refresh when a data sync completes.
+    """
+    from .ai.tasks import refresh_ai_insights
+    refresh_ai_insights.delay(integration_id, schema_name=schema_name)

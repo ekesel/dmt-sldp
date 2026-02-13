@@ -1,7 +1,9 @@
 from celery import shared_task
 from django.utils import timezone
+from django.db import connection
 from .models import Integration, WorkItem, Sprint
 from .connectors.factory import ConnectorFactory
+from .signals import data_sync_completed
 
 @shared_task
 def sync_tenant_data(integration_id):
@@ -82,9 +84,12 @@ def sync_tenant_data(integration_id):
     integration.last_sync_at = timezone.now()
     integration.save()
     
-    # 4. Refresh AI Insights
-    from .ai.tasks import refresh_ai_insights
-    refresh_ai_insights.delay(integration.id)
+    # Signal completion
+    data_sync_completed.send(
+        sender=sync_tenant_data,
+        integration_id=integration.id,
+        schema_name=connection.schema_name
+    )
     
     return f"Successfully synced {integration.name}"
 
