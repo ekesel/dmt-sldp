@@ -4,11 +4,11 @@
 > **Milestone**: v1.0 MVP
 
 ## Must-Haves (from SPEC)
-- [ ] Multi-tenant schema isolation (PostgreSQL).
-- [ ] Core ETL framework for one source (Jira).
-- [ ] DMT compliance calculation engine.
-- [ ] Basic Analytics Dashboard (Company Portal).
-- [ ] Tenant Management (Admin Portal).
+- [x] Multi-tenant schema isolation (PostgreSQL).
+- [x] Core ETL framework for one source (Jira).
+- [x] DMT compliance calculation engine.
+- [x] Basic Analytics Dashboard (Company Portal).
+- [x] Tenant Management (Admin Portal).
 
 ## Phases
 
@@ -33,6 +33,6 @@
 **Requirements**: REQ-06, REQ-09
 
 ### Phase 5: Polish & Scaling
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Support remaining source types (ClickUp, Azure), refine UI/UX, and implement data retention jobs.
 **Requirements**: REQ-08 (Advanced), REQ-10 (Retention)
