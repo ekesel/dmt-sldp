@@ -35,3 +35,11 @@
 ### Phase 5: Final Production Audit
 **Status**: ✅ Complete
 **Objective**: verify all success criteria from PRD Section 2.8 in a production-like environment.
+
+### Phase 6: Gap Closure (Solidification)
+**Status**: ⬜ Not Started
+**Objective**: Address critical technical debt in AI and Compliance layers.
+
+**Gaps to Close:**
+- [ ] AI Resilience (Exponential Backoff/Circuit Breakers)
+- [ ] Compliance Engine Hardening (Signal-based status)
