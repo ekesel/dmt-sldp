@@ -1,12 +1,14 @@
 from .jira import JiraConnector
 from .clickup import ClickUpConnector
 from .azure_boards import AzureBoardsConnector
+from .github import GitHubConnector
 
 class ConnectorFactory:
     _registry = {
         'jira': JiraConnector,
         'clickup': ClickUpConnector,
         'azure_boards': AzureBoardsConnector,
+        'github': GitHubConnector,
     }
 
     @classmethod
