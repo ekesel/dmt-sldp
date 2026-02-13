@@ -1,45 +1,45 @@
 # ROADMAP.md
 
-> **Current Milestone**: v1.1 - Production Readiness
-> **Goal**: Hardening the DMT-SLDP platform for production rollout by replacing mock services with functional integrations and securing the multi-tenant architecture.
+> **Current Milestone**: v1.2 - Scalability & Deep Integration
+> **Goal**: Transition to high-performance asynchronous workflows and deep quality-gate automation.
 
-## Must-Haves (from PRD & Audit)
-- [ ] **Real AI Integration**: Replace mock `AIService` with Google Gemini/Vertex AI provider as per PRD Section 2.2.
-- [ ] **Production WebSockets**: Implement full multi-tenant telemetry logic in `backend/data/consumers.py`.
-- [ ] **Security Hardening**: Implement CSRF, Secure Cookies, and CORS policies across all schemas.
-- [ ] **Environment Parity**: Refactor frontend/backend to use `.env` for all URLs and API keys (no hardcoding).
-- [ ] **GitHub Integration**: Add the GitHub source connector as specified in PRD Section 5.1.
+## Must-Haves
+- [ ] **Asynchronous Insights Engine**: Background Celery execution for AI logic.
+- [ ] **CI/CD Quality Gates**: Real GitHub status/signal validation in ComplianceEngine.
+- [ ] **Jira OAuth2**: Move from basic/mocked auth to secure standards.
+- [ ] **Unified Analytics**: Aggregated metrics models for historical reporting.
 
 ## Phases
 
-### Phase 1: Security & Environment Hardening
-**Status**: ✅ Complete
-**Objective**: Secure the platform and remove all hardcoded configurations to enable deployment flexibility.
-**Requirements**: REQ-SEC-01 (CORS/CSRF), REQ-ENV-01 (Dotenv refactor)
+### Phase 7: Asynchronous Workflow Foundation
+**Status**: ⬜ Not Started
+**Objective**: Implement background processing for AI insights and heavy ETL tasks.
 
-### Phase 2: AI Service Promotion
-**Status**: ✅ Complete
-**Objective**: Transition from mock predictions to real LLM-powered insights and forecasting.
-**Requirements**: REQ-AI-01 (Gemini Integration)
+### Phase 8: Deep Quality Integration (CI/CD Signals)
+**Status**: ⬜ Not Started
+**Objective**: Fetch and evaluate real GitHub status checks for compliance.
 
-### Phase 3: Real-time Telemetry Rewrite
-**Status**: ✅ Complete
-**Objective**: Finalize the WebSocket consumers to stream live data without tenant cross-talk.
-**Requirements**: REQ-WS-01 (Telemetry Stream)
+### Phase 9: Secure Identity (Jira OAuth2)
+**Status**: ⬜ Not Started
+**Objective**: Refactor Jira connector to use OAuth2 for production security.
 
-### Phase 4: Git Source Expansion (GitHub)
-**Status**: ✅ Complete
-**Objective**: Implement the GitHub connector to broaden the SLDP coverage.
-**Requirements**: REQ-EXT-01 (GitHub API Client)
+### Phase 10: Analytics & Aggregation
+**Status**: ⬜ Not Started
+**Objective**: Implement data warehouse-style aggregation models for cross-tenant reporting.
 
-### Phase 5: Final Production Audit
-**Status**: ✅ Complete
-**Objective**: verify all success criteria from PRD Section 2.8 in a production-like environment.
+### Phase 11: v1.2 Verification Audit
+**Status**: ⬜ Not Started
+**Objective**: Validate all v1.2 success criteria.
 
-### Phase 6: Gap Closure (Solidification)
-**Status**: ✅ Complete
-**Objective**: Address critical technical debt in AI and Compliance layers.
+---
 
-**Gaps to Close:**
-- [x] AI Resilience (Exponential Backoff/Circuit Breakers)
-- [x] Compliance Engine Hardening (Signal-based status)
+## Past Milestones
+
+### v1.1 - Production Readiness (Solidified)
+**Goal**: Hardening the DMT-SLDP platform for production rollout.
+- [x] Environment Parity
+- [x] Security Hardening
+- [x] Real AI Integration
+- [x] Production WebSockets
+- [x] GitHub Integration
+- [x] AI Resilience & Compliance Hardening (Phase 6)
