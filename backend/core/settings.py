@@ -4,11 +4,11 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-dummy-key-for-initialization'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dummy-key')
 
-DEBUG = True
+DEBUG = os.environ.get('PRODUCTION', 'False') != 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 SHARED_APPS = [
@@ -131,3 +131,7 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# CORS & Security
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
+CORS_ALLOW_CREDENTIALS = True
