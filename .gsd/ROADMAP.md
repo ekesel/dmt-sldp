@@ -28,7 +28,7 @@
 **Requirements**: REQ-WS-01 (Telemetry Stream)
 
 ### Phase 4: Git Source Expansion (GitHub)
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Implement the GitHub connector to broaden the SLDP coverage.
 **Requirements**: REQ-EXT-01 (GitHub API Client)
 
