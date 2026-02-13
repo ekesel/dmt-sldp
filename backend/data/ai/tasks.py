@@ -3,9 +3,11 @@ from django.utils import timezone
 from django.db.models import Avg, F
 from ..models import Integration, AIInsight, WorkItem
 from .service import GeminiAIProvider
+from backend.core.celery_utils import tenant_aware_task
 
 @shared_task
-def refresh_ai_insights(integration_id):
+@tenant_aware_task
+def refresh_ai_insights(integration_id, schema_name=None):
     """
     Refreshes AI insights for a specific integration using Google Gemini.
     """
