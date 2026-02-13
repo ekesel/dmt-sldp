@@ -149,3 +149,62 @@ def run_all_integrations_sync():
 def run_retention_cleanup():
     from django.core.management import call_command
     call_command('cleanup_old_data')
+
+@shared_task
+def aggregate_tenant_metrics(tenant_id, target_date_str=None):
+    """Compute and store metrics for a specific tenant on a given date."""
+    from django_tenants.utils import schema_context
+    from .models import DailyMetric, WorkItem, PullRequest, Sprint
+    from django.db.models import Count, Avg, F
+    from datetime import timedelta, datetime
+    from tenants.models import Tenant
+    
+    if target_date_str is None:
+        target_date = (timezone.now() - timedelta(days=1)).date()
+    else:
+        target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+
+    tenant = Tenant.objects.get(id=tenant_id)
+    
+    with schema_context(tenant.schema_name):
+        day_start = timezone.make_aware(datetime.combine(target_date, datetime.min.time()))
+        day_end = day_start + timedelta(days=1)
+        
+        # 1. Total & Compliant WorkItems
+        total_items = WorkItem.objects.filter(created_at__lt=day_end).count()
+        compliant_items = WorkItem.objects.filter(created_at__lt=day_end, is_compliant=True).count()
+        compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
+        
+        # 2. PR Snapshot
+        merged_prs = PullRequest.objects.filter(merged_at__range=(day_start, day_end))
+        prs_merged_count = merged_prs.count()
+        
+        # 3. Cycle Time (Avg time to resolve for items resolved today)
+        resolved_items = WorkItem.objects.filter(resolved_at__range=(day_start, day_end))
+        avg_cycle_time = resolved_items.annotate(
+            duration=F('resolved_at') - F('created_at')
+        ).aggregate(avg_duration=Avg('duration'))['avg_duration']
+        
+        avg_cycle_time_hours = avg_cycle_time.total_seconds() / 3600 if avg_cycle_time else 0
+        
+        DailyMetric.objects.update_or_create(
+            date=target_date,
+            defaults={
+                'total_work_items': total_items,
+                'compliant_work_items': compliant_items,
+                'compliance_rate': compliance_rate,
+                'avg_cycle_time_hours': avg_cycle_time_hours,
+                'prs_merged_count': prs_merged_count,
+            }
+        )
+        
+        return f"Aggregated metrics for {tenant.schema_name} on {target_date}"
+
+@shared_task
+def run_daily_aggregation():
+    """Iterate over all tenants and trigger aggregation."""
+    from tenants.models import Tenant
+    tenants = Tenant.objects.exclude(schema_name='public')
+    for tenant in tenants:
+        aggregate_tenant_metrics.delay(tenant.id)
+    return f"Triggered aggregation for {tenants.count()} tenants"

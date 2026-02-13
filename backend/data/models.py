@@ -138,3 +138,33 @@ class TaskLog(models.Model):
 
     def __str__(self):
         return f"{self.task_name} - {self.status} ({self.created_at})"
+
+class DailyMetric(models.Model):
+    date = models.DateField(db_index=True)
+    total_work_items = models.IntegerField(default=0)
+    compliant_work_items = models.IntegerField(default=0)
+    compliance_rate = models.FloatField(default=0.0)
+    avg_cycle_time_hours = models.FloatField(default=0.0)
+    prs_merged_count = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('date',)
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"Metrics for {self.date}"
+
+class HistoricalSprintMetric(models.Model):
+    sprint = models.OneToOneField(Sprint, on_delete=models.CASCADE, related_name='metrics')
+    velocity = models.IntegerField(default=0)
+    final_compliance_rate = models.FloatField(default=0.0)
+    ai_efficiency_score = models.FloatField(default=0.0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Metrics for Sprint: {self.sprint.name}"

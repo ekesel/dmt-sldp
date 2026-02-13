@@ -21,4 +21,8 @@ app.conf.beat_schedule = {
         'task': 'backend.data.tasks.run_retention_cleanup',
         'schedule': crontab(hour=2, minute=0),
     },
+    'daily-aggregation-midnight': {
+        'task': 'backend.data.tasks.run_daily_aggregation',
+        'schedule': crontab(hour=0, minute=0),
+    },
 }
