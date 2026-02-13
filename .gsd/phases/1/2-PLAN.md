@@ -4,63 +4,41 @@ plan: 2
 wave: 1
 ---
 
-# Plan 1.2: Frontend Shells & Auth Foundation
+# Plan 1.2: Security Hardening
 
 ## Objective
-Initialize both Next.js applications (Admin & Company portals) and implement basic JWT-based authentication shells.
+Implement production-grade security settings to protect multi-tenant data and ensure secure transport.
 
 ## Context
-- .gsd/SPEC.md
-- .gsd/DECISIONS.md
 - backend/core/settings.py
+- .gsd/SPEC.md
 
 ## Tasks
 
 <task type="auto">
-  <name>Initialize Next.js Portals</name>
-  <files>
-    - frontend/admin/package.json
-    - frontend/app/package.json
-  </files>
+  <name>Harden Security Middleware & Cookies</name>
+  <files>backend/core/settings.py</files>
   <action>
-    1. Initialize Next.js 14 in `frontend/admin` (Admin Portal) using App Router, TypeScript, and Tailwind CSS.
-    2. Initialize Next.js 14 in `frontend/app` (Company Portal) using App Router, TypeScript, and Tailwind CSS.
-    3. Add basic project structure (components, lib, styles) to both.
+    - Configure `SECURE_BROWSER_XSS_FILTER`, `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS`.
+    - Set `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, and `SECURE_SSL_REDIRECT` to True if `PRODUCTION` environment variable is 'True'.
+    - Configure `CORS_ALLOWED_ORIGINS` to be fetched from `os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')`.
   </action>
-  <verify>cd frontend/admin && npm run build && cd ../app && npm run build</verify>
-  <done>Both Next.js portals created and build successfully.</done>
+  <verify>grep "SECURE_SSL_REDIRECT" backend/core/settings.py</verify>
+  <done>Security settings are environmentally conditional and hardened.</done>
 </task>
 
 <task type="auto">
-  <name>Setup JWT Auth Skeleton</name>
-  <files>
-    - backend/users/models.py
-    - backend/core/urls.py
-  </files>
+  <name>Final Security & Deployment Audit</name>
+  <files>backend/core/settings.py</files>
   <action>
-    1. Create `users` app in Django.
-    2. Implement Custom User model inheriting from `AbstractUser`.
-    3. Configure `djangorestframework-simplejwt` in `settings.py`.
-    4. Add login/refresh token endpoints to `core/urls.py`.
+    - Run `python manage.py check --deploy` (simulated check).
+    - Ensure `ALLOWED_HOSTS` is restricted via environment variable.
   </action>
-  <verify>python backend/manage.py makemigrations users</verify>
-  <done>Auth system integrated in Django and migrations generated.</done>
-</task>
-
-<task type="auto">
-  <name>Update Docker for Frontend</name>
-  <files>
-    - docker-compose.yml
-  </files>
-  <action>
-    1. Add `admin-portal` and `company-portal` services to `docker-compose.yml`.
-    2. Setup volume mapping for hot-reloading in development.
-  </action>
-  <verify>docker-compose ps</verify>
-  <done>Docker Compose includes all backend and frontend services.</done>
+  <verify>python backend/manage.py check --deploy</verify>
+  <done>Django's deployment check passes without critical security warnings.</done>
 </task>
 
 ## Success Criteria
-- [ ] Admin and Company portal landing pages accessible.
-- [ ] Django API can issue JWT tokens for valid users.
-- [ ] Docker environment runs 5+ containers (db, redis, backend, admin, company).
+- [ ] `ALLOWED_HOSTS` is no longer `['*']` by default.
+- [ ] CSRF and Session cookies are configured for secure transport in production mode.
+- [ ] `python manage.py check --deploy` returns a clean bill of health for core settings.

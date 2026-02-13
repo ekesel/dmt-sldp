@@ -4,72 +4,47 @@ plan: 1
 wave: 1
 ---
 
-# Plan 1.1: Backend & Multi-tenancy Foundation
+# Plan 1.1: Environment Parity
 
 ## Objective
-Initialize the Django 5 project with `django-tenants` for schema-level multi-tenancy and set up the Docker development environment.
+Remove hardcoded URLs and secrets by centralizing configuration in environment variables for both backend and frontend.
 
 ## Context
 - .gsd/SPEC.md
-- .gsd/REQUIREMENTS.md
-- .gsd/DECISIONS.md
-- PRD.md
+- backend/core/settings.py
+- frontend/app/hooks/useDashboardData.ts
 
 ## Tasks
 
 <task type="auto">
-  <name>Initialize Django Project & Dependencies</name>
+  <name>Centralize Backend Configuration</name>
   <files>
-    - backend/requirements.txt
     - backend/core/settings.py
-    - backend/core/urls.py
+    - .env.example
   </files>
   <action>
-    1. Create `backend/requirements.txt` with Django 5.x, `django-tenants`, `psycopg2-binary`, `django-rest-framework`, `django-cors-headers`.
-    2. Initialize Django project in `backend/` directory.
-    3. Configure `settings.py` for `django-tenants`:
-       - Add `django_tenants` to `INSTALLED_APPS`.
-       - Define `SHARED_APPS` and `TENANT_APPS`.
-       - Set `DATABASE_ROUTERS = ['django_tenants.routers.TenantSyncRouter']`.
-       - Configure `DATABASES` for PostgreSQL with the `django_tenants.postgresql_backend`.
+    - Create `.env.example` with placeholders for `DJANGO_SECRET_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `REDIS_URL`, `PRODUCTION`.
+    - Modify `backend/core/settings.py` to use `os.environ.get()` for all these values.
+    - Set `DEBUG = os.environ.get('PRODUCTION', 'False') != 'True'`.
   </action>
-  <verify>python backend/manage.py check</verify>
-  <done>Django project initializes without errors and dependencies are locked.</done>
+  <verify>grep "os.environ.get" backend/core/settings.py</verify>
+  <done>Backend settings are no longer hardcoded and `.env.example` exists.</done>
 </task>
 
 <task type="auto">
-  <name>Define Base Tenant Models</name>
+  <name>Refactor Frontend Environment Hooks</name>
   <files>
-    - backend/tenants/models.py
-    - backend/tenants/admin.py
+    - frontend/app/hooks/useDashboardData.ts
+    - frontend/app/hooks/useWebSocket.ts
   </files>
   <action>
-    1. Create `tenants` app.
-    2. Define `Tenant` model inheriting from `TenantMixin`.
-    3. Define `Domain` model inheriting from `DomainMixin`.
-    4. Register models in `admin.py`.
+    - Refactor `useDashboardData.ts` to use `process.env.NEXT_PUBLIC_WS_URL` instead of the hardcoded `backend` host.
+    - Add `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` to `.env.example`.
   </action>
-  <verify>python backend/manage.py makemigrations tenants</verify>
-  <done>Tenant and Domain models created and migration files generated.</done>
-</task>
-
-<task type="auto">
-  <name>Dockerize Environment</name>
-  <files>
-    - Dockerfile
-    - docker-compose.yml
-    - .env
-  </files>
-  <action>
-    1. Create a `Dockerfile` for the Django backend.
-    2. Create `docker-compose.yml` with `db` (Postgres 15), `redis`, and `backend` services.
-    3. Configure environment variables for database connectivity in `.env`.
-  </action>
-  <verify>docker-compose config</verify>
-  <done>Docker configuration is valid and services are defined.</done>
+  <verify>grep "process.env" frontend/app/hooks/useDashboardData.ts</verify>
+  <done>Frontend no longer contains hardcoded backend URLs.</done>
 </task>
 
 ## Success Criteria
-- [ ] Django backend running inside Docker.
-- [ ] `django-tenants` middleware successfully switching schemas based on domain.
-- [ ] Base migrations for the `Public` schema (tenants, domains) applied.
+- [ ] `.env.example` contains all necessary keys for local and production-like setup.
+- [ ] Backend and Frontend codebases are free of hardcoded environment-specific URLs.
