@@ -1,44 +1,46 @@
 # ROADMAP.md
 
-> **Current Milestone**: v1.2 - Scalability & Deep Integration
-> **Goal**: Transition to high-performance asynchronous workflows and deep quality-gate automation.
+> **Current Milestone**: v1.3 - Ecosystem Expansion & UI Launch
+> **Goal**: Launch Next.js portals and bridge data-identity gaps (attribution & typed telemetry).
 
 ## Must-Haves
-- [ ] **Asynchronous Insights Engine**: Background Celery execution for AI logic.
-- [ ] **CI/CD Quality Gates**: Real GitHub status/signal validation in ComplianceEngine.
-- [ ] **Jira OAuth2**: Move from basic/mocked auth to secure standards.
-- [ ] **Unified Analytics**: Aggregated metrics models for historical reporting.
+- [ ] **GitHub Author Resolution**: Map commit/PR metadata to internal platform users.
+- [ ] **Next.js Portal Deployment**: Skeleton and core dashboards for Admin/Company portals.
+- [ ] **Typed Telemetry**: Migrate internal message bus to strictly typed Pydantic models.
+- [ ] **Resilient Docker Scaling**: Multi-worker Celery and production-ready service orchestration.
 
-## Current Position
-- **Phase**: 11 (verified)
-- **Status**: ✅ Milestone v1.2 Complete & Verified
+### Phase 12: Ecosystem Foundation
+**Status**: ⬜ Not Started
+**Objective**: Hardening internal messaging with Pydantic and preparing production orchestration.
 
-## Phases
+### Phase 13: Identity & Attribution
+**Status**: ⬜ Not Started
+**Objective**: Implement cross-tool author resolution for granular productivity metrics.
 
-### Phase 7: Asynchronous Workflow Foundation
-**Status**: ✅ Complete
-**Objective**: Implement background processing for AI insights and heavy ETL tasks.
+### Phase 14: Frontend Core
+**Status**: ⬜ Not Started
+**Objective**: Initialize Next.js projects and unified design system.
 
-### Phase 8: Deep Quality Integration (CI/CD Signals)
-**Status**: ✅ Complete
-**Objective**: Fetch and evaluate real GitHub status checks for compliance.
+### Phase 15: Portal Implementation
+**Status**: ⬜ Not Started
+**Objective**: Build out Admin and Company dashboards.
 
-### Phase 9: Secure Identity (Jira OAuth2)
-**Status**: ✅ Complete
-**Objective**: Refactor Jira connector to use OAuth2 for production security.
-
-### Phase 10: Analytics & Aggregation
-**Status**: ✅ Complete
-**Objective**: Implement data warehouse-style aggregation models for cross-tenant reporting.
-
-### Phase 11: v1.2 Verification Audit
-**Status**: ✅ Complete
-**Objective**: Validate all v1.2 success criteria.
+### Phase 16: v1.3 Verification Audit
+**Status**: ⬜ Not Started
+**Objective**: Holistic audit of UI launch and scaling capabilities.
 
 ---
 
-## Next Steps
-1. /pause (Celebrate milestone plateau 🎉)
+## Past Milestones
+
+### v1.2 - Scalability & Deep Integration (Solidified)
+**Goal**: High-performance asynchronous workflows and deep quality-gate automation.
+- [x] Asynchronous Insights Engine
+- [x] CI/CD Quality Gates
+## Current Position
+- **Milestone**: v1.3
+- **Phase**: Not started
+- **Status**: Milestone planned
 
 ## Past Milestones
 
