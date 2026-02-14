@@ -10,8 +10,59 @@ api.interceptors.request.use((config) => {
     if (tenant) {
         config.headers['X-Tenant'] = tenant;
     }
+    
+    // Add JWT token if available
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return config;
 });
+
+// Interceptor for handling token refresh
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('dmt-refresh-token') : null;
+                if (refreshToken) {
+                    const response = await api.post('/auth/token/refresh/', { refresh: refreshToken });
+                    const { access } = response.data;
+                    if (typeof window !== 'undefined') {
+                        localStorage.setItem('dmt-access-token', access);
+                    }
+                    originalRequest.headers['Authorization'] = `Bearer ${access}`;
+                    return api(originalRequest);
+                }
+            } catch (err) {
+                // Refresh failed, redirect to login
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('dmt-access-token');
+                    localStorage.removeItem('dmt-refresh-token');
+                    window.location.href = '/auth/login';
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+export const auth = {
+    register: (data: { username: string; email: string; password: string; password2: string; first_name?: string; last_name?: string }) =>
+        api.post('/auth/register/', data).then(res => res.data),
+    login: (username: string, password: string) =>
+        api.post('/auth/token/', { username, password }).then(res => res.data),
+    refreshToken: (refresh: string) =>
+        api.post('/auth/token/refresh/', { refresh }).then(res => res.data),
+    getProfile: () =>
+        api.get('/auth/profile/').then(res => res.data),
+    logout: () =>
+        api.post('/auth/logout/').then(res => res.data),
+};
 
 export const tenants = {
     list: () => api.get('/admin/tenants/').then(res => res.data),

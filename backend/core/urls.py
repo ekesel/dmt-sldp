@@ -1,11 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
 from data.views import MetricDashboardView, ForecastView, AIInsightFeedbackView
 from tenants.views import TenantViewSet, SystemHealthView
+from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -13,8 +11,11 @@ router.register(r'admin/tenants', TenantViewSet, basename='tenants')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/register/', RegisterView.as_view(), name='register'),
+    path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/analytics/metrics/', MetricDashboardView.as_view(), name='metrics_dashboard'),
     path('api/analytics/forecast/', ForecastView.as_view(), name='forecast'),
     path('api/analytics/insights/feedback/', AIInsightFeedbackView.as_view(), name='ai_feedback'),

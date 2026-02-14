@@ -1,8 +1,9 @@
-"use client";
+'use client';
 import React, { useEffect, useState } from 'react';
-import { Card, Button } from "@dmt/ui";
-import { LayoutDashboard, Users, Settings, ShieldCheck, Activity } from "lucide-react";
-import { health } from "@dmt/api";
+import { Building2, Users, Server, Activity, Zap } from 'lucide-react';
+import { health } from '@dmt/api';
+import { DashboardLayout } from './components/DashboardLayout';
+import { StatCard, Badge } from './components/UIComponents';
 
 export default function AdminHome() {
     const [stats, setStats] = useState<any>(null);
@@ -11,79 +12,119 @@ export default function AdminHome() {
     useEffect(() => {
         health.get()
             .then(data => setStats(data))
+            .catch(err => console.error('Error loading health:', err))
             .finally(() => setLoading(false));
     }, []);
 
     return (
-        <main className="min-h-screen bg-brand-dark p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <header className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                            <ShieldCheck className="text-brand-primary" />
-                            Platform Administration
-                        </h1>
-                        <p className="text-slate-400">Manage tenants and global system configurations.</p>
+        <DashboardLayout>
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+                <p className="text-slate-400">Welcome to the DMT-SLDP Admin Portal. Manage tenants and system configurations.</p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <StatCard
+                    icon={Building2}
+                    title="Active Tenants"
+                    value={loading ? '—' : stats?.active_tenants || 0}
+                    description="Total registered companies"
+                    trend={loading ? undefined : { value: 12, isPositive: true }}
+                />
+
+                <StatCard
+                    icon={Users}
+                    title="Total Users"
+                    value={loading ? '—' : '0'}
+                    description="Across all tenants"
+                />
+
+                <StatCard
+                    icon={Zap}
+                    title="System Load"
+                    value={loading ? '—' : '34%'}
+                    description="Current usage"
+                    trend={loading ? undefined : { value: 5, isPositive: false }}
+                />
+
+                <StatCard
+                    icon={Server}
+                    title="Uptime"
+                    value={loading ? '—' : stats?.uptime || '99.9%'}
+                    description="Last 30 days"
+                />
+
+                <StatCard
+                    icon={Activity}
+                    title="API Requests"
+                    value={loading ? '—' : '524.8K'}
+                    description="This month"
+                    trend={loading ? undefined : { value: 23, isPositive: true }}
+                />
+            </div>
+
+            {/* System Health Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Services Status */}
+                <div className="lg:col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-white mb-6">Services Status</h2>
+                    <div className="space-y-3">
+                        {[
+                            { name: 'Database', status: 'up' },
+                            { name: 'Redis Cache', status: 'up' },
+                            { name: 'Celery Workers', status: 'up' },
+                            { name: 'API Gateway', status: 'up' },
+                        ].map((service) => (
+                            <div key={service.name} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition">
+                                <span className="text-slate-300 font-medium">{service.name}</span>
+                                <Badge label={service.status === 'up' ? 'Operational' : 'Down'} variant={service.status === 'up' ? 'success' : 'error'} />
+                            </div>
+                        ))}
                     </div>
-                    <Button>Create New Tenant</Button>
-                </header>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="flex flex-col gap-4 bg-slate-900/50 border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-brand-primary/20 rounded-lg">
-                                <Users className="text-brand-primary" />
-                            </div>
-                            <h2 className="text-xl font-semibold">Active Tenants</h2>
-                        </div>
-                        {loading ? (
-                            <div className="h-10 w-24 bg-slate-800 animate-pulse rounded" />
-                        ) : (
-                            <>
-                                <p className="text-4xl font-bold">{stats?.active_tenants || 0}</p>
-                                <p className="text-sm text-slate-400">Total registered companies</p>
-                            </>
-                        )}
-                    </Card>
-
-                    <Card className="flex flex-col gap-4 bg-slate-900/50 border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-brand-accent/20 rounded-lg">
-                                <LayoutDashboard className="text-brand-accent" />
-                            </div>
-                            <h2 className="text-xl font-semibold">System Health</h2>
-                        </div>
-                        {loading ? (
-                            <div className="h-10 w-24 bg-slate-800 animate-pulse rounded" />
-                        ) : (
-                            <>
-                                <p className="text-4xl font-bold text-brand-accent">{stats?.uptime || '99.9%'}</p>
-                                <div className="flex items-center gap-2 mt-auto">
-                                    <div className={`w-2 h-2 rounded-full ${stats?.status === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                    <span className="text-sm text-slate-400 capitalize">{stats?.status || 'Unknown'}</span>
+                {/* Recent Activity */}
+                <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-white mb-6">Recent Activity</h2>
+                    <div className="space-y-4">
+                        {[
+                            { action: 'New tenant created', user: 'System Admin', time: '2 minutes ago' },
+                            { action: 'Backup completed', user: 'Automation', time: '1 hour ago' },
+                            { action: 'Database migration', user: 'DevOps Team', time: '3 hours ago' },
+                            { action: 'Security audit', user: 'Admin Panel', time: '5 hours ago' },
+                        ].map((activity, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition">
+                                <div>
+                                    <p className="text-slate-300 font-medium">{activity.action}</p>
+                                    <p className="text-xs text-slate-500">{activity.user}</p>
                                 </div>
-                            </>
-                        )}
-                    </Card>
-
-                    <Card className="flex flex-col gap-4 bg-slate-900/50 border-slate-800 text-slate-300">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-500/20 rounded-lg">
-                                <Activity className="text-slate-400" />
+                                <span className="text-xs text-slate-500">{activity.time}</span>
                             </div>
-                            <h2 className="text-xl font-semibold">Services</h2>
-                        </div>
-                        <div className="space-y-2 mt-auto">
-                            {['database', 'redis', 'celery'].map((svc) => (
-                                <div key={svc} className="flex justify-between items-center text-sm">
-                                    <span className="capitalize">{svc}</span>
-                                    <span className="text-emerald-500 font-medium">Online</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
+                        ))}
+                    </div>
                 </div>
             </div>
-        </main>
+
+            {/* Quick Actions */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                <h2 className="text-lg font-semibold text-white mb-6">Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button className="px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 font-medium transition">
+                        Create Tenant
+                    </button>
+                    <button className="px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 font-medium transition">
+                        Manage Users
+                    </button>
+                    <button className="px-4 py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 font-medium transition">
+                        View Reports
+                    </button>
+                    <button className="px-4 py-3 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 font-medium transition">
+                        System Settings
+                    </button>
+                </div>
+            </div>
+        </DashboardLayout>
     );
 }
