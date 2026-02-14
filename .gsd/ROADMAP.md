@@ -1,17 +1,17 @@
 # ROADMAP.md
 
-> **Current Milestone**: v1.3 - Ecosystem Expansion & UI Launch
-> **Goal**: Launch Next.js portals and bridge data-identity gaps (attribution & typed telemetry).
+> **Current Milestone**: v1.5 - Ecosystem Scale & Advanced Data Lifecycle
+> **Goal**: Scaling to Enterprise needs with deep historical trends and hardened data retention.
 
 ## Current Position
-- **Milestone**: v1.3 (Verified)
-- **Status**: ✅ Milestone complete
+- **Milestone**: v1.5 (Planned)
+- **Status**: 🔄 In Progress - Scoping Phases
 
 ## Must-Haves
-- [x] **GitHub Author Resolution**: Map commit/PR metadata to internal platform users.
-- [x] **Next.js Portal Deployment**: Skeleton and core dashboards for Admin/Company portals.
-- [x] **Typed Telemetry**: Migrate internal message bus to strictly typed Pydantic models.
-- [x] **Resilient Docker Scaling**: Multi-worker Celery and production-ready service orchestration.
+- [ ] **Historical Trending**: Persistent developer-level performance tracking over time.
+- [ ] **Automated Archival**: Production-ready data retention engine (Cold Store).
+- [ ] **Enterprise Reporting**: Cross-tenant report exports (PDF/CSV).
+- [ ] **Workspace Aggregation**: Link multiple source workspaces into a single view.
 
 ## Phases
 
@@ -70,13 +70,38 @@
 - [ ] **Visualizer**: Integrated "Confidence Interval" charts in the Company Portal.
 
 ### Phase 20: AI Team Optimization
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Leverage Gemini Pro for "Team Health" suggestions and bottleneck detection.
 
 **Key Deliverables:**
 - [ ] **Optimization Prompts**: Advanced prompt engineering for bottleneck analysis.
 - [ ] **Actionable Insights**: Automated suggestions for pair programming or task redistribution.
 - [ ] **Feedback Loop**: UI for users to confirm/reject AI suggestions.
+
+---
+
+## Milestone v1.5 - Ecosystem Scale & Advanced Data Lifecycle
+> **Goal**: Hardening the enterprise features identified in the PRD audit.
+
+### Phase 21: Developer Analytics & Trending
+**Status**: ⬜ Not Started
+**Objective**: Implement the `DeveloperMetrics` historical table for long-term efficiency scoring.
+**Depends on**: Phase 13, Phase 20
+
+### Phase 22: Archival & Lifecycle Engine
+**Status**: ⬜ Not Started
+**Objective**: Build the automated retention engine to archive stale data to S3/MinIO.
+**Depends on**: Phase 18
+
+### Phase 23: Enterprise Reporting Exports
+**Status**: ⬜ Not Started
+**Objective**: Implement CSV/PDF export endpoints for sprint and compliance reports.
+**Depends on**: Phase 15
+
+### Phase 24: Ecosystem Scale (Multi-Workspace)
+**Status**: ⬜ Not Started
+**Objective**: Support workspace-level aggregation for complex enterprise tenants.
+**Depends on**: Phase 12
 
 ---
 
