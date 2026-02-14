@@ -5,7 +5,7 @@ from ..models import Integration, AIInsight, WorkItem
 from .service import GeminiAIProvider
 from core.celery_utils import tenant_aware_task
 
-@shared_task
+@shared_task(queue='ai_insights')
 @tenant_aware_task
 def refresh_ai_insights(integration_id, schema_name=None):
     """

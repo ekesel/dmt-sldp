@@ -15,6 +15,13 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 app.autodiscover_tasks(['data.ai'])
+
+from kombu import Queue
+app.conf.task_queues = (
+    Queue('celery', routing_key='celery'),
+    Queue('ai_insights', routing_key='ai_insights'),
+)
+app.conf.task_default_queue = 'celery'
 from celery.schedules import crontab
 
 app.conf.beat_schedule = {

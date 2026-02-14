@@ -34,7 +34,7 @@ services:
       - db
       - redis
 
-  celery-worker:
+  worker-base: &worker-base
     build: ./backend
     volumes:
       - ./backend:/app
@@ -48,7 +48,14 @@ services:
     depends_on:
       - db
       - redis
-    command: [ "celery", "-A", "core", "worker", "-l", "info" ]
+
+  worker-default:
+    <<: *worker-base
+    command: [ "celery", "-A", "core", "worker", "-l", "info", "-Q", "celery" ]
+
+  worker-ai:
+    <<: *worker-base
+    command: [ "celery", "-A", "core", "worker", "-l", "info", "-Q", "ai_insights" ]
 
   celery-beat:
     build: ./backend
