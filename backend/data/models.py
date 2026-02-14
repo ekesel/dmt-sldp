@@ -1,7 +1,21 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
-class Integration(models.Model):
+class SoftDeleteMixin(models.Model):
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def delete(self, using=None, keep_parents=False):
+        self.deleted_at = timezone.now()
+        self.save()
+
+    def hard_delete(self):
+        super().delete()
+
+class Integration(SoftDeleteMixin, models.Model):
     SOURCE_TYPES = (
         ('jira', 'Jira'),
         ('clickup', 'ClickUp'),
@@ -26,7 +40,7 @@ class Integration(models.Model):
     def __str__(self):
         return f"{self.name} ({self.source_type})"
 
-class Sprint(models.Model):
+class Sprint(SoftDeleteMixin, models.Model):
     external_id = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=255)
     start_date = models.DateTimeField(null=True, blank=True)
@@ -38,7 +52,7 @@ class Sprint(models.Model):
     def __str__(self):
         return self.name
 
-class WorkItem(models.Model):
+class WorkItem(SoftDeleteMixin, models.Model):
     external_id = models.CharField(max_length=100, unique=True)
     integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='work_items')
     sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
@@ -170,3 +184,47 @@ class HistoricalSprintMetric(models.Model):
 
     def __str__(self):
         return f"Metrics for Sprint: {self.sprint.name}"
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('test_connection', 'Test Connection'),
+        ('trigger_sync', 'Trigger Sync'),
+        ('archive_data', 'Archive Data'),
+    ]
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE)
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    entity_type = models.CharField(max_length=50) 
+    entity_id = models.CharField(max_length=100) # Support broad ID types
+    old_values = models.JSONField(null=True, blank=True)
+    new_values = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('compliance_failure', 'Compliance Failure'),
+        ('etl_failure', 'ETL Failure'),
+        ('sprint_ending', 'Sprint Ending Soon'),
+        ('exception_approved', 'DMT Exception Approved'),
+        ('ai_insight', 'AI Insight'),
+    ]
+    
+    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    data = models.JSONField(default=dict)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']

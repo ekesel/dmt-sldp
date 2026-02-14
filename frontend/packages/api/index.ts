@@ -29,4 +29,12 @@ export const sources = {
     sync: (sourceId: string) => api.post(`/admin/sources/${sourceId}/sync/`).then(res => res.data),
 };
 
+export const health = {
+    get: () => api.get('/admin/health/').then(res => res.data),
+};
+
+export const dashboard = {
+    getMetrics: () => api.get('/analytics/metrics/').then(res => res.data),
+};
+
 export default api;

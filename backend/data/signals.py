@@ -3,7 +3,7 @@ from django.dispatch import receiver, Signal
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import connection
-from .models import WorkItem, AIInsight
+from .models import WorkItem, AIInsight, Integration, AuditLog, Notification
 
 # Custom signals
 data_sync_completed = Signal() # payload: DataSyncPayload
@@ -82,3 +82,45 @@ def trigger_ai_refresh(sender, payload, **kwargs):
         payload.integration_id, 
         schema_name=payload.schema_name
     )
+
+@receiver(post_save, sender=Integration)
+def audit_log_integration(sender, instance, created, **kwargs):
+    """
+    Logs integration changes to AuditLog.
+    """
+    action = 'create' if created else 'update'
+    from tenants.models import Tenant
+    try:
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        AuditLog.objects.create(
+            tenant=tenant,
+            action=action,
+            entity_type='Integration',
+            entity_id=str(instance.id),
+            new_values={'name': instance.name, 'source_type': instance.source_type}
+        )
+    except Exception:
+        pass # Fail silently for audit logs in MVP to avoid blocking main flow
+
+@receiver(post_save, sender=WorkItem)
+def notify_compliance_issue(sender, instance, **kwargs):
+    """
+    Creates notification if a work item is non-compliant.
+    """
+    if not instance.is_compliant:
+        from tenants.models import Tenant
+        try:
+            tenant = Tenant.objects.get(schema_name=connection.schema_name)
+            # Find a relevant user to notify (e.g. the assignee or a project admin)
+            # For MVP, we notify the resolved_assignee if present
+            if instance.resolved_assignee:
+                Notification.objects.get_or_create(
+                    tenant=tenant,
+                    user=instance.resolved_assignee,
+                    notification_type='compliance_failure',
+                    title=f"Compliance Failure: {instance.external_id}",
+                    message=f"Work item {instance.title} does not meet DMT standards.",
+                    data={'work_item_id': instance.id}
+                )
+        except Exception:
+            pass

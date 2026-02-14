@@ -9,10 +9,10 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "next": "14.2.0",
+        "@dmt/ui": "*",
+        "next": "^16.1.6",
         "react": "^18",
         "react-dom": "^18",
-        "@dmt/ui": "*",
         "recharts": "^2.12.0"
     },
     "devDependencies": {

@@ -1,30 +1,44 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from "@dmt/ui";
-import { Rocket, FileText, Share2, BarChart3 } from "lucide-react";
-import { KPICard } from "../components/KPISection";
-import { VelocityChart } from "../components/charts/VelocityChart";
+import { TrendingUp, FileText, Share2, BarChart3, AlertCircle } from "lucide-react";
+import { KPICard } from "../../components/KPISection";
+import { VelocityChart } from "../../components/charts/VelocityChart";
+import { dashboard } from "@dmt/api";
 
 export default function DashboardPage() {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    dashboard.getMetrics()
+      .then(data => setMetrics(data))
+      .catch(err => console.error("Failed to fetch metrics:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
-    <main className="min-h-screen bg-brand-dark p-8">
+    <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
       <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex justify-between items-center">
+        <header className="flex justify-between items-end border-b border-white/5 pb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Rocket className="text-brand-accent" />
+            <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">
+              <TrendingUp size={16} />
+              Real-time Performance
+            </div>
+            <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
               Company Analytics
             </h1>
-            <p className="text-slate-400">Project visibility and engineering performance metrics.</p>
+            <p className="text-slate-400 mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
           </div>
           <div className="flex gap-4">
-            <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all font-medium border border-white/5">
               <Share2 size={18} />
-              Share
+              Share Report
             </button>
-            <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-all font-bold shadow-lg shadow-brand-primary/20">
               <FileText size={18} />
-              Export
+              Export PDF
             </button>
           </div>
         </header>
@@ -32,60 +46,76 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <KPICard
             label="Sprint Velocity"
-            value="48.5 SP"
-            trend={{ direction: 'up', value: '12%' }}
-            description="Average over last 3 sprints"
+            value={loading ? "..." : `${metrics?.active_sprint?.total_points || 0} SP`}
+            trend={{ direction: 'up', value: loading ? "..." : 'Active' }}
+            description="Sum of completed story points"
           />
           <KPICard
             label="Cycle Time"
-            value="3.2 Days"
+            value={loading ? "..." : `${metrics?.avg_cycle_time || 0} Days`}
             trend={{ direction: 'down', value: '0.4d' }}
-            description="Target: < 3.0 Days"
+            description="Average resolution duration"
           />
           <KPICard
             label="DMT Compliance"
-            value="94%"
+            value={loading ? "..." : `${Math.round(metrics?.compliance_rate || 0)}%`}
             trend={{ direction: 'neutral', value: '0%' }}
             description="Minimum Threshold: 80%"
           />
           <KPICard
             label="Resolved Blockers"
-            value="14"
-            trend={{ direction: 'up', value: '5' }}
-            description="This sprint"
+            value={loading ? "..." : (metrics?.resolved_blockers || 0).toString()}
+            trend={{ direction: 'up', value: 'Live' }}
+            description="Bugs closed this period"
           />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-2 min-h-[400px] flex flex-col p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <BarChart3 className="text-brand-primary" />
-                Velocity & Throughput Trend
-              </h2>
-              <div className="flex gap-4 text-xs">
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  <div className="w-2 h-2 rounded-full bg-brand-primary" />
-                  Velocity (Planned)
+          <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <BarChart3 className="text-brand-primary" />
+                  Velocity & Throughput
+                </h2>
+                <p className="text-slate-500 text-sm mt-1">Sprint-over-sprint delivery trends</p>
+              </div>
+              <div className="flex gap-6 text-xs font-bold tracking-widest uppercase">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <div className="w-3 h-3 rounded-full bg-brand-primary shadow-sm shadow-brand-primary/50" />
+                  Velocity
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  <div className="w-2 h-2 rounded-full bg-brand-accent" />
-                  Throughput (Done)
+                <div className="flex items-center gap-2 text-slate-400">
+                  <div className="w-3 h-3 rounded-full bg-brand-accent shadow-sm shadow-brand-accent/50" />
+                  Throughput
                 </div>
               </div>
             </div>
-            <VelocityChart />
+            <div className="flex-1 w-full bg-slate-800/10 rounded-2xl border border-white/5 p-4">
+              <VelocityChart />
+            </div>
           </Card>
 
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">Active Alerts</h2>
-            <Card className="bg-rose-500/10 border-rose-500/20">
-              <p className="text-rose-400 font-medium">Critical Blocker</p>
-              <p className="text-rose-200/60 text-sm mt-2">DMT-123: Missing test evidence for production release.</p>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <AlertCircle className="text-rose-500" />
+              Critical Alerts
+            </h2>
+            <Card className="bg-rose-500/5 border-rose-500/20 p-6 group hover:bg-rose-500/10 transition-colors cursor-default">
+              <div className="flex justify-between items-start">
+                <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-rose-500 text-white leading-none">High Risk</span>
+                <span className="text-[10px] text-slate-500 font-bold">2H AGO</span>
+              </div>
+              <p className="text-rose-100 font-bold mt-4 group-hover:text-white transition-colors">DMT Compliance Drop</p>
+              <p className="text-rose-200/40 text-sm mt-2 leading-relaxed">Unit testing coverage in `core-engine` dropped to 64%. Action required before sprint end.</p>
             </Card>
-            <Card className="bg-amber-500/10 border-amber-500/20">
-              <p className="text-amber-400 font-medium">Compliance Warning</p>
-              <p className="text-amber-200/60 text-sm mt-2">Team B: Unit coverage dropped below 80%.</p>
+            <Card className="bg-amber-500/5 border-amber-500/20 p-6 group hover:bg-amber-500/10 transition-colors cursor-default">
+              <div className="flex justify-between items-start">
+                <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-amber-500 text-black leading-none">Warning</span>
+                <span className="text-[10px] text-slate-500 font-bold">5H AGO</span>
+              </div>
+              <p className="text-amber-100 font-bold mt-4 group-hover:text-white transition-colors">Stagnant Pull Requests</p>
+              <p className="text-amber-200/40 text-sm mt-2 leading-relaxed">3 PRs in `frontend-web` have been open for &gt; 48 hours without review.</p>
             </Card>
           </div>
         </div>
