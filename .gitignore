@@ -22,10 +22,6 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# GSD / Agent metadata
-.gsd/archive/
-.agent/
-.gemini/
 
 # IDEs / Editors
 .vscode/
