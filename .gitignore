@@ -1,0 +1,38 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+db.sqlite3
+*.log
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+.env*.local
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# GSD / Agent metadata
+.gsd/archive/
+.agent/
+.gemini/
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
