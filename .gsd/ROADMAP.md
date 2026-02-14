@@ -36,13 +36,13 @@
 **Objective**: Holistic audit of UI launch and scaling capabilities.
 
 ### Phase 17: Milestone 1.3 Gap Closure
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Address technical debt and regression risks from v1.3 audit.
 
 **Gaps to Close:**
-- [ ] Sanitize `TODO.md` to reflect current project reality.
-- [ ] Regression smoke test for portals on Next.js 16.
-- [ ] Roadmap session-based auth for Milestone 1.4.
+- [x] Sanitize `TODO.md` to reflect current project reality.
+- [x] Regression smoke test for portals on Next.js 16.
+- [x] Roadmap session-based auth for Milestone 1.4.
 
 ---
 
