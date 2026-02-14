@@ -1,66 +1,95 @@
-'use client';
+"use client";
 import React from 'react';
-import MetricCard from '../../components/metrics/MetricCard';
-import ComplianceChart from '../../components/charts/ComplianceChart';
-import CycleTimeChart from '../../components/charts/CycleTimeChart';
-import AIInsightsPanel from './AIInsightsPanel';
-import { useDashboardData } from '../../hooks/useDashboardData';
+import { Card } from "@dmt/ui";
+import { Rocket, FileText, Share2, BarChart3 } from "lucide-react";
+import { KPICard } from "../components/KPISection";
+import { VelocityChart } from "../components/charts/VelocityChart";
 
 export default function DashboardPage() {
-  const { metrics, loading, refresh } = useDashboardData();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight text-white">Company Dashboard</h1>
-          <p className="text-slate-400">Real-time DMT compliance and SLDP metrics.</p>
+    <main className="min-h-screen bg-brand-dark p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Rocket className="text-brand-accent" />
+              Company Analytics
+            </h1>
+            <p className="text-slate-400">Project visibility and engineering performance metrics.</p>
+          </div>
+          <div className="flex gap-4">
+            <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <Share2 size={18} />
+              Share
+            </button>
+            <button className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+              <FileText size={18} />
+              Export
+            </button>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <KPICard
+            label="Sprint Velocity"
+            value="48.5 SP"
+            trend={{ direction: 'up', value: '12%' }}
+            description="Average over last 3 sprints"
+          />
+          <KPICard
+            label="Cycle Time"
+            value="3.2 Days"
+            trend={{ direction: 'down', value: '0.4d' }}
+            description="Target: < 3.0 Days"
+          />
+          <KPICard
+            label="DMT Compliance"
+            value="94%"
+            trend={{ direction: 'neutral', value: '0%' }}
+            description="Minimum Threshold: 80%"
+          />
+          <KPICard
+            label="Resolved Blockers"
+            value="14"
+            trend={{ direction: 'up', value: '5' }}
+            description="This sprint"
+          />
         </div>
-        <button 
-          onClick={refresh}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          Refresh Data
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard 
-          title="DMT Compliance" 
-          value={`${metrics?.compliance_rate}%`} 
-          trend="+2.4%" 
-          status="good" 
-        />
-        <MetricCard 
-          title="Avg Cycle Time" 
-          value={metrics?.avg_cycle_time || 'N/A'} 
-          trend="-0.5 days" 
-          status="good" 
-        />
-        <MetricCard 
-          title="Sprint Velocity" 
-          value={metrics?.sprint_velocity || 0} 
-          trend="+5.2" 
-          status="neutral" 
-        />
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ComplianceChart />
-        <CycleTimeChart />
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="lg:col-span-2 min-h-[400px] flex flex-col p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <BarChart3 className="text-brand-primary" />
+                Velocity & Throughput Trend
+              </h2>
+              <div className="flex gap-4 text-xs">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="w-2 h-2 rounded-full bg-brand-primary" />
+                  Velocity (Planned)
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="w-2 h-2 rounded-full bg-brand-accent" />
+                  Throughput (Done)
+                </div>
+              </div>
+            </div>
+            <VelocityChart />
+          </Card>
 
-      <div className="grid grid-cols-1 gap-6">
-        <AIInsightsPanel />
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white">Active Alerts</h2>
+            <Card className="bg-rose-500/10 border-rose-500/20">
+              <p className="text-rose-400 font-medium">Critical Blocker</p>
+              <p className="text-rose-200/60 text-sm mt-2">DMT-123: Missing test evidence for production release.</p>
+            </Card>
+            <Card className="bg-amber-500/10 border-amber-500/20">
+              <p className="text-amber-400 font-medium">Compliance Warning</p>
+              <p className="text-amber-200/60 text-sm mt-2">Team B: Unit coverage dropped below 80%.</p>
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
