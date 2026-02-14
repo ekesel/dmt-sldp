@@ -1,6 +1,7 @@
 from celery import shared_task
+from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Avg, F
+from django.db.models import Avg, F, Count
 from ..models import Integration, AIInsight, WorkItem
 from .service import GeminiAIProvider
 from core.celery_utils import tenant_aware_task
@@ -34,15 +35,29 @@ def refresh_ai_insights(integration_id, schema_name=None):
     avg_cycle_time_str = f"{avg_cycle_time_days.days} days" if avg_cycle_time_days else "N/A"
     high_risk_count = work_items.filter(is_compliant=False).count()
 
+    # 1.1 Collect Team Optimization Data
+    stagnant_items = work_items.filter(
+        status='in_progress',
+        updated_at__lt=timezone.now() - timedelta(days=5)
+    ).values('external_id', 'title', 'assignee_email')
+    
+    assignee_distribution = work_items.filter(status='in_progress').values('assignee_email').annotate(
+        count=Count('id')
+    )
+
     metrics = {
         "compliance_rate": round(compliance_rate, 2),
         "avg_cycle_time": avg_cycle_time_str,
-        "high_risk_count": high_risk_count
+        "high_risk_count": high_risk_count,
+        "stagnant_items": list(stagnant_items),
+        "assignee_distribution": list(assignee_distribution)
     }
 
     # 2. Call real AI service
     ai_provider = GeminiAIProvider()
-    response_data = ai_provider.generate_compliance_insights(metrics)
+    # Wave 1: Combine compliance and team health or call separately
+    # For now, we enhance the primary provider to handle the expanded metrics
+    response_data = ai_provider.generate_optimization_insights(metrics)
 
     # 3. Store result
     insight = AIInsight.objects.create(

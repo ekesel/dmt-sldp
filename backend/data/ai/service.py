@@ -6,7 +6,7 @@ import random
 from google.api_core import exceptions
 from google.cloud import aiplatform
 from vertexai.generative_models import GenerativeModel, GenerationConfig
-from .prompts import COMPLIANCE_INSIGHT_SYSTEM_PROMPT
+from .prompts import COMPLIANCE_INSIGHT_SYSTEM_PROMPT, TEAM_HEALTH_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,39 @@ class GeminiAIProvider:
                     logger.info(f"Retrying AI generation in {delay:.2f}s...")
                     time.sleep(delay)
 
+        return self._get_fallback_insight()
+
+    def generate_optimization_insights(self, metrics: dict):
+        """
+        Generates team health and bottleneck insights.
+        """
+        if not self.model:
+            return self._get_fallback_insight()
+
+        prompt = TEAM_HEALTH_SYSTEM_PROMPT.format(
+            avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
+            assignee_distribution=json.dumps(metrics.get("assignee_distribution", [])),
+            stagnant_items=json.dumps(metrics.get("stagnant_items", []))
+        )
+
+        # Re-use generation logic or refactor
+        return self._generate_json(prompt)
+
+    def _generate_json(self, prompt: str):
+        for attempt in range(1, 4):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=GenerationConfig(
+                        response_mime_type="application/json",
+                    )
+                )
+                self._consecutive_failures = 0
+                return json.loads(response.text)
+            except Exception as e:
+                self._consecutive_failures += 1
+                if attempt < 3:
+                    time.sleep(2)
         return self._get_fallback_insight()
 
     def _get_fallback_insight(self):
