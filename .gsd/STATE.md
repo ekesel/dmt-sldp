@@ -50,9 +50,10 @@ Phase 2 executed successfully. Real Gemini AI integration promoted and Complianc
 Phase 1 executed successfully. 2 plans (Environment Parity & Security Hardening) completed.
 
 ## Next Steps
-1. Proceed to Phase 2: AI Service Promotion
+1. Proceed to Phase 2: AI Service12, 13, 14, 15, 16
 
-## Recent Milestones
+## Next Objectives
+- [ ] Milestone v1.4 - Advanced Analytics & AI Insights
 - [x] Project vision distilled into SPEC.md.
 - [x] Roadmap created with 5 phases.
 - [x] Phase 1 discussion completed and documented.
