@@ -1,7 +1,8 @@
 from celery import shared_task
 from django.utils import timezone
 from django.db import connection
-from .models import Integration, WorkItem, Sprint, TaskLog
+from .models import Integration, Sprint, WorkItem, PullRequest, PullRequestStatus, TaskLog
+from users.services import IdentityService
 from .connectors.factory import ConnectorFactory
 from .signals import data_sync_completed
 from core.telemetry.models import DataSyncPayload
@@ -51,23 +52,28 @@ def sync_tenant_data(integration_id, schema_name=None):
         work_items_data = connector.fetch_work_items(last_sync=integration.last_sync_at)
         for wi_data in work_items_data:
             # Simple mapping for demonstration
-            item, created = WorkItem.objects.update_or_create(
-                external_id=wi_data['external_id'],
+            # Resolve platform user
+            resolved_user = IdentityService.resolve_user(integration.source_type, wi_data.get('assignee_email'))
+            
+            work_item, created = WorkItem.objects.update_or_create(
+                external_id=wi_data['id'],
                 defaults={
                     'integration': integration,
                     'title': wi_data['title'],
-                    'type': wi_data['type'],
-                    'status': wi_data['status'],
+                    'description': wi_data.get('description', ''),
+                    'type': wi_data.get('type', 'task'),
+                    'status': wi_data.get('status', 'open'),
+                    'assignee_email': wi_data.get('assignee_email'),
+                    'resolved_assignee': resolved_user,
                     'created_at': wi_data['created_at'],
                     'updated_at': wi_data['updated_at'],
                 }
             )
             # Trigger compliance check
-            engine.check_compliance(item)
+            engine.check_compliance(work_item)
 
         # 3. Sync Pull Requests (Git Sources)
         import re
-        from .models import PullRequest, PullRequestStatus
         
         # ID patterns: [JIRA-123], JIRA-123, #123 (mapped to external_id)
         ID_PATTERN = re.compile(r'([A-Z]+-\d+|#\d+)', re.IGNORECASE)
@@ -81,13 +87,17 @@ def sync_tenant_data(integration_id, schema_name=None):
                 item_id = match.group(1).replace('#', '').upper()
                 work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
 
-            pr, created = PullRequest.objects.update_or_create(
-                external_id=pr_data['external_id'],
+            # Resolve platform user for PR
+            resolved_author = IdentityService.resolve_user('github', pr_data.get('author_email'))
+            
+            pr, pr_created = PullRequest.objects.update_or_create(
+                external_id=pr_data['id'],
                 defaults={
                     'integration': integration,
                     'work_item': work_item,
                     'title': pr_data['title'],
                     'author_email': pr_data['author_email'],
+                    'resolved_author': resolved_author,
                     'status': pr_data['status'],
                     'repository_name': pr_data['repository_name'],
                     'source_branch': pr_data['source_branch'],
