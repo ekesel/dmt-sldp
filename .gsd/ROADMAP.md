@@ -3,11 +3,18 @@
 > **Current Milestone**: v1.3 - Ecosystem Expansion & UI Launch
 > **Goal**: Launch Next.js portals and bridge data-identity gaps (attribution & typed telemetry).
 
+## Current Position
+- **Milestone**: v1.3
+- **Phase**: Not started
+- **Status**: Milestone planned
+
 ## Must-Haves
 - [ ] **GitHub Author Resolution**: Map commit/PR metadata to internal platform users.
 - [ ] **Next.js Portal Deployment**: Skeleton and core dashboards for Admin/Company portals.
 - [ ] **Typed Telemetry**: Migrate internal message bus to strictly typed Pydantic models.
 - [ ] **Resilient Docker Scaling**: Multi-worker Celery and production-ready service orchestration.
+
+## Phases
 
 ### Phase 12: Ecosystem Foundation
 **Status**: ⬜ Not Started
@@ -34,18 +41,12 @@
 ## Past Milestones
 
 ### v1.2 - Scalability & Deep Integration (Solidified)
-**Goal**: High-performance asynchronous workflows and deep quality-gate automation.
 - [x] Asynchronous Insights Engine
 - [x] CI/CD Quality Gates
-## Current Position
-- **Milestone**: v1.3
-- **Phase**: Not started
-- **Status**: Milestone planned
-
-## Past Milestones
+- [x] Jira OAuth2
+- [x] Unified Analytics
 
 ### v1.1 - Production Readiness (Solidified)
-**Goal**: Hardening the DMT-SLDP platform for production rollout.
 - [x] Environment Parity
 - [x] Security Hardening
 - [x] Real AI Integration
