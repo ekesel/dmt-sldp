@@ -37,6 +37,8 @@ export const dashboard = {
     getMetrics: () => api.get('/analytics/metrics/').then(res => res.data),
     getForecast: (integrationId: string, remainingItems: number = 10) =>
         api.get(`/analytics/forecast/?integration_id=${integrationId}&remaining_items=${remainingItems}`).then(res => res.data),
+    updateInsightFeedback: (insightId: number, suggestionId: string, status: 'accepted' | 'rejected') =>
+        api.patch('/analytics/insights/feedback/', { insight_id: insightId, suggestion_id: suggestionId, status }).then(res => res.data),
 };
 
 export default api;

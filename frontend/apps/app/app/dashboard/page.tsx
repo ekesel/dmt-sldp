@@ -5,6 +5,7 @@ import { TrendingUp, FileText, Share2, BarChart3, AlertCircle } from "lucide-rea
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
+import { AIInsightsList } from "../../components/AIInsightsList";
 import { dashboard } from "@dmt/api";
 
 export default function DashboardPage() {
@@ -161,6 +162,15 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+
+        {metrics?.latest_insight && (
+          <div className="pt-8 border-t border-white/5">
+            <AIInsightsList
+              insightId={metrics.latest_insight.id}
+              suggestions={metrics.latest_insight.suggestions}
+            />
+          </div>
+        )}
       </div>
     </main>
   );

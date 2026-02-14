@@ -1,4 +1,4 @@
-from ..models import WorkItem, Sprint, DailyMetric
+from ..models import WorkItem, Sprint, DailyMetric, AIInsight
 from django.db.models import Avg, Sum, Count, F
 
 class MetricService:
@@ -26,9 +26,16 @@ class MetricService:
         total_items = WorkItem.objects.count()
         compliant_items = WorkItem.objects.filter(is_compliant=True).count()
         
+        latest_insight = AIInsight.objects.filter(integration__isnull=False).first()
+        
         return {
             'compliance_rate': (compliant_items / total_items * 100) if total_items > 0 else 0,
             'active_sprint': MetricService.calculate_velocity(active_sprint.id) if active_sprint else None,
             'avg_cycle_time': 3.2,
-            'resolved_blockers': WorkItem.objects.filter(status='done', type='bug').count()
+            'resolved_blockers': WorkItem.objects.filter(status='done', type='bug').count(),
+            'latest_insight': {
+                'id': latest_insight.id,
+                'summary': latest_insight.summary,
+                'suggestions': latest_insight.suggestions
+            } if latest_insight else None
         }
