@@ -76,6 +76,12 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=development
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
     command: [ "sh", "-c", "npm install && npm run dev" ]
 
   company-portal:
@@ -87,6 +93,12 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
     command: [ "sh", "-c", "npm install && npm run dev" ]
 
 volumes:
