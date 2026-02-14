@@ -35,6 +35,8 @@ export const health = {
 
 export const dashboard = {
     getMetrics: () => api.get('/analytics/metrics/').then(res => res.data),
+    getForecast: (integrationId: string, remainingItems: number = 10) =>
+        api.get(`/analytics/forecast/?integration_id=${integrationId}&remaining_items=${remainingItems}`).then(res => res.data),
 };
 
 export default api;

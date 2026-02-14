@@ -4,16 +4,24 @@ import { Card } from "@dmt/ui";
 import { TrendingUp, FileText, Share2, BarChart3, AlertCircle } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
+import { ForecastChart } from "../../components/charts/ForecastChart";
 import { dashboard } from "@dmt/api";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null);
+  const [forecast, setForecast] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dashboard.getMetrics()
-      .then(data => setMetrics(data))
-      .catch(err => console.error("Failed to fetch metrics:", err))
+    Promise.all([
+      dashboard.getMetrics(),
+      dashboard.getForecast("1") // Hardcoded for Demo Integration ID
+    ])
+      .then(([metricsData, forecastData]) => {
+        setMetrics(metricsData);
+        setForecast(forecastData);
+      })
+      .catch(err => console.error("Failed to fetch dashboard data:", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -96,7 +104,41 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          <div className="space-y-6">
+          <Card className="min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <TrendingUp className="text-brand-primary" />
+                Delivery Forecast
+              </h2>
+              <p className="text-slate-500 text-sm mt-1">Stochastic completion prediction</p>
+            </div>
+
+            <div className="flex-1 w-full flex flex-col gap-6">
+              <div className="bg-slate-800/10 rounded-2xl border border-white/5 p-4 h-[200px]">
+                <ForecastChart data={forecast} />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 rounded-lg bg-brand-primary/5 border border-brand-primary/10">
+                  <span className="text-xs font-bold text-slate-400">85% Confidence</span>
+                  <span className="text-sm font-black text-white">
+                    {loading ? "..." : forecast?.["85"] ? new Date(forecast["85"]).toLocaleDateString() : "No Data"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/5">
+                  <span className="text-xs font-bold text-slate-400">50% Confidence (Aggressive)</span>
+                  <span className="text-sm font-bold text-slate-300">
+                    {loading ? "..." : forecast?.["50"] ? new Date(forecast["50"]).toLocaleDateString() : "No Data"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-600 italic">
+                  * Based on Monte Carlo simulation of {metrics?.active_sprint?.item_count || 10} remaining items.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <div className="lg:col-span-2 space-y-6">
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               <AlertCircle className="text-rose-500" />
               Critical Alerts
