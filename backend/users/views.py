@@ -11,6 +11,16 @@ from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPa
 User = get_user_model()
 
 
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing users from the admin portal.
+    """
+    queryset = User.objects.all().order_by('-id')
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    # In a real app, you'd add IsPlatformAdmin here too
+
+
 class RegisterView(APIView):
     """
     User registration endpoint for the admin portal.

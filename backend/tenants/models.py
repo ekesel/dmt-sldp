@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from django_tenants.models import TenantMixin, DomainMixin
+from django.conf import settings
 
 
 class Tenant(TenantMixin):
@@ -47,3 +48,27 @@ class Tenant(TenantMixin):
 
 class Domain(DomainMixin):
     pass
+
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('test_connection', 'Test Connection'),
+        ('trigger_sync', 'Trigger Sync'),
+        ('archive_data', 'Archive Data'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    entity_type = models.CharField(max_length=50)
+    entity_id = models.CharField(max_length=100)  # Support broad ID types
+    old_values = models.JSONField(null=True, blank=True)
+    new_values = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']

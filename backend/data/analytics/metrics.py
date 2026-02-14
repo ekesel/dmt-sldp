@@ -22,6 +22,21 @@ class MetricService:
 
     @staticmethod
     def get_dashboard_summary():
+        from django.db import connection
+        from tenants.models import AuditLog
+        
+        # If we are in the public schema (Admin Portal), tenant-specific models (Sprint, WorkItem) 
+        # from the 'data' app don't exist, so we return generic platform stats.
+        if connection.schema_name == 'public':
+            return {
+                'compliance_rate': 0,
+                'active_sprint': None,
+                'avg_cycle_time': 0,
+                'resolved_blockers': 0,
+                'latest_insight': None,
+                'api_requests_count': AuditLog.objects.count()
+            }
+
         active_sprint = Sprint.objects.filter(status='active').last()
         total_items = WorkItem.objects.count()
         compliant_items = WorkItem.objects.filter(is_compliant=True).count()
@@ -37,5 +52,6 @@ class MetricService:
                 'id': latest_insight.id,
                 'summary': latest_insight.summary,
                 'suggestions': latest_insight.suggestions
-            } if latest_insight else None
+            } if latest_insight else None,
+            'api_requests_count': AuditLog.objects.count()
         }

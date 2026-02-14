@@ -3,7 +3,8 @@ from django.dispatch import receiver, Signal
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import connection
-from .models import WorkItem, AIInsight, Integration, AuditLog, Notification
+from .models import WorkItem, AIInsight, Integration, Notification
+from tenants.models import AuditLog
 
 # Custom signals
 data_sync_completed = Signal() # payload: DataSyncPayload

@@ -13,8 +13,9 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 SHARED_APPS = [
+    'daphne',
     'django_tenants',
-    'tenants',
+    'tenants.apps.TenantsConfig',
     'users',
     'django.contrib.admin',
     'django.contrib.auth',

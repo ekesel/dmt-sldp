@@ -193,7 +193,7 @@ export default function TenantsPage() {
                         <td className="px-6 py-4 text-slate-400 text-sm">{formatDate(tenant.createdAt)}</td>
 
                         <td className="px-6 py-4">
-                          <div ref={menuContainerRef} className="relative flex justify-end gap-2">
+                          <div className="relative flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => handleOpenTenant(tenant)}
@@ -206,9 +206,10 @@ export default function TenantsPage() {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                setOpenMenuTenantId((prev) => (prev === tenant.id ? null : tenant.id))
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuTenantId((prev) => (prev === tenant.id ? null : tenant.id));
+                              }}
                               disabled={isBusy}
                               className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-slate-300 disabled:opacity-50"
                               title="More actions"
@@ -220,7 +221,10 @@ export default function TenantsPage() {
                               <div className="absolute right-0 top-10 z-20 min-w-[190px] rounded-lg border border-slate-700 bg-slate-900 shadow-lg p-1">
                                 <button
                                   type="button"
-                                  onClick={() => handleEditTenant(tenant.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTenant(tenant.id);
+                                  }}
                                   className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded"
                                 >
                                   <span className="inline-flex items-center gap-2">

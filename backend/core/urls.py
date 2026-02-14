@@ -2,12 +2,13 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from data.views import MetricDashboardView, ForecastView, AIInsightFeedbackView
-from tenants.views import TenantViewSet, SystemHealthView
-from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView
+from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView
+from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
+router.register(r'admin/users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,5 +21,6 @@ urlpatterns = [
     path('api/analytics/forecast/', ForecastView.as_view(), name='forecast'),
     path('api/analytics/insights/feedback/', AIInsightFeedbackView.as_view(), name='ai_feedback'),
     path('api/admin/health/', SystemHealthView.as_view(), name='system_health'),
+    path('api/admin/activity-log/', ActivityLogView.as_view(), name='activity_log'),
     path('api/', include(router.urls)),
 ]

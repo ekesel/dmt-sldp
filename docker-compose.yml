@@ -34,6 +34,7 @@ services:
     depends_on:
       - db
       - redis
+    command: [ "daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application" ]
 
   worker-base: &worker-base
     build: ./backend

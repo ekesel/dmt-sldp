@@ -17,7 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
             await logout();
             router.push('/auth/login');
         } catch (err) {
-            console.error('Logout error:', err);
+            // Silently handle logout error
         }
     };
 

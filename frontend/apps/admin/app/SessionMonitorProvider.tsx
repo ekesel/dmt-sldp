@@ -22,7 +22,7 @@ export default function SessionMonitorProvider({ children }: Props) {
 
   // Stable callback (prevents hook dependency churn)
   const handleLogout = useCallback((reason: string) => {
-    console.log('[SessionMonitor] Logged out:', reason);
+    // Silently handle logout
   }, []);
 
   useSessionMonitor({

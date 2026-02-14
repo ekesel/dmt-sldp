@@ -419,4 +419,8 @@ export const settings = {
     ),
 };
 
+export const activityLog = {
+  list: () => get<any[]>('/admin/activity-log/'),
+};
+
 export default api;
