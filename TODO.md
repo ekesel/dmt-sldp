@@ -1,9 +1,9 @@
 # TODO.md
 
 ## Critical Path
-- [ ] **Jira OAuth Flow**: Research and implement OAuth2 for Jira (currently using basic/mocked auth).
-- [ ] **CI/CD Signal Extraction**: Extend GitHub connector to fetch `CheckSuites` and `Status` signals for compliance verification.
-- [ ] **Asynchronous AI Processing**: Move AI insight generation to a dedicated event-driven queue.
+- [x] **Jira OAuth Flow**: Research and implement OAuth2 for Jira (Completed in Phase 9).
+- [x] **CI/CD Signal Extraction**: Extend GitHub connector to fetch `CheckSuites` and `Status` signals (Completed in Phase 8).
+- [x] **Asynchronous AI Processing**: Move AI insight generation to a dedicated event-driven queue (Completed in Phase 7).
 
 ## Backlog
 - [ ] **Typed Telemetry**: Migrate internal message bus to strictly typed models.
