@@ -51,6 +51,7 @@ class WorkItem(models.Model):
     
     creator_email = models.EmailField(blank=True, null=True)
     assignee_email = models.EmailField(blank=True, null=True)
+    resolved_assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
     
     # DMT Specific fields
     is_compliant = models.BooleanField(default=False)
@@ -70,6 +71,7 @@ class PullRequest(models.Model):
     
     title = models.CharField(max_length=500)
     author_email = models.EmailField()
+    resolved_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='pull_requests')
     status = models.CharField(max_length=50) # open, merged, closed
     
     repository_name = models.CharField(max_length=255)
