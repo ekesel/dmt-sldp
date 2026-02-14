@@ -7,19 +7,12 @@ const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
 });
 
-// Interceptor for multi-tenancy
+// Add JWT token if available
 api.interceptors.request.use((config) => {
-  const tenant = typeof window !== 'undefined' ? localStorage.getItem('dmt-tenant') : null;
-  if (tenant) {
-    config.headers['X-Tenant'] = tenant;
-  }
-
-  // Add JWT token if available
   const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
-
   return config;
 });
 
@@ -144,6 +137,7 @@ export interface AuthRegisterPayload {
 export interface AuthTokenResponse {
   access: string;
   refresh: string;
+  user: any;
 }
 
 export interface AuthRefreshResponse {
@@ -161,11 +155,11 @@ export interface UserProfile {
 
 export const auth = {
   register: (data: AuthRegisterPayload) => post<UserProfile, AuthRegisterPayload>('/auth/register/', data),
-  login: (username: string, password: string) =>
-    post<AuthTokenResponse, { username: string; password: string }>('/auth/token/', { username, password }),
+  login: (username: string, password: string, portal?: string) =>
+    post<AuthTokenResponse, { username: string; password: string; portal?: string }>('/auth/token/', { username, password, portal }),
   refreshToken: (refresh: string) =>
     post<AuthRefreshResponse, { refresh: string }>('/auth/token/refresh/', { refresh }),
-  getProfile: () => get<UserProfile>('/auth/profile/'),
+  getProfile: () => get<any>('/auth/profile/'),
   logout: () => post<{ success?: boolean; detail?: string }>('/auth/logout/'),
 };
 
@@ -178,7 +172,12 @@ export interface Tenant {
 
 export const tenants = {
   list: () => get<Tenant[]>('/admin/tenants/'),
+  get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`),
   create: (data: Partial<Tenant>) => post<Tenant, Partial<Tenant>>('/admin/tenants/', data),
+  update: (id: string | number, data: Partial<Tenant>) => patch<Tenant, Partial<Tenant>>(`/admin/tenants/${id}/`, data),
+  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`),
+  activate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/activate/`),
+  deactivate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/deactivate/`),
 };
 
 export interface Project {
@@ -261,6 +260,7 @@ export interface User {
 export interface UserListFilters {
   role?: string;
   status?: string;
+  [key: string]: string | undefined;
 }
 
 export type CreateUserPayload = Record<string, unknown>;

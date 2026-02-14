@@ -18,7 +18,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     error: string | null;
-    login: (username: string, password: string) => Promise<void>;
+    login: (username: string, password: string, portal?: string) => Promise<void>;
     register: (data: RegisterData) => Promise<void>;
     logout: () => Promise<void>;
     clearError: () => void;
@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (token) {
                 try {
                     const userData = await auth.getProfile();
-                    setUser(userData);
+                    setUser(userData as any);
                 } catch (err) {
                     localStorage.removeItem('dmt-access-token');
                     localStorage.removeItem('dmt-refresh-token');
@@ -59,11 +59,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         initAuth();
     }, []);
 
-    const login = async (username: string, password: string) => {
+    const login = async (username: string, password: string, portal?: string) => {
         setError(null);
         setIsLoading(true);
         try {
-            const response = await auth.login(username, password);
+            const response = await auth.login(username, password, portal);
             localStorage.setItem('dmt-access-token', response.access);
             localStorage.setItem('dmt-refresh-token', response.refresh);
             setUser(response.user);

@@ -103,12 +103,10 @@ export function TenantProvider({ children, autoLoad = false }: TenantProviderPro
   const syncTenantHeaders = useCallback((tenantId: string) => {
     if (!tenantId) {
       delete api.defaults.headers.common['X-Tenant'];
-      delete api.defaults.headers.common['tenant_id'];
       return;
     }
 
     api.defaults.headers.common['X-Tenant'] = tenantId;
-    api.defaults.headers.common['tenant_id'] = tenantId;
   }, []);
 
   const persistTenant = useCallback(
@@ -151,7 +149,11 @@ export function TenantProvider({ children, autoLoad = false }: TenantProviderPro
       const initialTenantId = resolveInitialTenantId(tenantList);
       setCurrentTenantId(initialTenantId);
 
-      if (initialTenantId) {
+      // In the Admin Portal, we should not automatically set a global tenant header
+      // as it persists in localStorage and can break requests to the collective admin API.
+      // We only apply it if it matches a query param or after an explicit switch.
+      const queryTenant = searchParams?.get(TENANT_QUERY_PARAM);
+      if (queryTenant && queryTenant === initialTenantId) {
         persistTenant(initialTenantId);
       } else {
         syncTenantHeaders('');

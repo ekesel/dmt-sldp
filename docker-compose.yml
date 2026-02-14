@@ -28,6 +28,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/1
+      - TENANT_DOMAIN_SUFFIX=localhost
     ports:
       - "8000:8000"
     depends_on:
@@ -76,6 +77,8 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api
+      - NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL=.localhost:3000
     restart: always
     deploy:
       resources:

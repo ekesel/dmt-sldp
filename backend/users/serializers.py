@@ -62,10 +62,19 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     def get_token(self, user):
         token = super().get_token(user)
+        # Add custom claims
+        token['is_platform_admin'] = user.is_platform_admin
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
         # Add user info to response
         data['user'] = UserSerializer(self.user).data
+        
+        # If the request indicates it's for the admin portal, restrict to platform admins
+        request = self.context.get('request')
+        if request and request.data.get('portal') == 'admin':
+            if not self.user.is_platform_admin:
+                raise ValidationError("Only platform administrators can log in to the admin portal.")
+                
         return data

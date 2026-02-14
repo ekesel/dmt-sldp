@@ -36,7 +36,7 @@ export default function LoginPage() {
         }
 
         try {
-            await login(username, password);
+            await login(username, password, 'admin');
             router.push('/');
         } catch (err) {
             // Error is already set by useAuth hook

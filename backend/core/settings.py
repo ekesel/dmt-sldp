@@ -137,10 +137,11 @@ CHANNEL_LAYERS = {
 def csv_env(name, default):
     return [x.strip() for x in os.environ.get(name, default).split(",") if x.strip()]
 
-CORS_ALLOWED_ORIGINS = csv_env(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
-)
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOWED_ORIGINS = csv_env(
+#     "CORS_ALLOWED_ORIGINS",
+#     "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+# )
 
 CSRF_TRUSTED_ORIGINS = csv_env(
     "CSRF_TRUSTED_ORIGINS",
@@ -170,3 +171,5 @@ else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+    
+TENANT_DOMAIN_SUFFIX = os.environ.get('TENANT_DOMAIN_SUFFIX', 'localhost')
