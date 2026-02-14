@@ -14,15 +14,16 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+app.autodiscover_tasks(['data.ai'])
 from celery.schedules import crontab
 
 app.conf.beat_schedule = {
     'retention-cleanup-2am': {
-        'task': 'backend.data.tasks.run_retention_cleanup',
+        'task': 'data.tasks.run_retention_cleanup',
         'schedule': crontab(hour=2, minute=0),
     },
     'daily-aggregation-midnight': {
-        'task': 'backend.data.tasks.run_daily_aggregation',
+        'task': 'data.tasks.run_daily_aggregation',
         'schedule': crontab(hour=0, minute=0),
     },
 }

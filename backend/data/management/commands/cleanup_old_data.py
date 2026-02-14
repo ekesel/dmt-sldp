@@ -2,8 +2,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
 from django.db import connection
-from backend.data.models import WorkItem, AIInsight, PullRequest, RetentionPolicy
-from customers.models import Client
+from data.models import WorkItem, AIInsight, PullRequest, RetentionPolicy
+from tenants.models import Tenant
 import time
 
 class Command(BaseCommand):
@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        tenants = Client.objects.all().exclude(schema_name='public')
+        tenants = Tenant.objects.all().exclude(schema_name='public')
 
         for tenant in tenants:
             self.stdout.write(f"Processing tenant: {tenant.schema_name}")

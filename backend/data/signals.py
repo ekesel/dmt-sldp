@@ -6,7 +6,7 @@ from django.db import connection
 from .models import WorkItem, AIInsight
 
 # Custom signals
-data_sync_completed = Signal()
+data_sync_completed = Signal() # payload: DataSyncPayload
 
 @receiver(post_save, sender=WorkItem)
 def work_item_telemetry_signal(sender, instance, **kwargs):
@@ -69,9 +69,16 @@ def ai_insight_telemetry_signal(sender, instance, created, **kwargs):
     )
 
 @receiver(data_sync_completed)
-def trigger_ai_refresh(sender, integration_id, schema_name, **kwargs):
+def trigger_ai_refresh(sender, payload, **kwargs):
     """
     Triggers AI insight refresh when a data sync completes.
+    Uses typed DataSyncPayload.
     """
+    if payload.status != 'success':
+        return
+
     from .ai.tasks import refresh_ai_insights
-    refresh_ai_insights.delay(integration_id, schema_name=schema_name)
+    refresh_ai_insights.delay(
+        payload.integration_id, 
+        schema_name=payload.schema_name
+    )

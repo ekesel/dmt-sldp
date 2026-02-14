@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.db.models import Avg, F
 from ..models import Integration, AIInsight, WorkItem
 from .service import GeminiAIProvider
-from backend.core.celery_utils import tenant_aware_task
+from core.celery_utils import tenant_aware_task
 
 @shared_task
 @tenant_aware_task

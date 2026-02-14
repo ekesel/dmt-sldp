@@ -4,9 +4,12 @@ from django.db import connection
 from .models import Integration, WorkItem, Sprint, TaskLog
 from .connectors.factory import ConnectorFactory
 from .signals import data_sync_completed
+from core.telemetry.models import DataSyncPayload
+from core.celery_utils import tenant_aware_task
 
 @shared_task
-def sync_tenant_data(integration_id):
+@tenant_aware_task
+def sync_tenant_data(integration_id, schema_name=None):
     """Sync data for a specific integration."""
     start_time = timezone.now()
     log = TaskLog.objects.create(
@@ -117,17 +120,29 @@ def sync_tenant_data(integration_id):
         integration.last_sync_at = timezone.now()
         integration.save()
         
-        # Signal completion
+        # Signal completion with typed payload
         data_sync_completed.send(
             sender=sync_tenant_data,
-            integration_id=integration.id,
-            schema_name=connection.schema_name
+            payload=DataSyncPayload(
+                integration_id=integration.id,
+                schema_name=connection.schema_name,
+                status='success'
+            )
         )
         
         log.status = 'success'
         return f"Successfully synced {integration.name}"
         
     except Exception as e:
+        # Signal failure with typed payload
+        data_sync_completed.send(
+            sender=sync_tenant_data,
+            payload=DataSyncPayload(
+                integration_id=integration_id,
+                schema_name=connection.schema_name if connection.schema_name else 'unknown',
+                status='failed'
+            )
+        )
         log.status = 'failed'
         log.error_message = str(e)
         raise e
@@ -140,10 +155,20 @@ def sync_tenant_data(integration_id):
 @shared_task
 def run_all_integrations_sync():
     """Trigger sync for all active integrations across all tenants."""
-    active_integrations = Integration.objects.filter(is_active=True)
-    for integration in active_integrations:
-        sync_tenant_data.delay(integration.id)
-    return f"Triggered sync for {active_integrations.count()} integrations"
+    from tenants.models import Tenant
+    from django_tenants.utils import schema_context
+    
+    tenants = Tenant.objects.exclude(schema_name='public')
+    total_triggered = 0
+    
+    for tenant in tenants:
+        with schema_context(tenant.schema_name):
+            active_integrations = Integration.objects.filter(is_active=True)
+            for integration in active_integrations:
+                sync_tenant_data.delay(integration.id, schema_name=tenant.schema_name)
+                total_triggered += 1
+                
+    return f"Triggered sync for {total_triggered} integrations across {tenants.count()} tenants"
 
 @shared_task
 def run_retention_cleanup():
