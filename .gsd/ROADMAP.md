@@ -57,6 +57,29 @@
 
 ---
 
+## Milestone v1.4 - Advanced Analytics & AI Insights
+> **Goal**: Implement statistical delivery forecasting and AI-driven team optimization suggestions.
+
+### Phase 19: Statistical Forecasting
+**Status**: ⬜ Not Started
+**Objective**: Build the statistical engine for predicting sprint completion and delivery dates based on historical velocity and cycle time.
+
+**Key Deliverables:**
+- [ ] **Forecasting Engine**: Implement Monte Carlo simulations for delivery date prediction.
+- [ ] **Data Sanitization**: Statistical outlier detection for "stale" work items.
+- [ ] **Visualizer**: Integrated "Confidence Interval" charts in the Company Portal.
+
+### Phase 20: AI Team Optimization
+**Status**: ⬜ Not Started
+**Objective**: Leverage Gemini Pro for "Team Health" suggestions and bottleneck detection.
+
+**Key Deliverables:**
+- [ ] **Optimization Prompts**: Advanced prompt engineering for bottleneck analysis.
+- [ ] **Actionable Insights**: Automated suggestions for pair programming or task redistribution.
+- [ ] **Feedback Loop**: UI for users to confirm/reject AI suggestions.
+
+---
+
 ## Past Milestones
 
 ### v1.2 - Scalability & Deep Integration (Solidified)
