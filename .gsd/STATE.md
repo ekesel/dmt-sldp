@@ -1,41 +1,35 @@
 # STATE.md
 
-> **Current Context**: Milestone v1.4 Verified. Advanced Analytics and AI Optimization live.
-> **Last Goal**: Complete Phase 20 Verification & Finalize Milestone v1.4.
-> **Next Goal**: Decompose and Plan Milestone v1.5.
-**Status**: Paused at 2026-02-14T18:09:00+05:30
+> **Current Context**: Milestone v1.4 verified and live. Milestone v1.5 defined based on PRD gaps.
+> **Last Goal**: Scoping Milestone v1.5.
+> **Next Goal**: Plan Phase 21: Developer Analytics.
+**Status**: Paused at 2026-02-14T18:12:45+05:30
 
 ## Current Position
 - **Milestone**: v1.5 (Planning)
 - **Phase**: 20 (Completed)
-- **Status**: 🔄 Milestone 1.5 Scoped - Ready for Planning
-1.4 Verified
+- **Status**: 🔄 Milestone v1.5 Defined in ROADMAP.md
 
 ## Last Session Summary
-Successfully implemented Milestone v1.4 (Advanced Analytics & AI Insights).
-- **Phase 19**: Built Monte Carlo simulation engine and Recharts-based forecasting visualizer.
-- **Phase 20**: Developed AI bottleneck detection engine utilizing Gemini Pro and implemented an interactive suggestion feedback loop.
-- **Environment**: Backend dependencies (numpy) updated; core URL routing and @dmt/api expanded.
+Finished Milestone v1.4 implementation and verification. Conducted a PRD audit which revealed gaps in Individual Metrics, Data Lifecycle, and Multi-Workspace scaling.
+Defined Milestone v1.5 (Ecosystem Scale & Advanced Data Lifecycle) with four new phases (21-24) to address these gaps.
 
 ## In-Progress Work
-- Milestone v1.5 initial setup started.
-- /new-milestone workflow initiated; awaiting user input for v1.5 scoping (Name, Goal, Must-haves).
+- ROADMAP.md updated with Milestone v1.5 phases.
+- No uncommitted code changes.
 
 ## Context Dump
 ### Decisions Made
-- **Monte Carlo Algorithm**: Used empirical sampling from historical cycle times (85th percentile target).
-- **AI Feedback**: Suggestions are stored with unique static IDs and a 'status' field in JSON to enable persistent user feedback loops.
-- **UI Integration**: Placed AI Insights and Forecast Cards on the main Company Dashboard for maximum visibility.
+- **Milestone 1.5 Scope**: Focused on enterprise features (Historical Trends, Archival Engine, Reporting, and Scaling).
+- **Phase 21 Design**: Will leverage the existing `Integration` and `WorkItem` schemas to populate a new `DeveloperMetrics` tracking system.
 
 ### Approaches Tried
-- **Django Testing**: Attempted direct Django tests for forecasting, but hit Python/Django version mismatches on the local environment.
-- **Verification Alternative**: Shifted to standalone NumPy verification scripts to prove math logic correctness—PASS.
+- **PRD Audit**: Systematically compared `PRD.md` sections (3.x, 4.x) against the existing Django models and Next.js views.
 
 ### Files of Interest
-- `backend/data/analytics/forecasting.py`: Core simulation logic.
-- `backend/data/ai/tasks.py`: AI insight generation and metric aggregation.
-- `frontend/apps/app/app/dashboard/page.tsx`: Main dashboard assembly.
+- `.gsd/ROADMAP.md`: Updated with Phases 21-24.
+- `PRD.md`: Reference for remaining enterprise features.
 
 ## Next Steps
-1. Define Milestone v1.5 goals and phases based on user feedback.
-2. /plan Phase 21 (likely Multi-Workspace support or RBAC).
+1. Run `/plan 21` to decompose the Developer Analytics implementation.
+2. Implement Phase 22 Archival Engine (S3/MinIO integration).
