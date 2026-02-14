@@ -254,6 +254,7 @@ export interface User {
   first_name?: string;
   last_name?: string;
   is_active?: boolean;
+  date_joined?: string;
   [key: string]: unknown;
 }
 
@@ -387,6 +388,7 @@ export const aiInsights = {
 /** ---------- settings ---------- */
 
 export interface SystemSettings {
+  // Platform-wide settings
   [key: string]: unknown;
 }
 
@@ -395,10 +397,9 @@ export interface UpdateSystemSettingsPayload {
 }
 
 export interface RetentionPolicy {
-  tenant_id?: string | number;
-  retention_days?: number;
-  delete_after_days?: number;
-  archive_after_days?: number;
+  work_items_months: number;
+  ai_insights_months: number;
+  pull_requests_months: number;
   [key: string]: unknown;
 }
 

@@ -13,7 +13,8 @@
         "@dmt/ui": "*",
         "next": "^16.1.6",
         "react": "^18",
-        "react-dom": "^18"
+        "react-dom": "^18",
+        "react-hot-toast": "^2.4.1"
     },
     "devDependencies": {
         "@types/node": "25.2.3",

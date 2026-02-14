@@ -65,7 +65,7 @@ class WorkItem(SoftDeleteMixin, models.Model):
     
     creator_email = models.EmailField(blank=True, null=True)
     assignee_email = models.EmailField(blank=True, null=True)
-    resolved_assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
+    resolved_assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='work_items')
     
     # DMT Specific fields
     is_compliant = models.BooleanField(default=False)
@@ -85,7 +85,7 @@ class PullRequest(models.Model):
     
     title = models.CharField(max_length=500)
     author_email = models.EmailField()
-    resolved_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='pull_requests')
+    resolved_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='pull_requests')
     status = models.CharField(max_length=50) # open, merged, closed
     
     repository_name = models.CharField(max_length=255)
@@ -124,16 +124,6 @@ class AIInsight(models.Model):
     def __str__(self):
         return f"AI Insight for {self.integration} at {self.created_at}"
 
-class RetentionPolicy(models.Model):
-    tenant = models.OneToOneField('tenants.Tenant', on_delete=models.CASCADE, related_name='retention_policy')
-    work_items_months = models.IntegerField(default=12)
-    ai_insights_months = models.IntegerField(default=6)
-    pull_requests_months = models.IntegerField(default=12)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Retention Policy for {self.tenant}"
 
 class TaskLog(models.Model):
     TASK_STATUS = (
@@ -195,7 +185,7 @@ class Notification(models.Model):
     ]
     
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
     notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
     title = models.CharField(max_length=255)
     message = models.TextField()

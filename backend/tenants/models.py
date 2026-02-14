@@ -26,6 +26,11 @@ class Tenant(TenantMixin):
     created_on = models.DateField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Data Retention Settings (Months)
+    retention_work_items = models.IntegerField(default=12)
+    retention_ai_insights = models.IntegerField(default=6)
+    retention_pull_requests = models.IntegerField(default=12)
+
     # default true, schema will be automatically created and synced when it is saved
     auto_create_schema = True
 
@@ -72,3 +77,12 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+
+
+class SystemSetting(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    value = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name

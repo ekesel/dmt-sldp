@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Tenant, Domain, AuditLog
+from .models import Tenant, Domain, AuditLog, SystemSetting
 from rest_framework import serializers
 from django.db.models import Count
 from django.conf import settings
@@ -32,8 +32,25 @@ class TenantSerializer(serializers.ModelSerializer):
             'created_on',
             'created_at',
             'updated_at',
+            'retention_work_items',
+            'retention_ai_insights',
+            'retention_pull_requests',
         ]
         read_only_fields = ['id', 'created_on', 'updated_at', 'users_count']
+
+class RetentionPolicySerializer(serializers.ModelSerializer):
+    work_items_months = serializers.IntegerField(source='retention_work_items')
+    ai_insights_months = serializers.IntegerField(source='retention_ai_insights')
+    pull_requests_months = serializers.IntegerField(source='retention_pull_requests')
+
+    class Meta:
+        model = Tenant
+        fields = ['work_items_months', 'ai_insights_months', 'pull_requests_months']
+
+class SystemSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemSetting
+        fields = ['name', 'value']
 
 class TenantViewSet(viewsets.ModelViewSet):
     serializer_class = TenantSerializer
@@ -81,6 +98,20 @@ class TenantViewSet(viewsets.ModelViewSet):
         tenant.status = 'inactive'
         tenant.save()
         return Response({'status': 'tenant deactivated'})
+
+    @action(detail=True, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsPlatformAdmin], url_path='retention-policy')
+    def retention_policy(self, request, pk=None):
+        tenant = self.get_object()
+        
+        if request.method == 'PATCH':
+            serializer = RetentionPolicySerializer(tenant, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = RetentionPolicySerializer(tenant)
+        return Response(serializer.data)
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
@@ -164,3 +195,26 @@ class SystemHealthView(APIView):
             'services': services,
             'active_tenants': Tenant.objects.filter(status='active').count()
         })
+
+
+class SystemSettingsView(APIView):
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+
+    def get(self, request):
+        settings = SystemSetting.objects.all()
+        # Convert to a simple key-value dict for easier frontend consumption
+        data = {s.name: s.value for s in settings}
+        return Response(data)
+
+    def patch(self, request):
+        # Expecting a dict of settings to update
+        for name, value in request.data.items():
+            SystemSetting.objects.update_or_create(
+                name=name,
+                defaults={'value': value}
+            )
+        
+        # Return the updated settings
+        settings = SystemSetting.objects.all()
+        data = {s.name: s.value for s in settings}
+        return Response(data)
