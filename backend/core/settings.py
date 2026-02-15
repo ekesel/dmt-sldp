@@ -29,6 +29,7 @@ SHARED_APPS = [
     'rest_framework_simplejwt',
     'channels',
     'configuration',
+    'notifications',
 ]
 
 TENANT_APPS = [

@@ -8,12 +8,14 @@ from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView
 from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
+from notifications.views import NotificationViewSet
 
 router = DefaultRouter()
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
 router.register(r'admin/users', UserViewSet, basename='users')
 router.register(r'admin/projects', ProjectViewSet, basename='projects')
 router.register(r'admin/sources', SourceConfigurationViewSet, basename='source_configurations')
+router.register(r'notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

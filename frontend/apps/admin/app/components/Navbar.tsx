@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../auth/AuthContext';
 import { useCurrentTenant } from '../context/TenantContext';
 import { Menu, LogOut, Settings, User, Shield, ChevronDown, Building } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
     onMenuClick?: () => void;
@@ -133,8 +134,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                 </div>
 
                 {/* Right Section */}
-                <div className="flex items-center gap-4">
-                    {/* User Info */}
+                <div className="flex items-center gap-2">
+                    <NotificationBell />
+
+                    {/* User Profile */}
                     <div className="hidden sm:flex flex-col items-end">
                         <p className="text-sm font-medium text-white">{user?.first_name || user?.username}</p>
                         <p className="text-xs text-slate-400">

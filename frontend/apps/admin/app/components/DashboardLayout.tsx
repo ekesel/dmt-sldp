@@ -4,12 +4,15 @@ import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
 
+import { useSessionMonitor } from '../hooks/useSessionMonitor';
+
 interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    useSessionMonitor(); // Initialize session monitoring
 
     return (
         <ProtectedRoute>

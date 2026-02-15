@@ -178,6 +178,7 @@ export const tenants = {
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`),
   activate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/activate/`),
   deactivate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/deactivate/`),
+  archiveData: (id: string | number) => post<{ status: string }>(`/admin/tenants/${id}/archive-data/`),
 };
 
 export interface Project {
@@ -422,6 +423,23 @@ export const settings = {
 
 export const activityLog = {
   list: () => get<any[]>('/admin/activity-log/'),
+};
+
+/** ---------- notifications ---------- */
+
+export interface Notification {
+  id: string | number;
+  message: string;
+  notification_type: 'info' | 'success' | 'warning' | 'error';
+  is_read: boolean;
+  created_at: string;
+}
+
+export const notifications = {
+  list: () => get<Notification[]>('/notifications/'),
+  markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
+  markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
+  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
 };
 
 export default api;

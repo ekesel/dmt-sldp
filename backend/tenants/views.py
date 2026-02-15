@@ -107,11 +107,52 @@ class TenantViewSet(viewsets.ModelViewSet):
             serializer = RetentionPolicySerializer(tenant, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                
+                # Notify all platform admins
+                from django.contrib.auth import get_user_model
+                from notifications.models import Notification
+                User = get_user_model()
+                admins = User.objects.filter(is_superuser=True)
+                
+                for admin in admins:
+                    Notification.objects.create(
+                        user=admin,
+                        message=f"Retention policy updated for tenant {tenant.name}.",
+                        notification_type='info'
+                    )
+
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = RetentionPolicySerializer(tenant)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsPlatformAdmin], url_path='archive-data')
+    def archive_data(self, request, pk=None):
+        tenant = self.get_object()
+        
+        # In a real scenario, this would trigger a Celery task.
+        # For now, we mock the successful initiation.
+        
+        # Create Audit Log
+        if request.user:
+            AuditLog.objects.create(
+                user=request.user,
+                tenant=tenant,
+                action='archive_data',
+                entity_type='tenant',
+                entity_id=str(tenant.id)
+            )
+
+        # Notify the requesting user (and potentially others)
+        from notifications.models import Notification
+        Notification.objects.create(
+            user=request.user,
+            message=f"Data archival process started for {tenant.name}.",
+            notification_type='success'
+        )
+
+        return Response({'status': 'Data archival started successfully.'})
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
