@@ -59,8 +59,21 @@ export default function AdminHome() {
         const token = localStorage.getItem('dmt-access-token');
         if (!token) return;
 
-        const hostname = window.location.hostname;
-        const wsUrl = `ws://${hostname}:8000/ws/admin/health/?token=${token}`;
+        const getWsOrigin = () => {
+            const envUrl = process.env.NEXT_PUBLIC_WS_URL;
+            if (envUrl && envUrl.includes('://')) {
+                try {
+                    const url = new URL(envUrl);
+                    return `${url.protocol}//${url.host}`;
+                } catch (e) { }
+            }
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${hostname}:8000`;
+        };
+
+        const wsOrigin = getWsOrigin();
+        const wsUrl = `${wsOrigin}/ws/admin/health/?token=${token}`;
 
         const socket = new WebSocket(wsUrl);
 

@@ -70,11 +70,27 @@ export default function SystemStatusPage() {
             return;
         }
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Use environment variable if provided, otherwise fallback to port 8000 on current hostname
-        const baseUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.hostname}:8000/ws/admin/health/`;
-        const wsUrl = `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?token=${token}`;
+        // Helper to get WS base origin
+        const getWsOrigin = () => {
+            const envUrl = process.env.NEXT_PUBLIC_WS_URL;
+            if (envUrl) {
+                try {
+                    if (envUrl.includes('://')) {
+                        const url = new URL(envUrl);
+                        return `${url.protocol}//${url.host}`;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${window.location.hostname}:8000`;
+        };
 
+        const wsOrigin = getWsOrigin();
+        const wsUrl = `${wsOrigin}/ws/admin/health/?token=${token}`;
+
+        console.log("Connecting to System Health WS:", wsUrl);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {

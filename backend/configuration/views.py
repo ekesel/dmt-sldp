@@ -84,15 +84,19 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
         source = self.get_object()
         from etl.factory import ConnectorFactory
         
-        config = {
+        # Build config dict from source model
+        config = source.config_json or {}
+        config.update({
             'base_url': source.base_url,
             'api_token': source.api_key,
             'username': source.username,
-        }
+        })
         
-        connector = ConnectorFactory.get_connector(source.source_type, config)
-        if not connector:
-             return Response({'status': 'failed', 'message': 'Invalid source type'}, status=400)
+        connector_class = ConnectorFactory._registry.get(source.source_type)
+        if not connector_class:
+             return Response({'status': 'failed', 'message': f'Invalid source type: {source.source_type}'}, status=400)
+             
+        connector = connector_class(config)
 
         try:
             success = connector.test_connection()
@@ -106,6 +110,13 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def trigger_sync(self, request, pk=None):
         source = self.get_object()
-        # Placeholder for triggering ETL sync
-        # In Phase 2, this will trigger the Celery task
-        return Response({'status': 'success', 'message': f'Sync triggered for {source.name} (Mocked)'})
+        from .tasks import perform_sync_task
+        
+        # Trigger Celery task
+        task = perform_sync_task.delay(source.id)
+        
+        return Response({
+            'status': 'success', 
+            'message': f'Sync triggered for {source.name}',
+            'task_id': task.id
+        })

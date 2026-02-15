@@ -202,9 +202,14 @@ export interface Source {
 }
 
 export const sources = {
-  list: (projectId: string) => get<Source[]>('/admin/sources/', { project: projectId }),
-  discover: (sourceId: string) => post<{ detail?: string }>(`/admin/sources/${sourceId}/discover/`),
-  sync: (sourceId: string) => post<{ detail?: string }>(`/admin/sources/${sourceId}/sync/`),
+  list: (projectId: string | number) => get<Source[]>('/admin/sources/', { project_id: projectId }),
+  discover: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/discover/`),
+  sync: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/sync/`),
+  testConnection: (sourceId: string | number) => post<{ status: string; message: string }>(`/admin/sources/${sourceId}/test_connection/`),
+  triggerSync: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_sync/`),
+  delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/sources/${sourceId}/`),
+  create: (data: any) => post<Source, any>('/admin/sources/', data),
+  update: (sourceId: string | number, data: any) => patch<Source, any>(`/admin/sources/${sourceId}/`, data),
 };
 
 export interface HealthResponse {

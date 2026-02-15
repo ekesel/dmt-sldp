@@ -18,6 +18,7 @@ class AdminHealthConsumer(AsyncWebsocketConsumer):
     """
     async def connect(self):
         user = self.scope.get('user')
+        self.tenant_id = self.scope['url_route']['kwargs'].get('tenant_id')
         
         # Verify platform admin status (middleware populated scope['user'])
         if not user or not user.is_authenticated or not getattr(user, 'is_platform_admin', False):

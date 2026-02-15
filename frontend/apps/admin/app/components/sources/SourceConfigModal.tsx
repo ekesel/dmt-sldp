@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Badge } from '../UIComponents';
-import api from '@dmt/api';
+import { sources as sourcesApi } from '@dmt/api';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -17,9 +17,8 @@ interface SourceConfigModalProps {
 const SOURCE_TYPES = [
     { value: 'jira', label: 'Jira' },
     { value: 'clickup', label: 'ClickUp' },
-    { value: 'azure_boards', label: 'Azure Boards' },
+    { value: 'azure_devops', label: 'Azure DevOps' },
     { value: 'github', label: 'GitHub' },
-    { value: 'azure_devops_git', label: 'Azure DevOps Git' },
 ];
 
 export function SourceConfigModal({ isOpen, onClose, projectId, source, onSuccess }: SourceConfigModalProps) {
@@ -61,10 +60,10 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
             }
 
             if (source) {
-                await api.patch(`/admin/sources/${source.id}/`, payload);
+                await (sourcesApi as any).update(source.id, payload);
                 toast.success("Source updated successfully");
             } else {
-                await api.post('/admin/sources/', payload);
+                await (sourcesApi as any).create(payload);
                 toast.success("Source created successfully");
             }
             onSuccess();

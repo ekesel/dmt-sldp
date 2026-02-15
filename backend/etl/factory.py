@@ -1,12 +1,15 @@
 from typing import Optional, Dict, Any, Type
 from .base import BaseConnector
 from .connectors.jira import JiraConnector
+from .connectors.clickup import ClickupConnector
+from .connectors.ado import AzureDevOpsConnector
 
 class ConnectorFactory:
     _registry: Dict[str, Type[BaseConnector]] = {
         'jira': JiraConnector,
-        # 'clickup': ClickupConnector,
-        # 'azure_boards': AzureBoardsConnector,
+        'clickup': ClickupConnector,
+        'azure_devops': AzureDevOpsConnector,
+        # 'azure_boards': AzureDevOpsConnector, # Alias
     }
 
     @classmethod

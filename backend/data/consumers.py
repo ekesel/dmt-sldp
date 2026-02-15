@@ -21,7 +21,7 @@ class TelemetryConsumer(AsyncWebsocketConsumer):
 
         # 2. Hardening: In production, we'd verify user.tenant_matching logic here.
         # For now, we standardize the group name.
-        self.group_name = f'tenant_{self.tenant_id}'
+        self.group_name = f'telemetry_{self.tenant_id}'
 
         await self.channel_layer.group_add(
             self.group_name,
@@ -43,6 +43,12 @@ class TelemetryConsumer(AsyncWebsocketConsumer):
 
     async def telemetry_update(self, event):
         """
-        Handler for messages broadcasted to the group (e.g., from signals).
+        Handler for general telemetry messages.
         """
         await self.send(text_data=json.dumps(event['message']))
+
+    async def sync_progress(self, event):
+        """
+        Handler for sync progress updates (sent from Celery tasks).
+        """
+        await self.send(text_data=json.dumps(event))

@@ -2,19 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Settings, RefreshCw, Eye, AlertCircle, Plus, Loader2, Trash2 } from "lucide-react";
+import { Settings, RefreshCw, Eye, AlertCircle, Plus, Loader2, Trash2, Zap, ShieldCheck } from "lucide-react";
 import { DashboardLayout } from '../../../components/DashboardLayout';
 import { Badge } from '../../../components/UIComponents';
 import { SourceConfigModal } from '../../../components/sources/SourceConfigModal';
-import api from '@dmt/api';
+import SyncProgressModal from '../../../components/sources/SyncProgressModal';
+import { sources as sourcesApi, Source as ApiSource } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
 interface Source {
-    id: string;
+    id: number;
     name: string;
     source_type: string;
     last_sync_status: string;
     last_sync_at: string | null;
+    tenant_id?: string | number;
 }
 
 export default function SourceConfigPage() {
@@ -27,17 +29,21 @@ export default function SourceConfigPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
+    // Sync Progress Modal State
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [syncSource, setSyncSource] = useState<{ id: number, name: string, tenantId: string } | null>(null);
+
     useEffect(() => {
-        fetchSources();
+        if (projectId) {
+            fetchSources();
+        }
     }, [projectId]);
 
     const fetchSources = async () => {
         try {
             setIsLoading(true);
-            const res = await api.get('/admin/sources/', {
-                params: { project_id: projectId }
-            });
-            setSources(res.data as Source[]);
+            const data = await sourcesApi.list(projectId);
+            setSources(data as unknown as Source[]);
         } catch (error) {
             console.error(error);
             toast.error("Failed to fetch sources");
@@ -56,14 +62,42 @@ export default function SourceConfigPage() {
         setIsModalOpen(true);
     };
 
-    const handleDeleteSource = async (id: string) => {
+    const handleDeleteSource = async (id: number) => {
         if (!confirm("Are you sure you want to delete this source?")) return;
         try {
-            await api.delete(`/admin/sources/${id}/`);
+            await sourcesApi.delete(id);
             toast.success("Source deleted");
             fetchSources();
         } catch (error) {
             toast.error("Failed to delete source");
+        }
+    };
+
+    const handleTestConnection = async (id: number) => {
+        try {
+            toast.loading("Testing connection...", { id: 'test-conn' });
+            const res = await sourcesApi.testConnection(id);
+            if (res.status === 'success') {
+                toast.success("Connection Successful!", { id: 'test-conn' });
+            } else {
+                toast.error(res.message || "Connection Failed", { id: 'test-conn' });
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Connection Failed", { id: 'test-conn' });
+        }
+    };
+
+    const handleTriggerSync = async (source: Source) => {
+        setSyncSource({
+            id: source.id,
+            name: source.name,
+            tenantId: String(source.tenant_id || '1')
+        });
+        setIsSyncModalOpen(true);
+        try {
+            await sourcesApi.triggerSync(source.id);
+        } catch (err: any) {
+            toast.error(`Failed to trigger sync: ${err.message}`);
         }
     };
 
@@ -114,7 +148,7 @@ export default function SourceConfigPage() {
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
                                 <Settings className="w-12 h-12 text-slate-700 mx-auto mb-4" />
                                 <h3 className="text-lg font-medium text-white mb-2">No sources configured</h3>
-                                <p className="text-slate-500 mb-6">Connect Jira, GitHub or other tools to start analyzing data.</p>
+                                <p className="text-slate-500 mb-6">Connect ClickUp, Azure DevOps or other tools to start analyzing data.</p>
                                 <button
                                     onClick={handleAddSource}
                                     className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
@@ -124,7 +158,7 @@ export default function SourceConfigPage() {
                             </div>
                         ) : (
                             sources.map((s) => (
-                                <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center justify-between hover:border-slate-700 transition">
+                                <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between hover:border-slate-700 transition gap-4">
                                     <div className="flex items-center gap-6">
                                         <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center font-bold text-white uppercase text-xl">
                                             {s.source_type[0]}
@@ -135,11 +169,11 @@ export default function SourceConfigPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-12">
+                                    <div className="flex flex-wrap items-center gap-8">
                                         <div className="text-center">
-                                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Health</p>
+                                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Status</p>
                                             <Badge
-                                                label={s.last_sync_status}
+                                                label={s.last_sync_status || 'Never Synced'}
                                                 variant={getStatusColor(s.last_sync_status) as any}
                                             />
                                         </div>
@@ -151,15 +185,22 @@ export default function SourceConfigPage() {
                                         </div>
                                         <div className="flex gap-2">
                                             <button
-                                                onClick={() => router.push(`/projects/${projectId}/sources/${s.id}`)}
-                                                className="bg-slate-800 hover:bg-slate-700 p-2 rounded-lg text-slate-400 hover:text-white transition"
-                                                title="View Details"
+                                                onClick={() => handleTestConnection(s.id)}
+                                                className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 p-2 rounded-lg transition"
+                                                title="Test Connection"
                                             >
-                                                <Eye size={18} />
+                                                <ShieldCheck size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleTriggerSync(s)}
+                                                className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 p-2 rounded-lg transition"
+                                                title="Sync Now"
+                                            >
+                                                <Zap size={18} />
                                             </button>
                                             <button
                                                 onClick={() => handleEditSource(s)}
-                                                className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 p-2 rounded-lg transition"
+                                                className="bg-slate-800 hover:bg-slate-700 p-2 rounded-lg text-slate-400 hover:text-white transition"
                                                 title="Edit Config"
                                             >
                                                 <RefreshCw size={18} />
@@ -193,9 +234,22 @@ export default function SourceConfigPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 projectId={projectId}
-                source={selectedSource}
+                source={selectedSource as any}
                 onSuccess={fetchSources}
             />
+
+            {syncSource && (
+                <SyncProgressModal
+                    isOpen={isSyncModalOpen}
+                    onClose={() => {
+                        setIsSyncModalOpen(false);
+                        fetchSources();
+                    }}
+                    sourceId={syncSource.id}
+                    sourceName={syncSource.name}
+                    tenantId={syncSource.tenantId}
+                />
+            )}
         </DashboardLayout>
     );
 }
