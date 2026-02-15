@@ -5,6 +5,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import SessionMonitorProvider from "./SessionMonitorProvider";
 import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
             <TenantProvider autoLoad={true}>
               <ThemeProvider>
                 {children}
+                <Toaster position="top-right" />
               </ThemeProvider>
             </TenantProvider>
           </SessionMonitorProvider>

@@ -259,3 +259,91 @@ class SystemSettingsView(APIView):
         settings = SystemSetting.objects.all()
         data = {s.name: s.value for s in settings}
         return Response(data)
+
+
+class ServiceDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+
+    def get(self, request, service_name):
+        # Mock detailed data for now. In a real application, you would connect to
+        # the service's monitoring endpoint or retrieve metrics from a Prometheus/Grafana instance.
+        
+        # Base details available for all services
+        details = {
+            'name': service_name,
+            'status': 'up',  # This should ideally be dynamically checked
+            'version': '1.2.0',
+            'uptime': '3d 12h 15m',
+            'last_check': datetime.datetime.now().isoformat(),
+            'logs': [
+                {'timestamp': (datetime.datetime.now() - datetime.timedelta(minutes=5)).isoformat(), 'level': 'INFO', 'message': f'{service_name} service health check initiated.'},
+                {'timestamp': (datetime.datetime.now() - datetime.timedelta(minutes=2)).isoformat(), 'level': 'INFO', 'message': 'Processing incoming request #10234.'},
+                {'timestamp': datetime.datetime.now().isoformat(), 'level': 'INFO', 'message': 'Health check completed: OK.'},
+            ]
+        }
+        
+        # Service-specific metrics
+        if service_name == 'database':
+            details.update({
+                'active_connections': 42,
+                'queries_per_second': 125,
+                'buffer_hit_ratio': '99.5%',
+                'replication_lag': '0ms'
+            })
+        elif service_name == 'redis':
+            details.update({
+                'connected_clients': 15,
+                'used_memory': '128MB',
+                'hits': 4500,
+                'misses': 120,
+                'hit_rate': '97.4%'
+            })
+        elif service_name == 'celery':
+            details.update({
+                'active_workers': 4,
+                'active_tasks': 2,
+                'queued_tasks': 0,
+                'processed_tasks_total': 15420
+            })
+        elif service_name == 'api_gateway':
+            details.update({
+                'requests_per_second': 45,
+                'average_latency': '45ms',
+                'error_rate': '0.01%',
+                'active_sessions': 120
+            })
+            
+        return Response(details)
+
+
+class ServiceRestartView(APIView):
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+
+    def post(self, request, service_name):
+        # Mock restart process.
+        # In a real production environment, this would likely trigger an Infrastructure-as-Code pipeline,
+        # a specialized Celery task interacting with Kubernetes/Docker API, or a system command.
+        
+        # Log the action
+        import logging
+        logger = logging.getLogger(__name__)
+        if request.user:
+            logger.info(f"Service restart initiated for {service_name} by {request.user.username}")
+            
+        # Notify admins via notification system
+        try:
+            from notifications.models import Notification
+            Notification.objects.create(
+                user=request.user,
+                message=f"Service restart initiated for: {service_name}",
+                notification_type='warning'
+            )
+        except Exception as e:
+            logger.error(f"Failed to create notification: {e}")
+            
+        # Simulate a successful restart initiation
+        return Response({
+            'status': 'restart_initiated', 
+            'message': f'Restart sequence for {service_name} has been initiated.',
+            'estimated_time': '30s'
+        })

@@ -5,6 +5,7 @@ import { Activity, BarChart3, AlertTriangle, RefreshCcw, Wifi, WifiOff } from 'l
 import { Badge } from '../components/UIComponents';
 import { health as apiHealth } from '@dmt/api';
 import { toast } from 'react-hot-toast';
+import { ServiceDetailsModal } from './ServiceDetailsModal';
 
 interface ServiceStatus {
     [key: string]: 'up' | 'down' | 'degraded';
@@ -25,6 +26,7 @@ export default function SystemStatusPage() {
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [wsConnected, setWsConnected] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [selectedService, setSelectedService] = useState<string | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -262,7 +264,11 @@ export default function SystemStatusPage() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                                         {Object.entries(healthData.services || {}).map(([name, status]) => (
-                                            <tr key={name} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                                            <tr
+                                                key={name}
+                                                onClick={() => setSelectedService(name)}
+                                                className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer"
+                                            >
                                                 <td className="px-6 py-4 font-medium text-slate-800 dark:text-white capitalize">
                                                     {formatServiceName(name)}
                                                 </td>
@@ -282,6 +288,14 @@ export default function SystemStatusPage() {
                             </div>
                         </div>
                     </>
+                )}
+
+                {selectedService && (
+                    <ServiceDetailsModal
+                        isOpen={!!selectedService}
+                        onClose={() => setSelectedService(null)}
+                        serviceName={selectedService}
+                    />
                 )}
             </div>
         </DashboardLayout>
