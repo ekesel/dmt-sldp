@@ -1,8 +1,10 @@
 from celery import shared_task
 from django.utils import timezone
 from django.db import connection
-from .models import Integration, Sprint, WorkItem, PullRequest, PullRequestStatus, TaskLog
+from .models import Sprint, WorkItem, PullRequest, PullRequestStatus, TaskLog
+from configuration.models import SourceConfiguration
 from users.services import IdentityService
+# Using legacy connectors factory for now as it has full logic
 from .connectors.factory import ConnectorFactory
 from .signals import data_sync_completed
 from core.telemetry.models import DataSyncPayload
@@ -10,25 +12,25 @@ from core.celery_utils import tenant_aware_task
 
 @shared_task
 @tenant_aware_task
-def sync_tenant_data(integration_id, schema_name=None):
-    """Sync data for a specific integration."""
+def sync_tenant_data(source_id, schema_name=None):
+    """Sync data for a specific source configuration."""
     start_time = timezone.now()
     log = TaskLog.objects.create(
         task_name="sync_tenant_data",
-        target_id=str(integration_id),
+        target_id=str(source_id),
         status='running'
     )
     
     try:
-        integration = Integration.objects.get(id=integration_id, is_active=True)
-    except Integration.DoesNotExist:
+        source = SourceConfiguration.objects.get(id=source_id, is_active=True)
+    except SourceConfiguration.DoesNotExist:
         log.status = 'failed'
-        log.error_message = f"Integration {integration_id} not found or inactive."
+        log.error_message = f"Source {source_id} not found or inactive."
         log.save()
         return log.error_message
 
     try:
-        connector = ConnectorFactory.get_connector(integration)
+        connector = ConnectorFactory.get_connector(source)
         
         # Proactively refresh token if needed (e.g., for Jira OAuth2)
         if hasattr(connector, 'refresh_access_token'):
@@ -49,16 +51,16 @@ def sync_tenant_data(integration_id, schema_name=None):
         from .engine.compliance import ComplianceEngine
         engine = ComplianceEngine()
         
-        work_items_data = connector.fetch_work_items(last_sync=integration.last_sync_at)
+        work_items_data = connector.fetch_work_items(last_sync=source.last_sync_at)
         for wi_data in work_items_data:
             # Simple mapping for demonstration
             # Resolve platform user
-            resolved_user = IdentityService.resolve_user(integration.source_type, wi_data.get('assignee_email'))
+            resolved_user = IdentityService.resolve_user(source.source_type, wi_data.get('assignee_email'))
             
             work_item, created = WorkItem.objects.update_or_create(
                 external_id=wi_data['id'],
                 defaults={
-                    'integration': integration,
+                    'source_config_id': source.id,
                     'title': wi_data['title'],
                     'description': wi_data.get('description', ''),
                     'type': wi_data.get('type', 'task'),
@@ -78,70 +80,72 @@ def sync_tenant_data(integration_id, schema_name=None):
         # ID patterns: [JIRA-123], JIRA-123, #123 (mapped to external_id)
         ID_PATTERN = re.compile(r'([A-Z]+-\d+|#\d+)', re.IGNORECASE)
         
-        prs_data = connector.fetch_pull_requests()
-        for pr_data in prs_data:
-            # Find matching WorkItem
-            work_item = None
-            match = ID_PATTERN.search(pr_data['title']) or ID_PATTERN.search(pr_data['source_branch'])
-            if match:
-                item_id = match.group(1).replace('#', '').upper()
-                work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
-
-            # Resolve platform user for PR
-            resolved_author = IdentityService.resolve_user('github', pr_data.get('author_email'))
-            
-            pr, pr_created = PullRequest.objects.update_or_create(
-                external_id=pr_data['id'],
-                defaults={
-                    'integration': integration,
-                    'work_item': work_item,
-                    'title': pr_data['title'],
-                    'author_email': pr_data['author_email'],
-                    'resolved_author': resolved_author,
-                    'status': pr_data['status'],
-                    'repository_name': pr_data['repository_name'],
-                    'source_branch': pr_data['source_branch'],
-                    'target_branch': pr_data['target_branch'],
-                    'created_at': pr_data['created_at'],
-                    'updated_at': pr_data['updated_at'],
-                    'merged_at': pr_data.get('merged_at'),
-                }
-            )
-
-            # NEW: Sync Status Checks for active PRs
-            if pr.status == 'open' and hasattr(connector, 'fetch_status_checks'):
-                checks = connector.fetch_status_checks(pr.external_id)
-                for check in checks:
-                    PullRequestStatus.objects.update_or_create(
-                        pull_request=pr,
-                        name=check['name'],
-                        defaults={
-                            'state': check['state'],
-                            'target_url': check.get('target_url'),
-                            'description': check.get('description'),
-                        }
-                    )
-            
-            # Recalculate compliance for linked WorkItem if PR status/checks changed
-            if work_item:
-                engine.check_compliance(work_item)
+        # Only fetch PRs if connector supports it
+        if hasattr(connector, 'fetch_pull_requests'):
+            prs_data = connector.fetch_pull_requests()
+            for pr_data in prs_data:
+                # Find matching WorkItem
+                work_item = None
+                match = ID_PATTERN.search(pr_data['title']) or ID_PATTERN.search(pr_data['source_branch'])
+                if match:
+                    item_id = match.group(1).replace('#', '').upper()
+                    work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
+    
+                # Resolve platform user for PR
+                resolved_author = IdentityService.resolve_user('github', pr_data.get('author_email'))
+                
+                pr, pr_created = PullRequest.objects.update_or_create(
+                    external_id=pr_data['id'],
+                    defaults={
+                        'source_config_id': source.id,
+                        'work_item': work_item,
+                        'title': pr_data['title'],
+                        'author_email': pr_data['author_email'],
+                        'resolved_author': resolved_author,
+                        'status': pr_data['status'],
+                        'repository_name': pr_data['repository_name'],
+                        'source_branch': pr_data['source_branch'],
+                        'target_branch': pr_data['target_branch'],
+                        'created_at': pr_data['created_at'],
+                        'updated_at': pr_data['updated_at'],
+                        'merged_at': pr_data.get('merged_at'),
+                    }
+                )
+    
+                # NEW: Sync Status Checks for active PRs
+                if pr.status == 'open' and hasattr(connector, 'fetch_status_checks'):
+                    checks = connector.fetch_status_checks(pr.external_id)
+                    for check in checks:
+                        PullRequestStatus.objects.update_or_create(
+                            pull_request=pr,
+                            name=check['name'],
+                            defaults={
+                                'state': check['state'],
+                                'target_url': check.get('target_url'),
+                                'description': check.get('description'),
+                            }
+                        )
+                
+                # Recalculate compliance for linked WorkItem if PR status/checks changed
+                if work_item:
+                    engine.check_compliance(work_item)
 
         # Update last sync timestamp
-        integration.last_sync_at = timezone.now()
-        integration.save()
+        source.last_sync_at = timezone.now()
+        source.save()
         
         # Signal completion with typed payload
         data_sync_completed.send(
             sender=sync_tenant_data,
             payload=DataSyncPayload(
-                integration_id=integration.id,
+                integration_id=source.id,
                 schema_name=connection.schema_name,
                 status='success'
             )
         )
         
         log.status = 'success'
-        return f"Successfully synced {integration.name}"
+        return f"Successfully synced {source.name}"
         
     except Exception as e:
         # Signal failure with typed payload
@@ -164,21 +168,22 @@ def sync_tenant_data(integration_id, schema_name=None):
 
 @shared_task
 def run_all_integrations_sync():
-    """Trigger sync for all active integrations across all tenants."""
-    from tenants.models import Tenant
-    from django_tenants.utils import schema_context
+    """Trigger sync for all active sources across all tenants."""
+    from configuration.models import SourceConfiguration
     
-    tenants = Tenant.objects.exclude(schema_name='public')
+    # Fetch all active sources with their tenants
+    active_sources = SourceConfiguration.objects.filter(is_active=True).select_related('project__tenant')
     total_triggered = 0
     
-    for tenant in tenants:
-        with schema_context(tenant.schema_name):
-            active_integrations = Integration.objects.filter(is_active=True)
-            for integration in active_integrations:
-                sync_tenant_data.delay(integration.id, schema_name=tenant.schema_name)
-                total_triggered += 1
+    for source in active_sources:
+        tenant_schema = source.project.tenant.schema_name
+        if tenant_schema == 'public':
+            continue 
+            
+        sync_tenant_data.delay(source.id, schema_name=tenant_schema)
+        total_triggered += 1
                 
-    return f"Triggered sync for {total_triggered} integrations across {tenants.count()} tenants"
+    return f"Triggered sync for {total_triggered} sources"
 
 @shared_task
 def run_retention_cleanup():

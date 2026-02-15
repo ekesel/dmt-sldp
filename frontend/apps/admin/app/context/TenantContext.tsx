@@ -173,17 +173,8 @@ export function TenantProvider({ children, autoLoad = false }: TenantProviderPro
   const switchTenant = useCallback(
     async (tenantId: string) => {
       const normalized = normalizeTenantId(tenantId);
-      if (!normalized) return;
 
-      const exists = availableTenants.some(
-        (t) => normalizeTenantId(t.id) === normalized
-      );
-
-      if (!exists) {
-        setError('Selected tenant is not accessible for this user.');
-        return;
-      }
-
+      // If normalized is empty string, we allow it (represents Global View)
       setError(null);
       setCurrentTenantId(normalized);
       persistTenant(normalized);

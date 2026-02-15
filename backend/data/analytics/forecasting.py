@@ -11,7 +11,7 @@ class ForecastingService:
         Calculates cycle times (in days) for the last N resolved work items.
         """
         items = WorkItem.objects.filter(
-            integration_id=integration_id,
+            source_config_id=integration_id,
             resolved_at__isnull=False,
             created_at__isnull=False
         ).order_by('-resolved_at')[:limit]

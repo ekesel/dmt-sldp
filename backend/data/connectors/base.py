@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 
 class BaseConnector(ABC):
-    def __init__(self, integration):
-        self.integration = integration
+    def __init__(self, source_config):
+        self.integration = source_config # Alias for backward compatibility in connectors
+        self.source = source_config
         self.config = {
-            'base_url': integration.base_url,
-            'api_key': integration.api_key,
-            'workspace_id': integration.workspace_id,
-            'credentials': integration.credentials,
+            'base_url': source_config.base_url,
+            'api_key': source_config.api_key,
+            'workspace_id': source_config.workspace_id,
+            'credentials': source_config.config_json.get('credentials', {}),
         }
 
     @abstractmethod

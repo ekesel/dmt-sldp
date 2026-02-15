@@ -14,6 +14,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 # Application definition
 SHARED_APPS = [
     'daphne',
+    'core',
     'django_tenants',
     'tenants.apps.TenantsConfig',
     'users',
@@ -27,6 +28,7 @@ SHARED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'channels',
+    'configuration',
 ]
 
 TENANT_APPS = [
@@ -45,6 +47,7 @@ TENANT_DOMAIN_MODEL = "tenants.Domain"
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django_tenants.middleware.main.TenantMainMiddleware',
+    'core.middleware.TenantHeaderMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

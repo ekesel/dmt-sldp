@@ -36,3 +36,34 @@ class JWTAuthMiddleware(BaseMiddleware):
             scope['user'] = AnonymousUser()
 
         return await super().__call__(scope, receive, send)
+
+class TenantHeaderMiddleware(BaseMiddleware):
+    """
+    Middleware to handle tenant context switching based on X-Tenant header.
+    Expects header 'X-Tenant: <tenant_id>'
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django_tenants.utils import schema_context
+        from tenants.models import Tenant
+
+        tenant_id = request.headers.get('X-Tenant')
+        
+        if tenant_id:
+            try:
+                # We need to find the tenant to get its schema_name
+                # This assumes Tenant model has 'schema_name' or we can derive it
+                # For django-tenants, the model itself holds the schema info
+                tenant = Tenant.objects.get(id=tenant_id)
+                with schema_context(tenant.schema_name):
+                    return self.get_response(request)
+            except Tenant.DoesNotExist:
+                # If tenant doesn't exist, we just proceed with public schema (or default)
+                # potentially logging a warning
+                pass
+            except Exception as e:
+                print(f"Error switching tenant context: {e}")
+
+        return self.get_response(request)

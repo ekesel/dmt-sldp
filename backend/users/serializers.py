@@ -10,7 +10,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_platform_admin', 'is_staff', 'is_superuser', 'is_active', 'date_joined']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'tenant', 'is_platform_admin', 'is_staff', 'is_superuser', 'is_active', 'date_joined']
         read_only_fields = ['id']
 
 
@@ -30,10 +30,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'password', 'password2')
+        fields = ('username', 'email', 'first_name', 'last_name', 'password', 'password2', 'tenant')
         extra_kwargs = {
             'first_name': {'required': False},
             'last_name': {'required': False},
+            'tenant': {'required': False},
         }
 
     def validate(self, attrs):

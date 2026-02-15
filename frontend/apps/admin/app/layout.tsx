@@ -23,7 +23,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <SessionMonitorProvider>
-            <TenantProvider autoLoad={false}>
+            <TenantProvider autoLoad={true}>
               <ThemeProvider>
                 {children}
               </ThemeProvider>

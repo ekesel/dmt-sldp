@@ -41,7 +41,7 @@ class MetricService:
         total_items = WorkItem.objects.count()
         compliant_items = WorkItem.objects.filter(is_compliant=True).count()
         
-        latest_insight = AIInsight.objects.filter(integration__isnull=False).first()
+        latest_insight = AIInsight.objects.filter(source_config_id__isnull=False).first()
         
         return {
             'compliance_rate': (compliant_items / total_items * 100) if total_items > 0 else 0,

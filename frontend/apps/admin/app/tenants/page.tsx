@@ -196,25 +196,22 @@ export default function TenantsPage() {
                           <div className="relative flex justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => handleOpenTenant(tenant)}
+                              onClick={() => handleEditTenant(tenant.id)}
                               disabled={isBusy}
-                              className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-slate-300 disabled:opacity-50"
-                              title="Open tenant"
+                              className="p-2 hover:bg-slate-800 rounded-lg transition text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                              title="Manage Tenant"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <Pencil className="w-4 h-4" />
                             </button>
 
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuTenantId((prev) => (prev === tenant.id ? null : tenant.id));
-                              }}
+                              onClick={() => handleOpenTenant(tenant)}
                               disabled={isBusy}
                               className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-slate-300 disabled:opacity-50"
-                              title="More actions"
+                              title="Open Client Portal"
                             >
-                              <MoreVertical className="w-4 h-4" />
+                              <ExternalLink className="w-4 h-4" />
                             </button>
 
                             {isMenuOpen && (

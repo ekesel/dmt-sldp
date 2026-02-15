@@ -8,9 +8,10 @@ interface UserCreateModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    tenantId?: string | number;
 }
 
-export function UserCreateModal({ isOpen, onClose, onSuccess }: UserCreateModalProps) {
+export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCreateModalProps) {
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -39,7 +40,8 @@ export function UserCreateModal({ isOpen, onClose, onSuccess }: UserCreateModalP
 
             await usersApi.create({
                 ...formData,
-                ...roleFlags
+                ...roleFlags,
+                ...(tenantId ? { tenant: tenantId } : {})
             });
             onSuccess?.();
             onClose();

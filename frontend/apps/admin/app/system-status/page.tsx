@@ -69,10 +69,9 @@ export default function SystemStatusPage() {
         }
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host; // Use current host (e.g. localhost:3001) but mocked to port 8000 for now if dev
-        // In real prod, this should use env var or relative path if proxied
-        const baseUrl = process.env.NEXT_PUBLIC_WS_URL || `ws://localhost:8000/ws/admin/health/`;
-        const wsUrl = `${baseUrl}?token=${token}`;
+        // Use environment variable if provided, otherwise fallback to port 8000 on current hostname
+        const baseUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.hostname}:8000/ws/admin/health/`;
+        const wsUrl = `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?token=${token}`;
 
         const ws = new WebSocket(wsUrl);
 
@@ -84,7 +83,15 @@ export default function SystemStatusPage() {
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                if (message.type === 'initial_state' || message.type === 'health_update') {
+                if (message.type === 'initial_state') {
+                    // Initial state has health nested, and other stats
+                    if (message.data.health) {
+                        setHealthData(message.data.health);
+                    }
+                    setLastUpdated(new Date());
+                    setLoading(false);
+                } else if (message.type === 'health_update') {
+                    // Periodic updates are flat health stats
                     setHealthData(message.data);
                     setLastUpdated(new Date());
                     setLoading(false);
@@ -262,7 +269,7 @@ export default function SystemStatusPage() {
                                                 <td className="px-6 py-4">
                                                     <Badge
                                                         label={status === 'up' ? 'Operational' : 'Down'}
-                                                        variant={status === 'up' ? 'success' : 'danger'}
+                                                        variant={status === 'up' ? 'success' : 'error'}
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">

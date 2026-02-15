@@ -2,26 +2,27 @@ from celery import shared_task
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Avg, F, Count
-from ..models import Integration, AIInsight, WorkItem
+from ..models import AIInsight, WorkItem
+from configuration.models import SourceConfiguration
 from .service import GeminiAIProvider
 from core.celery_utils import tenant_aware_task
 
 @shared_task(queue='ai_insights')
 @tenant_aware_task
-def refresh_ai_insights(integration_id, schema_name=None):
+def refresh_ai_insights(source_id, schema_name=None):
     """
-    Refreshes AI insights for a specific integration using Google Gemini.
+    Refreshes AI insights for a specific source using Google Gemini.
     """
     try:
-        integration = Integration.objects.get(id=integration_id)
-    except Integration.DoesNotExist:
-        return f"Integration {integration_id} not found."
+        source = SourceConfiguration.objects.get(id=source_id)
+    except SourceConfiguration.DoesNotExist:
+        return f"Source {source_id} not found."
 
     # 1. Aggregate real metrics
-    work_items = WorkItem.objects.filter(integration=integration)
+    work_items = WorkItem.objects.filter(source_config_id=source.id)
     total_count = work_items.count()
     if total_count == 0:
-        return f"No work items found for {integration.name}. Skipping AI insight."
+        return f"No work items found for {source.name}. Skipping AI insight."
 
     compliant_count = work_items.filter(is_compliant=True).count()
     compliance_rate = (compliant_count / total_count) * 100
@@ -61,10 +62,10 @@ def refresh_ai_insights(integration_id, schema_name=None):
 
     # 3. Store result
     insight = AIInsight.objects.create(
-        integration=integration,
+        source_config_id=source.id,
         summary=response_data.get("summary", ""),
         suggestions=response_data.get("suggestions", []),
         forecast=response_data.get("forecast", "")
     )
     
-    return f"AI Insight generated for {integration.name} (ID: {insight.id})"
+    return f"AI Insight generated for {source.name} (ID: {insight.id})"

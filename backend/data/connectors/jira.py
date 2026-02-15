@@ -24,13 +24,13 @@ class JiraConnector(BaseConnector):
         Refresh the OAuth2 access token using the refresh token.
         Reference: https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-google-tutorial/
         """
-        creds = self.integration.credentials
+        creds = self.source.config_json.get('credentials', {})
         refresh_token = creds.get('refresh_token')
         client_id = creds.get('client_id')
         client_secret = creds.get('client_secret')
 
         if not refresh_token or not client_id:
-            logger.error(f"Missing OAuth2 refresh credentials for {self.integration}")
+            logger.error(f"Missing OAuth2 refresh credentials for {self.source}")
             return False
 
         token_url = "https://auth.atlassian.com/oauth/token"
@@ -51,12 +51,15 @@ class JiraConnector(BaseConnector):
             creds['refresh_token'] = data.get('refresh_token', refresh_token) # Might provide new refresh token
             creds['expires_at'] = (timezone.now() + timezone.timedelta(seconds=data['expires_in'])).isoformat()
             
-            self.integration.credentials = creds
-            self.integration.save()
+            # Save back to config_json
+            if 'credentials' not in self.source.config_json:
+                self.source.config_json['credentials'] = {}
+            self.source.config_json['credentials'] = creds
+            self.source.save()
             
             # Update local config for the current instance
             self.config['credentials'] = creds
-            logger.info(f"Successfully refreshed Jira OAuth2 token for {self.integration}")
+            logger.info(f"Successfully refreshed Jira OAuth2 token for {self.source}")
             return True
         except Exception as e:
             logger.error(f"Failed to refresh Jira OAuth2 token: {e}")

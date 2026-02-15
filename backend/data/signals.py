@@ -3,7 +3,8 @@ from django.dispatch import receiver, Signal
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import connection
-from .models import WorkItem, AIInsight, Integration, Notification
+from .models import WorkItem, AIInsight, Notification
+
 from tenants.models import AuditLog
 
 # Custom signals
@@ -84,24 +85,6 @@ def trigger_ai_refresh(sender, payload, **kwargs):
         schema_name=payload.schema_name
     )
 
-@receiver(post_save, sender=Integration)
-def audit_log_integration(sender, instance, created, **kwargs):
-    """
-    Logs integration changes to AuditLog.
-    """
-    action = 'create' if created else 'update'
-    from tenants.models import Tenant
-    try:
-        tenant = Tenant.objects.get(schema_name=connection.schema_name)
-        AuditLog.objects.create(
-            tenant=tenant,
-            action=action,
-            entity_type='Integration',
-            entity_id=str(instance.id),
-            new_values={'name': instance.name, 'source_type': instance.source_type}
-        )
-    except Exception:
-        pass # Fail silently for audit logs in MVP to avoid blocking main flow
 
 @receiver(post_save, sender=WorkItem)
 def notify_compliance_issue(sender, instance, **kwargs):

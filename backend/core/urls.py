@@ -2,15 +2,18 @@ from django.contrib import admin
 # Trigger reload
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from data.views import MetricDashboardView, ForecastView, AIInsightFeedbackView, IntegrationViewSet
+from data.views import MetricDashboardView, ForecastView, AIInsightFeedbackView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView
 from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet
 from rest_framework.routers import DefaultRouter
 
+from configuration.views import ProjectViewSet, SourceConfigurationViewSet
+
 router = DefaultRouter()
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
 router.register(r'admin/users', UserViewSet, basename='users')
-router.register(r'admin/integrations', IntegrationViewSet, basename='integrations')
+router.register(r'admin/projects', ProjectViewSet, basename='projects')
+router.register(r'admin/sources', SourceConfigurationViewSet, basename='source_configurations')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

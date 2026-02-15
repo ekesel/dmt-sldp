@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useCurrentTenant } from '../context/TenantContext';
 import {
     LayoutDashboard,
     Building2,
@@ -10,6 +11,7 @@ import {
     Users,
     Shield,
     ActivitySquare,
+    FolderKanban,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,7 +19,14 @@ interface SidebarProps {
     onClose?: () => void;
 }
 
-const menuItems = [
+interface MenuItem {
+    icon: any;
+    label: string;
+    href: string;
+    section?: string;
+}
+
+const menuItems: MenuItem[] = [
     {
         icon: LayoutDashboard,
         label: 'Dashboard',
@@ -52,6 +61,50 @@ const menuItems = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
+    const router = useRouter();
+    const { currentTenantId } = useCurrentTenant();
+
+    // Debugging Sidebar
+    console.log('Sidebar Pathname:', pathname);
+    console.log('Current Tenant ID (Context):', currentTenantId);
+
+    // Dynamic Navigation Logic
+    const tenantMatch = pathname?.match(/\/tenants\/([^\/]+)/);
+    const urlTenantId = tenantMatch ? tenantMatch[1] : null;
+
+    // Determine active tenant ID: URL context takes priority, fallback to context
+    const activeTenantId = (urlTenantId && urlTenantId !== 'new') ? urlTenantId : currentTenantId;
+
+    // Check if we are actually on a tenant-specific page
+    const isOnTenantPage = !!urlTenantId && urlTenantId !== 'new';
+
+    const projectMatch = pathname?.match(/\/projects\/([^\/]+)/);
+    const projectId = projectMatch ? projectMatch[1] : null;
+
+    const dynamicItems = [];
+
+    // If we have an active tenant, add "Projects" link
+    if (activeTenantId && activeTenantId !== 'new') {
+        dynamicItems.push({
+            icon: FolderKanban,
+            label: 'Projects',
+            href: `/tenants/${activeTenantId}/projects`,
+            section: 'Tenant'
+        });
+    }
+
+    // If inside a project context, add "Methods" (Sources) link
+    if (projectId) {
+        // We might want to link back to the parent tenant projects too, but for now just add Sources
+        dynamicItems.push({
+            icon: Settings,
+            label: 'Methods',
+            href: `/projects/${projectId}/sources`,
+            section: 'Project'
+        });
+    }
+
+    const allItems = [...menuItems, ...dynamicItems];
 
     return (
         <>
@@ -65,12 +118,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-slate-900/80 border-r border-slate-800 backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${
-                    isOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-slate-900/80 border-r border-slate-800 backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
             >
                 <nav className="p-4 space-y-2">
-                    {menuItems.map((item) => {
+                    {allItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || pathname === item.href + '/';
 
@@ -79,15 +131,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 key={item.href}
                                 href={item.href}
                                 onClick={onClose}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                                    isActive
-                                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                        : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                                    }`}
                             >
                                 <Icon className="w-5 h-5 flex-shrink-0" />
                                 <span className="font-medium">{item.label}</span>
-                                {isActive && (
+                                {item.section && (
+                                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-semibold ${isActive ? 'bg-blue-500/30 text-blue-300' : 'bg-slate-800 text-slate-500'
+                                        }`}>
+                                        {item.section}
+                                    </span>
+                                )}
+                                {!item.section && isActive && (
                                     <div className="ml-auto w-2 h-2 bg-blue-400 rounded-full" />
                                 )}
                             </Link>

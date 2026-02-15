@@ -141,6 +141,23 @@ export default function TenantDetailsPage() {
                             </div>
                         </div>
 
+                        {/* Projects Section */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-medium text-white">Projects</h2>
+                                    <p className="text-sm text-slate-400">Manage projects associated with this tenant.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => router.push(`/tenants/${id}/projects`)}
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition"
+                                >
+                                    Manage Projects
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-3">
                             <button
                                 type="button"

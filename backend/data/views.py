@@ -59,33 +59,4 @@ class AIInsightFeedbackView(APIView):
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from .models import Integration
-from .serializers import IntegrationSerializer
 import asyncio
-
-class IntegrationViewSet(viewsets.ModelViewSet):
-    queryset = Integration.objects.all()
-    serializer_class = IntegrationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save()
-
-    @action(detail=True, methods=['post'], url_path='test/connection')
-    def test_connection(self, request, pk=None):
-        integration = self.get_object()
-        # Mock connection test for now
-        # In real implementation, this would use the integration's credentials to ping the external API
-        import time
-        time.sleep(1) # Simulate network delay
-        
-        if integration.is_active:
-             return Response({"status": "success", "message": f"Successfully connected to {integration.name}"})
-        else:
-             return Response({"status": "error", "message": "Integration is inactive"}, status=400)
-
-    @action(detail=True, methods=['post'])
-    def sync(self, request, pk=None):
-        integration = self.get_object()
-        # Trigger sync task (mocked)
-        return Response({"status": "success", "message": f"Sync started for {integration.name}"})

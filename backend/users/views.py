@@ -15,10 +15,40 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing users from the admin portal.
     """
-    queryset = User.objects.all().order_by('-id')
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
-    # In a real app, you'd add IsPlatformAdmin here too
+
+    def get_queryset(self):
+        user = self.request.user
+        tenant = getattr(user, 'tenant', None)
+        is_platform_admin = getattr(user, 'is_platform_admin', False)
+
+        # 1. Base filtering by user's own tenant (if not platform admin)
+        if is_platform_admin:
+            queryset = User.objects.all().order_by('-id')
+        elif tenant:
+            queryset = User.objects.filter(tenant=tenant).order_by('-id')
+        else:
+            return User.objects.none()
+
+        # 2. Optional target tenant filtering (for platform admins switching views)
+        target_tenant = self.request.query_params.get('tenant_id') or self.request.query_params.get('tenant')
+        if target_tenant:
+             # Ensure user has access: either platform admin or it's their own tenant
+             if is_platform_admin or (tenant and str(tenant.id) == str(target_tenant)):
+                queryset = queryset.filter(tenant_id=target_tenant)
+             else:
+                return User.objects.none()
+        
+        return queryset
+
+    def perform_create(self, serializer):
+        # Auto-assign tenant if not provided (and user belongs to one)
+        user_tenant = getattr(self.request.user, 'tenant', None)
+        if not serializer.validated_data.get('tenant') and user_tenant:
+             serializer.save(tenant=user_tenant)
+        else:
+             serializer.save()
 
 
 class RegisterView(APIView):

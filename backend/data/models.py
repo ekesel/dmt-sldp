@@ -15,30 +15,6 @@ class SoftDeleteMixin(models.Model):
     def hard_delete(self):
         super().delete()
 
-class Integration(SoftDeleteMixin, models.Model):
-    SOURCE_TYPES = (
-        ('jira', 'Jira'),
-        ('clickup', 'ClickUp'),
-        ('azure_boards', 'Azure Boards'),
-        ('github', 'GitHub'),
-        ('azure_devops', 'Azure DevOps'),
-    )
-    
-    name = models.CharField(max_length=100)
-    source_type = models.CharField(max_length=20, choices=SOURCE_TYPES)
-    base_url = models.URLField()
-    api_key = models.CharField(max_length=255, help_text="Encrypted or stored safely in production")
-    workspace_id = models.CharField(max_length=100, blank=True, null=True)
-    credentials = models.JSONField(default=dict, blank=True)
-    
-    is_active = models.BooleanField(default=True)
-    last_sync_at = models.DateTimeField(null=True, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.name} ({self.source_type})"
 
 class Sprint(SoftDeleteMixin, models.Model):
     external_id = models.CharField(max_length=100, unique=True)
@@ -54,7 +30,7 @@ class Sprint(SoftDeleteMixin, models.Model):
 
 class WorkItem(SoftDeleteMixin, models.Model):
     external_id = models.CharField(max_length=100, unique=True)
-    integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='work_items')
+    source_config_id = models.IntegerField(db_index=True) # ID of SourceConfiguration in public schema
     sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
     
     title = models.CharField(max_length=500)
@@ -80,7 +56,7 @@ class WorkItem(SoftDeleteMixin, models.Model):
 
 class PullRequest(models.Model):
     external_id = models.CharField(max_length=100, unique=True)
-    integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='pull_requests')
+    source_config_id = models.IntegerField(db_index=True)
     work_item = models.ForeignKey(WorkItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='pull_requests')
     
     title = models.CharField(max_length=500)
@@ -112,7 +88,7 @@ class PullRequestStatus(models.Model):
         return f"{self.pull_request} - {self.name}: {self.state}"
 
 class AIInsight(models.Model):
-    integration = models.ForeignKey(Integration, on_delete=models.CASCADE, related_name='ai_insights')
+    source_config_id = models.IntegerField(db_index=True)
     summary = models.TextField()
     suggestions = models.JSONField()  # List of {title, impact, description}
     forecast = models.TextField(null=True, blank=True)
@@ -122,7 +98,7 @@ class AIInsight(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"AI Insight for {self.integration} at {self.created_at}"
+        return f"AI Insight for Config #{self.source_config_id} at {self.created_at}"
 
 
 class TaskLog(models.Model):
