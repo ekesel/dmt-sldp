@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "./auth/AuthContext";
 import SessionMonitorProvider from "./SessionMonitorProvider";
 import { TenantProvider } from "./context/TenantContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +24,9 @@ export default function RootLayout({
         <AuthProvider>
           <SessionMonitorProvider>
             <TenantProvider autoLoad={false}>
+              <ThemeProvider>
                 {children}
+              </ThemeProvider>
             </TenantProvider>
           </SessionMonitorProvider>
         </AuthProvider>

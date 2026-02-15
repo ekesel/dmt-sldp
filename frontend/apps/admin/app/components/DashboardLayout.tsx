@@ -13,7 +13,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
     return (
         <ProtectedRoute>
-            <div className="flex flex-col h-screen bg-brand-dark">
+            <div className="flex flex-col h-screen bg-gray-50 dark:bg-brand-dark transition-colors duration-200">
                 <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
                 <div className="flex flex-1 overflow-hidden">
                     <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
