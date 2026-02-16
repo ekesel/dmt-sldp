@@ -131,8 +131,9 @@ class TenantViewSet(viewsets.ModelViewSet):
     def archive_data(self, request, pk=None):
         tenant = self.get_object()
         
-        # In a real scenario, this would trigger a Celery task.
-        # For now, we mock the successful initiation.
+        # Trigger the retention policy check asynchronously
+        from .tasks import run_retention_policy_check
+        run_retention_policy_check.delay()
         
         # Create Audit Log
         if request.user:
@@ -156,20 +157,48 @@ class TenantViewSet(viewsets.ModelViewSet):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    actor_name = serializers.CharField(source='user.username', read_only=True, default='System')
+    actor_name = serializers.ReadOnlyField(source='user.username')
+    tenant_name = serializers.ReadOnlyField(source='tenant.name')
 
     class Meta:
         model = AuditLog
-        fields = ['id', 'action', 'entity_type', 'entity_id', 'actor_name', 'timestamp']
+        fields = ['id', 'action', 'entity_type', 'entity_id', 'actor_name', 'tenant_name', 'timestamp', 'new_values']
 
 
-class ActivityLogView(APIView):
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
+
+class ActivityLogPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class ActivityLogView(ListAPIView):
+    """
+    View to retrieve audit logs with filtering and pagination.
+    Used by Activity page and dashboard widgets.
+    """
+    serializer_class = AuditLogSerializer
     permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    pagination_class = ActivityLogPagination
 
-    def get(self, request):
-        logs = AuditLog.objects.all().select_related('user')[:4]
-        serializer = AuditLogSerializer(logs, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        queryset = AuditLog.objects.all().select_related('user', 'tenant').order_by('-timestamp')
+        
+        # Filtering
+        tenant_id = self.request.query_params.get('tenant')
+        if tenant_id:
+            queryset = queryset.filter(tenant_id=tenant_id)
+            
+        action_val = self.request.query_params.get('action')
+        if action_val:
+            queryset = queryset.filter(action=action_val)
+            
+        entity_type = self.request.query_params.get('entity_type')
+        if entity_type:
+            queryset = queryset.filter(entity_type__icontains=entity_type)
+            
+        return queryset
 
 
 class SystemHealthView(APIView):

@@ -53,6 +53,11 @@ const menuItems: MenuItem[] = [
         href: '/system-status',
     },
     {
+        icon: Shield,
+        label: 'Activity',
+        href: '/activity',
+    },
+    {
         icon: Settings,
         label: 'Settings',
         href: '/settings',

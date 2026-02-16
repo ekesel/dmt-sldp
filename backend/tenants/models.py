@@ -60,8 +60,12 @@ class AuditLog(models.Model):
         ('create', 'Create'),
         ('update', 'Update'),
         ('delete', 'Delete'),
+        ('login', 'Login'),
+        ('logout', 'Logout'),
         ('test_connection', 'Test Connection'),
         ('trigger_sync', 'Trigger Sync'),
+        ('sync_success', 'Sync Success'),
+        ('sync_failed', 'Sync Failed'),
         ('archive_data', 'Archive Data'),
     ]
 
@@ -69,7 +73,7 @@ class AuditLog(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
     action = models.CharField(max_length=30, choices=ACTION_CHOICES)
     entity_type = models.CharField(max_length=50)
-    entity_id = models.IntegerField(db_index=True)
+    entity_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     old_values = models.JSONField(null=True, blank=True)
     new_values = models.JSONField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

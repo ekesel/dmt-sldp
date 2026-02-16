@@ -26,11 +26,8 @@ class ComplianceEngine:
             if failing_statuses.exists():
                 failures.append("failing_ci_checks")
             
-        work_item.is_compliant = len(failures) == 0
-        work_item.compliance_reason = {
-            "failures": failures,
-            "checked_at": str(work_item.updated_at)
-        }
+        work_item.dmt_compliant = len(failures) == 0
+        work_item.compliance_failures = failures
         work_item.save()
         
-        return work_item.is_compliant
+        return work_item.dmt_compliant

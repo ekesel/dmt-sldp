@@ -24,7 +24,8 @@ export function useNotifications() {
         if (!token) return;
 
         // Parse the WS URL from env to get the host
-        let wsHost = 'localhost:8000';
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        let wsHost = `${hostname}:8000`;
         const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
 
         if (envWsUrl) {

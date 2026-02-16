@@ -39,7 +39,7 @@ class MetricService:
 
         active_sprint = Sprint.objects.filter(status='active').last()
         total_items = WorkItem.objects.count()
-        compliant_items = WorkItem.objects.filter(is_compliant=True).count()
+        compliant_items = WorkItem.objects.filter(dmt_compliant=True).count()
         
         latest_insight = AIInsight.objects.filter(source_config_id__isnull=False).first()
         
@@ -47,7 +47,7 @@ class MetricService:
             'compliance_rate': (compliant_items / total_items * 100) if total_items > 0 else 0,
             'active_sprint': MetricService.calculate_velocity(active_sprint.id) if active_sprint else None,
             'avg_cycle_time': 3.2,
-            'resolved_blockers': WorkItem.objects.filter(status='done', type='bug').count(),
+            'resolved_blockers': WorkItem.objects.filter(status='done', item_type='bug').count(),
             'latest_insight': {
                 'id': latest_insight.id,
                 'summary': latest_insight.summary,

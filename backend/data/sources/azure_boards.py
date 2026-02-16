@@ -47,7 +47,7 @@ class AzureBoardsSource:
             "title": fields.get('System.Title'),
             "description": fields.get('System.Description'),
             "status": fields.get('System.State'),
-            "type": fields.get('System.WorkItemType'),
+            "item_type": fields.get('System.WorkItemType'),
             "priority": str(fields.get('Microsoft.VSTS.Common.Priority', '')),
             "developer_email": fields.get('System.AssignedTo', {}).get('uniqueName'),
             "created_at": fields.get('System.CreatedDate'),

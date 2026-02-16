@@ -5,7 +5,9 @@ import { AuthProvider } from "./auth/AuthContext";
 import SessionMonitorProvider from "./SessionMonitorProvider";
 import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import APIConfig from "./components/APIConfig";
 import { Toaster } from "react-hot-toast";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,7 +28,10 @@ export default function RootLayout({
           <SessionMonitorProvider>
             <TenantProvider autoLoad={true}>
               <ThemeProvider>
-                {children}
+                <ErrorBoundary>
+                  <APIConfig />
+                  {children}
+                </ErrorBoundary>
                 <Toaster position="top-right" />
               </ThemeProvider>
             </TenantProvider>

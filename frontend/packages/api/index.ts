@@ -1,4 +1,6 @@
 import axios, { AxiosError } from 'axios';
+import { getCache, setCache } from './cache';
+import { deduplicateRequest } from './deduplication';
 
 /* =========================
    Axios Instance
@@ -44,9 +46,23 @@ api.interceptors.response.use(
         }
       }
     }
+    if (error.response) {
+      // Handle 403 (Forbidden) and 5xx (Server Errors) via global handler
+      if (error.response.status === 403 || error.response.status >= 500) {
+        if (globalErrorHandler) {
+          globalErrorHandler(error);
+        }
+      }
+    }
     return Promise.reject(error);
   }
 );
+
+let globalErrorHandler: ((error: any) => void) | null = null;
+
+export const setGlobalErrorHandler = (handler: (error: any) => void) => {
+  globalErrorHandler = handler;
+};
 
 /* =========================
    Shared Types / Helpers
@@ -85,12 +101,56 @@ function handleApiError(error: unknown): never {
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
 
-async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+interface RequestConfig {
+  cache?: boolean;
+  ttl?: number;
+  deduplicate?: boolean;
+}
+
+async function get<T>(url: string, params?: Record<string, unknown>, config?: RequestConfig): Promise<T> {
+  const cacheKey = config?.cache || config?.deduplicate ? `${url}?${JSON.stringify(params || {})}` : null;
+
+  // 1. Check Cache
+  if (config?.cache && cacheKey) {
+    const cached = getCache<T>(cacheKey);
+    if (cached) return cached;
+  }
+
+  const performRequest = async () => {
+    try {
+      const res = await api.get<T>(url, { params });
+      return res.data;
+    } catch (error) {
+      handleApiError(error);
+      throw error; // handleApiError throws, but just in case
+    }
+  };
+
   try {
-    const res = await api.get<T>(url, { params });
-    return res.data;
+    let result: T;
+
+    // 2. Deduplication or Direct Call
+    if (config?.deduplicate !== false && cacheKey) { // Default to deduplication if key exists? No, let's be explicit or default true for GET?
+      // Let's only deduplicate if explicitly asked OR if caching is on (implies read-only)
+      if (config?.deduplicate || config?.cache) {
+        result = await deduplicateRequest(cacheKey, performRequest);
+      } else {
+        result = await performRequest();
+      }
+    } else {
+      result = await performRequest();
+    }
+
+    // 3. Set Cache
+    if (config?.cache && cacheKey) {
+      setCache(cacheKey, result, config.ttl);
+    }
+
+    return result;
   } catch (error) {
-    handleApiError(error);
+    throw error; // Already handled by handleApiError inside performRequest? 
+    // handleApiError throws ApiClientError.
+    // We need to ensure we don't swallow it.
   }
 }
 
@@ -171,8 +231,8 @@ export interface Tenant {
 }
 
 export const tenants = {
-  list: () => get<Tenant[]>('/admin/tenants/'),
-  get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`),
+  list: () => get<Tenant[]>('/admin/tenants/', {}, { cache: true, ttl: 60000 }), // Cache 1 min
+  get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`, {}, { cache: true, ttl: 60000 }),
   create: (data: Partial<Tenant>) => post<Tenant, Partial<Tenant>>('/admin/tenants/', data),
   update: (id: string | number, data: Partial<Tenant>) => patch<Tenant, Partial<Tenant>>(`/admin/tenants/${id}/`, data),
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`),
@@ -189,8 +249,8 @@ export interface Project {
 }
 
 export const projects = {
-  list: () => get<Project[]>('/admin/projects/'),
-  get: (id: string) => get<Project>(`/admin/projects/${id}/`),
+  list: () => get<Project[]>('/admin/projects/', {}, { cache: true, ttl: 30000 }), // Cache 30s
+  get: (id: string) => get<Project>(`/admin/projects/${id}/`, {}, { cache: true }),
 };
 
 export interface Source {
@@ -298,19 +358,20 @@ export interface Integration {
 export type CreateIntegrationPayload = Record<string, unknown>;
 export type UpdateIntegrationPayload = Record<string, unknown>;
 
+// Mapped to 'sources' in backend
 export const integrations = {
-  list: () => get<Integration[]>('/admin/integrations/'),
+  list: () => get<Integration[]>('/admin/sources/'),
   create: (data: CreateIntegrationPayload) =>
-    post<Integration, CreateIntegrationPayload>('/admin/integrations/', data),
-  get: (id: string | number) => get<Integration>(`/admin/integrations/${id}/`),
+    post<Integration, CreateIntegrationPayload>('/admin/sources/', data),
+  get: (id: string | number) => get<Integration>(`/admin/sources/${id}/`),
   update: (id: string | number, data: UpdateIntegrationPayload) =>
-    patch<Integration, UpdateIntegrationPayload>(`/admin/integrations/${id}/`, data),
+    patch<Integration, UpdateIntegrationPayload>(`/admin/sources/${id}/`, data),
   delete: (id: string | number) =>
-    del<{ success?: boolean; detail?: string }>(`/admin/integrations/${id}/`),
+    del<{ success?: boolean; detail?: string }>(`/admin/sources/${id}/`),
   sync: (id: string | number) =>
-    post<{ success?: boolean; detail?: string }>(`/admin/integrations/${id}/sync/`),
+    post<{ success?: boolean; detail?: string }>(`/admin/sources/${id}/sync/`),
   testConnection: (id: string | number) =>
-    post<{ success?: boolean; detail?: string; result?: unknown }>(`/admin/integrations/${id}/test/`),
+    post<{ success?: boolean; detail?: string; result?: unknown }>(`/admin/sources/${id}/test_connection/`),
 };
 
 /** ---------- workItems ---------- */
@@ -414,7 +475,7 @@ export interface UpdateRetentionPolicyPayload {
 }
 
 export const settings = {
-  getSystemSettings: () => get<SystemSettings>('/admin/settings/'),
+  getSystemSettings: () => get<SystemSettings>('/admin/settings/', {}, { cache: true }),
   updateSystemSettings: (data: UpdateSystemSettingsPayload) =>
     patch<SystemSettings, UpdateSystemSettingsPayload>('/admin/settings/', data),
   getRetentionPolicy: (tenantId: string | number) =>
@@ -426,8 +487,27 @@ export const settings = {
     ),
 };
 
+export interface AuditLogEntry {
+  id: number;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  actor_name: string;
+  tenant_name: string;
+  timestamp: string;
+  new_values?: any;
+}
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export const activityLog = {
-  list: () => get<any[]>('/admin/activity-log/'),
+  list: (params?: { tenant?: string | number; action?: string; limit?: number; page?: number }) =>
+    get<PaginatedResponse<AuditLogEntry>>('/admin/activity-log/', params),
 };
 
 /** ---------- notifications ---------- */

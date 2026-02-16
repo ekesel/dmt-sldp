@@ -4,8 +4,7 @@ from django.db import connection
 from .models import Sprint, WorkItem, PullRequest, PullRequestStatus, TaskLog
 from configuration.models import SourceConfiguration
 from users.services import IdentityService
-# Using legacy connectors factory for now as it has full logic
-from .connectors.factory import ConnectorFactory
+from etl.factory import ConnectorFactory
 from .signals import data_sync_completed
 from core.telemetry.models import DataSyncPayload
 from core.celery_utils import tenant_aware_task
@@ -30,108 +29,23 @@ def sync_tenant_data(source_id, schema_name=None):
         return log.error_message
 
     try:
-        connector = ConnectorFactory.get_connector(source)
+        # Prepare full config for connector
+        full_config = {
+            **(source.config_json or {}),
+            'base_url': source.base_url,
+            'api_key': source.api_key,
+            'username': source.username,
+        }
+        # Use common factory
+        connector = ConnectorFactory.get_connector(source.source_type, full_config)
         
-        # Proactively refresh token if needed (e.g., for Jira OAuth2)
-        if hasattr(connector, 'refresh_access_token'):
-            connector.refresh_access_token()
+        # 1. Sync Everything (Sprints, WorkItems, PRs)
+        # The connector's sync method handles internal normalization and persistence.
+        stats = connector.sync(source.project.tenant.id, source.id)
         
-        # 1. Sync Sprints
-        sprints_data = connector.fetch_sprints()
-        for s_data in sprints_data:
-            Sprint.objects.update_or_create(
-                external_id=s_data['external_id'],
-                defaults={
-                    'name': s_data['name'],
-                    'status': s_data['status'],
-                }
-            )
-
-        # 2. Sync Work Items
-        from .engine.compliance import ComplianceEngine
-        engine = ComplianceEngine()
-        
-        work_items_data = connector.fetch_work_items(last_sync=source.last_sync_at)
-        for wi_data in work_items_data:
-            # Simple mapping for demonstration
-            # Resolve platform user
-            resolved_user = IdentityService.resolve_user(source.source_type, wi_data.get('assignee_email'))
-            
-            work_item, created = WorkItem.objects.update_or_create(
-                external_id=wi_data['id'],
-                defaults={
-                    'source_config_id': source.id,
-                    'title': wi_data['title'],
-                    'description': wi_data.get('description', ''),
-                    'type': wi_data.get('type', 'task'),
-                    'status': wi_data.get('status', 'open'),
-                    'assignee_email': wi_data.get('assignee_email'),
-                    'resolved_assignee': resolved_user,
-                    'created_at': wi_data['created_at'],
-                    'updated_at': wi_data['updated_at'],
-                }
-            )
-            # Trigger compliance check
-            engine.check_compliance(work_item)
-
-        # 3. Sync Pull Requests (Git Sources)
-        import re
-        
-        # ID patterns: [JIRA-123], JIRA-123, #123 (mapped to external_id)
-        ID_PATTERN = re.compile(r'([A-Z]+-\d+|#\d+)', re.IGNORECASE)
-        
-        # Only fetch PRs if connector supports it
-        if hasattr(connector, 'fetch_pull_requests'):
-            prs_data = connector.fetch_pull_requests()
-            for pr_data in prs_data:
-                # Find matching WorkItem
-                work_item = None
-                match = ID_PATTERN.search(pr_data['title']) or ID_PATTERN.search(pr_data['source_branch'])
-                if match:
-                    item_id = match.group(1).replace('#', '').upper()
-                    work_item = WorkItem.objects.filter(external_id__icontains=item_id).first()
-    
-                # Resolve platform user for PR
-                resolved_author = IdentityService.resolve_user('github', pr_data.get('author_email'))
-                
-                pr, pr_created = PullRequest.objects.update_or_create(
-                    external_id=pr_data['id'],
-                    defaults={
-                        'source_config_id': source.id,
-                        'work_item': work_item,
-                        'title': pr_data['title'],
-                        'author_email': pr_data['author_email'],
-                        'resolved_author': resolved_author,
-                        'status': pr_data['status'],
-                        'repository_name': pr_data['repository_name'],
-                        'source_branch': pr_data['source_branch'],
-                        'target_branch': pr_data['target_branch'],
-                        'created_at': pr_data['created_at'],
-                        'updated_at': pr_data['updated_at'],
-                        'merged_at': pr_data.get('merged_at'),
-                    }
-                )
-    
-                # NEW: Sync Status Checks for active PRs
-                if pr.status == 'open' and hasattr(connector, 'fetch_status_checks'):
-                    checks = connector.fetch_status_checks(pr.external_id)
-                    for check in checks:
-                        PullRequestStatus.objects.update_or_create(
-                            pull_request=pr,
-                            name=check['name'],
-                            defaults={
-                                'state': check['state'],
-                                'target_url': check.get('target_url'),
-                                'description': check.get('description'),
-                            }
-                        )
-                
-                # Recalculate compliance for linked WorkItem if PR status/checks changed
-                if work_item:
-                    engine.check_compliance(work_item)
-
-        # Update last sync timestamp
+        # 2. Update last sync timestamp
         source.last_sync_at = timezone.now()
+        source.last_sync_status = 'success'
         source.save()
         
         # Signal completion with typed payload
@@ -145,14 +59,14 @@ def sync_tenant_data(source_id, schema_name=None):
         )
         
         log.status = 'success'
-        return f"Successfully synced {source.name}"
+        return f"Successfully synced {source.name}. Processed {stats.get('item_count', 0)} items."
         
     except Exception as e:
         # Signal failure with typed payload
         data_sync_completed.send(
             sender=sync_tenant_data,
             payload=DataSyncPayload(
-                integration_id=integration_id,
+                integration_id=source.id,
                 schema_name=connection.schema_name if connection.schema_name else 'unknown',
                 status='failed'
             )
@@ -212,7 +126,7 @@ def aggregate_tenant_metrics(tenant_id, target_date_str=None):
         
         # 1. Total & Compliant WorkItems
         total_items = WorkItem.objects.filter(created_at__lt=day_end).count()
-        compliant_items = WorkItem.objects.filter(created_at__lt=day_end, is_compliant=True).count()
+        compliant_items = WorkItem.objects.filter(created_at__lt=day_end, dmt_compliant=True).count()
         compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
         
         # 2. PR Snapshot
@@ -231,7 +145,7 @@ def aggregate_tenant_metrics(tenant_id, target_date_str=None):
             date=target_date,
             defaults={
                 'total_work_items': total_items,
-                'compliant_work_items': compliant_items,
+                'compliant_work_items': compliant_items, # keeping field name in DailyMetric model for now if it exists there
                 'compliance_rate': compliance_rate,
                 'avg_cycle_time_hours': avg_cycle_time_hours,
                 'prs_merged_count': prs_merged_count,

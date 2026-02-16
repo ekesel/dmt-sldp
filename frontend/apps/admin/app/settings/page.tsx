@@ -120,6 +120,7 @@ export default function SettingsPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Settings</h1>
                         <p className="text-slate-500 dark:text-slate-400">Configure platform-wide settings and retention policies.</p>
+
                     </div>
                     {hasUnsavedChanges && (
                         <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full text-xs font-medium border border-amber-500/20">

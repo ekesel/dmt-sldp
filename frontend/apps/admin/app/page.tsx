@@ -8,13 +8,13 @@ import useSessionMonitor from '../../../app/hooks/useSessionMonitor';
 import { DashboardLayout } from './components/DashboardLayout';
 import { StatCard, Badge } from './components/UIComponents';
 import { CreateTenantModal } from './components/CreateTenantModal';
+import { ActivityLog } from './components/ActivityLog';
 
 export default function AdminHome() {
     const router = useRouter();
     const [stats, setStats] = useState<any>(null);
     const [userCount, setUserCount] = useState<number>(0);
     const [metrics, setMetrics] = useState<any>(null);
-    const [activities, setActivities] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -33,17 +33,15 @@ export default function AdminHome() {
         setRefreshing(true);
 
         try {
-            const [healthData, userList, dashboardMetrics, logData] = await Promise.all([
+            const [healthData, userList, dashboardMetrics] = await Promise.all([
                 health.get(),
                 usersApi.list(),
-                dashboardApi.getMetrics(),
-                activityApi.list()
+                dashboardApi.getMetrics()
             ]);
 
             setStats(healthData);
             setUserCount(userList?.length || 0);
             setMetrics(dashboardMetrics);
-            setActivities(logData || []);
         } catch (err) {
             // Silently handle load errors as the UI handles empty states
         } finally {
@@ -61,10 +59,14 @@ export default function AdminHome() {
 
         const getWsOrigin = () => {
             const envUrl = process.env.NEXT_PUBLIC_WS_URL;
-            if (envUrl && envUrl.includes('://')) {
+            if (envUrl) {
                 try {
-                    const url = new URL(envUrl);
-                    return `${url.protocol}//${url.host}`;
+                    if (envUrl.includes('://')) {
+                        const url = new URL(envUrl);
+                        return `${url.protocol}//${url.host}`;
+                    }
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    return `${protocol}//${envUrl}`;
                 } catch (e) { }
             }
             const hostname = window.location.hostname;
@@ -84,10 +86,9 @@ export default function AdminHome() {
             const message = JSON.parse(event.data);
 
             if (message.type === 'initial_state') {
-                const { health, user_count, activities } = message.data;
+                const { health, user_count } = message.data;
                 setStats(health);
                 setUserCount(user_count);
-                setActivities(activities);
                 setMetrics({ api_requests_count: health.api_requests_count });
                 setLoading(false);
                 setRefreshing(false);
@@ -100,8 +101,8 @@ export default function AdminHome() {
                     }));
                 }
             } else if (message.type === 'activity_update') {
-                setActivities(prev => [message.data, ...prev].slice(0, 10));
-                // Also update metrics count if we can, but health_update will handle it
+                // Real-time updates could be handled by refreshing the ActivityLog component
+                // or via a global context/signal. For now, we'll let it poll or refresh on mount.
             }
         };
 
@@ -198,23 +199,13 @@ export default function AdminHome() {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-white mb-6">Recent Activity</h2>
-                    <div className="space-y-4">
-                        {activities.length > 0 ? activities.map((activity, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition">
-                                <div>
-                                    <p className="text-slate-300 font-medium capitalize">{activity.action} {activity.entity_type}</p>
-                                    <p className="text-xs text-slate-500">{activity.actor_name}</p>
-                                </div>
-                                <span className="text-xs text-slate-500">
-                                    {new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                        )) : (
-                            <div className="text-center py-8 text-slate-500 italic">No recent activity found.</div>
-                        )}
-                    </div>
+                <div className="lg:col-span-2">
+                    <ActivityLog
+                        title="System Operations"
+                        limit={6}
+                        compact
+                        className="h-full"
+                    />
                 </div>
             </div>
 

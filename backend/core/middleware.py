@@ -67,3 +67,102 @@ class TenantHeaderMiddleware(BaseMiddleware):
                 print(f"Error switching tenant context: {e}")
 
         return self.get_response(request)
+
+class AuditLogMiddleware:
+    """
+    Middleware to automatically log create, update, and delete actions.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Log critical write actions
+        if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            # Avoid logging login/token requests and non-API requests
+            if '/api/auth/' in request.path or not request.path.startswith('/api/'):
+                return response
+
+            # Only log if successful (2xx)
+            if 200 <= response.status_code < 300:
+                self._log_action(request, response)
+
+        return response
+
+    def _log_action(self, request, response):
+        from tenants.models import AuditLog, Tenant
+        
+        user = request.user if request.user and request.user.is_authenticated else None
+        if not user:
+            return
+
+        # Determine tenant from header or user association
+        tenant_id = request.headers.get('X-Tenant')
+        tenant = None
+        if tenant_id:
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+            except:
+                pass
+        
+        if not tenant and hasattr(user, 'tenant') and user.tenant:
+            tenant = user.tenant
+            
+        if not tenant:
+            # Fallback for public schema actions or if tenant not found
+            # Maybe use the first tenant if the user belongs to one
+            return
+
+        # Parse action
+        action_map = {
+            'POST': 'create',
+            'PUT': 'update',
+            'PATCH': 'update',
+            'DELETE': 'delete'
+        }
+        action = action_map.get(request.method, 'update')
+        
+        # Determine entity type and ID from path
+        # Example: /api/admin/projects/1/ -> entity_type='projects', entity_id='1'
+        path_segments = [s for s in request.path.split('/') if s]
+        entity_type = 'system'
+        entity_id = None
+        
+        if len(path_segments) >= 2:
+            # Check for IDs in the path
+            for seg in reversed(path_segments):
+                if seg.isdigit():
+                    entity_id = seg
+                    idx = path_segments.index(seg)
+                    if idx > 0:
+                        entity_type = path_segments[idx-1]
+                    break
+            
+            if not entity_id:
+                # Last segment might be the entity type (e.g., /api/admin/projects/)
+                entity_type = path_segments[-1]
+
+        try:
+            AuditLog.objects.create(
+                user=user,
+                tenant=tenant,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                new_values=getattr(request, 'data', None) if hasattr(request, 'data') else None,
+                ip_address=self._get_client_ip(request)
+            )
+        except Exception as e:
+            # Avoid breaking the request if logging fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating audit log: {e}")
+
+    def _get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

@@ -28,7 +28,7 @@ def work_item_telemetry_signal(sender, instance, **kwargs):
         "data": {
             "work_item_id": instance.id,
             "status": instance.status,
-            "is_compliant": instance.is_compliant,
+            "is_compliant": instance.dmt_compliant,
             "timestamp": str(instance.updated_at)
         }
     }
@@ -91,7 +91,7 @@ def notify_compliance_issue(sender, instance, **kwargs):
     """
     Creates notification if a work item is non-compliant.
     """
-    if not instance.is_compliant:
+    if not instance.dmt_compliant:
         from tenants.models import Tenant
         try:
             tenant = Tenant.objects.get(schema_name=connection.schema_name)

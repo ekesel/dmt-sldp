@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional, Callable
 import requests
 from ..base import BaseConnector
-from data.models import WorkItem
+from data.models import WorkItem, Sprint
 from django.utils import timezone
 from datetime import datetime
 import logging
@@ -60,22 +60,58 @@ class ClickupConnector(BaseConnector):
         spaces = spaces_resp.json().get('spaces', [])
         
         all_lists = []
+        sprint_lists = {} # list_id -> Sprint object
+
         for i, space in enumerate(spaces):
             space_id = space['id']
-            # progress from 30 to 45
             report(30 + int((i/len(spaces)) * 15), f"Scanning space: {space['name']}...")
             
             # 3. Get Folders -> Lists
             folders_resp = requests.get(f"{self.base_url}/space/{space_id}/folder", headers=headers)
             if folders_resp.status_code == 200:
                 folders = folders_resp.json().get('folders', [])
+                print(f"Space {space['name']} has {len(folders)} folders.")
                 for folder in folders:
-                    all_lists.extend(folder.get('lists', []))
+                    # Identify Sprint folders via flag or name fallback
+                    is_sprint = folder.get('is_sprint_folder', False) or 'sprint' in folder['name'].lower()
+                    lists = folder.get('lists', [])
+                    for lst in lists:
+                        all_lists.append(lst)
+                        if is_sprint:
+                            # Create or update Sprint record
+                            sprint_ext_id = f"clickup_sprint_{lst['id']}"
+                            # ClickUp lists have start_date and due_date in ms
+                            s_start = None
+                            if lst.get('start_date'):
+                                s_start = timezone.make_aware(datetime.fromtimestamp(int(lst['start_date']) / 1000))
+                            s_end = None
+                            if lst.get('due_date'):
+                                s_end = timezone.make_aware(datetime.fromtimestamp(int(lst['due_date']) / 1000))
+                            
+                            # Determine status
+                            now = timezone.now()
+                            status = 'active'
+                            if s_end and now > s_end:
+                                status = 'completed'
+                            elif s_start and now < s_start:
+                                status = 'planned'
+
+                            sprint_obj, _ = Sprint.objects.update_or_create(
+                                external_id=sprint_ext_id,
+                                defaults={
+                                    'name': lst['name'],
+                                    'start_date': s_start,
+                                    'end_date': s_end,
+                                    'status': status
+                                }
+                            )
+                            sprint_lists[lst['id']] = sprint_obj
             
             # 4. Get Folderless Lists
             lists_resp = requests.get(f"{self.base_url}/space/{space_id}/list", headers=headers)
             if lists_resp.status_code == 200:
-                all_lists.extend(lists_resp.json().get('lists', []))
+                lists = lists_resp.json().get('lists', [])
+                all_lists.extend(lists)
 
         # 5. Get Tasks from each list
         total_lists = len(all_lists)
@@ -90,16 +126,20 @@ class ClickupConnector(BaseConnector):
             if tasks_resp.status_code == 200:
                 tasks = tasks_resp.json().get('tasks', [])
                 for task in tasks:
-                    self._sync_task(task, source_id)
+                    self._sync_task(task, source_id, sprint_obj=sprint_lists.get(list_id))
                     item_count += 1
         
         report(100, f"Sync complete. Processed {item_count} items.")
         return {'item_count': item_count}
 
-    def _sync_task(self, task: Dict[str, Any], source_id: int):
+    def _sync_task(self, task: Dict[str, Any], source_id: int, sprint_obj=None):
         """
         Map and save a single ClickUp task to the WorkItem model.
         """
+        from users.resolver import UserResolver
+        from users.resolver import UserResolver
+        from etl.transformers import ComplianceEngine
+
         external_id = task['id']
         
         # ClickUp timestamps are in milliseconds
@@ -109,26 +149,59 @@ class ClickupConnector(BaseConnector):
         resolved_at = None
         if task.get('date_closed'):
             resolved_at = timezone.make_aware(datetime.fromtimestamp(int(task['date_closed']) / 1000))
+            
+        started_at = None
+        if task.get('start_date'):
+            started_at = timezone.make_aware(datetime.fromtimestamp(int(task['start_date']) / 1000))
 
-        # Basic status normalization
+        # Status and Category
         raw_status = task.get('status', {}).get('status', 'Open')
-        normalized_status = self.normalize_status(raw_status)
+        status_type = task.get('status', {}).get('type', 'open')
+        
+        # ClickUp status type mapping
+        category_map = {
+            'open': 'todo',
+            'custom': 'in_progress',
+            'unstarted': 'todo',
+            'closed': 'done'
+        }
+        status_category = category_map.get(status_type, 'todo')
         
         priority = task.get('priority', {}).get('priority', 'normal') if task.get('priority') else 'normal'
+        
+        assignee_email = task.get('assignees', [{}])[0].get('email') if task.get('assignees') else None
+        resolved_assignee = UserResolver.resolve_by_identity('clickup', assignee_email)
+
+        # Prepare data for model and compliance check
+        work_item_data = {
+            'source_config_id': source_id,
+            'external_id': external_id,
+            'title': task.get('name', 'Untitled'),
+            'description': task.get('description', ''),
+            'item_type': 'task', # ClickUp default
+            'status': raw_status,
+            'status_category': status_category,
+            'priority': priority,
+            'creator_email': task.get('creator', {}).get('email'),
+            'assignee_email': assignee_email,
+            'assignee_name': task.get('assignees', [{}])[0].get('username') if task.get('assignees') else None,
+            'created_at': created_at,
+            'updated_at': updated_at,
+            'resolved_at': resolved_at,
+            'raw_source_data': task,
+        }
+
+        # Run non-blocking compliance check
+        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data)
+        work_item_data['dmt_compliant'] = is_compliant
+        work_item_data['compliance_failures'] = compliance_failures
 
         WorkItem.objects.update_or_create(
+            source_config_id=source_id,
             external_id=external_id,
             defaults={
-                'source_config_id': source_id,
-                'title': task.get('name', 'Untitled'),
-                'description': task.get('description', ''),
-                'type': 'task', # ClickUp doesn't have a strict 'type' by default like Jira
-                'status': normalized_status,
-                'priority': priority,
-                'creator_email': task.get('creator', {}).get('email'),
-                'assignee_email': task.get('assignees', [{}])[0].get('email') if task.get('assignees') else None,
-                'created_at': created_at,
-                'updated_at': updated_at,
-                'resolved_at': resolved_at,
+                **work_item_data,
+                'resolved_assignee': resolved_assignee,
+                'sprint': sprint_obj
             }
         )

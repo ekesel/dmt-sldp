@@ -24,7 +24,7 @@ def refresh_ai_insights(source_id, schema_name=None):
     if total_count == 0:
         return f"No work items found for {source.name}. Skipping AI insight."
 
-    compliant_count = work_items.filter(is_compliant=True).count()
+    compliant_count = work_items.filter(dmt_compliant=True).count()
     compliance_rate = (compliant_count / total_count) * 100
     
     # Calculate avg cycle time (days) for resolved items
@@ -34,7 +34,7 @@ def refresh_ai_insights(source_id, schema_name=None):
     ).aggregate(avg_duration=Avg('duration'))['avg_duration']
     
     avg_cycle_time_str = f"{avg_cycle_time_days.days} days" if avg_cycle_time_days else "N/A"
-    high_risk_count = work_items.filter(is_compliant=False).count()
+    high_risk_count = work_items.filter(dmt_compliant=False).count()
 
     # 1.1 Collect Team Optimization Data
     stagnant_items = work_items.filter(

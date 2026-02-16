@@ -23,36 +23,99 @@ class Sprint(SoftDeleteMixin, models.Model):
     end_date = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     
-    status = models.CharField(max_length=50, default='active')
+    # multiple sprints can be 'active' simultaneously
+    status = models.CharField(max_length=50, default='active', db_index=True)
     
     def __str__(self):
         return self.name
 
 class WorkItem(SoftDeleteMixin, models.Model):
-    external_id = models.CharField(max_length=100, unique=True)
-    source_config_id = models.IntegerField(db_index=True) # ID of SourceConfiguration in public schema
-    sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
+    ITEM_TYPES = [
+        ('story', 'Story'),
+        ('bug', 'Bug'),
+        ('task', 'Task'),
+        ('epic', 'Epic'),
+    ]
     
-    title = models.CharField(max_length=500)
+    # Source tracking
+    external_id = models.CharField(max_length=100) # Original ID from PM tool
+    source_config_id = models.IntegerField(db_index=True) # ID of SourceConfiguration in public schema
+    source_url = models.URLField(blank=True, null=True)
+    
+    # Core fields
+    sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES, default='task')
+    title = models.TextField()
     description = models.TextField(blank=True, null=True)
-    type = models.CharField(max_length=50) # bug, story, task
-    status = models.CharField(max_length=50)
     priority = models.CharField(max_length=50, blank=True, null=True)
     
-    creator_email = models.EmailField(blank=True, null=True)
-    assignee_email = models.EmailField(blank=True, null=True)
-    resolved_assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='work_items')
+    # Status tracking
+    status = models.CharField(max_length=50)
+    status_category = models.CharField(max_length=20, choices=[
+        ('todo', 'To Do'),
+        ('in_progress', 'In Progress'),
+        ('done', 'Done'),
+    ], default='todo')
     
-    # DMT Specific fields
-    is_compliant = models.BooleanField(default=False)
-    compliance_reason = models.JSONField(default=dict, blank=True)
-    
+    # Timestamps
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-    resolved_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True) # First In Progress
+    resolved_at = models.DateTimeField(null=True, blank=True) # Done At
+    
+    # Assignment
+    creator_email = models.EmailField(blank=True, null=True)
+    assignee_email = models.EmailField(blank=True, null=True)
+    assignee_name = models.CharField(max_length=255, blank=True, null=True)
+    resolved_assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='work_items')
+    
+    # DMT Quality Fields (normalized from source)
+    ac_quality = models.CharField(max_length=20, blank=True, choices=[
+        ('incomplete', 'Incomplete'),
+        ('testable', 'Testable'),
+        ('final', 'Final'),
+    ])
+    unit_test_task_present = models.BooleanField(null=True, blank=True)
+    unit_testing_status = models.CharField(max_length=30, blank=True, choices=[
+        ('not_started', 'Not Started'),
+        ('in_progress', 'In Progress'),
+        ('done', 'Done'),
+        ('exception_approved', 'Exception Approved'),
+    ])
+    coverage_percent = models.FloatField(null=True, blank=True)
+    pr_links = models.JSONField(default=list, blank=True)  # List of PR URLs
+    ci_evidence_links = models.JSONField(default=list, blank=True)
+    reviewer_dmt_signoff = models.BooleanField(null=True, blank=True)
+    dmt_exception_required = models.BooleanField(default=False)
+    dmt_exception_reason = models.TextField(blank=True)
+    exception_approver = models.CharField(max_length=255, blank=True)
+    
+    # Blocked tracking
+    is_blocked = models.BooleanField(default=False)
+    blocked_reason = models.TextField(blank=True)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_days_total = models.IntegerField(default=0)
+    
+    # Raw data for auditing/debugging
+    raw_source_data = models.JSONField(default=dict, blank=True)
+    
+    # Compliance calculation (denormalized)
+    dmt_compliant = models.BooleanField(null=True, blank=True)
+    compliance_failures = models.JSONField(default=list, blank=True) # ['missing_pr_link', 'low_coverage']
+    
+    created_in_system_at = models.DateTimeField(auto_now_add=True)
+    updated_in_system_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'data_workitem'
+        unique_together = ('source_config_id', 'external_id')
+        indexes = [
+            models.Index(fields=['dmt_compliant', 'status_category']),
+            models.Index(fields=['source_config_id', 'external_id']),
+        ]
 
     def __str__(self):
-        return f"[{self.external_id}] {self.title}"
+        return f"[{self.external_id}] {self.title[:50]}"
 
 class PullRequest(models.Model):
     external_id = models.CharField(max_length=100, unique=True)
@@ -139,17 +202,101 @@ class DailyMetric(models.Model):
     def __str__(self):
         return f"Metrics for {self.date}"
 
-class HistoricalSprintMetric(models.Model):
-    sprint = models.OneToOneField(Sprint, on_delete=models.CASCADE, related_name='metrics')
-    velocity = models.IntegerField(default=0)
-    final_compliance_rate = models.FloatField(default=0.0)
-    ai_efficiency_score = models.FloatField(default=0.0)
+class SprintMetrics(models.Model):
+    """
+    Pre-calculated sprint metrics for fast dashboard loading.
+    Updated by ETL after each sprint close or nightly sync.
+    """
+    sprint_name = models.CharField(max_length=100)
+    sprint_start_date = models.DateField()
+    sprint_end_date = models.DateField()
     
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # Velocity
+    total_story_points_committed = models.FloatField(default=0)
+    total_story_points_completed = models.FloatField(default=0)
+    velocity = models.FloatField(default=0)
+    
+    # Throughput
+    items_completed = models.IntegerField(default=0)
+    stories_completed = models.IntegerField(default=0)
+    bugs_completed = models.IntegerField(default=0)
+    
+    # Quality
+    defects_found_post_release = models.IntegerField(default=0)
+    defect_density_per_100_points = models.FloatField(default=0)
+    
+    # DMT Compliance
+    total_items = models.IntegerField(default=0)
+    compliant_items = models.IntegerField(default=0)
+    compliance_rate_percent = models.FloatField(default=0)
+    
+    # Timing
+    avg_cycle_time_days = models.FloatField(null=True, blank=True)
+    avg_lead_time_days = models.FloatField(null=True, blank=True)
+    
+    # Blocked time
+    total_blocked_days = models.IntegerField(default=0)
+    avg_blocked_days_per_item = models.FloatField(default=0)
+    
+    # PR Metrics
+    total_prs_merged = models.IntegerField(default=0)
+    avg_time_to_first_review_hours = models.FloatField(null=True, blank=True)
+    prs_with_reviews_percent = models.FloatField(default=0)
+    
+    calculated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'data_sprintmetrics'
+        unique_together = ['sprint_name', 'sprint_end_date']
+        indexes = [
+            models.Index(fields=['sprint_end_date']),
+        ]
 
     def __str__(self):
-        return f"Metrics for Sprint: {self.sprint.name}"
+        return f"Metrics for {self.sprint_name}"
+
+class DeveloperMetrics(models.Model):
+    """
+    Individual developer metrics (denormalized).
+    """
+    developer_source_id = models.CharField(max_length=100)
+    developer_email = models.EmailField()
+    developer_name = models.CharField(max_length=255)
+    
+    sprint_name = models.CharField(max_length=100)
+    sprint_end_date = models.DateField()
+    
+    # Work items
+    story_points_completed = models.FloatField(default=0)
+    items_completed = models.IntegerField(default=0)
+    
+    # Code activity
+    commits_count = models.IntegerField(default=0)
+    prs_authored = models.IntegerField(default=0)
+    prs_merged = models.IntegerField(default=0)
+    
+    # Review activity
+    prs_reviewed = models.IntegerField(default=0)
+    avg_review_time_hours = models.FloatField(null=True, blank=True)
+    
+    # Quality
+    defects_attributed = models.IntegerField(default=0)
+    coverage_avg_percent = models.FloatField(null=True, blank=True)
+    
+    # DMT
+    dmt_compliance_rate = models.FloatField(default=0)
+    
+    calculated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'data_developermetrics'
+        unique_together = ['developer_source_id', 'sprint_name', 'sprint_end_date']
+        indexes = [
+            models.Index(fields=['developer_source_id', 'sprint_end_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.developer_name} - {self.sprint_name}"
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
