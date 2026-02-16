@@ -105,7 +105,9 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
             else:
                 return Response({'status': 'failed', 'message': 'Connection rejected by source'}, status=400)
         except Exception as e:
-            return Response({'status': 'failed', 'message': str(e)}, status=500)
+            # Propagate the actual error message from the connector
+            error_message = str(e)
+            return Response({'status': 'failed', 'message': error_message}, status=400)
 
     @action(detail=True, methods=['post'])
     def trigger_sync(self, request, pk=None):

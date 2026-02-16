@@ -9,7 +9,7 @@ class ConnectorFactory:
         'jira': JiraConnector,
         'clickup': ClickupConnector,
         'azure_devops': AzureDevOpsConnector,
-        # 'azure_boards': AzureDevOpsConnector, # Alias
+        'azure_boards': AzureDevOpsConnector, # Alias
     }
 
     @classmethod
