@@ -3,7 +3,8 @@ from django.dispatch import receiver, Signal
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import connection
-from .models import WorkItem, AIInsight, Notification
+from .models import WorkItem, AIInsight
+from notifications.models import Notification
 
 from tenants.models import AuditLog
 

@@ -2,7 +2,14 @@ from django.contrib import admin
 # Trigger reload
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from data.views import MetricDashboardView, ForecastView, AIInsightFeedbackView
+from data.views import (
+    MetricDashboardView, ForecastView, AIInsightFeedbackView,
+    DashboardSummaryView, VelocityView, ThroughputView, DefectDensityView,
+    ComplianceView, BlockedItemsView, PRHealthView,
+    DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
+    ComplianceFlagListView, ComplianceFlagResolveView, AIInsightListView
+)
+from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
 from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet
 from rest_framework.routers import DefaultRouter
@@ -24,9 +31,38 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/profile/', UserProfileView.as_view(), name='user_profile'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
+    
+    # Analytics & Dashboard
     path('api/analytics/metrics/', MetricDashboardView.as_view(), name='metrics_dashboard'),
     path('api/analytics/forecast/', ForecastView.as_view(), name='forecast'),
+    path('api/dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard_summary'),
+    path('api/dashboard/velocity/', VelocityView.as_view(), name='dashboard_velocity'),
+    path('api/dashboard/throughput/', ThroughputView.as_view(), name='dashboard_throughput'),
+    path('api/dashboard/defect-density/', DefectDensityView.as_view(), name='dashboard_defect_density'),
+    path('api/dashboard/compliance/', ComplianceView.as_view(), name='dashboard_compliance'),
+    path('api/dashboard/blocked-items/', BlockedItemsView.as_view(), name='dashboard_blocked_items'),
+    path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
+    
+    # Developers
+    path('api/developers/', DeveloperListView.as_view(), name='developer_list'),
+    path('api/developers/<str:id>/metrics/', DeveloperMetricsView.as_view(), name='developer_metrics'),
+    path('api/developers/<str:id>/comparison/', DeveloperComparisonView.as_view(), name='developer_comparison'),
+    path('api/me/metrics/', DeveloperMetricsView.as_view(), name='my_metrics'), # Needs filtering logic adjustment in view if used
+
+    # Compliance
+    path('api/compliance-flags/', ComplianceFlagListView.as_view(), name='compliance_flags'),
+    path('api/compliance-flags/<str:id>/resolve/', ComplianceFlagResolveView.as_view(), name='compliance_resolve'),
+    
+    # AI Insights
+    path('api/ai-insights/', AIInsightListView.as_view(), name='ai_insights'),
     path('api/analytics/insights/feedback/', AIInsightFeedbackView.as_view(), name='ai_feedback'),
+
+    # Exports
+    path('api/exports/sprint/', ExportSprintView.as_view(), name='export_sprint'),
+    path('api/exports/developer/', ExportDeveloperView.as_view(), name='export_developer'),
+    path('api/exports/compliance/', ExportComplianceView.as_view(), name='export_compliance'),
+
+    # Admin / System
     path('api/admin/health/', SystemHealthView.as_view(), name='system_health'),
     path('api/admin/health/services/<str:service_name>/', ServiceDetailView.as_view(), name='service_detail'),
     path('api/admin/services/<str:service_name>/restart/', ServiceRestartView.as_view(), name='service_restart'),

@@ -1,69 +1,101 @@
-import { Card, Button } from "@dmt/ui";
-import { ShieldAlert, Filter, CheckCircle, Clock } from "lucide-react";
-import React from "react";
+"use client";
+import React, { useEffect, useState } from 'react';
+import { Card } from "@dmt/ui";
+import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+
+interface ComplianceFlag {
+    id: string; // {item_id}-{type}
+    work_item_id: string;
+    work_item_title: string;
+    flag_type: string;
+    severity: 'critical' | 'warning';
+    created_at: string;
+}
 
 export default function CompliancePage() {
-    const mockFlags = [
-        { id: "f1", type: "Missing Test", item: "PR-452: Auth Engine", age: "4h", severity: "High" },
-        { id: "f2", type: "Low Coverage", item: "Service: IdentityMapping", age: "2d", severity: "Medium" },
-        { id: "f3", type: "Stale PR", item: "PR-410: Kafka Refactor", age: "5d", severity: "Low" },
-    ];
+    const [flags, setFlags] = useState<ComplianceFlag[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchFlags = async () => {
+        try {
+            const response = await fetch('/api/compliance-flags/');
+            if (response.ok) {
+                const data = await response.json();
+                setFlags(data);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFlags();
+    }, []);
+
+    const resolveFlag = async (flagId: string) => {
+        try {
+            const response = await fetch(`/api/compliance-flags/${flagId}/resolve/`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                // Remove from list or mark resolved
+                setFlags(prev => prev.filter(f => f.id !== flagId));
+            }
+        } catch (error) {
+            console.error("Failed to resolve flag", error);
+        }
+    };
 
     return (
-        <main className="min-h-screen bg-brand-dark p-8">
+        <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
             <div className="max-w-7xl mx-auto space-y-8">
-                <header className="flex justify-between items-center">
+                <header className="flex justify-between items-end border-b border-white/5 pb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                            <ShieldAlert className="text-rose-400" />
-                            Compliance Flag Center
+                        <div className="flex items-center gap-2 text-rose-500 text-sm font-bold tracking-wider uppercase mb-2">
+                            <AlertCircle size={16} />
+                            Governance
+                        </div>
+                        <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                            Compliance Flags
                         </h1>
-                        <p className="text-slate-400">Monitor and remediate quality violations across tools.</p>
+                        <p className="text-slate-400 mt-2 font-medium">Active DMT violations requiring attention.</p>
                     </div>
-                    <Button className="bg-slate-700 hover:bg-slate-600 flex items-center gap-2">
-                        <Filter size={18} />
-                        Filter Flags
-                    </Button>
                 </header>
 
-                <div className="grid grid-cols-1 gap-4">
-                    {mockFlags.map((f) => (
-                        <Card key={f.id} className="flex items-center justify-between border-rose-500/10 hover:border-rose-500/30 transition-all">
-                            <div className="flex items-center gap-6">
-                                <div className={`p-3 rounded-lg ${f.severity === 'High' ? 'bg-rose-500/20 text-rose-400' :
-                                        f.severity === 'Medium' ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-slate-500/20 text-slate-400'
-                                    }`}>
-                                    <ShieldAlert size={24} />
-                                </div>
+                <div className="grid gap-4">
+                    {loading ? (
+                        <p className="text-slate-400">Loading...</p>
+                    ) : flags.length === 0 ? (
+                        <div className="p-8 text-center bg-emerald-500/5 rounded-xl border border-emerald-500/20">
+                            <CheckCircle className="mx-auto text-emerald-500 mb-4" size={48} />
+                            <h3 className="text-xl font-bold text-white">All Clear</h3>
+                            <p className="text-emerald-200/60 mt-2">No active compliance flags found.</p>
+                        </div>
+                    ) : (
+                        flags.map((flag) => (
+                            <Card key={flag.id} className="p-6 bg-slate-900/40 border-white/5 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-xl font-semibold text-white">{f.type}</h3>
-                                    <p className="text-slate-400 text-sm">{f.item}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-12">
-                                <div className="text-center">
-                                    <p className="text-slate-400 text-xs uppercase tracking-wider">Age</p>
-                                    <div className="flex items-center gap-2 text-slate-300">
-                                        <Clock size={14} />
-                                        <p className="font-medium">{f.age}</p>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${flag.severity === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-black'
+                                            }`}>
+                                            {flag.severity}
+                                        </span>
+                                        <span className="text-slate-400 text-xs font-mono">{flag.created_at}</span>
                                     </div>
+                                    <h3 className="text-lg font-bold text-white">{flag.work_item_title}</h3>
+                                    <p className="text-slate-400 text-sm">Violation: {flag.flag_type}</p>
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-slate-400 text-xs uppercase tracking-wider">Severity</p>
-                                    <p className={`font-bold uppercase text-xs ${f.severity === 'High' ? 'text-rose-400' :
-                                            f.severity === 'Medium' ? 'text-amber-400' : 'text-slate-400'
-                                        }`}>{f.severity}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button className="bg-emerald-500 hover:bg-emerald-600 p-2">
-                                        <CheckCircle size={18} />
-                                    </Button>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+                                <button
+                                    onClick={() => resolveFlag(flag.id)}
+                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm transition-colors"
+                                >
+                                    Resolve
+                                </button>
+                            </Card>
+                        ))
+                    )}
                 </div>
             </div>
         </main>

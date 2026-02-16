@@ -31,6 +31,19 @@ class Tenant(TenantMixin):
     retention_ai_insights = models.IntegerField(default=6)
     retention_pull_requests = models.IntegerField(default=12)
 
+    # AI Configuration
+    AI_PROVIDER_OPENAI = 'openai'
+    AI_PROVIDER_KIMI = 'kimi'
+    AI_PROVIDER_CHOICES = [
+        (AI_PROVIDER_OPENAI, 'OpenAI'),
+        (AI_PROVIDER_KIMI, 'Moonshot AI (Kimi)'),
+    ]
+
+    ai_provider = models.CharField(max_length=50, choices=AI_PROVIDER_CHOICES, default=AI_PROVIDER_OPENAI)
+    ai_model = models.CharField(max_length=100, default='gpt-4', help_text="e.g., 'gpt-4' or 'moonshotai/kimi-k2.5'")
+    ai_api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Encrypted API Key")
+    ai_base_url = models.URLField(blank=True, null=True, help_text="Override base URL for AI provider")
+
     # default true, schema will be automatically created and synced when it is saved
     auto_create_schema = True
 

@@ -298,23 +298,4 @@ class DeveloperMetrics(models.Model):
     def __str__(self):
         return f"{self.developer_name} - {self.sprint_name}"
 
-class Notification(models.Model):
-    NOTIFICATION_TYPES = [
-        ('compliance_failure', 'Compliance Failure'),
-        ('etl_failure', 'ETL Failure'),
-        ('sprint_ending', 'Sprint Ending Soon'),
-        ('exception_approved', 'DMT Exception Approved'),
-        ('ai_insight', 'AI Insight'),
-    ]
-    
-    tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
-    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
-    title = models.CharField(max_length=255)
-    message = models.TextField()
-    data = models.JSONField(default=dict)
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-created_at']
+
