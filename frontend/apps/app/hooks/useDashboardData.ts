@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
 
 interface DashboardSummary {
@@ -34,16 +35,38 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { lastMessage } = useWebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/dashboard');
+  // Dynamically determine WebSocket URL based on tenant
+  const [wsUrl, setWsUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const tenant = hostname.split('.')[0];
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      setWsUrl(`${protocol}//${window.location.host}/ws/telemetry/${tenant}/`);
+    }
+  }, []);
+
+  const { lastMessage } = useWebSocket(wsUrl);
+
+  const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
 
   const fetchData = useCallback(async () => {
+    if (!token) return; // Don't fetch if not authenticated
+
     try {
       setLoading(true);
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const timestamp = Date.now();
       const [summaryRes, velocityRes, complianceRes, insightsRes] = await Promise.all([
-        fetch('/api/dashboard/summary/'),
-        fetch('/api/dashboard/velocity/'),
-        fetch('/api/dashboard/compliance/'),
-        fetch('/api/ai-insights/')
+        fetch(`/api/dashboard/summary/?_t=${timestamp}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/velocity/?_t=${timestamp}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/compliance/?_t=${timestamp}`, { headers, cache: 'no-store' }),
+        fetch(`/api/ai-insights/?_t=${timestamp}`, { headers, cache: 'no-store' })
       ]);
 
       if (!summaryRes.ok || !velocityRes.ok || !complianceRes.ok || !insightsRes.ok) {
@@ -61,7 +84,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     fetchData();
