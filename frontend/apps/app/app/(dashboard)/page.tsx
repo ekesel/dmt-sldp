@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@dmt/ui";
 import { TrendingUp, FileText, Share2, BarChart3, AlertCircle } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
@@ -7,9 +7,11 @@ import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
 import { AIInsightsList } from "../../components/AIInsightsList";
 import { useDashboardData } from "../../hooks/useDashboardData";
+import { ProjectSelector } from "../../components/ProjectSelector";
 
 export default function DashboardPage() {
-    const { summary, velocity, compliance, insights, loading, error } = useDashboardData();
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+    const { summary, velocity, compliance, insights, loading, error } = useDashboardData(selectedProjectId);
 
     if (loading) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
@@ -34,6 +36,10 @@ export default function DashboardPage() {
                         <p className="text-slate-400 mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>
                     <div className="flex gap-4">
+                        <ProjectSelector
+                            selectedProjectId={selectedProjectId}
+                            onSelect={setSelectedProjectId}
+                        />
                         {/* Stubbed actions */}
                         <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all font-medium border border-white/5">
                             <Share2 size={18} />

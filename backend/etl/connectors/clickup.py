@@ -119,18 +119,99 @@ class ClickupConnector(BaseConnector):
             list_id = lst['id']
             list_name = lst['name']
             
-            # progress from 50 to 90
             report(50 + int((i/total_lists) * 40), f"Syncing tasks from list: {list_name}...")
             
-            tasks_resp = requests.get(f"{self.base_url}/list/{list_id}/task", headers=headers)
-            if tasks_resp.status_code == 200:
-                tasks = tasks_resp.json().get('tasks', [])
+            # Use subtasks=true and include_closed=true for completeness
+            # Implement pagination with larger limit
+            page = 0
+            limit = 100
+            while True:
+                url = f"{self.base_url}/list/{list_id}/task?subtasks=true&include_closed=true&page={page}&limit={limit}"
+                tasks_resp = requests.get(url, headers=headers)
+                if tasks_resp.status_code != 200:
+                    break
+                
+                tasks_data = tasks_resp.json()
+                tasks = tasks_data.get('tasks', [])
+                if not tasks:
+                    break
+                
                 for task in tasks:
                     self._sync_task(task, source_id, sprint_obj=sprint_lists.get(list_id))
                     item_count += 1
+                
+                # Check if we should continue
+                if tasks_data.get('last_page') or len(tasks) < limit:
+                    break
+                page += 1
+                
+                # Memory optimization: Clear query log and collect GC
+                from django.db import connection
+                connection.queries_log.clear()
+                import gc
+                gc.collect()
         
+        # 6. Post-Sync: Link Parent/Child and Aggregate Points
+        report(95, "Resolving parent/child links and aggregating points...")
+        self._post_sync_linking(source_id)
+
         report(100, f"Sync complete. Processed {item_count} items.")
         return {'item_count': item_count}
+
+    def _post_sync_linking(self, source_id: int):
+        """
+        Link subtasks to parents and aggregate story points / AI usage.
+        """
+        from data.models import WorkItem
+        from django.db.models import Sum, Avg
+        
+        # Resolve Parent Linkage (for items where parent wasn't synced yet)
+        broken_links = WorkItem.objects.filter(source_config_id=source_id, parent__isnull=True, raw_source_data__parent__isnull=False)
+        for item in broken_links:
+            parent_ext_id = item.raw_source_data.get('parent')
+            parent_obj = WorkItem.objects.filter(source_config_id=source_id, external_id=parent_ext_id).first()
+            if parent_obj:
+                item.parent = parent_obj
+                item.save()
+
+        # Aggregate Story Points (Sum subtasks if parent is None/Zero)
+        parents = WorkItem.objects.filter(source_config_id=source_id, subtasks__isnull=False).distinct()
+        for p in parents:
+            # First, check if subtasks in DB are still subtasks in ClickUp
+            # This is hard because we don't know "all" subtasks unless we fetch everything.
+            # But we can at least check if the subtask's raw_data still has this parent.
+            valid_subtasks = p.subtasks.all()
+            
+            subtask_points = valid_subtasks.aggregate(Sum('story_points'))['story_points__sum']
+            if subtask_points:
+                # Only overwrite if parent has no points or points were derived from subtasks previously
+                if p.story_points is None or p.story_points == 0 or p.story_points == subtask_points:
+                     p.story_points = subtask_points
+                     p.save()
+            elif p.story_points is not None:
+                # If no subtasks found, and points were previously aggregated, clear them
+                # But only if the 'points' field in ClickUp raw_data is also null/0
+                raw_points = p.raw_source_data.get('points')
+                if not raw_points:
+                    p.story_points = 0
+                    p.save()
+            
+            # Aggregate AI Usage (Avg)
+            subtask_ai = valid_subtasks.aggregate(Avg('ai_usage_percent'))['ai_usage_percent__avg']
+            if subtask_ai is not None:
+                p.ai_usage_percent = subtask_ai
+                p.save()
+
+    def normalize_status(self, raw_status: str) -> str:
+        """
+        Map ClickUp statuses to DMT status categories.
+        """
+        status = raw_status.lower()
+        if status in ['done', 'complete', 'closed', 'resolved', 'verified', 'completed', 'verified - dev']:
+            return 'done'
+        elif status in ['in progress', 'active', 'development', 'review', 'in review', 'ready for testing', 'testing in progress', 'testing', 'dev scoping', 'reopened']:
+            return 'in_progress'
+        return 'todo'
 
     def _sync_task(self, task: Dict[str, Any], source_id: int, sprint_obj=None):
         """
@@ -158,30 +239,132 @@ class ClickupConnector(BaseConnector):
         raw_status = task.get('status', {}).get('status', 'Open')
         status_type = task.get('status', {}).get('type', 'open')
         
-        # ClickUp status type mapping
-        category_map = {
-            'open': 'todo',
-            'custom': 'in_progress',
-            'unstarted': 'todo',
-            'closed': 'done'
-        }
-        status_category = category_map.get(status_type, 'todo')
+        # Use granular status normalization
+        status_category = self.normalize_status(raw_status)
         
         priority = task.get('priority', {}).get('priority', 'normal') if task.get('priority') else 'normal'
         
         assignee_email = task.get('assignees', [{}])[0].get('email') if task.get('assignees') else None
         resolved_assignee = UserResolver.resolve_by_identity('clickup', assignee_email)
 
+        # Generic Field Mapping from Config
+        from configuration.models import SourceConfiguration
+        try:
+            sc = SourceConfiguration.objects.get(id=source_id)
+            config_mapping = sc.config_json.get('field_mapping', {}) if sc.config_json else {}
+        except SourceConfiguration.DoesNotExist:
+            config_mapping = {}
+
+        # Custom Fields Extraction
+        custom_fields = task.get('custom_fields', [])
+        
+        # Helper to find value by field ID or Name
+        def get_cf_value(field_identifier):
+            if not field_identifier: return None
+            for cf in custom_fields:
+                if cf['id'] == field_identifier or cf['name'] == field_identifier:
+                    # Value extraction depends on type
+                    val = cf.get('value')
+                    
+                    # Handle drop_down (value is index) -> Resolve to Name
+                    if cf.get('type') == 'drop_down' and val is not None:
+                        options = cf.get('type_config', {}).get('options', [])
+                        try:
+                            # val can be index (int) or ID (str)
+                            if isinstance(val, int):
+                                return options[val].get('name') if val < len(options) else str(val)
+                            # Sometimes ClickUp returns the option ID as value
+                            for opt in options:
+                                if opt['id'] == val:
+                                    return opt.get('name')
+                        except (IndexError, KeyError):
+                            pass
+                    return val
+            return None
+
+        # 1. AI Usage
+        ai_field_id = config_mapping.get('ai_usage_id')
+        ai_usage_percent = None
+        if ai_field_id:
+            val = get_cf_value(ai_field_id)
+            if val is not None:
+                try:
+                    ai_usage_percent = float(val)
+                except (ValueError, TypeError):
+                    pass
+        
+        # 2. PR Link
+        pr_link_id = config_mapping.get('pr_link_id')
+        pr_link = get_cf_value(pr_link_id)
+        
+        # 3. AC Quality
+        ac_quality_id = config_mapping.get('ac_quality_id')
+        ac_quality_val = get_cf_value(ac_quality_id)
+        reviewer_signoff = False
+        if ac_quality_val and str(ac_quality_val).lower() == 'final':
+            reviewer_signoff = True
+
+        # 4. Story Points (Standard ClickUp field 'points')
+        story_points = task.get('points')
+        
+        # 5. Parent ID (Subtasks)
+        parent_id = task.get('parent')
+        parent_obj = None
+        if parent_id:
+            try:
+                parent_obj = WorkItem.objects.filter(source_config_id=source_id, external_id=parent_id).first()
+            except Exception:
+                pass
+
+        # 6. Item Type Mapping (Custom Type or Tag)
+        item_type = 'task' # default
+        
+        # Check explicit mapping if configured
+        type_field_id = config_mapping.get('item_type_id')
+        if type_field_id:
+             item_type_val = get_cf_value(type_field_id)
+             if item_type_val: item_type = str(item_type_val).lower()
+
+        # Fallback 1: ClickUp custom_item_id (Modern ClickUp ID system)
+        custom_item_id = task.get('custom_item_id')
+        if item_type == 'task' and custom_item_id:
+            cit_map = {
+                1: 'epic',       # Milestone
+                1001: 'story',   # Goal -> Story
+                1002: 'story',   # User Story
+                1006: 'bug',     # Bug
+                1008: 'epic',    # Epic
+                1007: 'epic',    # Initiative
+            }
+            if custom_item_id in cit_map:
+                item_type = cit_map[custom_item_id]
+
+        # Fallback 2: custom_type string (Deprecated but common)
+        custom_type = task.get('custom_type')
+        if item_type == 'task' and custom_type:
+            ct_lower = custom_type.lower() if isinstance(custom_type, str) else ''
+            if 'milestone' in ct_lower: item_type = 'epic'
+            elif 'feature' in ct_lower: item_type = 'story'
+            elif 'bug' in ct_lower: item_type = 'bug'
+        
+        # Fallback 3: tags for 'story'
+        tags = [t['name'].lower() for t in task.get('tags', [])]
+        if item_type == 'task' and ('story' in tags or 'feature' in tags):
+            item_type = 'story'
+        
         # Prepare data for model and compliance check
         work_item_data = {
             'source_config_id': source_id,
             'external_id': external_id,
             'title': task.get('name', 'Untitled'),
             'description': task.get('description', ''),
-            'item_type': 'task', # ClickUp default
+            'item_type': item_type,
             'status': raw_status,
             'status_category': status_category,
             'priority': priority,
+            'story_points': story_points,
+            'ai_usage_percent': ai_usage_percent,
+            'parent': parent_obj,
             'creator_email': task.get('creator', {}).get('email'),
             'assignee_email': assignee_email,
             'assignee_name': task.get('assignees', [{}])[0].get('username') if task.get('assignees') else None,
@@ -189,7 +372,16 @@ class ClickupConnector(BaseConnector):
             'updated_at': updated_at,
             'resolved_at': resolved_at,
             'raw_source_data': task,
+            'reviewer_dmt_signoff': reviewer_signoff,
         }
+
+        # Clear assignee if none in ClickUp
+        if not task.get('assignees'):
+            work_item_data['assignee_email'] = None
+            work_item_data['assignee_name'] = None
+        
+        if pr_link:
+             work_item_data['pr_links'] = [pr_link]
 
         # Run non-blocking compliance check
         is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data)

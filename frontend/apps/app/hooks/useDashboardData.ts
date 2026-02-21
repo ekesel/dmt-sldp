@@ -27,7 +27,7 @@ interface Insight {
   created_at: string;
 }
 
-export function useDashboardData() {
+export function useDashboardData(projectId?: number | null) {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [velocity, setVelocity] = useState<VelocityData[]>([]);
   const [compliance, setCompliance] = useState<ComplianceData[]>([]);
@@ -62,11 +62,17 @@ export function useDashboardData() {
       };
 
       const timestamp = Date.now();
+      const queryParams = new URLSearchParams({
+        _t: timestamp.toString(),
+        ...(projectId ? { project_id: projectId.toString() } : {})
+      });
+      const queryString = `?${queryParams.toString()}`;
+
       const [summaryRes, velocityRes, complianceRes, insightsRes] = await Promise.all([
-        fetch(`/api/dashboard/summary/?_t=${timestamp}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/velocity/?_t=${timestamp}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/compliance/?_t=${timestamp}`, { headers, cache: 'no-store' }),
-        fetch(`/api/ai-insights/?_t=${timestamp}`, { headers, cache: 'no-store' })
+        fetch(`/api/dashboard/summary/${queryString}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/velocity/${queryString}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/compliance/${queryString}`, { headers, cache: 'no-store' }),
+        fetch(`/api/ai-insights/${queryString}`, { headers, cache: 'no-store' })
       ]);
 
       if (!summaryRes.ok || !velocityRes.ok || !complianceRes.ok || !insightsRes.ok) {
@@ -84,7 +90,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, projectId]);
 
   useEffect(() => {
     fetchData();

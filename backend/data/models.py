@@ -44,10 +44,13 @@ class WorkItem(SoftDeleteMixin, models.Model):
     
     # Core fields
     sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subtasks')
     item_type = models.CharField(max_length=20, choices=ITEM_TYPES, default='task')
     title = models.TextField()
     description = models.TextField(blank=True, null=True)
     priority = models.CharField(max_length=50, blank=True, null=True)
+    story_points = models.FloatField(null=True, blank=True)
+    ai_usage_percent = models.FloatField(null=True, blank=True)
     
     # Status tracking
     status = models.CharField(max_length=50)

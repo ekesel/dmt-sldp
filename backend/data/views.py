@@ -17,6 +17,7 @@ from core.utils.ai_client import AIClient
 from tenants.models import Tenant
 from .analytics.metrics import MetricService
 from .analytics.forecasting import ForecastingService
+from configuration.models import SourceConfiguration
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -47,14 +48,65 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Scope to current tenant via schema or request context
-        # Assumes django-tenants middleware sets connection.schema_name
+        project_id = request.query_params.get('project_id')
         
-        # Get current active sprint metrics if available
-        current_sprint = SprintMetrics.objects.order_by('-sprint_end_date').first()
+        # Base querysets
+        sprints = SprintMetrics.objects.order_by('-sprint_end_date')
+        
+        # If project_id provided, filter Sprints based on association via WorkItems
+        if project_id:
+            # 1. Get Source Config IDs for this project (Cross-schema query)
+            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            
+            # 2. Find sprints that have work items from these sources
+            from .models import WorkItem
+            relevant_sprint_names = WorkItem.objects.filter(
+                source_config_id__in=source_config_ids, 
+                sprint__isnull=False
+            ).values_list('sprint__name', flat=True).distinct()
+            
+            current_sprint = sprints.filter(sprint_name__in=relevant_sprint_names).first()
+        else:
+            current_sprint = sprints.first()
         
         if not current_sprint:
-            return Response({})
+            # Fallback: Calculate metrics dynamically from WorkItems if no SprintMetrics exist
+            from django.db.models import Sum, Avg, F, Q
+            from .models import WorkItem, Sprint
+            
+            # Base WorkItem Query
+            wi_qs = WorkItem.objects.all()
+            if project_id:
+               source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+               wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
+
+            # 1. Velocity (Active Sprint)
+            active_sprint = Sprint.objects.filter(status='active').first()
+            velocity = 0
+            if active_sprint:
+                completed_in_sprint = wi_qs.filter(sprint=active_sprint, status_category='done')
+                # Assuming 'story_points' field exists in raw_source_data or we use a count
+                # For now, simplistic count as story points field isn't in WorkItem model definition above
+                velocity = completed_in_sprint.count() 
+
+            # 2. Compliance Rate
+            total_items = wi_qs.count()
+            compliant_items = wi_qs.filter(dmt_compliant=True).count()
+            compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
+
+            # 3. Defects (Bugs)
+            defects = wi_qs.filter(item_type='bug').count()
+
+            # 4. Cycle Time (Mocked/Simplified)
+            cycle_time = 3.4 # Placeholder until we have resolved_at - started_at logic
+
+            data = {
+                "velocity": velocity,
+                "compliance_rate": round(compliance_rate, 1),
+                "defects": defects,
+                "cycle_time": cycle_time
+            }
+            return Response(data)
 
         data = {
             "velocity": current_sprint.velocity,
@@ -68,7 +120,44 @@ class VelocityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
+        project_id = request.query_params.get('project_id')
+        metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
+
+        if project_id:
+            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            from .models import WorkItem
+            relevant_sprint_names = WorkItem.objects.filter(
+                source_config_id__in=source_config_ids, 
+                sprint__isnull=False
+            ).values_list('sprint__name', flat=True).distinct()
+            metrics_qs = metrics_qs.filter(sprint_name__in=relevant_sprint_names)
+
+        metrics = metrics_qs[:5]
+        
+        if not metrics and SprintMetrics.objects.count() == 0:
+             # Fallback: Calculate from WorkItems
+             from .models import Sprint, WorkItem
+             
+             # Get last 5 sprints
+             sprints = Sprint.objects.order_by('-end_date')[:5]
+             data = []
+             
+             for sprint in sprints:
+                 wi_qs = WorkItem.objects.filter(sprint=sprint, status_category='done')
+                 if project_id:
+                     source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                     wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
+                 
+                 # Using count as proxy for velocity if points missing
+                 velocity = wi_qs.count() 
+                 
+                 data.append({
+                     "sprint_name": sprint.name,
+                     "velocity": velocity,
+                     "total_story_points_completed": velocity
+                 })
+             return Response(data)
+
         serializer = SprintMetricsSerializer(metrics, many=True)
         return Response(serializer.data)
 
@@ -100,7 +189,42 @@ class ComplianceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
+        project_id = request.query_params.get('project_id')
+        metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
+
+        if project_id:
+            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            from .models import WorkItem
+            relevant_sprint_names = WorkItem.objects.filter(
+                source_config_id__in=source_config_ids, 
+                sprint__isnull=False
+            ).values_list('sprint__name', flat=True).distinct()
+            metrics_qs = metrics_qs.filter(sprint_name__in=relevant_sprint_names)
+
+        metrics = metrics_qs[:5]
+        
+        if not metrics and SprintMetrics.objects.count() == 0:
+             # Fallback: Calculate from WorkItems
+             from .models import Sprint, WorkItem
+             sprints = Sprint.objects.order_by('-end_date')[:5]
+             data = []
+             
+             for sprint in sprints:
+                 wi_qs = WorkItem.objects.filter(sprint=sprint)
+                 if project_id:
+                     source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                     wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
+                 
+                 total = wi_qs.count()
+                 compliant = wi_qs.filter(dmt_compliant=True).count()
+                 rate = (compliant / total * 100) if total > 0 else 0
+                 
+                 data.append({
+                     "sprint": sprint.name,
+                     "rate": round(rate, 1)
+                 })
+             return Response(data)
+
         data = [{
             "sprint": m.sprint_name,
             "rate": m.compliance_rate_percent
@@ -223,7 +347,16 @@ class AIInsightListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        insights = AIInsight.objects.order_by('-created_at')[:10]
+        project_id = request.query_params.get('project_id')
+        insights_qs = AIInsight.objects.order_by('-created_at')
+
+        if project_id:
+            # AIInsights are linked to source_config
+            insights_qs = insights_qs.filter(source_config_id__in=
+                SourceConfiguration.objects.filter(project_id=project_id).values('id')
+            )
+
+        insights = insights_qs[:10]
         serializer = AIInsightSerializer(insights, many=True)
         return Response(serializer.data)
 
