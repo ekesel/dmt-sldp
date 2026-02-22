@@ -1,6 +1,7 @@
 from celery import shared_task
 from .factory import ConnectorFactory
 from configuration.models import SourceConfiguration
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ def extract_source_data(source_id: int):
             'base_url': source.base_url,
             'api_token': source.api_key, # Use temporary field for now
             'username': source.username,
+            'coverage_threshold': source.project.default_coverage_threshold if source.project else 80.0
         }
         
         connector = ConnectorFactory.get_connector(source.source_type, config)
@@ -20,13 +22,16 @@ def extract_source_data(source_id: int):
             logger.error(f"No connector found for type {source.source_type}")
             return
 
-        # Fetch data (Placeholder)
-        logger.info(f"Starting extraction for source {source.name}")
-        # data = connector.fetch_work_items()
+        # Trigger Sync
+        logger.info(f"Starting extraction for source {source.name} ({source.source_type})")
+        stats = connector.sync(source.project.tenant.id, source.id)
         
         # Update status
         source.last_sync_status = 'success'
+        source.last_sync_at = timezone.now()
         source.save()
+        
+        return stats
         
     except Exception as e:
         logger.error(f"Extraction failed: {str(e)}")

@@ -88,13 +88,16 @@ class ClickupConnector(BaseConnector):
                             if lst.get('due_date'):
                                 s_end = timezone.make_aware(datetime.fromtimestamp(int(lst['due_date']) / 1000))
                             
-                            # Determine status
+                            # Determine status - Only timed lists are active/completed
                             now = timezone.now()
-                            status = 'active'
-                            if s_end and now > s_end:
+                            if not s_start or not s_end:
+                                status = 'backlog' # Static lists (In Progress, Done, etc)
+                            elif now > s_end:
                                 status = 'completed'
-                            elif s_start and now < s_start:
+                            elif now < s_start:
                                 status = 'planned'
+                            else:
+                                status = 'active'
 
                             sprint_obj, _ = Sprint.objects.update_or_create(
                                 external_id=sprint_ext_id,
@@ -230,17 +233,21 @@ class ClickupConnector(BaseConnector):
         resolved_at = None
         if task.get('date_closed'):
             resolved_at = timezone.make_aware(datetime.fromtimestamp(int(task['date_closed']) / 1000))
-            
+        
+        # Capture specific started_at
         started_at = None
-        if task.get('start_date'):
+        if task.get('date_started'):
+            started_at = timezone.make_aware(datetime.fromtimestamp(int(task['date_started']) / 1000))
+        elif task.get('start_date'):
             started_at = timezone.make_aware(datetime.fromtimestamp(int(task['start_date']) / 1000))
 
         # Status and Category
         raw_status = task.get('status', {}).get('status', 'Open')
-        status_type = task.get('status', {}).get('type', 'open')
-        
-        # Use granular status normalization
         status_category = self.normalize_status(raw_status)
+        
+        # Fallback for resolved_at if status is Done but no date_closed
+        if not resolved_at and status_category == 'done':
+            resolved_at = updated_at or timezone.now()
         
         priority = task.get('priority', {}).get('priority', 'normal') if task.get('priority') else 'normal'
         
@@ -270,14 +277,26 @@ class ClickupConnector(BaseConnector):
                     if cf.get('type') == 'drop_down' and val is not None:
                         options = cf.get('type_config', {}).get('options', [])
                         try:
-                            # val can be index (int) or ID (str)
+                            # 1. val can be an index (int)
                             if isinstance(val, int):
                                 return options[val].get('name') if val < len(options) else str(val)
-                            # Sometimes ClickUp returns the option ID as value
-                            for opt in options:
-                                if opt['id'] == val:
-                                    return opt.get('name')
-                        except (IndexError, KeyError):
+                            
+                            # 2. val can be a string representation of an index ("0", "1")
+                            if isinstance(val, str) and val.isdigit():
+                                idx = int(val)
+                                for opt in options:
+                                    if opt.get('orderindex') == idx:
+                                        return opt.get('name')
+                                # Fallback if orderindex is missing but it is an index string
+                                if idx < len(options):
+                                    return options[idx].get('name')
+                                    
+                            # 3. Sometimes ClickUp returns the option ID (UUID string) as value
+                            if isinstance(val, str) and not val.isdigit():
+                                for opt in options:
+                                    if opt.get('id') == val:
+                                        return opt.get('name')
+                        except (IndexError, KeyError, ValueError):
                             pass
                     return val
             return None
@@ -296,13 +315,25 @@ class ClickupConnector(BaseConnector):
         # 2. PR Link
         pr_link_id = config_mapping.get('pr_link_id')
         pr_link = get_cf_value(pr_link_id)
+        # Filter out NA values
+        if isinstance(pr_link, str) and pr_link.lower() in ['na', 'n/a', 'none']:
+            pr_link = None
         
         # 3. AC Quality
         ac_quality_id = config_mapping.get('ac_quality_id')
         ac_quality_val = get_cf_value(ac_quality_id)
         reviewer_signoff = False
-        if ac_quality_val and str(ac_quality_val).lower() == 'final':
-            reviewer_signoff = True
+        ac_quality_db = ''
+        
+        if ac_quality_val:
+            ac_quality_lower = str(ac_quality_val).lower()
+            if ac_quality_lower == 'final':
+                reviewer_signoff = True
+                ac_quality_db = 'final'
+            elif ac_quality_lower == 'testable':
+                ac_quality_db = 'testable'
+            elif ac_quality_lower == 'incomplete':
+                ac_quality_db = 'incomplete'
 
         # 4. Story Points (Standard ClickUp field 'points')
         story_points = task.get('points')
@@ -372,6 +403,7 @@ class ClickupConnector(BaseConnector):
             'updated_at': updated_at,
             'resolved_at': resolved_at,
             'raw_source_data': task,
+            'ac_quality': ac_quality_db,
             'reviewer_dmt_signoff': reviewer_signoff,
         }
 
@@ -384,7 +416,8 @@ class ClickupConnector(BaseConnector):
              work_item_data['pr_links'] = [pr_link]
 
         # Run non-blocking compliance check
-        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data)
+        threshold = self.config.get('coverage_threshold', 80.0)
+        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
 

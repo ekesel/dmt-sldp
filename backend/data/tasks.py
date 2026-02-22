@@ -59,6 +59,10 @@ def sync_tenant_data(source_id, schema_name=None):
         )
         
         log.status = 'success'
+        
+        # 3. Trigger Metric Recalculation (Async)
+        update_all_sprint_metrics.delay(schema_name or connection.schema_name)
+        
         return f"Successfully synced {source.name}. Processed {stats.get('item_count', 0)} items."
         
     except Exception as e:
@@ -162,3 +166,22 @@ def run_daily_aggregation():
     for tenant in tenants:
         aggregate_tenant_metrics.delay(tenant.id)
     return f"Triggered aggregation for {tenants.count()} tenants"
+
+@shared_task
+@tenant_aware_task
+def update_all_sprint_metrics(schema_name=None):
+    """
+    Recalculate metrics for all sprints in the current tenant.
+    Used after sync or for backfilling.
+    """
+    from .models import Sprint
+    from .analytics.metrics import MetricService
+    
+    sprints = Sprint.objects.all()
+    count = 0
+    for sprint in sprints:
+        metrics = MetricService.populate_sprint_metrics(sprint.id)
+        if metrics:
+            count += 1
+            
+    return f"Updated metrics for {count} sprints in {connection.schema_name}"

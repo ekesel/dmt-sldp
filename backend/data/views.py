@@ -42,77 +42,20 @@ class ForecastView(APIView):
             return Response({"error": "No historical data for simulation"}, status=404)
             
         return Response(forecast)
-# ----------------------
-
 class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        from .analytics.metrics import MetricService
+        summary = MetricService.get_dashboard_summary(project_id)
         
-        # Base querysets
-        sprints = SprintMetrics.objects.order_by('-sprint_end_date')
-        
-        # If project_id provided, filter Sprints based on association via WorkItems
-        if project_id:
-            # 1. Get Source Config IDs for this project (Cross-schema query)
-            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-            
-            # 2. Find sprints that have work items from these sources
-            from .models import WorkItem
-            relevant_sprint_names = WorkItem.objects.filter(
-                source_config_id__in=source_config_ids, 
-                sprint__isnull=False
-            ).values_list('sprint__name', flat=True).distinct()
-            
-            current_sprint = sprints.filter(sprint_name__in=relevant_sprint_names).first()
-        else:
-            current_sprint = sprints.first()
-        
-        if not current_sprint:
-            # Fallback: Calculate metrics dynamically from WorkItems if no SprintMetrics exist
-            from django.db.models import Sum, Avg, F, Q
-            from .models import WorkItem, Sprint
-            
-            # Base WorkItem Query
-            wi_qs = WorkItem.objects.all()
-            if project_id:
-               source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-               wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
-
-            # 1. Velocity (Active Sprint)
-            active_sprint = Sprint.objects.filter(status='active').first()
-            velocity = 0
-            if active_sprint:
-                completed_in_sprint = wi_qs.filter(sprint=active_sprint, status_category='done')
-                # Assuming 'story_points' field exists in raw_source_data or we use a count
-                # For now, simplistic count as story points field isn't in WorkItem model definition above
-                velocity = completed_in_sprint.count() 
-
-            # 2. Compliance Rate
-            total_items = wi_qs.count()
-            compliant_items = wi_qs.filter(dmt_compliant=True).count()
-            compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
-
-            # 3. Defects (Bugs)
-            defects = wi_qs.filter(item_type='bug').count()
-
-            # 4. Cycle Time (Mocked/Simplified)
-            cycle_time = 3.4 # Placeholder until we have resolved_at - started_at logic
-
-            data = {
-                "velocity": velocity,
-                "compliance_rate": round(compliance_rate, 1),
-                "defects": defects,
-                "cycle_time": cycle_time
-            }
-            return Response(data)
-
+        # UI expects: velocity (int/float), compliance_rate (float), defects (int), cycle_time (float)
         data = {
-            "velocity": current_sprint.velocity,
-            "compliance_rate": current_sprint.compliance_rate_percent,
-            "defects": current_sprint.defects_found_post_release,
-            "cycle_time": current_sprint.avg_cycle_time_days
+            "velocity": summary['active_sprint']['total_points'] if summary['active_sprint'] else 0,
+            "compliance_rate": round(summary['compliance_rate'], 2),
+            "defects": summary['resolved_blockers'],
+            "cycle_time": summary['avg_cycle_time']
         }
         return Response(data)
 
@@ -137,9 +80,10 @@ class VelocityView(APIView):
         if not metrics and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
              from .models import Sprint, WorkItem
+             from django.db.models import Sum
              
              # Get last 5 sprints
-             sprints = Sprint.objects.order_by('-end_date')[:5]
+             sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
              data = []
              
              for sprint in sprints:
@@ -148,8 +92,8 @@ class VelocityView(APIView):
                      source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
                      wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
                  
-                 # Using count as proxy for velocity if points missing
-                 velocity = wi_qs.count() 
+                 # Using story_points sum
+                 velocity = wi_qs.aggregate(Sum('story_points'))['story_points__sum'] or 0
                  
                  data.append({
                      "sprint_name": sprint.name,

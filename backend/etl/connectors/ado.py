@@ -208,13 +208,16 @@ class AzureDevOpsConnector(BaseConnector):
                     s_start = self._parse_date(attributes.get('startDate'))
                     s_end = self._parse_date(attributes.get('finishDate'))
 
-                    # Status logic
+                    # Status logic - Only timed iterations are active/completed
                     now = timezone.now()
-                    status = 'active'
-                    if s_end and now > s_end:
+                    if not s_start or not s_end:
+                         status = 'backlog'
+                    elif now > s_end:
                          status = 'completed'
-                    elif s_start and now < s_start:
+                    elif now < s_start:
                          status = 'planned'
+                    else:
+                         status = 'active'
 
                     Sprint.objects.update_or_create(
                         external_id=str(it_id),
@@ -255,7 +258,7 @@ class AzureDevOpsConnector(BaseConnector):
         for i in range(0, len(ids), chunk_size):
             chunk = ids[i:i + chunk_size]
             ids_str = ",".join(chunk)
-            details_url = f"{self.api_base}/{project_name}/_apis/wit/workitems?ids={ids_str}&api-version=6.0&fields=System.Id,System.Title,System.Description,System.State,System.WorkItemType,System.AssignedTo,System.CreatedDate,System.ChangedDate,Microsoft.VSTS.Common.Priority,System.IterationPath,System.CreatedBy"
+            details_url = f"{self.api_base}/{project_name}/_apis/wit/workitems?ids={ids_str}&api-version=6.0&fields=System.Id,System.Title,System.Description,System.State,System.WorkItemType,System.AssignedTo,System.CreatedDate,System.ChangedDate,Microsoft.VSTS.Common.Priority,System.IterationPath,System.CreatedBy,Microsoft.VSTS.Common.ActivatedDate,Microsoft.VSTS.Common.ResolvedDate"
             
             d_resp = requests.get(details_url, headers=headers)
             if d_resp.status_code == 200:
@@ -274,11 +277,16 @@ class AzureDevOpsConnector(BaseConnector):
         item_type = fields.get('System.WorkItemType', 'Task').lower()
         state = fields.get('System.State', 'New')
         
+        # Dates from ADO fields
+        started_at = self._parse_date(fields.get('Microsoft.VSTS.Common.ActivatedDate'))
+        resolved_at = self._parse_date(fields.get('Microsoft.VSTS.Common.ResolvedDate'))
+        
         # Determine status category
         state_lower = state.lower()
         if state_lower in ['done', 'closed', 'completed', 'resolved']:
             status_category = 'done'
-            resolved_at = timezone.now() # Approximate if not available
+            if not resolved_at:
+                resolved_at = timezone.now() # Fallback
         elif state_lower in ['new', 'to do', 'proposed']:
             status_category = 'todo'
             resolved_at = None
@@ -328,12 +336,14 @@ class AzureDevOpsConnector(BaseConnector):
             'assignee_name': assigned_to.get('displayName') if isinstance(assigned_to, dict) else None,
             'created_at': created_at,
             'updated_at': updated_at,
+            'started_at': started_at,
             'resolved_at': resolved_at,
             'raw_source_data': item,
         }
 
         # Compliance
-        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data)
+        threshold = self.config.get('coverage_threshold', 80.0)
+        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
 

@@ -67,7 +67,7 @@ export default function DashboardPage() {
                     />
                     <KPICard
                         label="DMT Compliance"
-                        value={`${Math.round(summary?.compliance_rate || 0)}%`}
+                        value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                         description="Minimum Threshold: 80%"
                     />

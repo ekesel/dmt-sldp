@@ -222,7 +222,8 @@ class JiraConnector(BaseConnector):
         }
 
         # Run non-blocking compliance check
-        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data)
+        threshold = self.config.get('coverage_threshold', 80.0)
+        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
 

@@ -213,6 +213,7 @@ class SprintMetrics(models.Model):
     sprint_name = models.CharField(max_length=100)
     sprint_start_date = models.DateField()
     sprint_end_date = models.DateField()
+    project = models.ForeignKey('configuration.Project', on_delete=models.CASCADE, null=True, blank=True)
     
     # Velocity
     total_story_points_committed = models.FloatField(default=0)
@@ -250,7 +251,7 @@ class SprintMetrics(models.Model):
     
     class Meta:
         db_table = 'data_sprintmetrics'
-        unique_together = ['sprint_name', 'sprint_end_date']
+        unique_together = ['sprint_name', 'sprint_end_date', 'project']
         indexes = [
             models.Index(fields=['sprint_end_date']),
         ]

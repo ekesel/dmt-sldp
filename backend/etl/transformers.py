@@ -65,27 +65,48 @@ class ComplianceEngine:
     Automated rules for DMT compliance. Non-blocking.
     """
     @staticmethod
-    def check_compliance(work_item_data: Dict[str, Any]) -> tuple[bool, List[str]]:
+    def check_compliance(work_item_data: Dict[str, Any], coverage_threshold: float = 80.0) -> tuple[bool, List[str]]:
+        # If it's a subtask (has a parent), it is automatically exempt from DMT compliance checks
+        if work_item_data.get('parent'):
+            return True, []
+            
         failures = []
+        item_type = work_item_data.get('item_type', '').lower()
+        unit_testing_status = work_item_data.get('unit_testing_status')
+        has_exception = unit_testing_status == 'exception_approved'
         
-        # 1. Basic Metadata
-        if not work_item_data.get('assignee_email'):
-            failures.append('missing_assignee')
-        if not work_item_data.get('description'):
-            failures.append('missing_description')
-            
-        # 2. DMT Specific
-        if not work_item_data.get('pr_links'):
-            failures.append('missing_pr_link')
-            
-        # 3. Quality Gates
+        # 1. AC Quality
         ac_quality = work_item_data.get('ac_quality')
         if not ac_quality or ac_quality == 'incomplete':
-            failures.append('ac_quality_insufficient')
+            failures.append('missing_ac_quality')
             
-        coverage = work_item_data.get('coverage_percent')
-        if coverage is not None and coverage < 80: # Default threshold
-            failures.append('low_test_coverage')
+        # 2. Unit Testing & Coverage
+        if not has_exception:
+            if unit_testing_status != 'done':
+                failures.append('unit_testing_not_done')
+            
+            coverage = work_item_data.get('coverage_percent')
+            if coverage is None or coverage < coverage_threshold:
+                failures.append('low_coverage')
+                
+        # 3. Pull Request Requirements (Stories and Bugs)
+        if item_type in ['story', 'bug']:
+            pr_links = work_item_data.get('pr_links', [])
+            valid_prs = [l for l in pr_links if isinstance(l, str) and l.startswith('http')]
+            if not valid_prs:
+                failures.append('missing_pr_link')
+                
+            # 4. CI Evidence & Signoff
+            # ci_links = work_item_data.get('ci_evidence_links', [])
+            # if not ci_links:
+            #     failures.append('missing_ci_evidence')
+                
+            if not work_item_data.get('reviewer_dmt_signoff'):
+                failures.append('missing_dmt_signoff')
+            
+        # 5. Basic Metadata (Supplemental)
+        if not work_item_data.get('assignee_email'):
+            failures.append('missing_assignee')
             
         is_compliant = len(failures) == 0
         return is_compliant, failures
