@@ -56,7 +56,7 @@ export default function DashboardPage() {
                     <KPICard
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
-                        trend={{ direction: 'neutral', value: 'Latest' }}
+                        trend={{ direction: 'neutral', value: 'Avg' }}
                         description="Average of last 5 sprints"
                     />
                     <KPICard

@@ -23,7 +23,7 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
     return (
         <div className="w-full h-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
+                <AreaChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 30 }}>
                     <defs>
                         <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -34,9 +34,13 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
                     <XAxis
                         dataKey="sprint_name"
                         stroke="#94a3b8"
-                        fontSize={12}
+                        fontSize={11}
                         tickLine={false}
                         axisLine={false}
+                        interval={0}
+                        angle={-25}
+                        textAnchor="end"
+                        height={60}
                     />
                     <YAxis
                         stroke="#94a3b8"

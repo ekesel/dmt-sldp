@@ -67,20 +67,40 @@ class VelocityView(APIView):
         metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
-            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-            from .models import WorkItem
-            relevant_sprint_names = WorkItem.objects.filter(
-                source_config_id__in=source_config_ids, 
-                sprint__isnull=False
-            ).values_list('sprint__name', flat=True).distinct()
-            metrics_qs = metrics_qs.filter(sprint_name__in=relevant_sprint_names)
-
+            metrics_qs = metrics_qs.filter(project_id=project_id)
+        else:
+            metrics_qs = metrics_qs.filter(project__isnull=True)
         metrics = metrics_qs[:5]
+        
+        data = []
+        for m in metrics:
+            # Strip date suffix like " (2/18 - 3/3)" from DB string
+            base_sprint = m.sprint_name.split(' (')[0]
+            
+            if project_id:
+                label = base_sprint
+            else:
+                # Find which projects contributed to this global sprint metric
+                contributing_projects = SprintMetrics.objects.filter(
+                    sprint_name=m.sprint_name, 
+                    project__isnull=False
+                ).values_list('project__name', flat=True)
+                
+                if contributing_projects:
+                    proj_names = ", ".join(contributing_projects)
+                    label = f"{base_sprint}\n({proj_names})"
+                else:
+                    label = base_sprint
+                
+            data.append({
+                "sprint_name": label,
+                "velocity": m.velocity,
+                "total_story_points_completed": m.total_story_points_completed
+            })
         
         if not metrics and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
              from .models import Sprint, WorkItem
-             from django.db.models import Sum
              
              # Get last 5 sprints
              sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
@@ -91,19 +111,23 @@ class VelocityView(APIView):
                  if project_id:
                      source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
                      wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
+                     sprint_label = sprint.name
+                 else:
+                     sprint_label = f"{sprint.project.name} - {sprint.name}" if sprint.project else sprint.name
                  
                  # Using story_points sum
                  velocity = wi_qs.aggregate(Sum('story_points'))['story_points__sum'] or 0
                  
                  data.append({
-                     "sprint_name": sprint.name,
+                     "sprint_name": sprint_label,
                      "velocity": velocity,
                      "total_story_points_completed": velocity
                  })
+             data.reverse() # Oldest to newest for graph
              return Response(data)
 
-        serializer = SprintMetricsSerializer(metrics, many=True)
-        return Response(serializer.data)
+        data.reverse() # Oldest to newest for graph
+        return Response(data)
 
 class ThroughputView(APIView):
     permission_classes = [IsAuthenticated]
