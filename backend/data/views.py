@@ -31,13 +31,10 @@ class ForecastView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        integration_id = request.query_params.get('integration_id')
+        project_id = request.query_params.get('project_id')
         remaining_items = int(request.query_params.get('remaining_items', 10))
-        
-        if not integration_id:
-            return Response({"error": "integration_id is required"}, status=400)
             
-        forecast = ForecastingService.simulate_delivery_dates(integration_id, remaining_items)
+        forecast = ForecastingService.simulate_delivery_dates(project_id, remaining_items)
         if not forecast:
             return Response({"error": "No historical data for simulation"}, status=404)
             
@@ -354,5 +351,31 @@ class AIInsightFeedbackView(APIView):
     permission_classes = [IsAuthenticated]
     
     def patch(self, request):
-        # Existing implementation logic
-        pass
+        insight_id = request.data.get('insight_id')
+        suggestion_id = request.data.get('suggestion_id')
+        status = request.data.get('status')
+        
+        if not all([insight_id, suggestion_id, status]):
+            return Response({"error": "Missing required fields"}, status=400)
+            
+        try:
+            insight = AIInsight.objects.get(id=insight_id)
+            
+            # Find and update the suggestion
+            updated = False
+            for suggestion in insight.suggestions:
+                if str(suggestion.get('id')) == str(suggestion_id):
+                    suggestion['status'] = status
+                    from django.utils import timezone
+                    suggestion['updated_at'] = timezone.now().isoformat()
+                    updated = True
+                    break
+                    
+            if not updated:
+                return Response({"error": "Suggestion not found in insight"}, status=404)
+                
+            insight.save(update_fields=['suggestions'])
+            return Response({"success": True})
+            
+        except AIInsight.DoesNotExist:
+            return Response({"error": "AIInsight not found"}, status=404)

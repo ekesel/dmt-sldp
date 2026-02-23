@@ -11,7 +11,7 @@ import { ProjectSelector } from "../../components/ProjectSelector";
 
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const { summary, velocity, compliance, insights, loading, error } = useDashboardData(selectedProjectId);
+    const { summary, velocity, compliance, insights, forecast, loading, error } = useDashboardData(selectedProjectId);
 
     if (loading) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
@@ -96,17 +96,19 @@ export default function DashboardPage() {
                     </Card>
 
                     <Card className="min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
-                        {/* Forecast requires separate endpoint logic or data derived from velocity */}
-                        {/* Placeholder for now as forecast endpoint logic in backend expects integration_id which we might not have in summary */}
                         <div className="mb-8">
                             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                                 <TrendingUp className="text-brand-primary" />
                                 Delivery Forecast
                             </h2>
-                            <p className="text-slate-500 text-sm mt-1">Coming Soon: Stochastic prediction</p>
+                            <p className="text-slate-500 text-sm mt-1">Stochastic prediction based on historical cycle times</p>
                         </div>
                         <div className="flex-1 w-full flex items-center justify-center text-slate-500">
-                            Forecast data unavailable
+                            {forecast ? (
+                                <ForecastChart data={forecast} />
+                            ) : (
+                                "Forecast data unavailable (insufficient historical records)"
+                            )}
                         </div>
                     </Card>
 
@@ -133,17 +135,13 @@ export default function DashboardPage() {
 
                 {insights && insights.length > 0 && (
                     <div className="pt-8 border-t border-white/5">
-                        {/* Assuming AIInsightsList can take a list or we map it */}
-                        {/* For now, just show the latest insight if available */}
-                        {/* Note: AIInsightsList expects specific props, need to check component */}
-                        <h2 className="text-2xl font-bold text-white mb-4">AI Insights</h2>
-                        <div className="grid gap-4">
-                            {insights.map((insight: any) => (
-                                <Card key={insight.id} className="p-4 bg-slate-800/20 border-white/5">
-                                    <h3 className="text-lg font-bold text-white">{insight.title || "Insight"}</h3>
-                                    <p className="text-slate-400 mt-2">{insight.summary}</p>
-                                </Card>
-                            ))}
+                        <AIInsightsList
+                            insightId={insights[0].id}
+                            suggestions={insights[0].suggestions}
+                        />
+                        <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
+                            <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
+                            <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
                         </div>
                     </div>
                 )}

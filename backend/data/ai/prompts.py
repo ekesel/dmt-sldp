@@ -8,13 +8,12 @@ Context:
 - High-risk items (missing PRs): {high_risk_count}
 
 Response format (JSON):
-{
-  "summary": "Brief analysis of current state",
+{{"summary": "Brief analysis of current state",
   "suggestions": [
-    {"title": "Actionable suggestion", "impact": "High/Medium/Low", "description": "Why and how"}
+    {{"title": "Actionable suggestion", "impact": "High/Medium/Low", "description": "Why and how"}}
   ],
   "forecast": "Predicted delivery risk"
-}
+}}
 """
 
 TEAM_HEALTH_SYSTEM_PROMPT = """
@@ -27,16 +26,16 @@ Team Data:
 - Stagnant Items (>5 days in progress): {stagnant_items}
 
 Response format (JSON):
-{
+{{
   "summary": "High-level team health overview",
   "suggestions": [
-    {
+    {{
       "id": "unique_short_id",
       "title": "Short title",
       "impact": "High/Medium/Low",
       "description": "Specific advice",
       "status": "pending"
-    }
+    }}
   ]
-}
+}}
 """

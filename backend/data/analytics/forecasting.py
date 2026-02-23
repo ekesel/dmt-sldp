@@ -6,15 +6,22 @@ from django.db.models import F
 
 class ForecastingService:
     @staticmethod
-    def get_historical_cycle_times(integration_id, limit=100):
+    def get_historical_cycle_times(project_id=None, limit=200):
         """
         Calculates cycle times (in days) for the last N resolved work items.
         """
+        from configuration.models import SourceConfiguration
+        
         items = WorkItem.objects.filter(
-            source_config_id=integration_id,
             resolved_at__isnull=False,
             created_at__isnull=False
-        ).order_by('-resolved_at')[:limit]
+        ).order_by('-resolved_at')
+        
+        if project_id:
+            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            items = items.filter(source_config_id__in=source_config_ids)
+            
+        items = items[:limit]
         
         cycle_times = []
         for item in items:
@@ -26,11 +33,11 @@ class ForecastingService:
         return cycle_times
 
     @staticmethod
-    def simulate_delivery_dates(integration_id, remaining_items, num_simulations=10000):
+    def simulate_delivery_dates(project_id=None, remaining_items=10, num_simulations=10000):
         """
         Runs Monte Carlo simulations to predict completion time for M items.
         """
-        historical_times = ForecastingService.get_historical_cycle_times(integration_id)
+        historical_times = ForecastingService.get_historical_cycle_times(project_id)
         
         if not historical_times:
             # Fallback if no history exists

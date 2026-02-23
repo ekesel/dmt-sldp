@@ -4,7 +4,9 @@ from django.utils import timezone
 from django.db.models import Avg, F, Count
 from ..models import AIInsight, WorkItem
 from configuration.models import SourceConfiguration
-from .service import GeminiAIProvider
+from tenants.models import Tenant
+from django.db import connection
+from .service import GeminiAIProvider, KimiAIProvider
 from core.celery_utils import tenant_aware_task
 
 @shared_task(queue='ai_insights')
@@ -55,7 +57,12 @@ def refresh_ai_insights(source_id, schema_name=None):
     }
 
     # 2. Call real AI service
-    ai_provider = GeminiAIProvider()
+    tenant = Tenant.objects.get(schema_name=connection.schema_name)
+    if tenant.ai_provider == Tenant.AI_PROVIDER_KIMI:
+        ai_provider = KimiAIProvider(api_key=tenant.ai_api_key, model_name=tenant.ai_model, base_url=tenant.ai_base_url)
+    else:
+        ai_provider = GeminiAIProvider()
+
     # Wave 1: Combine compliance and team health or call separately
     # For now, we enhance the primary provider to handle the expanded metrics
     response_data = ai_provider.generate_optimization_insights(metrics)

@@ -24,6 +24,7 @@ interface ComplianceData {
 interface Insight {
   id: number;
   summary: string;
+  suggestions: any[];
   created_at: string;
 }
 
@@ -32,6 +33,7 @@ export function useDashboardData(projectId?: number | null) {
   const [velocity, setVelocity] = useState<VelocityData[]>([]);
   const [compliance, setCompliance] = useState<ComplianceData[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [forecast, setForecast] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,11 +70,12 @@ export function useDashboardData(projectId?: number | null) {
       });
       const queryString = `?${queryParams.toString()}`;
 
-      const [summaryRes, velocityRes, complianceRes, insightsRes] = await Promise.all([
+      const [summaryRes, velocityRes, complianceRes, insightsRes, forecastRes] = await Promise.all([
         fetch(`/api/dashboard/summary/${queryString}`, { headers, cache: 'no-store' }),
         fetch(`/api/dashboard/velocity/${queryString}`, { headers, cache: 'no-store' }),
         fetch(`/api/dashboard/compliance/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/ai-insights/${queryString}`, { headers, cache: 'no-store' })
+        fetch(`/api/ai-insights/${queryString}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/forecast/${queryString}`, { headers, cache: 'no-store' })
       ]);
 
       if (!summaryRes.ok || !velocityRes.ok || !complianceRes.ok || !insightsRes.ok) {
@@ -83,6 +86,14 @@ export function useDashboardData(projectId?: number | null) {
       setVelocity(await velocityRes.json());
       setCompliance(await complianceRes.json());
       setInsights(await insightsRes.json());
+
+      // Forecast might 404 if no history exists yet; handle gracefully
+      if (forecastRes.ok) {
+        setForecast(await forecastRes.json());
+      } else {
+        setForecast(null);
+      }
+
       setError(null);
     } catch (err) {
       console.error(err);
@@ -109,5 +120,5 @@ export function useDashboardData(projectId?: number | null) {
     }
   }, [lastMessage, fetchData]);
 
-  return { summary, velocity, compliance, insights, loading, error, refresh: fetchData };
+  return { summary, velocity, compliance, insights, forecast, loading, error, refresh: fetchData };
 }

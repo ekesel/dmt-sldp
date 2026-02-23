@@ -34,7 +34,7 @@ urlpatterns = [
     
     # Analytics & Dashboard
     path('api/analytics/metrics/', MetricDashboardView.as_view(), name='metrics_dashboard'),
-    path('api/analytics/forecast/', ForecastView.as_view(), name='forecast'),
+    path('api/dashboard/forecast/', ForecastView.as_view(), name='forecast'),
     path('api/dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard_summary'),
     path('api/dashboard/velocity/', VelocityView.as_view(), name='dashboard_velocity'),
     path('api/dashboard/throughput/', ThroughputView.as_view(), name='dashboard_throughput'),
