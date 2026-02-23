@@ -123,7 +123,7 @@ class MetricService:
                 'compliance_rate': 0,
                 'active_sprint': None,
                 'avg_cycle_time': 0,
-                'resolved_blockers': 0,
+                'bugs_resolved': 0,
                 'latest_insight': None,
                 'api_requests_count': AuditLog.objects.count()
             }
@@ -145,6 +145,7 @@ class MetricService:
             total_velocity = sum(m.velocity for m in last_5_metrics)
             total_items = sum(m.items_completed for m in last_5_metrics)
             total_cycle_time = sum(m.avg_cycle_time_days for m in last_5_metrics)
+            total_bugs = sum(m.bugs_completed for m in last_5_metrics)
             count = len(last_5_metrics)
             
             avg_velocity = total_velocity / count
@@ -161,7 +162,7 @@ class MetricService:
                     'item_count': round(avg_items, 1)
                 },
                 'avg_cycle_time': round(avg_cycle_time, 1),
-                'resolved_blockers': latest.bugs_completed,
+                'bugs_resolved': total_bugs,
                 'latest_insight': {
                     'id': latest_insight.id,
                     'summary': latest_insight.summary,
@@ -182,9 +183,13 @@ class MetricService:
         
         # Calculate dynamic average velocity if metrics missing
         dynamic_velocities = []
+        total_bugs_dynamic = 0
         for s in sprints:
             v = MetricService.calculate_velocity(s.id)
             dynamic_velocities.append(v)
+            # Add bugs completed in this sprint
+            sprint_items = total_items_qs.filter(sprint=s)
+            total_bugs_dynamic += sprint_items.filter(status_category='done', item_type='bug').count()
         
         if dynamic_velocities:
             avg_points = sum(v['total_points'] for v in dynamic_velocities) / len(dynamic_velocities)
@@ -202,7 +207,7 @@ class MetricService:
                 'item_count': round(avg_count, 1)
             },
             'avg_cycle_time': avg_cycle_time,
-            'resolved_blockers': total_items_qs.filter(status_category='done', item_type='bug').count(),
+            'bugs_resolved': total_bugs_dynamic,
             'latest_insight': {
                 'id': latest_insight.id,
                 'summary': latest_insight.summary,

@@ -258,7 +258,8 @@ class AzureDevOpsConnector(BaseConnector):
         for i in range(0, len(ids), chunk_size):
             chunk = ids[i:i + chunk_size]
             ids_str = ",".join(chunk)
-            details_url = f"{self.api_base}/{project_name}/_apis/wit/workitems?ids={ids_str}&api-version=6.0&fields=System.Id,System.Title,System.Description,System.State,System.WorkItemType,System.AssignedTo,System.CreatedDate,System.ChangedDate,Microsoft.VSTS.Common.Priority,System.IterationPath,System.CreatedBy,Microsoft.VSTS.Common.ActivatedDate,Microsoft.VSTS.Common.ResolvedDate"
+            # Remove the &fields= parameter so ADO returns all custom fields for compliance checking
+            details_url = f"{self.api_base}/{project_name}/_apis/wit/workitems?ids={ids_str}&api-version=6.0"
             
             d_resp = requests.get(details_url, headers=headers)
             if d_resp.status_code == 200:
@@ -320,6 +321,52 @@ class AzureDevOpsConnector(BaseConnector):
             if len(parts) > 1:
                 sprint_name = parts[-1]
                 sprint_obj = Sprint.objects.filter(name=sprint_name).first()
+                    
+        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint
+        if not sprint_obj and (started_at or resolved_at):
+            # We don't have project_id on Sprint, so grab the latest active/completed sprint for this data source's timeline
+            sprint_obj = Sprint.objects.filter(
+                status__in=['active', 'completed']
+            ).order_by('-end_date').first()
+
+        # Extract DMT Compliance Custom Fields from ADO
+        
+        # 1. AC Quality
+        ac_quality_val = fields.get('Custom.ACQuality')
+        ac_quality_db = ''
+        if ac_quality_val:
+            ac_quality_lower = str(ac_quality_val).strip().lower()
+            if ac_quality_lower == 'final': ac_quality_db = 'final'
+            elif ac_quality_lower == 'testable': ac_quality_db = 'testable'
+            elif ac_quality_lower == 'incomplete': ac_quality_db = 'incomplete'
+            
+        # 2. Unit Testing Status
+        unit_testing_val = fields.get('Custom.UnitTestingStatus')
+        unit_testing_db = ''
+        if unit_testing_val:
+            raw_val = str(unit_testing_val).strip().lower()
+            if raw_val == 'not started': unit_testing_db = 'not_started'
+            elif raw_val == 'in progress': unit_testing_db = 'in_progress'
+            elif raw_val == 'done': unit_testing_db = 'done'
+            elif raw_val == 'exception approved': unit_testing_db = 'exception_approved'
+            
+        # 3. Reviewer DMT Signoff (Typically a boolean or "Y"/"N" string in ADO setup)
+        signoff_val = fields.get('Custom.ReviewerDMTSignoff')
+        reviewer_signoff = False
+        if signoff_val:
+            if isinstance(signoff_val, bool):
+                reviewer_signoff = signoff_val
+            elif isinstance(signoff_val, str) and signoff_val.strip().upper() == 'Y':
+                reviewer_signoff = True
+                
+        # 4. Story Points
+        story_points_val = fields.get('Custom.StoryPoint')
+        story_points = None
+        if story_points_val is not None:
+             try:
+                 story_points = float(story_points_val)
+             except (ValueError, TypeError):
+                 pass
 
         # Prepare for DB
         work_item_data = {
@@ -331,6 +378,7 @@ class AzureDevOpsConnector(BaseConnector):
             'status': state,
             'status_category': status_category,
             'priority': prio,
+            'story_points': story_points,
             'creator_email': fields.get('System.CreatedBy', {}).get('uniqueName') if isinstance(fields.get('System.CreatedBy'), dict) else None,
             'assignee_email': assignee_email,
             'assignee_name': assigned_to.get('displayName') if isinstance(assigned_to, dict) else None,
@@ -339,6 +387,9 @@ class AzureDevOpsConnector(BaseConnector):
             'started_at': started_at,
             'resolved_at': resolved_at,
             'raw_source_data': item,
+            'ac_quality': ac_quality_db,
+            'unit_testing_status': unit_testing_db,
+            'reviewer_dmt_signoff': reviewer_signoff,
         }
 
         # Compliance

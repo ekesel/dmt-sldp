@@ -6,7 +6,7 @@ import { useWebSocket } from './useWebSocket';
 interface DashboardSummary {
   velocity: number;
   compliance_rate: number;
-  defects: number;
+  bugs_resolved: number;
   cycle_time: number;
 }
 

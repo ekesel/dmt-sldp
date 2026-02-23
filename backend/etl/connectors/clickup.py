@@ -277,8 +277,13 @@ class ClickupConnector(BaseConnector):
                     if cf.get('type') == 'drop_down' and val is not None:
                         options = cf.get('type_config', {}).get('options', [])
                         try:
-                            # 1. val can be an index (int)
+                            # 1. val can be an index (int) mapping to the element's orderindex
                             if isinstance(val, int):
+                                for opt in options:
+                                    # Some ClickUp fields set 'orderindex'
+                                    if opt.get('orderindex') == val:
+                                        return opt.get('name')
+                                # Fallback to strict array indexing if orderindex isn't present
                                 return options[val].get('name') if val < len(options) else str(val)
                             
                             # 2. val can be a string representation of an index ("0", "1")
@@ -322,18 +327,36 @@ class ClickupConnector(BaseConnector):
         # 3. AC Quality
         ac_quality_id = config_mapping.get('ac_quality_id')
         ac_quality_val = get_cf_value(ac_quality_id)
-        reviewer_signoff = False
         ac_quality_db = ''
         
         if ac_quality_val:
             ac_quality_lower = str(ac_quality_val).lower()
             if ac_quality_lower == 'final':
-                reviewer_signoff = True
                 ac_quality_db = 'final'
             elif ac_quality_lower == 'testable':
                 ac_quality_db = 'testable'
             elif ac_quality_lower == 'incomplete':
                 ac_quality_db = 'incomplete'
+
+        # 3b. Reviewer Signoff
+        signoff_id = config_mapping.get('reviewer_dmt_signoff_id')
+        reviewer_signoff_val = get_cf_value(signoff_id)
+        reviewer_signoff = False
+        if reviewer_signoff_val and str(reviewer_signoff_val).upper() == 'Y':
+            reviewer_signoff = True
+            
+        # 3c. Unit Testing Status
+        unit_testing_id = config_mapping.get('unit_testing_status_id')
+        unit_testing_val = get_cf_value(unit_testing_id)
+        unit_testing_status_db = ''
+        if unit_testing_val:
+            # Map string to DB choice (e.g. 'Done' -> 'done', 'Exception Approved' -> 'exception_approved')
+            raw_val = str(unit_testing_val).strip().lower()
+            if raw_val == 'not started': unit_testing_status_db = 'not_started'
+            elif raw_val == 'in progress': unit_testing_status_db = 'in_progress'
+            elif raw_val == 'done': unit_testing_status_db = 'done'
+            elif raw_val == 'exception approved': unit_testing_status_db = 'exception_approved'
+
 
         # 4. Story Points (Standard ClickUp field 'points')
         story_points = task.get('points')
@@ -405,6 +428,7 @@ class ClickupConnector(BaseConnector):
             'raw_source_data': task,
             'ac_quality': ac_quality_db,
             'reviewer_dmt_signoff': reviewer_signoff,
+            'unit_testing_status': unit_testing_status_db,
         }
 
         # Clear assignee if none in ClickUp

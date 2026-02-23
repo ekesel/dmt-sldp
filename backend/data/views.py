@@ -50,11 +50,11 @@ class DashboardSummaryView(APIView):
         from .analytics.metrics import MetricService
         summary = MetricService.get_dashboard_summary(project_id)
         
-        # UI expects: velocity (int/float), compliance_rate (float), defects (int), cycle_time (float)
+        # UI expects: velocity (int/float), compliance_rate (float), bugs_resolved (int), cycle_time (float)
         data = {
             "velocity": summary['active_sprint']['total_points'] if summary['active_sprint'] else 0,
             "compliance_rate": round(summary['compliance_rate'], 2),
-            "defects": summary['resolved_blockers'],
+            "bugs_resolved": summary['bugs_resolved'],
             "cycle_time": summary['avg_cycle_time']
         }
         return Response(data)

@@ -72,10 +72,10 @@ export default function DashboardPage() {
                         description="Minimum Threshold: 80%"
                     />
                     <KPICard
-                        label="Post-Release Defects"
-                        value={(summary?.defects || 0).toString()}
-                        trend={{ direction: 'down', value: 'Total' }}
-                        description="Bugs found in production"
+                        label="Bugs Resolved"
+                        value={(summary?.bugs_resolved || 0).toString()}
+                        trend={{ direction: 'neutral', value: 'Total' }}
+                        description="Bugs fixed in the last 5 sprints"
                     />
                 </div>
 

@@ -85,9 +85,9 @@ class ComplianceEngine:
             if unit_testing_status != 'done':
                 failures.append('unit_testing_not_done')
             
-            coverage = work_item_data.get('coverage_percent')
-            if coverage is None or coverage < coverage_threshold:
-                failures.append('low_coverage')
+            # coverage = work_item_data.get('coverage_percent')
+            # if coverage is None or coverage < coverage_threshold:
+            #     failures.append('low_coverage')
                 
         # 3. Pull Request Requirements (Stories and Bugs)
         if item_type in ['story', 'bug']:
@@ -105,8 +105,8 @@ class ComplianceEngine:
                 failures.append('missing_dmt_signoff')
             
         # 5. Basic Metadata (Supplemental)
-        if not work_item_data.get('assignee_email'):
-            failures.append('missing_assignee')
+        # if not work_item_data.get('assignee_email'):
+        #     failures.append('missing_assignee')
             
         is_compliant = len(failures) == 0
         return is_compliant, failures
