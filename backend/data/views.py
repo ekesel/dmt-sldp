@@ -392,14 +392,50 @@ class AssigneeDistributionView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
 
-        work_items = WorkItem.objects.all()
-        if project_id and project_id != 'null':
-            from configuration.models import SourceConfiguration
-            source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-            work_items = work_items.filter(source_config_id__in=source_ids)
-
+        from .models import Sprint, SprintMetrics
+        from configuration.models import SourceConfiguration
         from django.db.models import Q
         from collections import defaultdict
+
+        # Identify last 5 sprints
+        try:
+            if project_id and project_id not in ['null', 'undefined']:
+                source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
+                
+                # Preferred: Get from pre-calculated metrics
+                relevant_sprint_names = list(SprintMetrics.objects.filter(
+                    project_id=project_id
+                ).order_by('-sprint_end_date').values_list('sprint_name', flat=True)[:5])
+                
+                if not relevant_sprint_names:
+                    # Fallback: Get from Sprint model based on work items in this project
+                    relevant_sprint_names = list(Sprint.objects.filter(
+                        work_items__source_config_id__in=source_ids
+                    ).distinct().order_by('-end_date').values_list('name', flat=True)[:5])
+                
+                if relevant_sprint_names:
+                    work_items = WorkItem.objects.filter(
+                        source_config_id__in=source_ids, 
+                        sprint__name__in=relevant_sprint_names
+                    )
+                else:
+                    # If NO sprints found at all, we filter to empty to be safe (no data for last 5 sprints)
+                    work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
+            else:
+                # Global view
+                relevant_sprint_names = list(SprintMetrics.objects.filter(
+                    project__isnull=True
+                ).order_by('-sprint_end_date').values_list('sprint_name', flat=True)[:5])
+                
+                if not relevant_sprint_names:
+                    relevant_sprint_names = list(Sprint.objects.all().order_by('-end_date').values_list('name', flat=True)[:5])
+                
+                if relevant_sprint_names:
+                    work_items = WorkItem.objects.filter(sprint__name__in=relevant_sprint_names)
+                else:
+                    work_items = WorkItem.objects.none()
+        except Exception:
+            work_items = WorkItem.objects.none()
 
         # Use a dict to aggregate stats by email
         # Key: lowercased email
@@ -446,7 +482,7 @@ class AssigneeDistributionView(APIView):
         fallback_rows = (
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
-            .values('assignee_email', 'assignee_name', 'status_category')
+            .values('assignee_email', 'assignee_name', 'status_category', 'started_at', 'resolved_at')
         )
 
         for row in fallback_rows:
@@ -472,8 +508,9 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                # Note: cycle time calc for fallback items skipped for simplicity/schema limits
-                # unless we have fields for them on WorkItem directly (already filtered above)
+                if row['resolved_at'] and row['started_at']:
+                    duration = (row['resolved_at'] - row['started_at']).total_seconds() / 86400.0
+                    agg['durations'].append(duration)
 
         # 3. Finalize result list
         result = []
@@ -490,6 +527,6 @@ class AssigneeDistributionView(APIView):
                 'avg_cycle_time_days': avg_ct,
             })
 
-        # Sort by most in-progress work first
-        result.sort(key=lambda x: x['in_progress'], reverse=True)
+        # Sort by most total work first
+        result.sort(key=lambda x: x['total'], reverse=True)
         return Response(result)

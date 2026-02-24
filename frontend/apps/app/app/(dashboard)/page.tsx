@@ -29,10 +29,10 @@ export default function DashboardPage() {
                     <div>
                         <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">
                             <TrendingUp size={16} />
-                            Real-time Performance
+                            Performance Overview
                         </div>
                         <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
-                            Company Analytics
+                            {selectedProjectId ? 'Project Analytics' : 'Organizational Analytics'}
                         </h1>
                         <p className="text-slate-400 mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>

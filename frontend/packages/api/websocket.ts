@@ -144,7 +144,15 @@ export class WebSocketConnectionManager {
       );
     }
 
-    return this.options.baseUrl.replace("{tenant_id}", encodeURIComponent(tenantId));
+    const baseUrl = this.options.baseUrl.replace("{tenant_id}", encodeURIComponent(tenantId));
+    const token = this.getJwtToken();
+    if (token) {
+      // Append token to query string
+      const url = new URL(baseUrl);
+      url.searchParams.set('token', token);
+      return url.toString();
+    }
+    return baseUrl;
   }
 
   private getJwtToken(): string | null {
@@ -258,17 +266,22 @@ export class WebSocketConnectionManager {
 
   private scheduleReconnect(): void {
     const cfg = this.options.reconnect;
-    if (!cfg.enabled || this.manuallyDisconnected) return;
+    if (!cfg || !cfg.enabled || this.manuallyDisconnected) return;
 
     const attempts = this.reconnectAttempts;
-    if (attempts >= cfg.maxAttempts) {
+    const maxAttempts = cfg.maxAttempts ?? Infinity;
+    if (attempts >= maxAttempts) {
       this.warn("Max reconnect attempts reached. Giving up.");
       return;
     }
 
     // exponential backoff: initial * 2^attempts, capped
-    const rawDelay = Math.min(cfg.initialDelayMs * 2 ** attempts, cfg.maxDelayMs);
-    const delay = addJitter(rawDelay, cfg.jitterMs);
+    const initialDelay = cfg.initialDelayMs ?? 1000;
+    const maxDelay = cfg.maxDelayMs ?? 30000;
+    const jitter = cfg.jitterMs ?? 250;
+
+    const rawDelay = Math.min(initialDelay * 2 ** attempts, maxDelay);
+    const delay = addJitter(rawDelay, jitter);
 
     this.reconnectAttempts += 1;
     this.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})...`);

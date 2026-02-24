@@ -142,10 +142,10 @@ class MetricService:
         
         if last_5_metrics:
             # Calculate averages across the last 5 (or fewer if not available)
-            total_velocity = sum(m.velocity for m in last_5_metrics)
-            total_items = sum(m.items_completed for m in last_5_metrics)
-            total_cycle_time = sum(m.avg_cycle_time_days for m in last_5_metrics)
-            total_bugs = sum(m.bugs_completed for m in last_5_metrics)
+            total_velocity = sum(m.velocity or 0 for m in last_5_metrics)
+            total_items = sum(m.items_completed or 0 for m in last_5_metrics)
+            total_cycle_time = sum(m.avg_cycle_time_days or 0 for m in last_5_metrics)
+            total_bugs = sum(m.bugs_completed or 0 for m in last_5_metrics)
             count = len(last_5_metrics)
             
             avg_velocity = total_velocity / count
@@ -158,10 +158,10 @@ class MetricService:
             return {
                 'compliance_rate': round(latest.compliance_rate_percent, 2),
                 'active_sprint': {
-                    'total_points': round(avg_velocity, 1),
-                    'item_count': round(avg_items, 1)
+                    'total_points': round(avg_velocity, 1) if avg_velocity is not None else 0,
+                    'item_count': round(avg_items, 1) if avg_items is not None else 0
                 },
-                'avg_cycle_time': round(avg_cycle_time, 1),
+                'avg_cycle_time': round(avg_cycle_time, 1) if avg_cycle_time is not None else 0,
                 'bugs_resolved': total_bugs,
                 'latest_insight': {
                     'id': latest_insight.id,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import api from '@dmt/api';
 import { useAuth } from '../context/AuthContext';
 
 export interface Project {
@@ -20,23 +21,13 @@ export function useProjects() {
 
             try {
                 setLoading(true);
-                const response = await fetch('/api/admin/projects/', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch projects');
-                }
-
-                const data = await response.json();
-                setProjects(data);
+                // Use the api instance which handles Host headers/baseURL correctly
+                const response = await api.get<Project[]>('/admin/projects/');
+                setProjects(response.data);
                 setError(null);
-            } catch (err) {
-                console.error(err);
-                setError('Failed to load projects');
+            } catch (err: any) {
+                console.error('Project fetch error:', err);
+                setError(err.message || 'Failed to load projects');
             } finally {
                 setLoading(false);
             }

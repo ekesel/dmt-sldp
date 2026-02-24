@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
+import api, { aiInsights } from '@dmt/api';
 
 interface DashboardSummary {
   velocity: number;
@@ -71,52 +72,29 @@ export function useDashboardData(projectId?: number | null) {
 
     try {
       setLoading(true);
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
+      const params = projectId ? { project_id: projectId } : {};
 
-      const timestamp = Date.now();
-      const queryParams = new URLSearchParams({
-        _t: timestamp.toString(),
-        ...(projectId ? { project_id: projectId.toString() } : {})
-      });
-      const queryString = `?${queryParams.toString()}`;
-
-      const [summaryRes, velocityRes, complianceRes, insightsRes, forecastRes, assigneeRes] = await Promise.all([
-        fetch(`/api/dashboard/summary/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/velocity/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/compliance/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/ai-insights/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/forecast/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/assignee-distribution/${queryString}`, { headers, cache: 'no-store' }),
+      // Use the api instance from @dmt/api which has interceptors for token refresh
+      const [summaryData, velocityData, complianceData, insightsData, forecastData, assigneeData] = await Promise.all([
+        api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
+        api.get<VelocityData[]>('dashboard/velocity/', { params }).then(r => r.data),
+        api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
+        aiInsights.list(params) as unknown as Promise<Insight[]>,
+        api.get<Record<string, string>>('dashboard/forecast/', { params }).then(r => r.data).catch(() => null),
+        api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
       ]);
 
-      if (!summaryRes.ok || !velocityRes.ok || !complianceRes.ok || !insightsRes.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-
-      setSummary(await summaryRes.json());
-      setVelocity(await velocityRes.json());
-      setCompliance(await complianceRes.json());
-      setInsights(await insightsRes.json());
-
-      if (forecastRes.ok) {
-        setForecast(await forecastRes.json());
-      } else {
-        setForecast(null);
-      }
-
-      if (assigneeRes.ok) {
-        setAssigneeDistribution(await assigneeRes.json());
-      } else {
-        setAssigneeDistribution([]);
-      }
+      setSummary(summaryData);
+      setVelocity(velocityData);
+      setCompliance(complianceData);
+      setInsights(insightsData);
+      setForecast(forecastData);
+      setAssigneeDistribution(assigneeData);
 
       setError(null);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load dashboard data');
+    } catch (err: any) {
+      console.error('Dashboard load error:', err);
+      setError(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }

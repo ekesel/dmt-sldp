@@ -5,8 +5,18 @@ import { deduplicateRequest } from './deduplication';
 /* =========================
    Axios Instance
 ========================= */
+const getBaseURL = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname; // e.g., acme-corp.localhost
+    const port = 8000; // backend port
+    return `http://${hostname}:${port}/api/`;
+  }
+  return 'http://localhost:8000/api/';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  baseURL: getBaseURL(),
 });
 
 // Add JWT token if available

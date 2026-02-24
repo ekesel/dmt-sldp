@@ -39,25 +39,38 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
 
     if (!assignees || assignees.length === 0) return null;
 
-    const maxTotal = Math.max(...assignees.map((a) => a.total), 1);
+    // Ensure unique items by email to prevent duplicate key errors in UI
+    const seenEmails = new Set<string>();
+    const uniqueAssignees = assignees.filter((a) => {
+        if (!a.email || seenEmails.has(a.email)) return false;
+        seenEmails.add(a.email);
+        return true;
+    });
+
+    if (uniqueAssignees.length === 0) return null;
+
+    const maxTotal = Math.max(...uniqueAssignees.map((a) => a.total), 1);
 
     return (
         <div className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-6">
             {/* Header */}
             <div className="flex items-center gap-2 mb-5">
                 <Users className="text-brand-primary w-5 h-5" />
-                <h2 className="text-xl font-bold text-white">Team Workload</h2>
-                <span className="ml-auto text-xs text-slate-400">{assignees.length} member{assignees.length !== 1 ? 's' : ''}</span>
+                <div className="flex items-baseline gap-2">
+                    <h2 className="text-xl font-bold text-white">Team Workload</h2>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Last 5 sprints</span>
+                </div>
+                <span className="ml-auto text-xs text-slate-400">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>
 
             <div className="space-y-4">
-                {assignees.map((person) => {
+                {uniqueAssignees.map((person) => {
                     const color = avatarColor(person.name);
                     const barWidth = Math.round((person.total / maxTotal) * 100);
                     const inProgressPct = person.total > 0 ? Math.round((person.in_progress / person.total) * 100) : 0;
 
                     return (
-                        <div key={person.email || person.name} className="group">
+                        <div key={person.email} className="group">
                             <div className="flex items-center gap-3 mb-1.5">
                                 {/* Avatar */}
                                 <div
