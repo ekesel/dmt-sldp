@@ -315,11 +315,11 @@ class AIInsightListView(APIView):
         project_id = request.query_params.get('project_id')
         insights_qs = AIInsight.objects.order_by('-created_at')
 
-        if project_id:
-            # AIInsights are linked to source_config
-            insights_qs = insights_qs.filter(source_config_id__in=
-                SourceConfiguration.objects.filter(project_id=project_id).values('id')
-            )
+        if project_id and project_id != 'null':
+            insights_qs = insights_qs.filter(project_id=project_id)
+        else:
+            # Return global insights (not specific to any project)
+            insights_qs = insights_qs.filter(project__isnull=True)
 
         insights = insights_qs[:10]
         serializer = AIInsightSerializer(insights, many=True)
@@ -379,3 +379,117 @@ class AIInsightFeedbackView(APIView):
             
         except AIInsight.DoesNotExist:
             return Response({"error": "AIInsight not found"}, status=404)
+
+
+class AssigneeDistributionView(APIView):
+    """
+    GET /api/dashboard/assignee-distribution/
+    Returns per-assignee workload breakdown for the given project (or globally).
+    Prefers linked User records but falls back to raw assignee_email strings.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        project_id = request.query_params.get('project_id')
+
+        work_items = WorkItem.objects.all()
+        if project_id and project_id != 'null':
+            from configuration.models import SourceConfiguration
+            source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            work_items = work_items.filter(source_config_id__in=source_ids)
+
+        from django.db.models import Q
+        from collections import defaultdict
+
+        # Use a dict to aggregate stats by email
+        # Key: lowercased email
+        # Value: { 'name': str, 'email': str, 'id': int|None, 'is_portal_user': bool, 'total': int, 'in_progress': int, 'completed': int, 'durations': list }
+        aggregation = {}
+
+        # 1. Process Resolved Assignees
+        resolved_rows = (
+            work_items.filter(resolved_assignee__isnull=False)
+            .values('resolved_assignee__id', 'resolved_assignee__first_name',
+                    'resolved_assignee__last_name', 'resolved_assignee__email',
+                    'resolved_assignee__is_active', 'status_category', 'resolved_at', 'started_at')
+        )
+
+        for row in resolved_rows:
+            email = (row['resolved_assignee__email'] or '').lower().strip()
+            if not email:
+                continue
+
+            if email not in aggregation:
+                name = f"{row['resolved_assignee__first_name']} {row['resolved_assignee__last_name']}".strip()
+                aggregation[email] = {
+                    'id': row['resolved_assignee__id'],
+                    'name': name or email,
+                    'email': email,
+                    'is_portal_user': row['resolved_assignee__is_active'],
+                    'total': 0,
+                    'in_progress': 0,
+                    'completed': 0,
+                    'durations': []
+                }
+            
+            agg = aggregation[email]
+            agg['total'] += 1
+            if row['status_category'] == 'in_progress':
+                agg['in_progress'] += 1
+            elif row['status_category'] == 'done':
+                agg['completed'] += 1
+                if row['resolved_at'] and row['started_at']:
+                    duration = (row['resolved_at'] - row['started_at']).total_seconds() / 86400.0
+                    agg['durations'].append(duration)
+
+        # 2. Process Fallback Assignees (unlinked)
+        fallback_rows = (
+            work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
+            .exclude(assignee_email='')
+            .values('assignee_email', 'assignee_name', 'status_category')
+        )
+
+        for row in fallback_rows:
+            email = (row['assignee_email'] or '').lower().strip()
+            if not email:
+                continue
+
+            if email not in aggregation:
+                aggregation[email] = {
+                    'id': None,
+                    'name': row['assignee_name'] or email,
+                    'email': email,
+                    'is_portal_user': False,
+                    'total': 0,
+                    'in_progress': 0,
+                    'completed': 0,
+                    'durations': []
+                }
+            
+            agg = aggregation[email]
+            agg['total'] += 1
+            if row['status_category'] == 'in_progress':
+                agg['in_progress'] += 1
+            elif row['status_category'] == 'done':
+                agg['completed'] += 1
+                # Note: cycle time calc for fallback items skipped for simplicity/schema limits
+                # unless we have fields for them on WorkItem directly (already filtered above)
+
+        # 3. Finalize result list
+        result = []
+        for email, agg in aggregation.items():
+            avg_ct = round(sum(agg['durations']) / len(agg['durations']), 1) if agg['durations'] else None
+            result.append({
+                'id': agg['id'],
+                'name': agg['name'],
+                'email': agg['email'],
+                'is_portal_user': agg['is_portal_user'],
+                'total': agg['total'],
+                'in_progress': agg['in_progress'],
+                'completed': agg['completed'],
+                'avg_cycle_time_days': avg_ct,
+            })
+
+        # Sort by most in-progress work first
+        result.sort(key=lambda x: x['in_progress'], reverse=True)
+        return Response(result)

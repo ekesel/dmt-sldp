@@ -25,7 +25,19 @@ interface Insight {
   id: number;
   summary: string;
   suggestions: any[];
+  project_name?: string | null;
   created_at: string;
+}
+
+export interface AssigneeEntry {
+  id: number | null;
+  name: string;
+  email: string;
+  is_portal_user: boolean;
+  total: number;
+  in_progress: number;
+  completed: number;
+  avg_cycle_time_days: number | null;
 }
 
 export function useDashboardData(projectId?: number | null) {
@@ -34,6 +46,7 @@ export function useDashboardData(projectId?: number | null) {
   const [compliance, setCompliance] = useState<ComplianceData[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [forecast, setForecast] = useState<Record<string, string> | null>(null);
+  const [assigneeDistribution, setAssigneeDistribution] = useState<AssigneeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,12 +83,13 @@ export function useDashboardData(projectId?: number | null) {
       });
       const queryString = `?${queryParams.toString()}`;
 
-      const [summaryRes, velocityRes, complianceRes, insightsRes, forecastRes] = await Promise.all([
+      const [summaryRes, velocityRes, complianceRes, insightsRes, forecastRes, assigneeRes] = await Promise.all([
         fetch(`/api/dashboard/summary/${queryString}`, { headers, cache: 'no-store' }),
         fetch(`/api/dashboard/velocity/${queryString}`, { headers, cache: 'no-store' }),
         fetch(`/api/dashboard/compliance/${queryString}`, { headers, cache: 'no-store' }),
         fetch(`/api/ai-insights/${queryString}`, { headers, cache: 'no-store' }),
-        fetch(`/api/dashboard/forecast/${queryString}`, { headers, cache: 'no-store' })
+        fetch(`/api/dashboard/forecast/${queryString}`, { headers, cache: 'no-store' }),
+        fetch(`/api/dashboard/assignee-distribution/${queryString}`, { headers, cache: 'no-store' }),
       ]);
 
       if (!summaryRes.ok || !velocityRes.ok || !complianceRes.ok || !insightsRes.ok) {
@@ -87,11 +101,16 @@ export function useDashboardData(projectId?: number | null) {
       setCompliance(await complianceRes.json());
       setInsights(await insightsRes.json());
 
-      // Forecast might 404 if no history exists yet; handle gracefully
       if (forecastRes.ok) {
         setForecast(await forecastRes.json());
       } else {
         setForecast(null);
+      }
+
+      if (assigneeRes.ok) {
+        setAssigneeDistribution(await assigneeRes.json());
+      } else {
+        setAssigneeDistribution([]);
       }
 
       setError(null);
@@ -120,5 +139,5 @@ export function useDashboardData(projectId?: number | null) {
     }
   }, [lastMessage, fetchData]);
 
-  return { summary, velocity, compliance, insights, forecast, loading, error, refresh: fetchData };
+  return { summary, velocity, compliance, insights, forecast, assigneeDistribution, loading, error, refresh: fetchData };
 }

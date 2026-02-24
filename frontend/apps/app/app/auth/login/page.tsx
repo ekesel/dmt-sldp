@@ -22,7 +22,7 @@ export default function LoginPage() {
 
         try {
             await login(formData.username, formData.password, 'company'); // Pass portal='company'
-            router.push('/dashboard');
+            router.push('/');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Invalid credentials. Please make sure you are accessing the correct portal.');
         } finally {

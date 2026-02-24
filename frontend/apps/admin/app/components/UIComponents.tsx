@@ -34,13 +34,14 @@ export const StatCard: React.FC<{
 
 export const Badge: React.FC<{
     label: string;
-    variant?: 'default' | 'success' | 'warning' | 'error';
+    variant?: 'default' | 'success' | 'warning' | 'error' | 'neutral';
 }> = ({ label, variant = 'default' }) => {
     const variants = {
         default: 'bg-slate-800 text-slate-300',
         success: 'bg-green-500/20 text-green-400 border border-green-500/30',
         warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
         error: 'bg-red-500/20 text-red-400 border border-red-500/30',
+        neutral: 'bg-slate-700/50 text-slate-400 border border-slate-700',
     };
 
     return (

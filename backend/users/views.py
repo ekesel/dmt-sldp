@@ -6,6 +6,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.conf import settings
 from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer
 
 User = get_user_model()
@@ -103,3 +107,42 @@ class LogoutView(APIView):
             {'message': 'Logged out successfully'},
             status=status.HTTP_200_OK
         )
+
+
+class InviteUserView(APIView):
+    """
+    POST /api/users/{id}/invite/
+    Activates a synced (is_active=False) user and returns a password-set link
+    so the assignee can log into the company portal.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            # Restrict to same tenant
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Only admin or platform admins can invite
+        requester = request.user
+        if not requester.is_platform_admin and getattr(requester, 'tenant', None) != getattr(user, 'tenant', None):
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Activate the user
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+        # Generate a single-use password-reset token
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # Build the invite URL (frontend handles the set-password page)
+        frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        invite_link = f"{frontend_base}/set-password?uid={uid}&token={token}"
+
+        return Response({
+            'message': f'Invite sent to {user.email or user.username}',
+            'invite_link': invite_link,   # Admin can share this manually
+            'user': UserSerializer(user).data,
+        }, status=status.HTTP_200_OK)

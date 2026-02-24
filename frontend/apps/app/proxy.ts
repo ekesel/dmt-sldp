@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
     // Basic protection: Check if user is trying to access protected routes
     // For now, client-side AuthContext handles most logic, but middleware is good for redirects
 
@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
         requestHeaders.set('x-forwarded-host', hostname);
     }
 
-    // Manual API Proxy via Middleware to avoid next.config.js ambiguity
+    // Manual API Proxy via Proxy middleware to ensure headers are correctly propagated
     if (request.nextUrl.pathname.startsWith('/api/')) {
         const newUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, 'http://backend:8000');
         return NextResponse.rewrite(newUrl, {
@@ -42,5 +42,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/metrics/:path*', '/compliance/:path*', '/api/:path*'],
+    // Broad matcher to catch all requests for tenant resolution
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

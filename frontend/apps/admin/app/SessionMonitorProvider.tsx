@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import useSessionMonitor from '../../../app/hooks/useSessionMonitor';
+import { useSessionMonitor } from './hooks/useSessionMonitor';
 
 type Props = {
   children: ReactNode;
@@ -25,10 +25,7 @@ export default function SessionMonitorProvider({ children }: Props) {
     // Silently handle logout
   }, []);
 
-  useSessionMonitor({
-    enabled: !isPublicAuthRoute,
-    onLogout: handleLogout,
-  });
+  useSessionMonitor();
 
   return <>{children}</>;
 }

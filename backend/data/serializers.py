@@ -34,6 +34,11 @@ class ComplianceFlagSerializer(serializers.ModelSerializer):
         ]
 
 class AIInsightSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source='project.name', read_only=True, allow_null=True)
+
     class Meta:
         model = AIInsight
-        fields = '__all__'
+        fields = [
+            'id', 'project', 'project_name', 'source_config_id', 
+            'summary', 'suggestions', 'forecast', 'created_at'
+        ]

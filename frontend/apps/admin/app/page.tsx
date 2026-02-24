@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Users, Server, Activity, Zap, RefreshCw } from 'lucide-react';
 import { health, tenants as tenantsApi, users as usersApi, dashboard as dashboardApi, activityLog as activityApi } from '@dmt/api';
-import useSessionMonitor from '../../../app/hooks/useSessionMonitor';
+import { useSessionMonitor } from './hooks/useSessionMonitor';
 import { DashboardLayout } from './components/DashboardLayout';
 import { StatCard, Badge } from './components/UIComponents';
 import { CreateTenantModal } from './components/CreateTenantModal';
@@ -21,12 +21,7 @@ export default function AdminHome() {
     const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Session Monitoring
-    const { isSessionValid } = useSessionMonitor({
-        enabled: true,
-        onLogout: () => {
-            router.push('/auth/login');
-        }
-    });
+    const { isSessionValid } = useSessionMonitor();
 
     const fetchData = useCallback(async () => {
         setLoading(true);

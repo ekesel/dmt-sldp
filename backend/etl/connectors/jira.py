@@ -1,12 +1,13 @@
 from typing import Dict, Any, List, Optional, Callable
 import requests
 import base64
-import re # Added for sprint ID extraction
+import re
 from ..base import BaseConnector
-from data.models import WorkItem, Sprint # Modified: Added Sprint
+from data.models import WorkItem, Sprint
 from django.utils import timezone
 from datetime import datetime
 import logging
+from users.resolver import UserResolver
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,20 @@ class JiraConnector(BaseConnector):
         description = self._flatten_adf(fields.get('description'))
         
         assignee_email = fields.get('assignee', {}).get('emailAddress') if fields.get('assignee') else None
-        resolved_assignee = UserResolver.resolve_by_identity('jira', assignee_email)
+        assignee_name = fields.get('assignee', {}).get('displayName') if fields.get('assignee') else None
+        assignee_account_id = fields.get('assignee', {}).get('accountId') if fields.get('assignee') else None
+
+        # Resolve/upsert a portal-ready User for this assignee
+        from tenants.models import Tenant
+        from django.db import connection
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+        resolved_assignee = UserResolver.resolve_or_create(
+            provider='jira',
+            external_user_id=assignee_account_id or assignee_email or '',
+            email=assignee_email,
+            name=assignee_name,
+            tenant=tenant,
+        )
 
         # Extract sprint from custom fields
         sprint_obj = None
@@ -213,7 +227,7 @@ class JiraConnector(BaseConnector):
             'priority': priority.lower(),
             'creator_email': fields.get('creator', {}).get('emailAddress'),
             'assignee_email': assignee_email,
-            'assignee_name': fields.get('assignee', {}).get('displayName') if fields.get('assignee') else None,
+            'assignee_name': assignee_name,
             'created_at': created_at,
             'updated_at': updated_at,
             'started_at': started_at,

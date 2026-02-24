@@ -154,7 +154,8 @@ class PullRequestStatus(models.Model):
         return f"{self.pull_request} - {self.name}: {self.state}"
 
 class AIInsight(models.Model):
-    source_config_id = models.IntegerField(db_index=True)
+    project = models.ForeignKey('configuration.Project', on_delete=models.CASCADE, null=True, blank=True)
+    source_config_id = models.IntegerField(db_index=True, null=True, blank=True)
     summary = models.TextField()
     suggestions = models.JSONField()  # List of {title, impact, description}
     forecast = models.TextField(null=True, blank=True)
@@ -164,7 +165,8 @@ class AIInsight(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"AI Insight for Config #{self.source_config_id} at {self.created_at}"
+        target = f"Project {self.project_id}" if self.project_id else "Global"
+        return f"AI Insight ({target}) at {self.created_at}"
 
 
 class TaskLog(models.Model):

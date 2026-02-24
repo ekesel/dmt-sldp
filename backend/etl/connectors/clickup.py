@@ -221,7 +221,6 @@ class ClickupConnector(BaseConnector):
         Map and save a single ClickUp task to the WorkItem model.
         """
         from users.resolver import UserResolver
-        from users.resolver import UserResolver
         from etl.transformers import ComplianceEngine
 
         external_id = task['id']
@@ -251,8 +250,21 @@ class ClickupConnector(BaseConnector):
         
         priority = task.get('priority', {}).get('priority', 'normal') if task.get('priority') else 'normal'
         
-        assignee_email = task.get('assignees', [{}])[0].get('email') if task.get('assignees') else None
-        resolved_assignee = UserResolver.resolve_by_identity('clickup', assignee_email)
+        assignee_data = task.get('assignees', [{}])[0] if task.get('assignees') else {}
+        assignee_email = assignee_data.get('email')
+        assignee_name = assignee_data.get('username') or assignee_data.get('name')
+        assignee_cu_id = str(assignee_data.get('id', '')) if assignee_data.get('id') else ''
+
+        from tenants.models import Tenant
+        from django.db import connection
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+        resolved_assignee = UserResolver.resolve_or_create(
+            provider='clickup',
+            external_user_id=assignee_cu_id or assignee_email or '',
+            email=assignee_email,
+            name=assignee_name,
+            tenant=tenant,
+        )
 
         # Generic Field Mapping from Config
         from configuration.models import SourceConfiguration

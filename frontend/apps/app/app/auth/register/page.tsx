@@ -50,7 +50,7 @@ export default function RegisterPage() {
             // BUT requirements say "per tenant login".
 
             await register(formData);
-            router.push('/dashboard');
+            router.push('/');
         } catch (err: any) {
             // Check for specific error details from backend
             const detail = err.response?.data?.detail

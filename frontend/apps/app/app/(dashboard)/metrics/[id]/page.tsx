@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from "@dmt/ui";
 import { User, TrendingUp, ArrowLeft, BarChart3 } from "lucide-react";
-import { VelocityChart } from "../../components/charts/VelocityChart";
+import { VelocityChart } from "../../../../components/charts/VelocityChart";
 import { useParams, useRouter } from 'next/navigation';
 
 interface DeveloperMetrics {

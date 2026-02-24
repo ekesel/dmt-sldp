@@ -6,12 +6,13 @@ import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
 import { AIInsightsList } from "../../components/AIInsightsList";
+import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector } from "../../components/ProjectSelector";
 
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const { summary, velocity, compliance, insights, forecast, loading, error } = useDashboardData(selectedProjectId);
+    const { summary, velocity, compliance, insights, forecast, assigneeDistribution, loading, error } = useDashboardData(selectedProjectId);
 
     if (loading) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
@@ -79,6 +80,11 @@ export default function DashboardPage() {
                     />
                 </div>
 
+                {/* Assignee Distribution Card */}
+                {assigneeDistribution.length > 0 && (
+                    <AssigneeDistributionCard assignees={assigneeDistribution} />
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
                         <div className="flex items-center justify-between mb-10">
@@ -135,6 +141,12 @@ export default function DashboardPage() {
 
                 {insights && insights.length > 0 && (
                     <div className="pt-8 border-t border-white/5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Share2 className="text-brand-primary w-5 h-5" />
+                            <h2 className="text-2xl font-bold text-white">
+                                {insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Global Insights"}
+                            </h2>
+                        </div>
                         <AIInsightsList
                             insightId={insights[0].id}
                             suggestions={insights[0].suggestions}

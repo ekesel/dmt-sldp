@@ -20,7 +20,7 @@ interface SidebarProps {
 }
 
 interface MenuItem {
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     label: string;
     href: string;
     section?: string;

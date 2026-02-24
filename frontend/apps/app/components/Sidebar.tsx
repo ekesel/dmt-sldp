@@ -17,7 +17,7 @@ interface SidebarProps {
 }
 
 interface MenuItem {
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     label: string;
     href: string;
     section?: string;
@@ -27,7 +27,7 @@ const menuItems: MenuItem[] = [
     {
         icon: LayoutDashboard,
         label: 'Dashboard',
-        href: '/dashboard',
+        href: '/',
     },
     {
         icon: BarChart2,

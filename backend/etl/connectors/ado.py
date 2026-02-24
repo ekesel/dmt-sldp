@@ -298,14 +298,23 @@ class AzureDevOpsConnector(BaseConnector):
         # Priority
         prio = str(fields.get('Microsoft.VSTS.Common.Priority', '3'))
         
-        # User resolving
-        assigned_to = fields.get('System.AssignedTo', {}) # usually dict {displayName, uniqueName}
+        # User resolving — upsert a portal-ready User for this assignee
+        assigned_to = fields.get('System.AssignedTo', {})
         assignee_email = assigned_to.get('uniqueName') if isinstance(assigned_to, dict) else None
-        if assignee_email:
-             # ADO emails might be diff, check format
-             pass
-        
-        resolved_assignee = UserResolver.resolve_by_identity('azure_devops', assignee_email)
+        assignee_name = assigned_to.get('displayName') if isinstance(assigned_to, dict) else None
+        # ADO uses descriptor as stable external ID (falls back to email)
+        assignee_descriptor = assigned_to.get('descriptor') if isinstance(assigned_to, dict) else None
+
+        from tenants.models import Tenant
+        from django.db import connection
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+        resolved_assignee = UserResolver.resolve_or_create(
+            provider='azure_devops',
+            external_user_id=assignee_descriptor or assignee_email or '',
+            email=assignee_email,
+            name=assignee_name,
+            tenant=tenant,
+        )
         
         # Dates
         created_at = self._parse_date(fields.get('System.CreatedDate')) or timezone.now()
@@ -381,7 +390,7 @@ class AzureDevOpsConnector(BaseConnector):
             'story_points': story_points,
             'creator_email': fields.get('System.CreatedBy', {}).get('uniqueName') if isinstance(fields.get('System.CreatedBy'), dict) else None,
             'assignee_email': assignee_email,
-            'assignee_name': assigned_to.get('displayName') if isinstance(assigned_to, dict) else None,
+            'assignee_name': assignee_name,
             'created_at': created_at,
             'updated_at': updated_at,
             'started_at': started_at,

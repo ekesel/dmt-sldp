@@ -7,11 +7,12 @@ from data.views import (
     DashboardSummaryView, VelocityView, ThroughputView, DefectDensityView,
     ComplianceView, BlockedItemsView, PRHealthView,
     DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
-    ComplianceFlagListView, ComplianceFlagResolveView, AIInsightListView
+    ComplianceFlagListView, ComplianceFlagResolveView, AIInsightListView,
+    AssigneeDistributionView
 )
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
-from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet
+from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet, InviteUserView
 from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
@@ -42,6 +43,10 @@ urlpatterns = [
     path('api/dashboard/compliance/', ComplianceView.as_view(), name='dashboard_compliance'),
     path('api/dashboard/blocked-items/', BlockedItemsView.as_view(), name='dashboard_blocked_items'),
     path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
+    path('api/dashboard/assignee-distribution/', AssigneeDistributionView.as_view(), name='assignee_distribution'),
+    
+    # User management
+    path('api/users/<int:pk>/invite/', InviteUserView.as_view(), name='user_invite'),
     
     # Developers
     path('api/developers/', DeveloperListView.as_view(), name='developer_list'),
