@@ -88,6 +88,8 @@ class GeminiAIProvider:
 
         prompt = TEAM_HEALTH_SYSTEM_PROMPT.format(
             avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
+            velocity_history=json.dumps(metrics.get("velocity_history", [])),
+            developer_history=json.dumps(metrics.get("developer_history", [])),
             assignee_distribution=json.dumps(metrics.get("assignee_distribution", [])),
             stagnant_items=json.dumps(metrics.get("stagnant_items", []))
         )
@@ -160,6 +162,8 @@ class KimiAIProvider:
 
         prompt = TEAM_HEALTH_SYSTEM_PROMPT.format(
             avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
+            velocity_history=json.dumps(metrics.get("velocity_history", [])),
+            developer_history=json.dumps(metrics.get("developer_history", [])),
             assignee_distribution=json.dumps(metrics.get("assignee_distribution", [])),
             stagnant_items=json.dumps(metrics.get("stagnant_items", []))
         )

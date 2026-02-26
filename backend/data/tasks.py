@@ -8,6 +8,8 @@ from etl.factory import ConnectorFactory
 from .signals import data_sync_completed
 from core.telemetry.models import DataSyncPayload
 from core.celery_utils import tenant_aware_task
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 @shared_task
 @tenant_aware_task
@@ -61,7 +63,7 @@ def sync_tenant_data(source_id, schema_name=None):
         log.status = 'success'
         
         # 3. Trigger Metric Recalculation (Async)
-        update_all_sprint_metrics.delay(schema_name or connection.schema_name)
+        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
         
         return f"Successfully synced {source.name}. Processed {stats.get('item_count', 0)} items."
         
@@ -184,4 +186,21 @@ def update_all_sprint_metrics(schema_name=None):
         if metrics:
             count += 1
             
+    # Signal dashboard that metrics have been updated
+    from tenants.models import Tenant
+    try:
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"telemetry_{tenant.slug}",
+            {
+                "type": "telemetry_update",
+                "message": {
+                    "type": "metrics_update"
+                }
+            }
+        )
+    except Exception as e:
+        print(f"Failed to broadcast metrics update: {e}")
+
     return f"Updated metrics for {count} sprints in {connection.schema_name}"

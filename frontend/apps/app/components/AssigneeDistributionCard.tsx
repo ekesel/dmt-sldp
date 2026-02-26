@@ -83,14 +83,14 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                                 {/* Name + badges */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-sm font-medium text-white truncate">{person.name}</span>
+                                        <span className="text-sm font-medium text-white">{person.name}</span>
                                         {person.is_portal_user && (
                                             <span title="Can log in to portal">
                                                 <UserCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                                             </span>
                                         )}
                                     </div>
-                                    <span className="text-xs text-slate-500 truncate">{person.email}</span>
+                                    <span className="text-xs text-slate-500">{person.email}</span>
                                 </div>
 
                                 {/* Stats */}

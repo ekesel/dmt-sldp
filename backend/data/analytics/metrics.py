@@ -157,6 +157,7 @@ class MetricService:
             
             return {
                 'compliance_rate': round(latest.compliance_rate_percent, 2),
+                'velocity': round(avg_velocity, 1) if avg_velocity is not None else 0,
                 'active_sprint': {
                     'total_points': round(avg_velocity, 1) if avg_velocity is not None else 0,
                     'item_count': round(avg_items, 1) if avg_items is not None else 0

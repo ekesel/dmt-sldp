@@ -22,18 +22,20 @@ Analyze the following team performance data and identify BOTTLENECKS, OVERLOADED
 
 Team Data:
 - Average Cycle Time: {avg_cycle_time}
-- Assignee Distribution: {assignee_distribution}
+- Velocity History (Last 5 Sprints): {velocity_history}
+- Developer History (Last 5 Sprints): {developer_history}
+- Current Assignee Distribution: {assignee_distribution}
 - Stagnant Items (>5 days in progress): {stagnant_items}
 
 Response format (JSON):
 {{
-  "summary": "High-level team health overview",
+  "summary": "High-level team health overview with trend analysis based on last 5 sprints",
   "suggestions": [
     {{
       "id": "unique_short_id",
       "title": "Short title",
       "impact": "High/Medium/Low",
-      "description": "Specific advice",
+      "description": "Specific advice considering trends",
       "status": "pending"
     }}
   ]

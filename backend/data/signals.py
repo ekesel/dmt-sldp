@@ -19,8 +19,13 @@ def work_item_telemetry_signal(sender, instance, **kwargs):
     channel_layer = get_channel_layer()
     schema_name = connection.schema_name
     
-    # We use schema_name as the tenant identifier for the group
-    group_name = f"tenant_{schema_name}"
+    # We use tenant slug for the telemetry group to match consumers and tasks
+    try:
+        from tenants.models import Tenant
+        tenant = Tenant.objects.get(schema_name=schema_name)
+        group_name = f"telemetry_{tenant.slug}"
+    except Exception:
+        group_name = f"telemetry_{schema_name}" # Fallback
     
     # In a real implementation, we'd calculate the updated metrics here
     # For now, we signal that an update happened.
@@ -52,7 +57,12 @@ def ai_insight_telemetry_signal(sender, instance, created, **kwargs):
 
     channel_layer = get_channel_layer()
     schema_name = connection.schema_name
-    group_name = f"tenant_{schema_name}"
+    try:
+        from tenants.models import Tenant
+        tenant = Tenant.objects.get(schema_name=schema_name)
+        group_name = f"telemetry_{tenant.slug}"
+    except Exception:
+        group_name = f"telemetry_{schema_name}"
     
     message = {
         "type": "insight_ready",

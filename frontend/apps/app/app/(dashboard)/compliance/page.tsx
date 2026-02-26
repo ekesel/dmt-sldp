@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { Card } from "@dmt/ui";
-import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
+import api from '@dmt/api';
 
 interface ComplianceFlag {
     id: string; // {item_id}-{type}
@@ -18,13 +19,10 @@ export default function CompliancePage() {
 
     const fetchFlags = async () => {
         try {
-            const response = await fetch('/api/compliance-flags/');
-            if (response.ok) {
-                const data = await response.json();
-                setFlags(data);
-            }
+            const response = await api.get<ComplianceFlag[]>('compliance-flags/');
+            setFlags(response.data);
         } catch (error) {
-            console.error(error);
+            console.error("Failed to fetch compliance flags:", error);
         } finally {
             setLoading(false);
         }
@@ -36,13 +34,8 @@ export default function CompliancePage() {
 
     const resolveFlag = async (flagId: string) => {
         try {
-            const response = await fetch(`/api/compliance-flags/${flagId}/resolve/`, {
-                method: 'POST'
-            });
-            if (response.ok) {
-                // Remove from list or mark resolved
-                setFlags(prev => prev.filter(f => f.id !== flagId));
-            }
+            await api.post(`compliance-flags/${flagId}/resolve/`);
+            setFlags(prev => prev.filter(f => f.id !== flagId));
         } catch (error) {
             console.error("Failed to resolve flag", error);
         }

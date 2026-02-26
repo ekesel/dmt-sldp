@@ -1,4 +1,5 @@
 from functools import wraps
+import inspect
 from django_tenants.utils import schema_context
 from celery.utils.log import get_task_logger
 
@@ -11,11 +12,18 @@ def tenant_aware_task(f):
     """
     @wraps(f)
     def wrapper(*args, **kwargs):
-        schema_name = kwargs.pop('schema_name', None)
+        # Use inspect to find schema_name in either args or kwargs
+        sig = inspect.signature(f)
+        try:
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            schema_name = bound_args.arguments.get('schema_name')
+        except TypeError:
+            # Fallback if binding fails
+            schema_name = kwargs.get('schema_name')
+
         if not schema_name:
             logger.error(f"Task {f.__name__} called without 'schema_name'. Execution may fail or use 'public' schema.")
-            # Fallback to public or raise? For now, we'll try to proceed but log the error.
-            # In a strict environment, we should probably raise an error.
             return f(*args, **kwargs)
         
         with schema_context(schema_name):

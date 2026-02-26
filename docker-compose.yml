@@ -103,7 +103,7 @@ services:
       resources:
         limits:
           cpus: '0.50'
-          memory: 512M
+          memory: 1024M
     command: [ "sh", "-c", "cd /app && npm install && cd /app/apps/app && npm run dev" ]
 
 volumes:

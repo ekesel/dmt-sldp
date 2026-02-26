@@ -44,6 +44,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
         else:
              serializer.save()
 
+    @action(detail=True, methods=['post'])
+    def trigger_sync(self, request, pk=None):
+        project = self.get_object()
+        from .tasks import perform_sync_task
+        
+        active_sources = project.sources.filter(is_active=True)
+        task_ids = []
+        
+        for source in active_sources:
+            task = perform_sync_task.delay(source.id)
+            task_ids.append(task.id)
+            
+        return Response({
+            'status': 'success',
+            'message': f'Sync triggered for {active_sources.count()} sources in project {project.name}',
+            'task_ids': task_ids
+        })
+
 
 class SourceConfigurationViewSet(viewsets.ModelViewSet):
     """

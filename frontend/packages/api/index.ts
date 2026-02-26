@@ -261,6 +261,7 @@ export interface Project {
 export const projects = {
   list: () => get<Project[]>('/admin/projects/', {}, { cache: true, ttl: 30000 }), // Cache 30s
   get: (id: string) => get<Project>(`/admin/projects/${id}/`, {}, { cache: true }),
+  triggerSync: (id: string | number) => post<{ status: string; message: string; task_ids?: string[] }>(`/admin/projects/${id}/trigger_sync/`),
 };
 
 export interface Source {
@@ -460,6 +461,8 @@ export const aiInsights = {
       `/ai-insights/${insightId}/feedback/`,
       { suggestion_id: suggestionId, status }
     ),
+  refresh: (projectId?: number | null) =>
+    post<{ status: string; message: string }>('/ai-insights/refresh/', { project_id: projectId }),
 };
 
 /** ---------- settings ---------- */

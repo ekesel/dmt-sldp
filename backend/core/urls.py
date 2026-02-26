@@ -8,7 +8,7 @@ from data.views import (
     ComplianceView, BlockedItemsView, PRHealthView,
     DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
     ComplianceFlagListView, ComplianceFlagResolveView, AIInsightListView,
-    AssigneeDistributionView
+    AssigneeDistributionView, AIInsightRefreshView
 )
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
@@ -60,7 +60,8 @@ urlpatterns = [
     
     # AI Insights
     path('api/ai-insights/', AIInsightListView.as_view(), name='ai_insights'),
-    path('api/analytics/insights/feedback/', AIInsightFeedbackView.as_view(), name='ai_feedback'),
+    path('api/ai-insights/refresh/', AIInsightRefreshView.as_view(), name='ai_insights_refresh'),
+    path('api/ai-insights/<int:insight_id>/feedback/', AIInsightFeedbackView.as_view(), name='ai_feedback'),
 
     # Exports
     path('api/exports/sprint/', ExportSprintView.as_view(), name='export_sprint'),

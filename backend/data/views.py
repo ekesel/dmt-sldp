@@ -13,6 +13,7 @@ from .serializers import (
     WorkItemSerializer, SprintMetricsSerializer, DeveloperMetricsSerializer, 
     DeveloperListSerializer, AIInsightSerializer
 )
+from .ai.tasks import refresh_ai_insights
 from core.utils.ai_client import AIClient
 from tenants.models import Tenant
 from .analytics.metrics import MetricService
@@ -49,7 +50,7 @@ class DashboardSummaryView(APIView):
         
         # UI expects: velocity (int/float), compliance_rate (float), bugs_resolved (int), cycle_time (float)
         data = {
-            "velocity": summary['active_sprint']['total_points'] if summary['active_sprint'] else 0,
+            "velocity": summary.get('velocity', 0),
             "compliance_rate": round(summary['compliance_rate'], 2),
             "bugs_resolved": summary['bugs_resolved'],
             "cycle_time": summary['avg_cycle_time']
@@ -321,12 +322,18 @@ class AIInsightListView(APIView):
             # Return global insights (not specific to any project)
             insights_qs = insights_qs.filter(project__isnull=True)
 
-        insights = insights_qs[:10]
+        insights = list(insights_qs[:10])
+        
+        # Filter suggestions to only show 'pending' ones in the response
+        for insight in insights:
+            if insight.suggestions and isinstance(insight.suggestions, list):
+                insight.suggestions = [s for s in insight.suggestions if s.get('status', 'pending') == 'pending']
+                
         serializer = AIInsightSerializer(insights, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        # Trigger fresh insight generation
+        # Trigger fresh insight generation (Streaming)
         # Get tenant config
         try:
             tenant = Tenant.objects.get(schema_name=connection.schema_name)
@@ -347,11 +354,26 @@ class AIInsightListView(APIView):
         except Tenant.DoesNotExist:
             return Response({"error": "Tenant context missing"}, status=400)
 
+class AIInsightRefreshView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        project_id = request.data.get('project_id')
+        schema_name = getattr(request.user, 'tenant', None).schema_name if hasattr(request.user, 'tenant') else connection.schema_name
+        
+        # Trigger Celery task
+        refresh_ai_insights.delay(project_id=project_id, schema_name=schema_name)
+        
+        return Response({
+            "status": "success",
+            "message": "AI insight refresh triggered"
+        })
+
+
 class AIInsightFeedbackView(APIView):
     permission_classes = [IsAuthenticated]
     
-    def patch(self, request):
-        insight_id = request.data.get('insight_id')
+    def patch(self, request, insight_id):
         suggestion_id = request.data.get('suggestion_id')
         status = request.data.get('status')
         

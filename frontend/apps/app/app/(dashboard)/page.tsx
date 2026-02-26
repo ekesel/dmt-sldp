@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, Share2, BarChart3, AlertCircle } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -9,10 +9,154 @@ import { AIInsightsList } from "../../components/AIInsightsList";
 import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector } from "../../components/ProjectSelector";
+import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
+import { projects } from "@dmt/api";
+import { SyncProgressOverlay } from "../../components/SyncProgressOverlay";
+import { toast } from "react-hot-toast";
 
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const { summary, velocity, compliance, insights, forecast, assigneeDistribution, loading, error } = useDashboardData(selectedProjectId);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const dashboardRef = useRef<HTMLDivElement>(null);
+    const {
+        summary, velocity, compliance, insights, forecast, assigneeDistribution,
+        loading, error, refreshInsights, isRefreshingInsights,
+        aiProgress, aiStatus
+    } = useDashboardData(selectedProjectId);
+
+    const handleExportPDF = async () => {
+        if (!dashboardRef.current) return;
+
+        try {
+            setIsExporting(true);
+            console.log('[PDF Export] Starting professional sliced export...');
+
+            // Dynamically import client-side only libraries
+            const html2canvas = (await import('html2canvas')).default;
+            const jspdfMod = await import('jspdf');
+            const JsPDF = (jspdfMod as any).jsPDF || (jspdfMod as any).default;
+
+            if (!JsPDF) throw new Error('Could not load jsPDF library');
+
+            const element = dashboardRef.current;
+            const originalStyle = element.style.cssText;
+
+            // Force desktop layout (1400px) and disable constraints
+            element.style.width = '1400px';
+            element.style.minWidth = '1400px';
+            element.style.maxWidth = 'none';
+            element.style.margin = '0';
+            element.style.padding = '0';
+            element.style.height = 'auto';
+            element.style.overflow = 'visible';
+
+            // Wait for reflow
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const mainCanvas = await html2canvas(element, {
+                scale: 2, // High resolution
+                useCORS: true,
+                backgroundColor: '#0f172a',
+                logging: false,
+                width: 1400,
+            });
+
+            // Restore original styles
+            element.style.cssText = originalStyle;
+
+            const pdf = new JsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: 'a4'
+            });
+
+            const margin = 40;
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const pWidth = pdfWidth - (margin * 2);
+            const pHeight = pdfHeight - (margin * 2);
+
+            // Calculate how much of the canvas height fits into one printable page height
+            const canvasPageHeight = (pHeight * mainCanvas.width) / pWidth;
+            let currentY = 0;
+            let pageNum = 1;
+
+            console.log(`[PDF Export] Slicing into pages. Total canvas height: ${mainCanvas.height}, Page height: ${canvasPageHeight}`);
+
+            while (currentY < mainCanvas.height) {
+                if (pageNum > 1) pdf.addPage();
+
+                // Set page background
+                pdf.setFillColor('#0f172a');
+                pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+
+                // Determine the height of this slice
+                const remainingHeight = mainCanvas.height - currentY;
+                const sliceHeight = Math.min(canvasPageHeight, remainingHeight);
+
+                // Create a temporary canvas for this page to ensure no background bleed or overlap
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = mainCanvas.width;
+                pageCanvas.height = sliceHeight;
+                const pageCtx = pageCanvas.getContext('2d');
+
+                if (pageCtx) {
+                    pageCtx.drawImage(
+                        mainCanvas,
+                        0, currentY, mainCanvas.width, sliceHeight, // Source
+                        0, 0, mainCanvas.width, sliceHeight         // Destination
+                    );
+
+                    const pageImgData = pageCanvas.toDataURL('image/png');
+                    // Calculate the display height for this slice on the PDF
+                    const displayHeight = (sliceHeight * pWidth) / mainCanvas.width;
+
+                    pdf.addImage(pageImgData, 'PNG', margin, margin, pWidth, displayHeight);
+                }
+
+                currentY += canvasPageHeight;
+                pageNum++;
+            }
+
+            const pdfName = `dashboard-${selectedProjectId || 'global'}-${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfBlob = pdf.output('blob');
+            const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.setAttribute('download', pdfName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+
+            console.log('[PDF Export] Sliced export triggered successfully');
+        } catch (err) {
+            console.error('[PDF Export] Error:', err);
+            alert('Failed to export PDF.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleResync = async () => {
+        if (!selectedProjectId) return;
+
+        try {
+            setIsSyncing(true);
+            setIsSyncModalOpen(true);
+            const response = await projects.triggerSync(selectedProjectId);
+            console.log('[Sync] Triggered:', response);
+        } catch (err) {
+            console.error('[Sync] Error:', err);
+            toast.error('Failed to trigger synchronization');
+            setIsSyncModalOpen(false);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     if (loading) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
@@ -24,7 +168,7 @@ export default function DashboardPage() {
 
     return (
         <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8">
                 <header className="flex justify-between items-end border-b border-white/5 pb-8">
                     <div>
                         <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">
@@ -41,14 +185,24 @@ export default function DashboardPage() {
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
                         />
-                        {/* Stubbed actions */}
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all font-medium border border-white/5">
-                            <Share2 size={18} />
-                            Share Report
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-all font-bold shadow-lg shadow-brand-primary/20">
+                        {selectedProjectId && (
+                            <button
+                                onClick={handleResync}
+                                disabled={isSyncing}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all font-bold border border-white/10 cursor-pointer ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title="Resync Project Data"
+                            >
+                                <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
+                                {isSyncing ? 'Syncing...' : 'Resync'}
+                            </button>
+                        )}
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isExporting}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-all font-bold shadow-lg shadow-brand-primary/20 cursor-pointer ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
                             <FileText size={18} />
-                            Export PDF
+                            {isExporting ? 'Exporting...' : 'Export PDF'}
                         </button>
                     </div>
                 </header>
@@ -147,17 +301,42 @@ export default function DashboardPage() {
                                 {insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Global Insights"}
                             </h2>
                         </div>
-                        <AIInsightsList
-                            insightId={insights[0].id}
-                            suggestions={insights[0].suggestions}
-                        />
-                        <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
-                            <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
-                            <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
-                        </div>
+                        <button
+                            onClick={refreshInsights}
+                            disabled={isRefreshingInsights}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all text-xs font-bold border border-white/10 mb-4 ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
+                            {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
+                        </button>
+
+                        {isRefreshingInsights ? (
+                            <AIThinkingOverlay progress={aiProgress} status={aiStatus} />
+                        ) : (
+                            <>
+                                <AIInsightsList
+                                    insightId={insights[0].id}
+                                    suggestions={insights[0].suggestions}
+                                    onAllHandled={refreshInsights}
+                                />
+                                <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
+                                    <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
+                                    <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
+
+            {selectedProjectId && (
+                <SyncProgressOverlay
+                    isOpen={isSyncModalOpen}
+                    onClose={() => setIsSyncModalOpen(false)}
+                    projectId={selectedProjectId}
+                    tenantId={localStorage.getItem('dmt-tenant') || undefined}
+                />
+            )}
         </main>
     );
 }

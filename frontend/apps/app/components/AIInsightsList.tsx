@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@dmt/ui";
 import { Check, X, Sparkles, AlertCircle } from "lucide-react";
-import { dashboard } from "@dmt/api";
+import { dashboard, aiInsights } from "@dmt/api";
+import { toast } from 'react-hot-toast';
 
 interface Suggestion {
     id: string;
@@ -15,17 +16,28 @@ interface Suggestion {
 interface AIInsightsListProps {
     insightId: number;
     suggestions: Suggestion[];
+    onAllHandled?: () => void;
 }
 
-export const AIInsightsList: React.FC<AIInsightsListProps> = ({ insightId, suggestions: initialSuggestions }) => {
-    const [suggestions, setSuggestions] = useState(initialSuggestions);
+export const AIInsightsList: React.FC<AIInsightsListProps> = ({ insightId, suggestions: initialSuggestions, onAllHandled }) => {
+    const [suggestions, setSuggestions] = useState(initialSuggestions.filter(s => s.status === 'pending'));
+
+    useEffect(() => {
+        setSuggestions(initialSuggestions.filter(s => s.status === 'pending'));
+    }, [initialSuggestions]);
 
     const handleFeedback = async (suggestionId: string, status: 'accepted' | 'rejected') => {
         try {
-            await dashboard.updateInsightFeedback(insightId, suggestionId, status);
-            setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+            await aiInsights.updateFeedback(insightId, suggestionId, status);
+            const remaining = suggestions.filter(s => s.id !== suggestionId);
+            setSuggestions(remaining);
+
+            if (remaining.length === 0 && onAllHandled) {
+                onAllHandled();
+            }
         } catch (err) {
             console.error("Failed to update AI feedback:", err);
+            toast.error("Failed to update feedback");
         }
     };
 
@@ -44,8 +56,8 @@ export const AIInsightsList: React.FC<AIInsightsListProps> = ({ insightId, sugge
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${s.impact === 'High' ? 'bg-rose-500 text-white' :
-                                            s.impact === 'Medium' ? 'bg-amber-500 text-black' :
-                                                'bg-slate-700 text-slate-300'
+                                        s.impact === 'Medium' ? 'bg-amber-500 text-black' :
+                                            'bg-slate-700 text-slate-300'
                                         }`}>
                                         {s.impact} Impact
                                     </span>
