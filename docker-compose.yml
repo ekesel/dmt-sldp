@@ -86,7 +86,7 @@ services:
       resources:
         limits:
           cpus: '0.50'
-          memory: 512M
+          memory: 1536M
     command: [ "sh", "-c", "cd /app && npm install --force && cd /app/apps/admin && npm run dev" ]
 
   company-portal:

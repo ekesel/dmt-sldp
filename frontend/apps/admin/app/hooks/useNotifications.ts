@@ -7,6 +7,8 @@ export function useNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [status, setStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
     const ws = useRef<WebSocket | null>(null);
+    const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isMounted = useRef(true);
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -30,7 +32,7 @@ export function useNotifications() {
 
         if (envWsUrl) {
             try {
-                // If env var is a full URL, extract authority
+                // If env var is a full URL, extract authority (host + port only)
                 if (envWsUrl.includes('://')) {
                     const urlObj = new URL(envWsUrl);
                     wsHost = urlObj.host;
@@ -72,8 +74,9 @@ export function useNotifications() {
         ws.current.onclose = () => {
             setStatus('closed');
             console.log('Notifications WebSocket Disconnected');
-            // Simple reconnection logic
-            setTimeout(connectWebSocket, 5000);
+            // Only schedule a reconnect if the component is still mounted
+            if (!isMounted.current) return;
+            reconnectTimer.current = setTimeout(connectWebSocket, 5000);
         };
 
         ws.current.onerror = (err) => {
@@ -83,10 +86,17 @@ export function useNotifications() {
     }, []);
 
     useEffect(() => {
+        isMounted.current = true;
         fetchNotifications();
         connectWebSocket();
 
         return () => {
+            // Mark as unmounted first so the onclose handler won't schedule a reconnect
+            isMounted.current = false;
+            if (reconnectTimer.current) {
+                clearTimeout(reconnectTimer.current);
+                reconnectTimer.current = null;
+            }
             if (ws.current) {
                 ws.current.close();
             }

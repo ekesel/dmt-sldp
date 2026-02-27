@@ -160,11 +160,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
 
                         {/* Dropdown Items */}
                         <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <button className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 flex items-center gap-2 rounded-t-lg transition">
+                            <button
+                                onClick={() => router.push('/profile')}
+                                className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 flex items-center gap-2 rounded-t-lg transition"
+                            >
                                 <User className="w-4 h-4" />
                                 My Profile
                             </button>
-                            <button className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 flex items-center gap-2 transition">
+                            <button
+                                onClick={() => router.push('/settings')}
+                                className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 flex items-center gap-2 transition"
+                            >
                                 <Settings className="w-4 h-4" />
                                 Settings
                             </button>

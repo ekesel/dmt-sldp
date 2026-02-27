@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '../AuthContext';
 import { ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
@@ -120,24 +119,6 @@ export default function LoginPage() {
                             )}
                         </button>
                     </form>
-
-                    {/* Divider */}
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-800" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-slate-900/60 text-slate-500">Don't have an account?</span>
-                        </div>
-                    </div>
-
-                    {/* Signup Link */}
-                    <Link
-                        href="/auth/register"
-                        className="block w-full py-3 px-4 border border-slate-700 hover:border-slate-600 text-slate-300 font-semibold rounded-lg transition duration-200 text-center hover:bg-slate-800/50"
-                    >
-                        Create an Account
-                    </Link>
                 </div>
 
                 {/* Footer */}
