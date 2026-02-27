@@ -271,6 +271,7 @@ class DeveloperMetrics(models.Model):
     
     sprint_name = models.CharField(max_length=100)
     sprint_end_date = models.DateField()
+    project = models.ForeignKey('configuration.Project', on_delete=models.CASCADE, null=True, blank=True)
     
     # Work items
     story_points_completed = models.FloatField(default=0)
@@ -291,14 +292,15 @@ class DeveloperMetrics(models.Model):
     
     # DMT
     dmt_compliance_rate = models.FloatField(default=0)
+    ai_usage_percent = models.FloatField(default=0)
     
     calculated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'data_developermetrics'
-        unique_together = ['developer_source_id', 'sprint_name', 'sprint_end_date']
+        unique_together = ['developer_source_id', 'sprint_name', 'sprint_end_date', 'project']
         indexes = [
-            models.Index(fields=['developer_source_id', 'sprint_end_date']),
+            models.Index(fields=['developer_source_id', 'sprint_end_date', 'project']),
         ]
 
     def __str__(self):

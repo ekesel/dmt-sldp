@@ -96,6 +96,14 @@ export class ApiClientError extends Error {
   }
 }
 
+/** Builds a query string from an object, skipping null/undefined/empty values */
+function buildQuery(params: Record<string, string | number | null | undefined>): string {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '' && v !== 'null' && v !== 'undefined')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  return parts.length ? `?${parts.join('&')}` : '';
+}
+
 function handleApiError(error: unknown): never {
   if (axios.isAxiosError(error)) {
     const axiosErr = error as AxiosError<ApiErrorPayload>;
@@ -320,6 +328,38 @@ export const dashboard = {
    1.2 NEW MODULES
 ========================= */
 
+/** ---------- developers ---------- */
+
+export interface Developer {
+  id: string; // This is the email
+  developer_name: string;
+  developer_email: string;
+  projects?: { id: number; name: string }[];
+  [key: string]: unknown;
+}
+
+export const developers = {
+  list: () => get<Developer[]>('/developers/'),
+  getMetrics: (id: string, projectId?: string) =>
+    get<any>(`/developers/${id}/metrics/${projectId ? `?project_id=${projectId}` : ''}`),
+  getComparison: (id: string, projectId?: string) =>
+    get<any>(`/developers/${id}/comparison/${projectId ? `?project_id=${projectId}` : ''}`),
+};
+
+export const compliance = {
+  listFlags: (projectId?: string | number | null, sprintId?: string | number | null) =>
+    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  resolveFlag: (flagId: string) =>
+    post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
+  getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
+    get<any>(`/compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+};
+
+export const sprints = {
+  list: (projectId?: string | number | null) =>
+    get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+};
+
 /** ---------- users ---------- */
 
 export interface User {
@@ -525,19 +565,25 @@ export const activityLog = {
 
 /** ---------- notifications ---------- */
 
-export interface Notification {
+export interface DMTNotification {
   id: string | number;
+  title?: string;
   message: string;
-  notification_type: 'info' | 'success' | 'warning' | 'error';
+  notification_type: 'info' | 'success' | 'warning' | 'error' | string;
   is_read: boolean;
   created_at: string;
 }
 
+/** @deprecated Use DMTNotification instead */
+export type Notification = DMTNotification;
+
 export const notifications = {
-  list: () => get<Notification[]>('/notifications/'),
+  list: () => get<DMTNotification[]>('/notifications/'),
   markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
   markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
+  send: (data: { recipient_id: string | number; title: string; message: string; notification_type?: string }) =>
+    post<DMTNotification, any>('/notifications/send/', data),
 };
 
 export default api;

@@ -48,8 +48,19 @@ class MetricService:
         from django.db.models import Sum, Count, Q
         
         sprint = Sprint.objects.get(id=sprint_id)
-        if not sprint.start_date or not sprint.end_date:
-            return None
+        if not sprint.end_date:
+            # For "In Progress" sprints or items without dates, use today as a default end date
+            # to allow metric calculation while the sprint is active.
+            from django.utils import timezone
+            sprint_end = timezone.now()
+        else:
+            sprint_end = sprint.end_date
+            
+        if not sprint.start_date:
+            # Fallback for start date if missing
+            sprint_start = sprint_end - timezone.timedelta(days=14)
+        else:
+            sprint_start = sprint.start_date
             
         projects = list(Project.objects.all()) + [None] # All projects + Global (None)
         
@@ -76,11 +87,9 @@ class MetricService:
                 stories=Count('id', filter=Q(item_type='story')),
                 bugs=Count('id', filter=Q(item_type='bug'))
             )
-            # 4. Compliance (Only for parent tasks)
-            # Use parent_id field added during schema migration
-            parent_work_items = work_items.filter(parent_id__isnull=True)
-            total_count = parent_work_items.count()
-            compliant_count = parent_work_items.filter(dmt_compliant=True).count()
+            # 4. Compliance (Standardized to ALL work items for dashboard consistency)
+            total_count = work_items.count()
+            compliant_count = work_items.filter(dmt_compliant=True).count()
             compliance_rate = (compliant_count / total_count * 100) if total_count > 0 else 0
             
             # 5. Quality
@@ -91,10 +100,10 @@ class MetricService:
 
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
-                sprint_end_date=sprint.end_date.date(),
+                sprint_end_date=sprint_end.date(),
                 project=project,
                 defaults={
-                    'sprint_start_date': sprint.start_date.date(),
+                    'sprint_start_date': sprint_start.date(),
                     'total_story_points_completed': velocity,
                     'velocity': velocity,
                     'items_completed': throughput_stats['total_count'] or 0,
@@ -216,3 +225,105 @@ class MetricService:
             } if latest_insight else None,
             'api_requests_count': AuditLog.objects.count()
         }
+    @staticmethod
+    def populate_developer_metrics(sprint_id):
+        """
+        Calculate and persist metrics for each developer in a specific sprint.
+        Accounts for developers working across multiple projects.
+        """
+        from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest
+        from configuration.models import Project, SourceConfiguration
+        from django.db.models import Sum, Count, Q, Avg
+        
+        sprint = Sprint.objects.get(id=sprint_id)
+        if not sprint.end_date:
+            from django.utils import timezone
+            sprint_end = timezone.now()
+        else:
+            sprint_end = sprint.end_date
+            
+        if not sprint.start_date:
+            sprint_start = sprint_end - timezone.timedelta(days=14)
+        else:
+            sprint_start = sprint.start_date
+            
+        # Get all projects
+        projects = list(Project.objects.all())
+        
+        results = []
+        for project in projects:
+            source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
+            
+            # 1. Get all developers who have work items or PRs in this project/sprint
+            # We group by email to handle the 'person' across different source IDs if they vary
+            dev_emails = WorkItem.objects.filter(
+                sprint=sprint, 
+                source_config_id__in=source_conf_ids
+            ).values_list('assignee_email', flat=True).distinct()
+            
+            dev_emails = [e for e in dev_emails if e]
+            
+            for email in dev_emails:
+                # Filter work items for this developer in this project/sprint
+                dev_work_items = WorkItem.objects.filter(
+                    sprint=sprint,
+                    assignee_email=email,
+                    source_config_id__in=source_conf_ids
+                )
+                
+                # Filter PRs for this developer in this sprint (approximate by date if not linked)
+                # In a mature system, PRs are linked to WorkItems or have a sprint field
+                from django.db.models import Q
+                pr_filter = Q(
+                    author_email=email,
+                    source_config_id__in=source_conf_ids,
+                    created_at__lte=sprint_end
+                )
+                if sprint_start:
+                    pr_filter &= Q(created_at__gte=sprint_start)
+                
+                dev_prs = PullRequest.objects.filter(pr_filter)
+                
+                # Calculate stats
+                completed_items = dev_work_items.filter(status_category='done')
+                points = completed_items.aggregate(total=Sum('story_points'))['total'] or 0
+                items_count = completed_items.count()
+                
+                # DMT Compliance (Standardized to ALL work items)
+                total_compliance_target = dev_work_items.count()
+                compliant_count = dev_work_items.filter(dmt_compliant=True).count()
+                compliance_rate = (compliant_count / total_compliance_target * 100) if total_compliance_target > 0 else 0
+                
+                # Quality
+                defects = dev_work_items.filter(item_type='bug').count()
+                avg_coverage = dev_work_items.aggregate(avg=Avg('coverage_percent'))['avg']
+                avg_ai_usage = dev_work_items.aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+                
+                # Code Activity
+                prs_authored = dev_prs.count()
+                prs_merged = dev_prs.filter(merged_at__isnull=False).count()
+                
+                # Name (Use the most recent name found)
+                dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or email
+
+                metric_obj, created = DeveloperMetrics.objects.update_or_create(
+                    developer_email=email,
+                    sprint_name=sprint.name,
+                    sprint_end_date=sprint_end.date(),
+                    project=project,
+                    defaults={
+                        'developer_source_id': email, # Fallback to email as unique source ID
+                        'developer_name': dev_name,
+                        'story_points_completed': points,
+                        'items_completed': items_count,
+                        'prs_authored': prs_authored,
+                        'prs_merged': prs_merged,
+                        'defects_attributed': defects,
+                        'coverage_avg_percent': avg_coverage,
+                        'ai_usage_percent': avg_ai_usage,
+                        'dmt_compliance_rate': round(compliance_rate, 2),
+                    }
+                )
+                results.append(metric_obj)
+                
+        return results

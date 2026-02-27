@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { notifications as apiNotifications, Notification } from '@dmt/api';
+import { notifications as apiNotifications, DMTNotification } from '@dmt/api';
 
 export function useNotifications() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<DMTNotification[]>([]);
     const [status, setStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
     const ws = useRef<WebSocket | null>(null);
 
@@ -60,6 +60,16 @@ export function useNotifications() {
                         }
                         return [newNotification, ...prev];
                     });
+
+                    // --- Browser Native Notification ---
+                    if (typeof window !== 'undefined' && 'Notification' in window) {
+                        if (Notification.permission === 'granted') {
+                            new Notification(newNotification.title || 'DMT Notification', {
+                                body: newNotification.message,
+                                icon: '/favicon.ico', // Update with real icon path if available
+                            });
+                        }
+                    }
                 }
             } catch (e) {
                 console.error('Failed to parse notification message', e);
@@ -77,6 +87,13 @@ export function useNotifications() {
     }, []);
 
     useEffect(() => {
+        // Request browser notification permission
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
         fetchNotifications();
         connectWebSocket();
 

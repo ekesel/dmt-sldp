@@ -3,11 +3,12 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard,
-    BarChart2,
     ShieldCheck,
+    BarChart2,
     Settings,
-    Shield
+    Shield,
+    MessageSquare,
+    LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,6 +39,11 @@ const menuItems: MenuItem[] = [
         icon: ShieldCheck,
         label: 'Compliance',
         href: '/compliance',
+    },
+    {
+        icon: MessageSquare,
+        label: 'Messenger',
+        href: '/notifications/send',
     },
 ];
 

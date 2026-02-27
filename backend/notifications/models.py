@@ -61,9 +61,11 @@ def broadcast_notification(sender, instance, created, **kwargs):
                 'type': 'notification_message',
                 'data': {
                     'id': instance.id,
+                    'title': instance.title,
                     'message': instance.message,
                     'notification_type': instance.notification_type,
                     'is_read': instance.is_read,
+                    'data': instance.data,
                     'created_at': instance.created_at.isoformat(),
                 }
             }

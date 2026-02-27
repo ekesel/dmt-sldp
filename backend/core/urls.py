@@ -7,7 +7,7 @@ from data.views import (
     DashboardSummaryView, VelocityView, ThroughputView, DefectDensityView,
     ComplianceView, BlockedItemsView, PRHealthView,
     DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
-    ComplianceFlagListView, ComplianceFlagResolveView, AIInsightListView,
+    ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, SprintListView, AIInsightListView,
     AssigneeDistributionView, AIInsightRefreshView
 )
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
@@ -57,6 +57,8 @@ urlpatterns = [
     # Compliance
     path('api/compliance-flags/', ComplianceFlagListView.as_view(), name='compliance_flags'),
     path('api/compliance-flags/<str:id>/resolve/', ComplianceFlagResolveView.as_view(), name='compliance_resolve'),
+    path('api/compliance-summary/', ComplianceSummaryView.as_view(), name='compliance_summary'),
+    path('api/sprints/', SprintListView.as_view(), name='sprint_list'),
     
     # AI Insights
     path('api/ai-insights/', AIInsightListView.as_view(), name='ai_insights'),
