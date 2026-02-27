@@ -40,91 +40,64 @@ export const SyncProgressOverlay: React.FC<SyncProgressOverlayProps> = ({ isOpen
     useEffect(() => {
         if (!isOpen) return;
 
-        const getTenantId = () => {
-            const stored = localStorage.getItem('dmt-tenant');
-            if (stored && stored !== 'undefined' && stored !== 'null') return stored;
+        let isSubscribed = true;
 
+        // Proactive fallback for local development or subdomains:
+        // If dmt-tenant is missing, try to derive it from the URL
+        if (typeof window !== 'undefined' && !localStorage.getItem('dmt-tenant')) {
             const host = window.location.hostname;
             const parts = host.split('.');
             if (parts.length > 1 && parts[0] !== 'localhost') {
-                return parts[0];
+                localStorage.setItem('dmt-tenant', parts[0]);
+            } else if (tenantId) {
+                localStorage.setItem('dmt-tenant', tenantId);
             }
-            return 'default';
-        };
+        }
 
-        const resolvedTenantId = tenantId || getTenantId();
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname;
-        const port = window.location.port;
-        const token = localStorage.getItem('dmt-access-token');
+        // Dynamic import or direct usage of the shared manager 
+        import('@dmt/api').then(({ getWebSocketManager }) => {
+            if (!isSubscribed) return;
 
-        console.log(`[Sync] Initiating listener. Project: ${projectId}, Tenant: ${resolvedTenantId}`);
+            const wsManager = getWebSocketManager();
 
-        let ws: WebSocket;
-        let isFallback = false;
+            const handleProgress = (message: any) => {
+                const data = message.payload || message; // handle both direct and payload-wrapped
 
-        const connect = (targetUrl: string) => {
-            console.log(`[Sync] Connecting to WebSocket: ${targetUrl}`);
-            const urlWithToken = token ? `${targetUrl}?token=${token}` : targetUrl;
-            ws = new WebSocket(urlWithToken);
+                if (data.project_id && data.project_id !== projectId) {
+                    return;
+                }
 
-            ws.onopen = () => {
-                console.log(`[Sync] WebSocket Connected to ${targetUrl}`);
-            };
+                setSyncState({
+                    progress: data.progress,
+                    status: data.status,
+                    message: data.message,
+                    source_id: data.source_id
+                });
 
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    console.log('[Sync] Event:', data);
-
-                    if (data.type === 'sync_progress') {
-                        if (data.project_id && data.project_id !== projectId) {
-                            return;
-                        }
-
-                        setSyncState({
-                            progress: data.progress,
-                            status: data.status,
-                            message: data.message,
-                            source_id: data.source_id
-                        });
-
-                        if (data.status === 'success' && data.progress === 100) {
-                            toast.success('Synchronization complete');
-                        } else if (data.status === 'failed') {
-                            toast.error(`Sync error: ${data.message}`);
-                        }
-                    }
-                } catch (e) {
-                    console.error('[Sync] Error parsing message:', e);
+                if (data.status === 'success' && data.progress === 100) {
+                    toast.success('Synchronization complete');
+                } else if (data.status === 'failed') {
+                    toast.error(`Sync error: ${data.message}`);
                 }
             };
 
-            ws.onerror = (e) => {
-                console.warn(`[Sync] WebSocket Connection failed for ${targetUrl}`, e);
-                if (!isFallback) {
-                    isFallback = true;
-                    toast.error('Real-time connection failed. Retrying through proxy...');
-                    const fallbackUrl = `${protocol}//${host}${port ? `:${port}` : ''}/ws/telemetry/${resolvedTenantId}/`;
-                    connect(fallbackUrl);
-                }
-            };
+            // Subscribe to sync_progress
+            wsManager.subscribe('sync_progress', handleProgress);
 
-            ws.onclose = () => {
-                console.log(`[Sync] WebSocket Closed for ${targetUrl}`);
-            };
-        };
-
-        const primaryUrl = `${protocol}//${host}:8000/ws/telemetry/${resolvedTenantId}/`;
-        connect(primaryUrl);
+            // Connect
+            wsManager.connect().catch(console.error);
+        });
 
         return () => {
-            if (ws) {
-                console.log('[Sync] Closing WebSocket');
-                ws.close();
-            }
+            isSubscribed = false;
+            import('@dmt/api').then(({ getWebSocketManager }) => {
+                const wsManager = getWebSocketManager();
+                // We only unsubscribe this specific component's listener,
+                // we don't necessarily disconnect the whole socket if others use it
+                wsManager.unsubscribe('sync_progress');
+            });
         };
-    }, [isOpen, tenantId]);
+    }, [isOpen, projectId]);
 
     if (!isVisible) return null;
 

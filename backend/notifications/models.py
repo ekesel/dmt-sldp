@@ -13,6 +13,7 @@ class Notification(models.Model):
     TYPE_SPRINT_ENDING = 'sprint_ending'
     TYPE_EXCEPTION_APPROVED = 'exception_approved'
     TYPE_AI_INSIGHT = 'ai_insight'
+    TYPE_PASSWORD_RESET = 'password_reset'
 
     TYPE_CHOICES = [
         (TYPE_INFO, 'Info'),
@@ -24,6 +25,7 @@ class Notification(models.Model):
         (TYPE_SPRINT_ENDING, 'Sprint Ending Soon'),
         (TYPE_EXCEPTION_APPROVED, 'DMT Exception Approved'),
         (TYPE_AI_INSIGHT, 'AI Insight'),
+        (TYPE_PASSWORD_RESET, 'Password Reset'),
     ]
 
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True)

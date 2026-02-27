@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, Plus, Shield, Search, Filter, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { Users, Plus, Shield, Search, Filter, ChevronLeft, ChevronRight, Edit2, Trash2, Mail, Copy, Check } from 'lucide-react';
 import { Badge } from '../../components/UIComponents';
 import { users as usersApi, User } from '@dmt/api';
 import { UserCreateModal } from './UserCreateModal';
@@ -13,6 +13,9 @@ export function UserList() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [inviteLink, setInviteLink] = useState<string | null>(null);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('All Roles');
     const [currentPage, setCurrentPage] = useState(1);
@@ -72,6 +75,16 @@ export function UserList() {
             fetchUsers();
         } catch (err: any) {
             alert(err.message || 'Failed to delete user');
+        }
+    };
+
+    const handleInviteUser = async (user: User) => {
+        try {
+            const res = await usersApi.invite(user.id);
+            setInviteLink(res.invite_link);
+            setIsInviteModalOpen(true);
+        } catch (err: any) {
+            alert(err.response?.data?.error || err.message || 'Failed to invite user');
         }
     };
 
@@ -208,6 +221,13 @@ export function UserList() {
                                             <td className="px-6 py-4">
                                                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
+                                                        onClick={() => handleInviteUser(user)}
+                                                        className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-green-400"
+                                                        title="Send password reset / invite"
+                                                    >
+                                                        <Mail size={16} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => {
                                                             setSelectedUser(user);
                                                             setIsEditModalOpen(true);
@@ -315,6 +335,55 @@ export function UserList() {
                                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition shadow-lg shadow-red-500/20 font-['Outfit']"
                             >
                                 Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invite Link Modal */}
+            {isInviteModalOpen && inviteLink && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3 text-green-400 mb-2">
+                                <div className="p-2 bg-green-500/10 rounded-lg">
+                                    <Mail size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Invite Link Generated</h3>
+                            </div>
+                            <p className="text-slate-400 text-sm">
+                                Copy the link below and send it to the user so they can set their password and log in. This link is single-use.
+                            </p>
+                            <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-lg mt-4">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={inviteLink}
+                                    className="bg-transparent flex-1 text-slate-300 outline-none text-sm"
+                                />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(inviteLink);
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 2000);
+                                    }}
+                                    className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 flex-shrink-0"
+                                >
+                                    {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-800/30 flex justify-end">
+                            <button
+                                onClick={() => {
+                                    setIsInviteModalOpen(false);
+                                    setInviteLink(null);
+                                    setCopied(false);
+                                }}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition"
+                            >
+                                Close
                             </button>
                         </div>
                     </div>

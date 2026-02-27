@@ -9,10 +9,11 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
+    tenant_slug = serializers.ReadOnlyField(source='tenant.slug')
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'tenant', 'tenant_name', 'is_platform_admin', 'is_staff', 'is_superuser', 'is_active', 'date_joined']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 'is_staff', 'is_superuser', 'is_active', 'date_joined']
         read_only_fields = ['id']
 
 
@@ -90,13 +91,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add user info to response
         data['user'] = UserSerializer(self.user).data
         
-        # Get request from context
         request = self.context.get('request')
         
-        # If the request indicates it's for the admin portal, restrict to platform admins
+        # If the request indicates it's for the admin portal, restrict to platform admins and staff
         if request and request.data.get('portal') == 'admin':
-            if not self.user.is_platform_admin:
-                raise ValidationError("Only platform administrators can log in to the admin portal.")
+            if not (self.user.is_platform_admin or self.user.is_staff):
+                raise ValidationError("Only administrators or staff can log in to the admin portal.")
         elif request and request.data.get('portal') == 'company':
             if not self.user.tenant:
                 raise ValidationError("User does not belong to any tenant.")

@@ -46,11 +46,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const token = localStorage.getItem('dmt-access-token');
             if (token) {
                 try {
-                    const userData = await auth.getProfile();
-                    setUser(userData as any);
+                    const userData = await auth.getProfile() as any;
+                    setUser(userData);
+                    if (userData?.tenant_slug) {
+                        localStorage.setItem('dmt-tenant', userData.tenant_slug);
+                    }
                 } catch (err) {
                     localStorage.removeItem('dmt-access-token');
                     localStorage.removeItem('dmt-refresh-token');
+                    localStorage.removeItem('dmt-tenant');
                     setUser(null);
                 }
             }
@@ -66,6 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const response = await auth.login(username, password, portal);
             localStorage.setItem('dmt-access-token', response.access);
             localStorage.setItem('dmt-refresh-token', response.refresh);
+            if (response.user?.tenant_slug) {
+                localStorage.setItem('dmt-tenant', response.user.tenant_slug);
+            }
             setUser(response.user);
         } catch (err: any) {
             const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials.';
@@ -101,6 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } finally {
             localStorage.removeItem('dmt-access-token');
             localStorage.removeItem('dmt-refresh-token');
+            localStorage.removeItem('dmt-tenant');
             setUser(null);
             setIsLoading(false);
         }

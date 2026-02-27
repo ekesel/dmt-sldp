@@ -13,6 +13,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/set-password',
 ];
 
 export default function SessionMonitorProvider({ children }: Props) {

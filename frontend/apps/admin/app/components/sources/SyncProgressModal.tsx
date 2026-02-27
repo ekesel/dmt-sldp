@@ -57,9 +57,13 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
 
         // Connect to WebSocket
         const token = localStorage.getItem('dmt-access-token');
-        const urlWithToken = `${WS_URL}/${tenantId}/?token=${token}`;
+        const dmtTenant = localStorage.getItem('dmt-tenant');
 
-        console.log(`Connecting to WS: ${urlWithToken}`);
+        // Use dmtTenant if available (matches what we did for the portal), otherwise fallback
+        const resolvedTenantId = dmtTenant || tenantId;
+        const urlWithToken = token ? `${WS_URL}/${resolvedTenantId}/?token=${token}` : `${WS_URL}/${resolvedTenantId}/`;
+
+        console.log(`[SyncProgressModal] Connecting to WS: ${urlWithToken}`);
         const ws = new WebSocket(urlWithToken);
 
         ws.onopen = () => {

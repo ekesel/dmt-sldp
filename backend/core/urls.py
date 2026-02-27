@@ -12,7 +12,10 @@ from data.views import (
 )
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
-from users.views import RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, UserViewSet, InviteUserView
+from users.views import (
+    RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, 
+    UserViewSet, InviteUserView, PasswordResetRequestView, ResetPasswordConfirmView
+)
 from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
@@ -32,6 +35,8 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/profile/', UserProfileView.as_view(), name='user_profile'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
+    path('api/auth/password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('api/auth/password-reset/confirm/', ResetPasswordConfirmView.as_view(), name='password_reset_confirm'),
     
     # Analytics & Dashboard
     path('api/analytics/metrics/', MetricDashboardView.as_view(), name='metrics_dashboard'),

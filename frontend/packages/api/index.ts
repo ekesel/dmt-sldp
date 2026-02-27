@@ -239,6 +239,10 @@ export const auth = {
     post<AuthRefreshResponse, { refresh: string }>('/auth/token/refresh/', { refresh }),
   getProfile: () => get<any>('/auth/profile/'),
   logout: () => post<{ success?: boolean; detail?: string }>('/auth/logout/'),
+  passwordResetRequest: (email: string) =>
+    post<{ message: string }, { email: string }>('/auth/password-reset-request/', { email }),
+  resetPasswordConfirm: (data: { uid: string; token: string; new_password: string }) =>
+    post<{ message: string }, { uid: string; token: string; new_password: string }>('/auth/password-reset/confirm/', data),
 };
 
 export interface Tenant {
@@ -393,6 +397,7 @@ export const users = {
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/users/${id}/`),
   updateRole: (id: string | number, role: string) =>
     patch<User, { role: string }>(`/admin/users/${id}/role/`, { role }),
+  invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
 };
 
 /** ---------- integrations ---------- */
@@ -591,5 +596,8 @@ export const notifications = {
     notification_type?: string;
   }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, any>('/notifications/send-bulk/', data),
 };
+
+export { getWebSocketManager } from './websocket';
+export type { TelemetryMessage } from './websocket';
 
 export default api;

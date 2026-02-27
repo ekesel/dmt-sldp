@@ -158,11 +158,11 @@ export default function DashboardPage() {
         }
     };
 
-    if (loading) {
+    if (loading && !summary) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
     }
 
-    if (error) {
+    if (error && !summary) {
         return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-rose-500">{error}</div>;
     }
 

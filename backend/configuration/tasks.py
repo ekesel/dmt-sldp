@@ -26,32 +26,29 @@ def perform_sync_task(self, source_id: int):
 
     def emit_progress(progress: int, message: str, status: str = 'in_progress', stats: dict = None):
         """Helper to send WS update"""
-        if not group_name:
-            logger.warning(f"Attempted to emit progress before group_name was set for source {source_id}")
-            return
         try:
-            # logger.info(f"Emitting sync progress for source {source_id}: {progress}% - {message}") # Removed as per instruction
             event = {
                 "type": "sync_progress",
                 "source_id": source_id,
-                "project_id": source.project.id, # Added project_id
+                "project_id": source.project.id,
                 "progress": progress,
                 "message": message,
                 "status": status,
-                "stats": stats # Added stats
+                "stats": stats
             }
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                event
-            )
+            if 'group_names' in locals():
+                for gn in group_names:
+                    async_to_sync(channel_layer.group_send)(gn, event)
+            else:
+                 logger.warning(f"Attempted to emit progress before group_names was set for source {source_id}")
         except Exception as e:
             logger.error(f"Failed to emit WS progress for source {source_id}: {e}")
 
     try:
         source = SourceConfiguration.objects.get(id=source_id)
-        # tenant_id = source.project.tenant.id # No longer used for group_name
-        tenant_slug = source.project.tenant.slug # Use tenant slug for group name
-        group_name = f"telemetry_{tenant_slug}" # Set group_name here
+        tenant_id = source.project.tenant.id # Use tenant ID
+        tenant_slug = source.project.tenant.slug # Use tenant slug
+        group_names = [f"telemetry_{tenant_slug}", f"telemetry_{tenant_id}"] # Broadcast to both
         
         # 1. Start
         source.last_sync_status = 'in_progress'
@@ -101,17 +98,18 @@ def perform_sync_task(self, source_id: int):
             # Frontend will refetch immediately, but since update_all_sprint_metrics is async,
             # we might want to also send another signal when recalculation finishes.
             # For now, this is a major improvement.
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    "type": "telemetry_update",
-                    "message": {
-                        "type": "metrics_update",
-                        "project_id": source.project.id,
-                        "sync_id": source_id
+            for gn in group_names:
+                async_to_sync(channel_layer.group_send)(
+                    gn,
+                    {
+                        "type": "telemetry_update",
+                        "message": {
+                            "type": "metrics_update",
+                            "project_id": source.project.id,
+                            "sync_id": source_id
+                        }
                     }
-                }
-            )
+                )
         except Exception as e:
             logger.error(f"Failed to emit metrics_update after sync: {e}")
         

@@ -71,7 +71,7 @@ const DEFAULT_OPTIONS: Required<
 > = {
   baseUrl: "ws://localhost:8000/ws/telemetry/{tenant_id}/",
   tenantStorageKey: "dmt-tenant",
-  tokenStorageKey: "access_token",
+  tokenStorageKey: "dmt-access-token",
   reconnect: {
     enabled: true,
     initialDelayMs: 1000,
@@ -239,9 +239,9 @@ export class WebSocketConnectionManager {
       return;
     }
 
-    const { eventType } = parsed;
+    const eventType = parsed.eventType || (parsed as any).type;
     if (!eventType) {
-      this.warn("Incoming message missing eventType:", parsed);
+      this.warn("Incoming message missing eventType or type:", parsed);
       return;
     }
 

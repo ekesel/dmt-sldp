@@ -80,8 +80,8 @@ export function useNotifications() {
         };
 
         ws.current.onerror = (err) => {
-            console.error('Notifications WebSocket Error', err);
-            ws.current?.close();
+            console.warn('Notifications WebSocket encountered a minor error:', err);
+            // Don't close immediately here; let the browser naturally close it and trigger onclose.
         };
     }, []);
 

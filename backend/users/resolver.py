@@ -113,7 +113,7 @@ class UserResolver:
                 email=email or '',
                 first_name=first_name,
                 last_name=last_name,
-                is_active=False,   # Cannot log in until admin sends invite
+                is_active=True,   # Assigned users can immediately request password reset
                 tenant=tenant,
             )
             user.set_unusable_password()
