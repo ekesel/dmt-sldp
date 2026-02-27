@@ -76,6 +76,11 @@ export function NotificationBell() {
                                         <div className="flex gap-3">
                                             <div className="mt-0.5">{getIcon(n.notification_type)}</div>
                                             <div className="flex-1 min-w-0">
+                                                {n.title && n.title !== 'Notification' && (
+                                                    <p className={`text-xs font-semibold mb-0.5 truncate ${!n.is_read ? 'text-white' : 'text-slate-300'}`}>
+                                                        {n.title}
+                                                    </p>
+                                                )}
                                                 <p className={`text-sm leading-relaxed ${!n.is_read ? 'text-slate-200' : 'text-slate-400'}`}>
                                                     {n.message}
                                                 </p>

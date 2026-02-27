@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use, useRef } from 'react';
 import { Card } from "@dmt/ui";
 import {
     User,
@@ -13,7 +13,8 @@ import {
     Activity,
     ShieldCheck,
     LineChart as ChartIcon,
-    Cpu
+    Cpu,
+    ChevronDown
 } from "lucide-react";
 import { developers, Developer } from "@dmt/api";
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,18 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
     const [comparison, setComparison] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -104,22 +117,55 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2" ref={dropdownRef}>
                             <label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 ml-1">Current Context</label>
-                            <div className="flex items-center gap-3 bg-slate-900 border border-white/10 p-2 rounded-2xl shadow-2xl">
-                                <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/20">
-                                    <Briefcase size={20} />
-                                </div>
-                                <select
-                                    value={selectedProjectId}
-                                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                                    className="bg-transparent border-none text-white focus:ring-0 cursor-pointer pr-10 font-bold text-lg outline-none"
+                            <div className="relative">
+                                <button
+                                    onClick={() => setDropdownOpen(o => !o)}
+                                    className="flex items-center gap-3 bg-slate-900 border border-white/10 hover:border-brand-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
                                 >
-                                    <option value="all" className="bg-slate-900">All Projects Combined</option>
-                                    {developer?.projects?.map(p => (
-                                        <option key={p.id} value={p.id} className="bg-slate-900">{p.name}</option>
-                                    ))}
-                                </select>
+                                    <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/20 shrink-0">
+                                        <Briefcase size={20} />
+                                    </div>
+                                    <span className="font-bold text-lg text-white flex-1 text-left truncate">
+                                        {selectedProjectId === 'all'
+                                            ? 'All Projects Combined'
+                                            : developer?.projects?.find(p => String(p.id) === selectedProjectId)?.name ?? 'Project'}
+                                    </span>
+                                    <ChevronDown
+                                        size={18}
+                                        className={`text-slate-400 shrink-0 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
+                                            {[{ id: 'all', name: 'All Projects Combined' }, ...(developer?.projects ?? [])].map(p => {
+                                                const isActive = String(p.id) === selectedProjectId;
+                                                return (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => { setSelectedProjectId(String(p.id)); setDropdownOpen(false); }}
+                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
+                                                                ? 'bg-brand-primary/15 text-white'
+                                                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-brand-primary shadow-[0_0_6px_var(--color-brand-primary)]' : 'bg-slate-700 group-hover:bg-slate-400'
+                                                            }`} />
+                                                        <span className="font-semibold text-sm truncate">{p.name}</span>
+                                                        {isActive && (
+                                                            <span className="ml-auto text-brand-primary shrink-0">
+                                                                <CheckCircle2 size={14} />
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

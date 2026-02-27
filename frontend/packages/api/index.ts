@@ -584,6 +584,12 @@ export const notifications = {
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
   send: (data: { recipient_id: string | number; title: string; message: string; notification_type?: string }) =>
     post<DMTNotification, any>('/notifications/send/', data),
+  sendBulk: (data: {
+    recipient_ids: (string | number)[];
+    title: string;
+    message: string;
+    notification_type?: string;
+  }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, any>('/notifications/send-bulk/', data),
 };
 
 export default api;

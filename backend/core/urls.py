@@ -76,5 +76,10 @@ urlpatterns = [
     path('api/admin/services/<str:service_name>/restart/', ServiceRestartView.as_view(), name='service_restart'),
     path('api/admin/activity-log/', ActivityLogView.as_view(), name='activity_log'),
     path('api/admin/settings/', SystemSettingsView.as_view(), name='system_settings'),
+    # Notification custom actions — must be listed BEFORE router.urls
+    # to prevent DRF's /{pk}/ pattern from greedily matching "send" / "send-bulk"
+    path('api/notifications/send/', NotificationViewSet.as_view({'post': 'send_notification'}), name='notification_send'),
+    path('api/notifications/send-bulk/', NotificationViewSet.as_view({'post': 'send_notification_bulk'}), name='notification_send_bulk'),
+
     path('api/', include(router.urls)),
 ]

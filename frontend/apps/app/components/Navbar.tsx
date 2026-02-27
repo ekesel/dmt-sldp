@@ -2,7 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { Menu, LogOut, Settings, User, Shield, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, User, ChevronDown } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
@@ -73,13 +73,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
 
                         {/* Dropdown Items */}
                         <div className={`absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-600 rounded-lg shadow-xl transition-all duration-200 z-[100] ${isDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
-                            <button className="w-full px-4 py-3 text-left text-sm bg-transparent !text-white hover:bg-slate-700 flex items-center gap-2 rounded-t-lg transition" style={{ color: 'white' }}>
+                            <button
+                                onClick={() => { setIsDropdownOpen(false); router.push('/profile'); }}
+                                className="w-full px-4 py-3 text-left text-sm bg-transparent !text-white hover:bg-slate-700 flex items-center gap-2 rounded-t-lg transition" style={{ color: 'white' }}>
                                 <User className="w-4 h-4" />
                                 <span style={{ color: 'white' }}>My Profile</span>
-                            </button>
-                            <button className="w-full px-4 py-3 text-left text-sm bg-transparent !text-white hover:bg-slate-700 flex items-center gap-2 transition" style={{ color: 'white' }}>
-                                <Settings className="w-4 h-4" />
-                                <span style={{ color: 'white' }}>Settings</span>
                             </button>
                             <hr className="border-slate-700" />
                             <button

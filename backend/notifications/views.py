@@ -30,6 +30,63 @@ class NotificationViewSet(viewsets.ModelViewSet):
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'count': count})
 
+    @action(detail=False, methods=['post'], url_path='send-bulk')
+    def send_notification_bulk(self, request):
+        """
+        Send a notification to multiple users at once.
+        POST /api/notifications/send-bulk/
+        {
+            "recipient_ids": [1, 2, 3],
+            "title": "...",
+            "message": "...",
+            "notification_type": "info"
+        }
+        """
+        from users.models import User
+
+        recipient_ids = request.data.get('recipient_ids', [])
+        title = request.data.get('title', 'Manual Notification')
+        message = request.data.get('message')
+        n_type = request.data.get('notification_type', 'info')
+
+        if not isinstance(recipient_ids, list) or len(recipient_ids) == 0:
+            return Response(
+                {'error': 'recipient_ids must be a non-empty list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not message:
+            return Response(
+                {'error': 'message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        tenant = getattr(request.user, 'tenant', None)
+        sent_count = 0
+        failed = []
+
+        for rid in recipient_ids:
+            try:
+                recipient = User.objects.get(id=rid)
+                if not request.user.is_platform_admin and recipient.tenant != tenant:
+                    failed.append({'id': rid, 'reason': 'Not in your tenant'})
+                    continue
+                Notification.objects.create(
+                    user=recipient,
+                    tenant=tenant,
+                    title=title,
+                    message=message,
+                    notification_type=n_type
+                )
+                sent_count += 1
+            except User.DoesNotExist:
+                failed.append({'id': rid, 'reason': 'User not found'})
+
+        return Response(
+            {'sent': sent_count, 'failed': failed},
+            status=status.HTTP_201_CREATED
+        )
+
     @action(detail=False, methods=['post'], url_path='send')
     def send_notification(self, request):
         """
