@@ -19,11 +19,25 @@ const api = axios.create({
   baseURL: getBaseURL(),
 });
 
-// Add JWT token if available
+// Add JWT token and X-Tenant if available
 api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('dmt-access-token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Auto-inject X-Tenant from hostname if not already set (preventing overriding Admin Portal explicit setting)
+    if (!config.headers['X-Tenant'] && !api.defaults.headers.common['X-Tenant']) {
+      const host = window.location.hostname;
+      const parts = host.split('.');
+      const devDomains = process.env.NEXT_PUBLIC_DEV_DOMAINS
+        ? process.env.NEXT_PUBLIC_DEV_DOMAINS.split(',')
+        : ['localhost', '127.0.0.1'];
+      if (parts.length > 1 && !devDomains.includes(parts[0])) {
+        config.headers['X-Tenant'] = parts[0];
+      }
+    }
   }
   return config;
 });

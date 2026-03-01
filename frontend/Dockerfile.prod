@@ -1,0 +1,22 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy the entire monorepo
+COPY . .
+
+# Install dependencies using clean install
+RUN npm ci
+
+# Accept build argument for which app workspace to build
+ARG APP_NAME
+ENV APP_NAME=${APP_NAME}
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the specific app
+WORKDIR /app/apps/${APP_NAME}
+RUN npm run build
+
+# Start the built Next.js application
+CMD ["npm", "start"]

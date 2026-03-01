@@ -56,7 +56,11 @@ class TenantHeaderMiddleware(BaseMiddleware):
                 # We need to find the tenant to get its schema_name
                 # This assumes Tenant model has 'schema_name' or we can derive it
                 # For django-tenants, the model itself holds the schema info
-                tenant = Tenant.objects.get(id=tenant_id)
+                if tenant_id.isdigit():
+                    tenant = Tenant.objects.get(id=tenant_id)
+                else:
+                    from django.db.models import Q
+                    tenant = Tenant.objects.get(Q(slug=tenant_id) | Q(schema_name=tenant_id))
                 with schema_context(tenant.schema_name):
                     return self.get_response(request)
             except Tenant.DoesNotExist:
@@ -97,12 +101,15 @@ class AuditLogMiddleware:
         if not user:
             return
 
-        # Determine tenant from header or user association
         tenant_id = request.headers.get('X-Tenant')
         tenant = None
         if tenant_id:
             try:
-                tenant = Tenant.objects.get(id=tenant_id)
+                from django.db.models import Q
+                if tenant_id.isdigit():
+                    tenant = Tenant.objects.get(id=tenant_id)
+                else:
+                    tenant = Tenant.objects.get(Q(slug=tenant_id) | Q(schema_name=tenant_id))
             except:
                 pass
         
