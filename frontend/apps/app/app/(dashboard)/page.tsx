@@ -301,40 +301,45 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {insights && insights.length > 0 && (
-                    <div className="pt-8 border-t border-white/5">
-                        <div className="flex items-center gap-2 mb-4">
+                <div className="pt-8 border-t border-white/5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
                             <Share2 className="text-brand-primary w-5 h-5" />
                             <h2 className="text-2xl font-bold text-white">
-                                {insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Global Insights"}
+                                {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
                             </h2>
                         </div>
                         <button
                             onClick={refreshInsights}
                             disabled={isRefreshingInsights}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all text-xs font-bold border border-white/10 mb-4 ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all text-xs font-bold border border-white/10 ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
                             {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
                         </button>
-
-                        {isRefreshingInsights ? (
-                            <AIThinkingOverlay progress={aiProgress} status={aiStatus} />
-                        ) : (
-                            <>
-                                <AIInsightsList
-                                    insightId={insights[0].id}
-                                    suggestions={insights[0].suggestions}
-                                    onAllHandled={refreshInsights}
-                                />
-                                <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
-                                    <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
-                                    <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
-                                </div>
-                            </>
-                        )}
                     </div>
-                )}
+
+                    {isRefreshingInsights ? (
+                        <AIThinkingOverlay progress={aiProgress} status={aiStatus} />
+                    ) : insights.length > 0 ? (
+                        <>
+                            <AIInsightsList
+                                insightId={insights[0].id}
+                                suggestions={insights[0].suggestions}
+                                onAllHandled={refreshInsights}
+                            />
+                            <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
+                                <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
+                                <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
+                            </div>
+                        </>
+                    ) : (
+                        <Card className="p-8 bg-slate-900/40 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+                            <TrendingUp className="text-slate-600 mb-4" size={32} />
+                            <p className="text-slate-400 font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
+                        </Card>
+                    )}
+                </div>
             </div>
 
             {selectedProjectId && (

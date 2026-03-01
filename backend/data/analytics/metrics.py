@@ -226,7 +226,13 @@ class MetricService:
         # Get last 5 sprints for averaging
         last_5_metrics = list(sprints_qs[:5])
         
-        latest_insight = AIInsight.objects.filter(source_config_id__isnull=False).first()
+        latest_insight_qs = AIInsight.objects.order_by('-created_at')
+        if project_id:
+            latest_insight_qs = latest_insight_qs.filter(project_id=project_id)
+        else:
+            latest_insight_qs = latest_insight_qs.filter(project__isnull=True)
+            
+        latest_insight = latest_insight_qs.first()
         
         if last_5_metrics:
             # Calculate averages across the last 5 (or fewer if not available)
