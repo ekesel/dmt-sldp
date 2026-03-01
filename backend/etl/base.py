@@ -22,6 +22,14 @@ class BaseConnector(ABC):
         """
         pass
 
+    def fetch_folders(self) -> List[Dict[str, str]]:
+        """
+        Fetch available scope folders (e.g. ClickUp Folders, ADO Teams).
+        Returns a list of dicts: [{'id': '...', 'name': '...'}]
+        Defaults to empty list if not implemented.
+        """
+        return []
+
     @abstractmethod
     def sync(self, tenant_id: int, source_id: int, progress_callback: Optional[Callable[[int, str], None]] = None) -> Dict[str, Any]:
         """

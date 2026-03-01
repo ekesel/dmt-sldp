@@ -4,8 +4,39 @@ from django.db.models import Avg, Sum, Count, F
 class MetricService:
     @staticmethod
     def calculate_velocity(sprint_id):
-        # In a real system, this would sum up story points of completed items
-        completed_items = WorkItem.objects.filter(sprint_id=sprint_id, status='done')
+        from configuration.models import SourceConfiguration
+        from django.db.models import Q
+        
+        # Base query
+        completed_items = WorkItem.objects.filter(sprint_id=sprint_id, status_category='done')
+        
+        # Apply active folder filtering if configured
+        active_sources = SourceConfiguration.objects.filter(is_active=True).exclude(config_json__active_folder_id__isnull=True)
+        if active_sources.exists():
+            filters = Q()
+            for source in active_sources:
+                folder_id = source.config_json.get('active_folder_id')
+                if not folder_id: continue
+                
+                # If ADO: filter by area/iteration path containing the team name, or team id inside raw_data (we'll check System.IterationPath roughly)
+                # If ClickUp: filter by list/folder id
+                if source.source_type == 'clickup':
+                    filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
+                               Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
+                elif source.source_type in ['azure_devops', 'azure_boards']:
+                    # ADO logic: usually we filter by checking if the team iteration path is within the item
+                    # Given the item's raw data has System.AreaPath or System.IterationPath
+                    # For a basic robust query checking if the team id or name is anywhere in the raw data (which teams fetch returns):
+                    folder_name = source.config_json.get('active_folder_name', '').split('/')[-1].strip()
+                    filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
+                               Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+            
+            # Combine: Items must either belong to a source WITHOUT an active folder, OR match the active folder filter
+            sources_with_folders = active_sources.values_list('id', flat=True)
+            completed_items = completed_items.filter(
+                ~Q(source_config_id__in=sources_with_folders) | filters
+            )
+
         total_points = completed_items.aggregate(total=Sum('story_points'))['total'] or 0
         return {
             'total_points': total_points,
@@ -68,9 +99,35 @@ class MetricService:
         for project in projects:
             # 1. Base query for this sprint
             work_items = WorkItem.objects.filter(sprint=sprint)
+            
+            # Apply project and folder filtering
             if project:
-                source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
+                sources = SourceConfiguration.objects.filter(project=project)
+                source_conf_ids = sources.values_list('id', flat=True)
                 work_items = work_items.filter(source_config_id__in=source_conf_ids)
+                
+                # Active Folder Filtering
+                filters = Q()
+                has_folder_filters = False
+                for source in sources:
+                    config = source.config_json or {}
+                    folder_id = config.get('active_folder_id')
+                    if not folder_id: continue
+                    has_folder_filters = True
+                    
+                    if source.source_type == 'clickup':
+                        filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
+                                   Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
+                    elif source.source_type in ['azure_devops', 'azure_boards']:
+                        folder_name = config.get('active_folder_name', '').split('/')[-1].strip()
+                        filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
+                                   Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+                
+                if has_folder_filters:
+                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    work_items = work_items.filter(
+                        ~Q(source_config_id__in=sources_with_folders) | filters
+                    )
             
             if not work_items.exists() and project is not None:
                 continue # Skip projects with no items in this sprint
@@ -264,12 +321,38 @@ class MetricService:
             dev_emails = [e for e in dev_emails if e]
             
             for email in dev_emails:
-                # Filter work items for this developer in this project/sprint
+                # Apply project and folder filtering
+                sources = SourceConfiguration.objects.filter(project=project)
+                source_conf_ids = sources.values_list('id', flat=True)
+                
                 dev_work_items = WorkItem.objects.filter(
                     sprint=sprint,
                     assignee_email=email,
                     source_config_id__in=source_conf_ids
                 )
+                
+                # Active Folder Filtering
+                filters = Q()
+                has_folder_filters = False
+                for source in sources:
+                    config = source.config_json or {}
+                    folder_id = config.get('active_folder_id')
+                    if not folder_id: continue
+                    has_folder_filters = True
+                    
+                    if source.source_type == 'clickup':
+                        filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
+                                   Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
+                    elif source.source_type in ['azure_devops', 'azure_boards']:
+                        folder_name = config.get('active_folder_name', '').split('/')[-1].strip()
+                        filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
+                                   Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+                
+                if has_folder_filters:
+                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    dev_work_items = dev_work_items.filter(
+                        ~Q(source_config_id__in=sources_with_folders) | filters
+                    )
                 
                 # Filter PRs for this developer in this sprint (approximate by date if not linked)
                 # In a mature system, PRs are linked to WorkItems or have a sprint field
@@ -327,7 +410,7 @@ class MetricService:
                 results.append(metric_obj)
         
         # --- Automated Title Logic (Post-Calculation) ---
-        self._update_competitive_titles(sprint_id)
+        MetricService._update_competitive_titles(sprint_id)
                 
         return results
 

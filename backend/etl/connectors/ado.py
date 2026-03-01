@@ -113,6 +113,50 @@ class AzureDevOpsConnector(BaseConnector):
             logger.error(f"ADO Connection Error: {e}")
             raise e
 
+    def fetch_folders(self) -> List[Dict[str, str]]:
+        """
+        Fetch available Teams from Azure DevOps to be used as 'Folders'.
+        """
+        headers = self._get_auth_header()
+        teams_list = []
+        
+        # If project is specified, fetch teams for that project
+        if self.project_name:
+            url = f"{self.api_base}/_apis/projects/{self.project_name}/teams?api-version=6.0"
+            try:
+                resp = requests.get(url, headers=headers)
+                if resp.status_code == 200:
+                    teams = resp.json().get('value', [])
+                    for team in teams:
+                        teams_list.append({
+                            'id': team['id'],
+                            'name': f"{self.project_name} / {team['name']}"
+                        })
+            except Exception as e:
+                logger.error(f"ADO Fetch Teams Error: {e}")
+        else:
+            # If no project specified, fetch all projects then teams
+            url = f"{self.api_base}/_apis/projects?api-version=6.0"
+            try:
+                resp = requests.get(url, headers=headers)
+                if resp.status_code == 200:
+                    projects = resp.json().get('value', [])
+                    for project in projects:
+                        p_name = project['name']
+                        t_url = f"{self.api_base}/_apis/projects/{p_name}/teams?api-version=6.0"
+                        t_resp = requests.get(t_url, headers=headers)
+                        if t_resp.status_code == 200:
+                            teams = t_resp.json().get('value', [])
+                            for team in teams:
+                                teams_list.append({
+                                    'id': team['id'],
+                                    'name': f"{p_name} / {team['name']}"
+                                })
+            except Exception as e:
+                logger.error(f"ADO Fetch Projects/Teams Error: {e}")
+                
+        return teams_list
+
     def sync(self, tenant_id: int, source_id: int, progress_callback: Optional[Callable[[int, str], None]] = None) -> Dict[str, Any]:
         """
         Fetch Work Items, Sprints, and PRs.

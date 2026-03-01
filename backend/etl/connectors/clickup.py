@@ -25,6 +25,53 @@ class ClickupConnector(BaseConnector):
         else:
             raise Exception(f"ClickUp Connection Failed: {response.text}")
 
+    def fetch_folders(self) -> List[Dict[str, str]]:
+        """
+        Fetch available Folders and Lists from Clickup for the workspace.
+        """
+        headers = {'Authorization': self.api_key}
+        folders_list = []
+        
+        # 1. Get Teams (Workspaces)
+        teams_resp = requests.get(f"{self.base_url}/team", headers=headers)
+        if teams_resp.status_code != 200:
+             return []
+             
+        teams = teams_resp.json().get('teams', [])
+        if not teams:
+             return []
+        
+        team_id = teams[0]['id']
+        
+        # 2. Get Spaces
+        spaces_resp = requests.get(f"{self.base_url}/team/{team_id}/space", headers=headers)
+        if spaces_resp.status_code != 200:
+            return []
+            
+        spaces = spaces_resp.json().get('spaces', [])
+        
+        for space in spaces:
+            space_id = space['id']
+            # 3. Get Folders
+            folders_resp = requests.get(f"{self.base_url}/space/{space_id}/folder", headers=headers)
+            if folders_resp.status_code == 200:
+                for folder in folders_resp.json().get('folders', []):
+                    folders_list.append({
+                        'id': folder['id'],
+                        'name': f"{space['name']} / {folder['name']} (Folder)"
+                    })
+            
+            # 4. Get Folderless Lists
+            lists_resp = requests.get(f"{self.base_url}/space/{space_id}/list", headers=headers)
+            if lists_resp.status_code == 200:
+                for lst in lists_resp.json().get('lists', []):
+                    folders_list.append({
+                        'id': lst['id'],
+                        'name': f"{space['name']} / {lst['name']} (List)"
+                    })
+                    
+        return folders_list
+
     def sync(self, tenant_id: int, source_id: int, progress_callback: Optional[Callable[[int, str], None]] = None) -> Dict[str, Any]:
         """
         Fetch workspaces, spaces, lists, and tasks from ClickUp and sync to WorkItem model.
@@ -177,33 +224,9 @@ class ClickupConnector(BaseConnector):
                 item.parent = parent_obj
                 item.save()
 
-        # Aggregate Story Points (Sum subtasks if parent is None/Zero)
-        parents = WorkItem.objects.filter(source_config_id=source_id, subtasks__isnull=False).distinct()
-        for p in parents:
-            # First, check if subtasks in DB are still subtasks in ClickUp
-            # This is hard because we don't know "all" subtasks unless we fetch everything.
-            # But we can at least check if the subtask's raw_data still has this parent.
-            valid_subtasks = p.subtasks.all()
-            
-            subtask_points = valid_subtasks.aggregate(Sum('story_points'))['story_points__sum']
-            if subtask_points:
-                # Only overwrite if parent has no points or points were derived from subtasks previously
-                if p.story_points is None or p.story_points == 0 or p.story_points == subtask_points:
-                     p.story_points = subtask_points
-                     p.save()
-            elif p.story_points is not None:
-                # If no subtasks found, and points were previously aggregated, clear them
-                # But only if the 'points' field in ClickUp raw_data is also null/0
-                raw_points = p.raw_source_data.get('points')
-                if not raw_points:
-                    p.story_points = 0
-                    p.save()
-            
-            # Aggregate AI Usage (Avg)
-            subtask_ai = valid_subtasks.aggregate(Avg('ai_usage_percent'))['ai_usage_percent__avg']
-            if subtask_ai is not None:
-                p.ai_usage_percent = subtask_ai
-                p.save()
+        # Avoid artificial rollup of story points to parents, as this leads to 
+        # double-counting during metric aggregations!
+        # Points and AI Usage will remain exactly as defined in the source system.
 
     def normalize_status(self, raw_status: str) -> str:
         """

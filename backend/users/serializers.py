@@ -113,10 +113,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         request = self.context.get('request')
         
-        # If the request indicates it's for the admin portal, restrict to platform admins and staff
+        # If the request indicates it's for the admin portal, restrict to platform admins and superusers on public schema
         if request and request.data.get('portal') == 'admin':
-            if not (self.user.is_platform_admin or self.user.is_staff):
-                raise ValidationError("Only administrators or staff can log in to the admin portal.")
+            from django.db import connection
+            if connection.schema_name != 'public':
+                raise ValidationError("Admin portal access is only allowed through the public domain.")
+                
+            if not (self.user.is_platform_admin or self.user.is_superuser):
+                raise ValidationError("Only administrators or superusers can log in to the admin portal.")
         elif request and request.data.get('portal') == 'company':
             if not self.user.tenant:
                 raise ValidationError("User does not belong to any tenant.")

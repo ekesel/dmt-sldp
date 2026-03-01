@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity
 import { compliance } from '@dmt/api';
 import { ProjectSelector } from "../../../components/ProjectSelector";
 import { SprintSelector } from "../../../components/SprintSelector";
+import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 
 interface ComplianceFlag {
     id: string;
@@ -103,7 +104,7 @@ export default function CompliancePage() {
                         </h1>
                         <p className="text-slate-400 mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap justify-end">
                         <SprintSelector
                             projectId={selectedProjectId}
                             selectedSprintId={selectedSprintId}
@@ -112,6 +113,12 @@ export default function CompliancePage() {
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={handleProjectChange}
+                        />
+                        <ActiveFolderSelector
+                            projectId={selectedProjectId}
+                            onFolderChanged={() => {
+                                fetchData(selectedProjectId, selectedSprintId);
+                            }}
                         />
                     </div>
                 </header>

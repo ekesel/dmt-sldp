@@ -9,6 +9,7 @@ import { AIInsightsList } from "../../components/AIInsightsList";
 import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector } from "../../components/ProjectSelector";
+import { ActiveFolderSelector } from "../../components/ActiveFolderSelector";
 import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
 import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
@@ -180,10 +181,17 @@ export default function DashboardPage() {
                         </h1>
                         <p className="text-slate-400 mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center flex-wrap justify-end">
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
+                        />
+                        <ActiveFolderSelector
+                            projectId={selectedProjectId}
+                            onFolderChanged={() => {
+                                // Simply reload the page to clear frontend caches and fetch new metric scoped data
+                                window.location.reload();
+                            }}
                         />
                         {selectedProjectId && (
                             <button

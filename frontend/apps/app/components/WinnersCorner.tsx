@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { dashboard, LeaderboardData, LeaderboardWinner } from '@dmt/api';
+import { dashboard, LeaderboardResponse, LeaderboardWinner } from '@dmt/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface WinnersCornerProps {
@@ -9,7 +9,7 @@ interface WinnersCornerProps {
 }
 
 const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
-    const [data, setData] = useState<LeaderboardData | null>(null);
+    const [data, setData] = useState<LeaderboardResponse | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -25,12 +25,12 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
     }, [projectId]);
 
     // Flatten all winners into one list for the ticker
-    const allWinners: (LeaderboardWinner & { category: string })[] = data
+    const allWinners: (LeaderboardWinner & { category: string })[] = data?.current_month
         ? [
-            ...(data.quality || []).map((w) => ({ ...w, category: 'Code Quality Champion' })),
-            ...(data.velocity || []).map((w) => ({ ...w, category: 'Velocity King' })),
-            ...(data.reviewer || []).map((w) => ({ ...w, category: 'Top Reviewer' })),
-            ...(data.ai || []).map((w) => ({ ...w, category: 'AI Specialist' })),
+            ...(data.current_month.quality || []).map((w) => ({ ...w, category: 'Code Quality Champion' })),
+            ...(data.current_month.velocity || []).map((w) => ({ ...w, category: 'Velocity King' })),
+            ...(data.current_month.reviewer || []).map((w) => ({ ...w, category: 'Top Reviewer' })),
+            ...(data.current_month.ai || []).map((w) => ({ ...w, category: 'AI Specialist' })),
         ]
         : [];
 

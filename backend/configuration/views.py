@@ -140,3 +140,26 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
             'message': f'Sync triggered for {source.name}',
             'task_id': task.id
         })
+
+    @action(detail=True, methods=['get'])
+    def remote_folders(self, request, pk=None):
+        source = self.get_object()
+        from etl.factory import ConnectorFactory
+        
+        config = source.config_json or {}
+        config.update({
+            'base_url': source.base_url,
+            'api_token': source.api_key,
+            'username': source.username,
+        })
+        
+        connector_class = ConnectorFactory._registry.get(source.source_type)
+        if not connector_class:
+            return Response({'status': 'failed', 'message': f'Invalid source type: {source.source_type}'}, status=400)
+             
+        connector = connector_class(config)
+        try:
+            folders = connector.fetch_folders()
+            return Response({'status': 'success', 'folders': folders})
+        except Exception as e:
+            return Response({'status': 'failed', 'message': str(e)}, status=400)

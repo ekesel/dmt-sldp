@@ -28,8 +28,12 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
         base_url: '',
         api_key: '',
         username: '',
+        active_folder_id: '',
+        active_folder_name: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+    const [isLoadingFolders, setIsLoadingFolders] = useState(false);
 
     useEffect(() => {
         if (source) {
@@ -39,11 +43,40 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                 base_url: source.base_url || '',
                 api_key: '', // Don't show existing API key
                 username: source.username || '',
+                active_folder_id: source.config_json?.active_folder_id || '',
+                active_folder_name: source.config_json?.active_folder_name || '',
             });
+
+            // Fetch available folders for this source
+            const fetchFolders = async () => {
+                setIsLoadingFolders(true);
+                try {
+                    const response = await (sourcesApi as any).remoteFolders(source.id);
+                    if (response.status === 'success' && response.folders) {
+                        setFolders(response.folders);
+                    }
+                } catch (error) {
+                    console.error("Failed to load generic folders:", error);
+                } finally {
+                    setIsLoadingFolders(false);
+                }
+            };
+            fetchFolders();
         } else {
-            setFormData({ name: '', source_type: '', base_url: '', api_key: '', username: '' });
+            setFormData({ name: '', source_type: '', base_url: '', api_key: '', username: '', active_folder_id: '', active_folder_name: '' });
+            setFolders([]);
         }
     }, [source, isOpen]);
+
+    const handleFolderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedId = e.target.value;
+        const selectedFolder = folders.find(f => f.id === selectedId);
+        setFormData(prev => ({
+            ...prev,
+            active_folder_id: selectedId,
+            active_folder_name: selectedFolder ? selectedFolder.name : ''
+        }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,7 +86,16 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
             const payload = {
                 ...formData,
                 project: projectId,
+                config_json: {
+                    ...(source?.config_json || {}),
+                    active_folder_id: formData.active_folder_id,
+                    active_folder_name: formData.active_folder_name
+                }
             };
+
+            // Remove flat mapped items so they aren't rejected by strict serializers if they aren't models fields
+            delete (payload as any).active_folder_id;
+            delete (payload as any).active_folder_name;
 
             if (source && !formData.api_key) {
                 delete (payload as any).api_key;
@@ -143,6 +185,27 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                         required={!source}
                     />
                 </div>
+
+                {source && (formData.source_type === 'clickup' || formData.source_type.includes('azure')) && (
+                    <div className="pt-2 border-t border-slate-700/50">
+                        <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center gap-2">
+                            Active Sync Folder (Target Scope)
+                            {isLoadingFolders && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+                        </label>
+                        <select
+                            value={formData.active_folder_id}
+                            onChange={handleFolderChange}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                            disabled={isLoadingFolders}
+                        >
+                            <option value="">Sync All Scope (No Filter)</option>
+                            {folders.map(f => (
+                                <option key={f.id} value={f.id}>{f.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-500 mt-1">If selected, metrics will be restricted purely to this folder or team.</p>
+                    </div>
+                )}
 
                 <div className="pt-4 flex gap-3">
                     <button

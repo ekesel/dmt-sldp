@@ -80,3 +80,28 @@ class SourceConfiguration(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.source_type})"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_config_json = dict(self.config_json) if self.config_json else {}
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Check if active_folder_id changed
+        old_folder = self._original_config_json.get('active_folder_id')
+        new_folder = (self.config_json or {}).get('active_folder_id')
+        
+        if not is_new and old_folder != new_folder:
+            # Trigger a background sync and metric recalculation 
+            # (imported locally to avoid circular imports)
+            try:
+                from configuration.tasks import perform_sync_task
+                perform_sync_task.delay(self.id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to trigger sync on folder change: {e}")
+                
+        # Update original state for next save
+        self._original_config_json = dict(self.config_json) if self.config_json else {}

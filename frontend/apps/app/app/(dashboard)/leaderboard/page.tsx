@@ -5,6 +5,7 @@ import { Card } from '@dmt/ui';
 import { dashboard, LeaderboardResponse, LeaderboardWinner } from '@dmt/api';
 import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award } from 'lucide-react';
 import { ProjectSelector } from '../../../components/ProjectSelector';
+import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 
 const CategoryCard = ({
     title,
@@ -161,10 +162,17 @@ export default function LeaderboardPage() {
                         <h1 className="text-4xl font-extrabold text-white tracking-tight">Leaderboard</h1>
                         <p className="text-slate-400 mt-2 font-medium">Recognizing engineering excellence across the organization.</p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 items-center flex-wrap justify-end">
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
+                        />
+                        <ActiveFolderSelector
+                            projectId={selectedProjectId}
+                            onFolderChanged={() => {
+                                // Reload page to fetch new leaderboard data with new active folder restrictions
+                                window.location.reload();
+                            }}
                         />
                     </div>
                 </header>
