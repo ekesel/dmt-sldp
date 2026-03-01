@@ -120,7 +120,7 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 ml-1">Current Context</label>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col gap-3">
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(o => !o)}

@@ -3,36 +3,47 @@ from django.db.models import Avg, Sum, Count, F
 
 class MetricService:
     @staticmethod
-    def calculate_velocity(sprint_id):
+    def calculate_velocity(sprint_id, project_id=None):
         from configuration.models import SourceConfiguration
         from django.db.models import Q
         
         # Base query
         completed_items = WorkItem.objects.filter(sprint_id=sprint_id, status_category='done')
         
+        # Apply project-specific filtering if project_id is provided
+        active_sources = SourceConfiguration.objects.filter(is_active=True)
+        if project_id:
+            active_sources = active_sources.filter(project_id=project_id)
+            source_conf_ids = active_sources.values_list('id', flat=True)
+            completed_items = completed_items.filter(source_config_id__in=source_conf_ids)
+
         # Apply active folder filtering if configured
-        active_sources = SourceConfiguration.objects.filter(is_active=True).exclude(config_json__active_folder_id__isnull=True)
-        if active_sources.exists():
+        active_sources_with_folders = active_sources.exclude(config_json__active_folder_id__isnull=True)
+        if active_sources_with_folders.exists():
             filters = Q()
-            for source in active_sources:
+            for source in active_sources_with_folders:
                 folder_id = source.config_json.get('active_folder_id')
                 if not folder_id: continue
                 
-                # If ADO: filter by area/iteration path containing the team name, or team id inside raw_data (we'll check System.IterationPath roughly)
-                # If ClickUp: filter by list/folder id
                 if source.source_type == 'clickup':
                     filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
                                Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
                 elif source.source_type in ['azure_devops', 'azure_boards']:
-                    # ADO logic: usually we filter by checking if the team iteration path is within the item
-                    # Given the item's raw data has System.AreaPath or System.IterationPath
-                    # For a basic robust query checking if the team id or name is anywhere in the raw data (which teams fetch returns):
-                    folder_name = source.config_json.get('active_folder_name', '').split('/')[-1].strip()
-                    filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
-                               Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+                    full_scope_name = source.config_json.get('active_folder_name', '')
+                    scope_segments = [s.strip() for s in full_scope_name.split('/') if s.strip()]
+                    
+                    folder_filters = Q()
+                    for segment in scope_segments:
+                        folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': segment}) | \
+                                         Q(raw_source_data__fields__contains={'System.IterationPath': segment})
+                    
+                    folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': full_scope_name}) | \
+                                      Q(raw_source_data__fields__contains={'System.IterationPath': full_scope_name})
+                    
+                    filters |= Q(source_config_id=source.id) & folder_filters
             
             # Combine: Items must either belong to a source WITHOUT an active folder, OR match the active folder filter
-            sources_with_folders = active_sources.values_list('id', flat=True)
+            sources_with_folders = active_sources_with_folders.values_list('id', flat=True)
             completed_items = completed_items.filter(
                 ~Q(source_config_id__in=sources_with_folders) | filters
             )
@@ -80,15 +91,14 @@ class MetricService:
         
         sprint = Sprint.objects.get(id=sprint_id)
         if not sprint.end_date:
-            # For "In Progress" sprints or items without dates, use today as a default end date
-            # to allow metric calculation while the sprint is active.
+            # Final fallback: use start_date if available, or Jan 1st of current year.
+            # This ensures idempotency (same date every sync) for undated sprints.
             from django.utils import timezone
-            sprint_end = timezone.now()
+            sprint_end = sprint.start_date or timezone.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
             sprint_end = sprint.end_date
             
         if not sprint.start_date:
-            # Fallback for start date if missing
             sprint_start = sprint_end - timezone.timedelta(days=14)
         else:
             sprint_start = sprint.start_date
@@ -119,9 +129,21 @@ class MetricService:
                         filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
                                    Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
                     elif source.source_type in ['azure_devops', 'azure_boards']:
-                        folder_name = config.get('active_folder_name', '').split('/')[-1].strip()
-                        filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
-                                   Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+                        # Robust ADO logic: Check if any segment of the Area/Iteration Path matches the scope name
+                        # or if the scope name matches the path. This handles "VEDA / VEDA Team" vs "VEDA"
+                        full_scope_name = config.get('active_folder_name', '')
+                        scope_segments = [s.strip() for s in full_scope_name.split('/') if s.strip()]
+                        
+                        folder_filters = Q()
+                        for segment in scope_segments:
+                            folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': segment}) | \
+                                             Q(raw_source_data__fields__contains={'System.IterationPath': segment})
+                        
+                        # Also include the full name as a fallback
+                        folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': full_scope_name}) | \
+                                          Q(raw_source_data__fields__contains={'System.IterationPath': full_scope_name})
+                        
+                        filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
                     sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
@@ -252,7 +274,7 @@ class MetricService:
         dynamic_velocities = []
         total_bugs_dynamic = 0
         for s in sprints:
-            v = MetricService.calculate_velocity(s.id)
+            v = MetricService.calculate_velocity(s.id, project_id=project_id)
             dynamic_velocities.append(v)
             # Add bugs completed in this sprint
             sprint_items = total_items_qs.filter(sprint=s)
@@ -295,7 +317,7 @@ class MetricService:
         sprint = Sprint.objects.get(id=sprint_id)
         if not sprint.end_date:
             from django.utils import timezone
-            sprint_end = timezone.now()
+            sprint_end = sprint.start_date or timezone.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
             sprint_end = sprint.end_date
             
@@ -344,9 +366,18 @@ class MetricService:
                         filters |= Q(source_config_id=source.id, raw_source_data__list__id=folder_id) | \
                                    Q(source_config_id=source.id, raw_source_data__folder__id=folder_id)
                     elif source.source_type in ['azure_devops', 'azure_boards']:
-                        folder_name = config.get('active_folder_name', '').split('/')[-1].strip()
-                        filters |= Q(source_config_id=source.id, raw_source_data__fields__contains={'System.AreaPath': folder_name}) | \
-                                   Q(source_config_id=source.id, raw_source_data__fields__contains={'System.IterationPath': folder_name})
+                        full_scope_name = config.get('active_folder_name', '')
+                        scope_segments = [s.strip() for s in full_scope_name.split('/') if s.strip()]
+                        
+                        folder_filters = Q()
+                        for segment in scope_segments:
+                            folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': segment}) | \
+                                             Q(raw_source_data__fields__contains={'System.IterationPath': segment})
+                        
+                        folder_filters |= Q(raw_source_data__fields__contains={'System.AreaPath': full_scope_name}) | \
+                                          Q(raw_source_data__fields__contains={'System.IterationPath': full_scope_name})
+                        
+                        filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
                     sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)

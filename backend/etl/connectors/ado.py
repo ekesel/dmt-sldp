@@ -226,54 +226,75 @@ class AzureDevOpsConnector(BaseConnector):
         """
         Fetch and save Iterations as Sprints.
         Using teamsettings/iterations to get dates.
-        Note: requires Team context, often 'Project Name Team'. 
-        Fallback to project classifications if team api fails.
-        For MVP, trying default project team.
+        We'll try the default project team first, then all other teams if that fails.
         """
-        # Default team is usually named same as project + " Team"
-        team_name = f"{project_name} Team"
-        # Accessing project's default team iterations
-        # GET https://dev.azure.com/{organization}/{project}/{team}/_apis/work/teamsettings/iterations?api-version=6.0
-        
-        url = f"{self.api_base}/{project_name}/{team_name}/_apis/work/teamsettings/iterations?api-version=6.0"
-        
+        # 1. Try to get all teams first
+        teams = []
+        teams_url = f"{self.api_base}/_apis/projects/{project_name}/teams?api-version=6.0"
         try:
-            resp = requests.get(url, headers=headers)
-            # If default team not found, might need to list teams. 
-            # Ignoring specific team logic for now, if 404/400 we skip or try just project level (which doesn't always show dates)
-            if resp.status_code == 200:
-                iterations = resp.json().get('value', [])
-                for it in iterations:
-                    name = it['name']
-                    it_id = it['id']
-                    path = it['path']
-                    
-                    attributes = it.get('attributes', {})
-                    s_start = self._parse_date(attributes.get('startDate'))
-                    s_end = self._parse_date(attributes.get('finishDate'))
-
-                    # Status logic - Only timed iterations are active/completed
-                    now = timezone.now()
-                    if not s_start or not s_end:
-                         status = 'backlog'
-                    elif now > s_end:
-                         status = 'completed'
-                    elif now < s_start:
-                         status = 'planned'
-                    else:
-                         status = 'active'
-
-                    Sprint.objects.update_or_create(
-                        external_id=str(it_id),
-                        defaults={
-                            'name': name,
-                            'start_date': s_start,
-                            'end_date': s_end,
-                            'status': status
-                        }
-                    )
+            teams_resp = requests.get(teams_url, headers=headers)
+            if teams_resp.status_code == 200:
+                teams = teams_resp.json().get('value', [])
         except Exception as e:
-            logger.warning(f"Failed to sync sprints for {project_name}: {e}")
+            logger.warning(f"Failed to fetch teams for {project_name}: {e}")
+
+        # Add default team name to front of list if not already there
+        default_team_name = f"{project_name} Team"
+        team_names = [t['name'] for t in teams]
+        if default_team_name not in team_names:
+            team_names.insert(0, default_team_name)
+        else:
+            # Move default team to front
+            team_names.remove(default_team_name)
+            team_names.insert(0, default_team_name)
+
+        synced_iteration_ids = set()
+
+        for team_name in team_names:
+            # GET https://dev.azure.com/{organization}/{project}/{team}/_apis/work/teamsettings/iterations?api-version=6.0
+            url = f"{self.api_base}/{project_name}/{team_name}/_apis/work/teamsettings/iterations?api-version=6.0"
+            
+            try:
+                resp = requests.get(url, headers=headers)
+                if resp.status_code == 200:
+                    iterations = resp.json().get('value', [])
+                    if not iterations:
+                        continue
+
+                    for it in iterations:
+                        it_id = str(it['id'])
+                        if it_id in synced_iteration_ids:
+                            continue
+                        
+                        name = it['name']
+                        path = it['path']
+                        attributes = it.get('attributes', {})
+                        s_start = self._parse_date(attributes.get('startDate'))
+                        s_end = self._parse_date(attributes.get('finishDate'))
+
+                        # Status logic - Only timed iterations are active/completed
+                        now = timezone.now()
+                        if not s_start or not s_end:
+                             status = 'backlog'
+                        elif now > s_end:
+                             status = 'completed'
+                        elif now < s_start:
+                             status = 'planned'
+                        else:
+                             status = 'active'
+
+                        Sprint.objects.update_or_create(
+                            external_id=it_id,
+                            defaults={
+                                'name': name,
+                                'start_date': s_start,
+                                'end_date': s_end,
+                                'status': status
+                            }
+                        )
+                        synced_iteration_ids.add(it_id)
+            except Exception as e:
+                logger.warning(f"Failed to sync sprints for team {team_name} in {project_name}: {e}")
 
     def _sync_work_items(self, project_name: str, source_id: int, headers: Dict) -> int:
         """
