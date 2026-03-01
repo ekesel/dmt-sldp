@@ -154,8 +154,14 @@ class PullRequestStatus(models.Model):
         return f"{self.pull_request} - {self.name}: {self.state}"
 
 class AIInsight(models.Model):
+    INSIGHT_TYPES = [
+        ('general', 'General'),
+        ('deep_sprint', 'Deep Sprint Analysis'),
+    ]
+    
     project = models.ForeignKey('configuration.Project', on_delete=models.CASCADE, null=True, blank=True)
     source_config_id = models.IntegerField(db_index=True, null=True, blank=True)
+    insight_type = models.CharField(max_length=20, choices=INSIGHT_TYPES, default='general', db_index=True)
     summary = models.TextField()
     suggestions = models.JSONField()  # List of {title, impact, description}
     forecast = models.TextField(null=True, blank=True)

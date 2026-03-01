@@ -537,6 +537,8 @@ export interface AiInsight {
 }
 
 export interface AiInsightFilters {
+  project_id?: string | number;
+  insight_type?: 'general' | 'deep_sprint';
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -559,8 +561,12 @@ export const aiInsights = {
       `/ai-insights/${insightId}/feedback/`,
       { suggestion_id: suggestionId, status }
     ),
-  refresh: (projectId?: number | null) =>
-    post<{ status: string; message: string }>('/ai-insights/refresh/', { project_id: projectId }),
+  refresh: (projectId?: number | null, insightType: string = 'general', sprintId?: number | null) =>
+    post<{ status: string; message: string }>('/ai-insights/refresh/', {
+      project_id: projectId,
+      insight_type: insightType,
+      sprint_id: sprintId
+    }),
 };
 
 /** ---------- settings ---------- */

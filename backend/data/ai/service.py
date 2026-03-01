@@ -1,13 +1,14 @@
 import os
 import json
 import logging
+import re
 import time
 import random
 import requests
 from google.api_core import exceptions
 from google.cloud import aiplatform
 from vertexai.generative_models import GenerativeModel, GenerationConfig
-from .prompts import COMPLIANCE_INSIGHT_SYSTEM_PROMPT, TEAM_HEALTH_SYSTEM_PROMPT
+from .prompts import COMPLIANCE_INSIGHT_SYSTEM_PROMPT, TEAM_HEALTH_SYSTEM_PROMPT, DEEP_SPRINT_ANALYSIS_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,24 @@ class GeminiAIProvider:
         # Re-use generation logic or refactor
         return self._generate_json(prompt)
 
+    def generate_deep_sprint_insights(self, metrics: dict):
+        """
+        Generates assignee-centric deep sprint analysis.
+        """
+        if not self.model:
+            return self._get_fallback_insight()
+
+        prompt = DEEP_SPRINT_ANALYSIS_PROMPT.format(
+            sprint_name=metrics.get("sprint_name", "Unknown Sprint"),
+            total_points=metrics.get("total_points", 0),
+            total_items=metrics.get("total_items", 0),
+            avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
+            assignee_metrics=json.dumps(metrics.get("assignee_metrics", [])),
+            blocked_items=json.dumps(metrics.get("blocked_items", []))
+        )
+
+        return self._generate_json(prompt)
+
     def _generate_json(self, prompt: str):
         for attempt in range(1, 4):
             try:
@@ -153,6 +172,25 @@ class KimiAIProvider:
 
         return self._generate_json(prompt)
 
+    def generate_deep_sprint_insights(self, metrics: dict):
+        """
+        Generates assignee-centric deep sprint analysis.
+        """
+        if not self.api_key:
+            return self._get_fallback_insight()
+
+        prompt = DEEP_SPRINT_ANALYSIS_PROMPT.format(
+            sprint_name=metrics.get("sprint_name", "Unknown Sprint"),
+            total_points=metrics.get("total_points", 0),
+            total_items=metrics.get("total_items", 0),
+            avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
+            assignee_metrics=json.dumps(metrics.get("assignee_metrics", [])),
+            blocked_items=json.dumps(metrics.get("blocked_items", []))
+        )
+        prompt += "\n\nYou MUST return a single JSON object. Do not wrap in markdown blocks, just return raw JSON."
+
+        return self._generate_json(prompt)
+
     def generate_optimization_insights(self, metrics: dict):
         """
         Generates team health and bottleneck insights.
@@ -187,9 +225,10 @@ class KimiAIProvider:
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 1024,
+            "max_tokens": 4096,
             "chat_template_kwargs": {"thinking": True}
         }
+
 
         for attempt in range(1, 4):
             try:
@@ -197,20 +236,32 @@ class KimiAIProvider:
                 response.raise_for_status()
                 result_text = response.json()['choices'][0]['message']['content']
                 
-                # Cleanup markdown blocks if Kimi included them despite instructions
-                result_text = result_text.strip()
-                if result_text.startswith("```json"):
-                    result_text = result_text[7:]
-                if result_text.startswith("```"):
-                    result_text = result_text[3:]
-                if result_text.endswith("```"):
-                    result_text = result_text[:-3]
+                # Robust extraction: find the first { and last }
+                # This handles markdown blocks and conversational noise
+                match = re.search(r'(\{.*\})', result_text, re.DOTALL)
+                if match:
+                    result_text = match.group(1)
+                else:
+                    # Cleanup markdown blocks if no match (fallback)
+                    result_text = result_text.strip()
+                    if result_text.startswith("```json"):
+                        result_text = result_text[7:]
+                    elif result_text.startswith("```"):
+                        result_text = result_text[3:]
+                    if result_text.endswith("```"):
+                        result_text = result_text[:-3]
                 
-                parsed_json = json.loads(result_text.strip())
-                
-                self._consecutive_failures = 0
-                self._circuit_breaker_until = None
-                return parsed_json
+                try:
+                    parsed_json = json.loads(result_text.strip())
+                    self._consecutive_failures = 0
+                    self._circuit_breaker_until = None
+                    return parsed_json
+                except json.JSONDecodeError as je:
+                    logger.warning(f"JSON decode failed in attempt {attempt}: {je}")
+                    # If it's a truncation issue, maybe we can't do much, but retry might help if it was a flake
+                    if attempt == 3:
+                        raise je
+                    time.sleep(1)
                 
             except Exception as e:
                 self._consecutive_failures += 1

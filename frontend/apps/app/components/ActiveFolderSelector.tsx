@@ -100,41 +100,54 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoadingFolders || isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 transition-all font-medium border border-slate-700 w-auto justify-between max-w-[250px]"
+                className="flex items-center gap-3 bg-slate-900 border border-white/10 hover:border-brand-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px] text-left"
                 title="Select a specific Team or Folder to scope all metrics"
             >
-                <div className="flex items-center gap-2 truncate">
-                    {isSaving ? <Loader2 size={16} className="animate-spin text-brand-primary" /> : <Target size={16} className={currentFolderId ? 'text-green-400' : 'text-slate-400'} />}
-                    <span className="truncate whitespace-nowrap">
+                <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/20 shrink-0">
+                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Target size={18} className={currentFolderId ? 'text-green-400' : 'text-brand-primary'} />}
+                </div>
+                <div className="flex flex-col flex-1 truncate">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 leading-none mb-1">Scope</span>
+                    <span className="font-bold text-sm text-white truncate leading-none">
                         {isLoadingFolders ? 'Loading...' : (currentFolderName || 'All Folders (Whole Project)')}
                     </span>
                 </div>
+                <Filter size={16} className="text-slate-400 shrink-0" />
             </button>
 
             {isOpen && (
-                <div className="absolute top-full mt-2 w-72 max-h-96 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 right-0 sm:left-0">
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700/50 mb-1">
-                        Select Metric Scope
-                    </div>
-
-                    <button
-                        onClick={() => handleSelectFolder('', '')}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 flex items-center gap-2 ${!currentFolderId ? 'text-brand-primary bg-slate-700/50' : 'text-slate-300'}`}
-                    >
-                        <Filter size={14} />
-                        All Folders (Whole Project)
-                    </button>
-
-                    {folders.map(f => (
+                <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         <button
-                            key={f.id}
-                            onClick={() => handleSelectFolder(f.id, f.name)}
-                            className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 block truncate ${currentFolderId === f.id ? 'text-brand-primary bg-slate-700/50 pr-4' : 'text-slate-300'}`}
+                            onClick={() => handleSelectFolder('', '')}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${!currentFolderId
+                                ? 'bg-brand-primary/15 text-white'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                }`}
                         >
-                            <span className="w-1 h-1 inline-block rounded-full bg-current opacity-50 mr-2 mb-[2px]"></span>
-                            <span className="truncate inline-block align-bottom max-w-[230px]" title={f.name}>{f.name}</span>
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${!currentFolderId ? 'bg-brand-primary shadow-[0_0_6px_var(--color-brand-primary)]' : 'bg-slate-700 group-hover:bg-slate-400'
+                                }`} />
+                            <span className="font-semibold text-sm truncate">All Folders (Whole Project)</span>
                         </button>
-                    ))}
+
+                        {folders.map(f => {
+                            const isActive = currentFolderId === f.id;
+                            return (
+                                <button
+                                    key={f.id}
+                                    onClick={() => handleSelectFolder(f.id, f.name)}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
+                                        ? 'bg-brand-primary/15 text-white'
+                                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-brand-primary shadow-[0_0_6px_var(--color-brand-primary)]' : 'bg-slate-700 group-hover:bg-slate-400'
+                                        }`} />
+                                    <span className="font-semibold text-sm truncate">{f.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

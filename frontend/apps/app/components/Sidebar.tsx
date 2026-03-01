@@ -9,7 +9,8 @@ import {
     Shield,
     MessageSquare,
     LayoutDashboard,
-    Trophy
+    Trophy,
+    Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -38,6 +39,11 @@ const menuItems: MenuItem[] = [
         href: '/metrics',
     },
     {
+        icon: Sparkles,
+        label: 'Sprint Analysis',
+        href: '/sprint-analysis',
+    },
+    {
         icon: ShieldCheck,
         label: 'Compliance',
         href: '/compliance',
@@ -63,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const visibleMenuItems = menuItems.filter(item => {
         if (item.label === 'Messenger') return features.canAccessMessenger;
         if (item.label === 'Compliance') return features.canAccessCompliance;
-        if (item.label === 'Metrics') return features.canAccessMetrics;
+        if (item.label === 'Metrics' || item.label === 'Sprint Analysis') return features.canAccessMetrics;
         return true;
     });
 

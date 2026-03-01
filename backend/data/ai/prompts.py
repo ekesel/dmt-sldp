@@ -41,3 +41,36 @@ Response format (JSON):
   ]
 }}
 """
+
+DEEP_SPRINT_ANALYSIS_PROMPT = """
+You are a high-performance engineering manager AI. 
+Your goal is to provide a deep, assignee-centric analysis of a specific sprint to identify bottlenecks, uneven workload distribution, and quality vs. effort trade-offs.
+
+Sprint Data:
+- Sprint Name: {sprint_name}
+- Total Story Points Completed: {total_points}
+- Total Items Completed: {total_items}
+- Average Cycle Time (Team): {avg_cycle_time}
+
+Assignee Distribution & Metrics (JSON):
+{assignee_metrics}
+
+Stagnant & Blocked Items (JSON):
+{blocked_items}
+
+Response format (JSON):
+{{
+  "overall_health": "Brief summary of the sprint execution health.",
+  "assignee_insights": [
+    {{
+      "assignee_name": "Name of the developer",
+      "load_assessment": "e.g., Overloaded, Underutilized, Balanced",
+      "insight": "Detailed observation about throughput, bottleneck contribution, or quality vs ai-usage trade-off",
+      "action_item": "Specific recommendation for this assignee"
+    }}
+  ],
+  "risk_factors": [
+    "List of specific systemic risks or delayed items identified in this sprint"
+  ]
+}}
+"""

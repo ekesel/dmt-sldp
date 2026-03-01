@@ -118,10 +118,10 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-2" ref={dropdownRef}>
+                        <div className="flex flex-col gap-2">
                             <label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 ml-1">Current Context</label>
                             <div className="flex items-center gap-4">
-                                <div className="relative">
+                                <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(o => !o)}
                                         className="flex items-center gap-3 bg-slate-900 border border-white/10 hover:border-brand-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
@@ -129,11 +129,14 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                         <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/20 shrink-0">
                                             <Briefcase size={20} />
                                         </div>
-                                        <span className="font-bold text-lg text-white flex-1 text-left truncate">
-                                            {selectedProjectId === 'all'
-                                                ? 'All Projects Combined'
-                                                : developer?.projects?.find(p => String(p.id) === selectedProjectId)?.name ?? 'Project'}
-                                        </span>
+                                        <div className="flex flex-col flex-1 truncate text-left">
+                                            <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 leading-none mb-1">Project</span>
+                                            <span className="font-bold text-sm text-white truncate leading-none">
+                                                {selectedProjectId === 'all'
+                                                    ? 'All Projects Combined'
+                                                    : developer?.projects?.find(p => String(p.id) === selectedProjectId)?.name ?? 'Project'}
+                                            </span>
+                                        </div>
                                         <ChevronDown
                                             size={18}
                                             className={`text-slate-400 shrink-0 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}

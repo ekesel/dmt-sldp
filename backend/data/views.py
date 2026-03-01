@@ -644,7 +644,8 @@ class AIInsightListView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
-        insights_qs = AIInsight.objects.order_by('-created_at')
+        insight_type = request.query_params.get('insight_type', 'general')
+        insights_qs = AIInsight.objects.filter(insight_type=insight_type).order_by('-created_at')
 
         if project_id and project_id != 'null':
             insights_qs = insights_qs.filter(project_id=project_id)
@@ -689,10 +690,16 @@ class AIInsightRefreshView(APIView):
 
     def post(self, request):
         project_id = request.data.get('project_id')
+        insight_type = request.data.get('insight_type', 'general')
+        sprint_id = request.data.get('sprint_id')
         schema_name = getattr(request.user, 'tenant', None).schema_name if hasattr(request.user, 'tenant') else connection.schema_name
         
         # Trigger Celery task
-        refresh_ai_insights.delay(project_id=project_id, schema_name=schema_name)
+        from .ai.tasks import analyze_sprint
+        if insight_type == 'deep_sprint' and sprint_id:
+            analyze_sprint.delay(sprint_id=sprint_id, project_id=project_id, schema_name=schema_name)
+        else:
+            refresh_ai_insights.delay(project_id=project_id, schema_name=schema_name)
         
         return Response({
             "status": "success",

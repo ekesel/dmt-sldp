@@ -365,20 +365,24 @@ class AzureDevOpsConnector(BaseConnector):
         updated_at = self._parse_date(fields.get('System.ChangedDate')) or timezone.now()
 
         # Link to Sprint (Iteration)
-        # IterationPath looks like "Project\\Iteration 1"
-        iteration_path = fields.get('System.IterationPath')
+        # Attempt to match by exact IterationId first (most reliable)
+        iteration_info = fields.get('System.IterationId') or item.get('id') # fallback
         sprint_obj = None
-        if iteration_path and '\\' in iteration_path:
-            # Try to match by name (imperfect but viable MVP)
-            parts = iteration_path.split('\\')
-            if len(parts) > 1:
-                sprint_name = parts[-1]
-                sprint_obj = Sprint.objects.filter(name=sprint_name).first()
+        if iteration_info:
+             sprint_obj = Sprint.objects.filter(external_id=str(iteration_info)).first()
+        
+        # Fallback to name-based matching if ID fails or IterationPath is provided
+        if not sprint_obj:
+            iteration_path = fields.get('System.IterationPath')
+            if iteration_path and '\\' in iteration_path:
+                parts = iteration_path.split('\\')
+                if len(parts) > 1:
+                    sprint_name = parts[-1]
+                    sprint_obj = Sprint.objects.filter(name=sprint_name).order_by('-end_date').first()
                     
         # If still no sprint and it's resolved/started, map to the most recently completed/active sprint
         if not sprint_obj and (started_at or resolved_at):
-            # We don't have project_id on Sprint, so grab the latest active/completed sprint for this data source's timeline
-            sprint_obj = Sprint.objects.filter(
+             sprint_obj = Sprint.objects.filter(
                 status__in=['active', 'completed']
             ).order_by('-end_date').first()
 
@@ -403,23 +407,55 @@ class AzureDevOpsConnector(BaseConnector):
             elif raw_val == 'done': unit_testing_db = 'done'
             elif raw_val == 'exception approved': unit_testing_db = 'exception_approved'
             
-        # 3. Reviewer DMT Signoff (Typically a boolean or "Y"/"N" string in ADO setup)
-        signoff_val = fields.get('Custom.ReviewerDMTSignoff')
+        # 3. Reviewer DMT Signoff 
+        signoff_val = fields.get('Custom.ReviewerDMTSignoff') or fields.get('Custom.ReviewerDMTSSignoff')
         reviewer_signoff = False
         if signoff_val:
             if isinstance(signoff_val, bool):
                 reviewer_signoff = signoff_val
-            elif isinstance(signoff_val, str) and signoff_val.strip().upper() == 'Y':
+            elif isinstance(signoff_val, str) and signoff_val.strip().upper() in ['Y', 'YES', 'TRUE']:
                 reviewer_signoff = True
                 
-        # 4. Story Points
-        story_points_val = fields.get('Custom.StoryPoint')
+        # 4. Story Points (Check multiple common field names)
+        story_points_val = fields.get('Microsoft.VSTS.Scheduling.StoryPoints') or \
+                           fields.get('Custom.StoryPoint') or \
+                           fields.get('Custom.StoryPoints') or \
+                           fields.get('Microsoft.VSTS.Scheduling.Size')
         story_points = None
         if story_points_val is not None:
              try:
                  story_points = float(story_points_val)
              except (ValueError, TypeError):
                  pass
+
+        # 5. AI Usage Percentage
+        ai_usage_val = fields.get('Custom.AIUsagePercentage') or fields.get('Custom.AIUsagePercent')
+        ai_usage = 0.0
+        if ai_usage_val is not None:
+            try:
+                ai_usage = float(ai_usage_val)
+            except (ValueError, TypeError):
+                pass
+
+        # 6. Coverage Percentage Change
+        coverage_val = fields.get('Custom.CoveragePercentageChange') or fields.get('Custom.CoveragePercentage')
+        coverage = None
+        if coverage_val is not None:
+            try:
+                coverage = float(coverage_val)
+            except (ValueError, TypeError):
+                pass
+
+        # 7. DMT Exception Logic
+        dmt_exc_req = fields.get('Custom.DMTExceptionRequired')
+        dmt_exception_required = False
+        if dmt_exc_req:
+            if isinstance(dmt_exc_req, bool):
+                dmt_exception_required = dmt_exc_req
+            elif str(dmt_exc_req).strip().upper() in ['Y', 'YES', 'TRUE']:
+                dmt_exception_required = True
+        
+        dmt_exception_reason = fields.get('Custom.DMTExceptionDetails') or fields.get('Custom.DMTExceptionReason') or ""
 
         # Prepare for DB
         work_item_data = {
@@ -443,6 +479,10 @@ class AzureDevOpsConnector(BaseConnector):
             'ac_quality': ac_quality_db,
             'unit_testing_status': unit_testing_db,
             'reviewer_dmt_signoff': reviewer_signoff,
+            'ai_usage_percent': ai_usage,
+            'coverage_percent': coverage,
+            'dmt_exception_required': dmt_exception_required,
+            'dmt_exception_reason': dmt_exception_reason,
         }
 
         # Compliance

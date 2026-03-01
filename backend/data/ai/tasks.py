@@ -1,3 +1,4 @@
+import json
 from celery import shared_task
 from datetime import timedelta
 from django.utils import timezone
@@ -266,3 +267,180 @@ def refresh_ai_insights(project_id=None, schema_name=None):
         raise e
 
     return f"AI Insight generated for {target_name} (ID: {insight.id})"
+
+def generate_sprint_analysis_payload(sprint_id, project_id=None):
+    from ..models import Sprint, SprintMetrics, DeveloperMetrics, WorkItem
+    from configuration.models import SourceConfiguration
+    import json
+
+    try:
+        sprint = Sprint.objects.get(id=sprint_id)
+    except Sprint.DoesNotExist:
+        return None
+
+    # Fetch Sprint Metrics
+    sprint_metrics_qs = SprintMetrics.objects.filter(sprint_name=sprint.name)
+    if project_id:
+        sprint_metrics_qs = sprint_metrics_qs.filter(project_id=project_id)
+    else:
+        sprint_metrics_qs = sprint_metrics_qs.filter(project__isnull=True)
+    
+    sprint_metrics = sprint_metrics_qs.first()
+    
+    if not sprint_metrics:
+        # Fallback if metrics aren't calculated yet, or just return basic info
+        sprint_metrics = type('obj', (object,), {'total_story_points_completed': 0, 'items_completed': 0, 'avg_cycle_time_days': 0})
+
+    # Fetch Developer Metrics
+    dev_metrics_qs = DeveloperMetrics.objects.filter(sprint_name=sprint.name)
+    if project_id:
+        dev_metrics_qs = dev_metrics_qs.filter(project_id=project_id)
+    else:
+        dev_metrics_qs = dev_metrics_qs.filter(project__isnull=True)
+        
+    assignee_metrics = []
+    for dm in dev_metrics_qs:
+        assignee_metrics.append({
+            "name": dm.developer_name,
+            "story_points": dm.story_points_completed,
+            "tasks_completed": dm.items_completed,
+            "defects_attributed": dm.defects_attributed,
+            "ai_usage_percent": dm.ai_usage_percent,
+            "dmt_compliance_rate": dm.dmt_compliance_rate
+        })
+        
+    # Fetch Blocked/Stagnant Items
+    items_qs = WorkItem.objects.filter(sprint=sprint)
+    if project_id:
+        source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+        items_qs = items_qs.filter(source_config_id__in=source_ids)
+        
+    blocked_items = []
+    # Items with high blocked days or currently blocked
+    stagnant_items = items_qs.filter(Q(is_blocked=True) | Q(blocked_days_total__gt=2)).values(
+        'title', 'assignee_name', 'status_category', 'blocked_reason', 'blocked_days_total', 'ac_quality'
+    )[:10] # Limit to top 10 to avoid token limits
+    
+    for item in stagnant_items:
+        blocked_items.append({
+            "title": item['title'],
+            "assignee": item['assignee_name'],
+            "status": item['status_category'],
+            "blocked_reason": item['blocked_reason'],
+            "blocked_days": item['blocked_days_total'],
+            "ac_quality": item['ac_quality']
+        })
+
+    return {
+        "sprint_name": sprint.name,
+        "total_points": sprint_metrics.total_story_points_completed,
+        "total_items": sprint_metrics.items_completed,
+        "avg_cycle_time": sprint_metrics.avg_cycle_time_days,
+        "assignee_metrics": assignee_metrics,
+        "blocked_items": blocked_items
+    }
+
+@shared_task(queue='ai_insights')
+@tenant_aware_task
+def analyze_sprint(sprint_id, project_id=None, schema_name=None):
+    """
+    Generates a deep sprint analysis for a specific sprint.
+    """
+    tenant = Tenant.objects.get(schema_name=connection.schema_name)
+    channel_layer = get_channel_layer()
+
+    try:
+        from configuration.models import Project
+        from ..models import Sprint
+        try:
+            sprint = Sprint.objects.get(id=sprint_id)
+        except Sprint.DoesNotExist:
+            return f"Sprint {sprint_id} not found."
+
+        project = None
+        target_name = f"Sprint {sprint.name} (Global)"
+        if project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+                target_name = f"Sprint {sprint.name} for Project {project.name}"
+            except Project.DoesNotExist:
+                return f"Project {project_id} not found."
+
+        # Emit telemetry
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"telemetry_{tenant.slug}",
+                {
+                    "type": "telemetry_update",
+                    "message": {
+                        "type": "ai_insight_progress",
+                        "project_id": project_id,
+                        "progress": 30,
+                        "status": "Compiling Deep Sprint Data..."
+                    }
+                }
+            )
+        except Exception: pass
+
+        # Refresh metrics before analysis to ensure AI has latest data
+        from ..analytics.metrics import MetricService
+        try:
+            MetricService.populate_sprint_metrics(sprint_id)
+            MetricService.populate_developer_metrics(sprint_id)
+        except Exception as me:
+            print(f"Non-critical error refreshing metrics: {me}")
+
+        payload = generate_sprint_analysis_payload(sprint_id, project_id)
+        if not payload:
+            return "Could not generate payload."
+
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"telemetry_{tenant.slug}",
+                {
+                    "type": "telemetry_update",
+                    "message": {
+                        "type": "ai_insight_progress",
+                        "project_id": project_id,
+                        "progress": 60,
+                        "status": "Analyzing Assignee Distribution..."
+                    }
+                }
+            )
+        except Exception: pass
+
+        # Call AI Provider
+        if tenant.ai_provider == Tenant.AI_PROVIDER_KIMI:
+            ai_provider = KimiAIProvider(api_key=tenant.ai_api_key, model_name=tenant.ai_model, base_url=tenant.ai_base_url)
+        else:
+            ai_provider = GeminiAIProvider()
+
+        response_data = ai_provider.generate_deep_sprint_insights(payload)
+
+        # Store Insight
+        insight = AIInsight.objects.create(
+            project=project,
+            insight_type='deep_sprint',
+            summary=response_data.get("overall_health", "Analysis Complete."),
+            suggestions=response_data.get("assignee_insights", []),
+            forecast=json.dumps(response_data.get("risk_factors", [])) # Using forecast field to store risks
+        )
+
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f"telemetry_{tenant.slug}",
+                {
+                    "type": "telemetry_update",
+                    "message": {
+                        "type": "ai_insight_update",
+                        "project_id": project_id
+                    }
+                }
+            )
+        except Exception: pass
+
+        return f"Deep Sprint Analysis generated for {target_name} (Insight ID: {insight.id})"
+        
+    except Exception as e:
+        print(f"Error in analyze_sprint: {e}")
+        raise e
