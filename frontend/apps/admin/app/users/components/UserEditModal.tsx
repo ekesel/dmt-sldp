@@ -54,7 +54,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 is_platform_admin: formData.role === 'Super Admin' || formData.role === 'Admin',
                 is_superuser: formData.role === 'Super Admin',
                 is_staff: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
-                is_manager: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
+                is_manager: formData.role === 'Manager',
             };
 
             await usersApi.update(user.id, {

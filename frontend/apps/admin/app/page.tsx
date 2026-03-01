@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Building2, Users, Server, Activity, Zap, RefreshCw } from 'lucide-react';
 import { health, tenants as tenantsApi, users as usersApi, dashboard as dashboardApi, activityLog as activityApi } from '@dmt/api';
 import { useSessionMonitor } from './hooks/useSessionMonitor';
+import { useAuth } from './auth/AuthContext';
 import { DashboardLayout } from './components/DashboardLayout';
 import { StatCard, Badge } from './components/UIComponents';
 import { CreateTenantModal } from './components/CreateTenantModal';
@@ -22,6 +23,7 @@ export default function AdminHome() {
 
     // Session Monitoring
     const { isSessionValid } = useSessionMonitor();
+    const { user } = useAuth();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -208,12 +210,14 @@ export default function AdminHome() {
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-6">Quick Actions</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 font-medium transition"
-                    >
-                        Create Tenant
-                    </button>
+                    {user?.is_superuser && (
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 font-medium transition"
+                        >
+                            Create Tenant
+                        </button>
+                    )}
                     <button
                         onClick={() => router.push('/users')}
                         className="px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 font-medium transition"
@@ -235,11 +239,13 @@ export default function AdminHome() {
                 </div>
             </div>
 
-            <CreateTenantModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSuccess={() => { }}
-            />
+            {user?.is_superuser && (
+                <CreateTenantModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={() => { }}
+                />
+            )}
         </DashboardLayout>
     );
 }

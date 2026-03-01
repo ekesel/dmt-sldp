@@ -1,3 +1,4 @@
+import os
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -167,6 +168,24 @@ class InviteUserView(APIView):
 
         # Build the invite URL (frontend handles the set-password page)
         frontend_base = getattr(settings, 'FRONTEND_URL', os.environ.get('FRONTEND_URL', 'http://localhost:3000'))
+        
+        tenant = getattr(user, 'tenant', None)
+        if tenant:
+            domain_obj = tenant.domains.first()
+            if domain_obj:
+                from urllib.parse import urlparse, urlunparse
+                parsed = urlparse(frontend_base)
+                port = parsed.port
+                new_netloc = domain_obj.domain
+                if port:
+                    # If dealing with localhost locally
+                    if domain_obj.domain.endswith('.localhost') or domain_obj.domain == 'localhost':
+                        new_netloc = f"{domain_obj.domain}:{port}"
+                    # Usually in prod domain won't need port unless specified, but let's be safe
+                    elif ':' not in domain_obj.domain and port not in (80, 443):
+                        new_netloc = f"{domain_obj.domain}:{port}"
+                frontend_base = urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
         invite_link = f"{frontend_base}/set-password?uid={uid}&token={token}"
 
         return Response({
@@ -189,36 +208,42 @@ class PasswordResetRequestView(APIView):
         if not email:
             return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_request)
 
-        # Find the active user
-        user = User.objects.filter(email=email, is_active=True).first()
+        # Find the user, allowing inactive users so admins get notified to invite them
+        user = User.objects.filter(email=email).first()
         if not user:
             # For security, return success even if user not found to prevent email enumeration
-            return Response({'message': 'If an active account exists with this email, admins have been notified.'}, status=status.HTTP_200_OK)
+            return Response({'message': 'If an account exists with this email, admins have been notified.'}, status=status.HTTP_200_OK)
 
         # Find admins for this user's tenant (or platform admins)
         from notifications.models import Notification
         
         tenant = getattr(user, 'tenant', None)
+        admins = User.objects.none()
+        
         if tenant:
-            admins = User.objects.filter(tenant=tenant, is_staff=True)
-        else:
-            admins = User.objects.filter(is_platform_admin=True)
-
-        if not admins.exists():
-            admins = User.objects.filter(is_platform_admin=True)
+            admins = admins | User.objects.filter(tenant=tenant, is_staff=True)
+            
+        # Always include platform admins and superusers
+        admins = admins | User.objects.filter(is_platform_admin=True)
+        admins = admins | User.objects.filter(is_superuser=True)
+        
+        admins = admins.distinct()
 
         # Create notification for each admin
         for admin in admins:
             Notification.objects.create(
                 user=admin,
                 tenant=tenant,
-                title="Password Reset Request",
-                message=f"User {user.email} has requested a password reset. You can generate a reset link from the Users list by using the Invite action.",
+                title="URGENT: Password Reset Request",
+                message=(
+                    f"User {user.email} has requested a password reset. "
+                    f"Please generate a reset link immediately from the Users list by using the 'Invite' action (Mail icon)."
+                ),
                 notification_type=Notification.TYPE_PASSWORD_RESET,
                 data={'requested_by_user_id': user.id, 'requested_by_email': user.email}
             )
 
-        return Response({'message': 'If an active account exists with this email, admins have been notified.'}, status=status.HTTP_200_OK)
+        return Response({'message': 'If an account exists with this email, admins have been notified.'}, status=status.HTTP_200_OK)
 
 
 class ResetPasswordConfirmView(APIView):

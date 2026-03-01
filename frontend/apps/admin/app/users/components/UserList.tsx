@@ -55,7 +55,7 @@ export function UserList() {
                 user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
 
-            const role = user.is_superuser ? 'Super Admin' : user.is_platform_admin ? 'Admin' : 'Manager';
+            const role = user.is_superuser ? 'Super Admin' : user.is_platform_admin ? 'Admin' : user.is_manager ? 'Manager' : 'User';
             const matchesRole = roleFilter === 'All Roles' || role === roleFilter;
 
             return matchesSearch && matchesRole;
@@ -91,7 +91,8 @@ export function UserList() {
     const getRoleInfo = (user: User) => {
         if (user.is_superuser) return { label: 'Super Admin', color: 'text-purple-400' };
         if (user.is_platform_admin) return { label: 'Admin', color: 'text-blue-400' };
-        return { label: 'Manager', color: 'text-emerald-400' };
+        if (user.is_manager) return { label: 'Manager', color: 'text-emerald-400' };
+        return { label: 'User', color: 'text-slate-400' };
     };
 
     const formatDate = (dateString: string) => {
@@ -149,6 +150,7 @@ export function UserList() {
                         <option>Super Admin</option>
                         <option>Admin</option>
                         <option>Manager</option>
+                        <option>User</option>
                     </select>
                 </div>
             </div>

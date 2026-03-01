@@ -67,12 +67,12 @@ export default function LoginPage() {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Username Field */}
                         <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-300">Username</label>
+                            <label className="block text-sm font-medium text-slate-300">Email or Username</label>
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Enter your credentials"
+                                placeholder="Enter your email or username"
                                 autoComplete="username"
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition duration-200"
                                 disabled={isLoading}

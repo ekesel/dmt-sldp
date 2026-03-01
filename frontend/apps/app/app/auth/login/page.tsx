@@ -53,14 +53,14 @@ export default function LoginPage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-slate-300">Username</label>
+                            <label className="text-sm font-medium text-slate-300">Email or Username</label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                 <input
                                     type="text"
                                     required
                                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all outline-none"
-                                    placeholder="johndoe"
+                                    placeholder="johndoe or john@example.com"
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                 />

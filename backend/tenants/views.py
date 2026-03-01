@@ -6,7 +6,7 @@ from .models import Tenant, Domain, AuditLog, SystemSetting
 from rest_framework import serializers
 from django.db.models import Count
 from django.conf import settings
-from core.permissions import IsPlatformAdmin, IsSuperUser
+from core.permissions import IsPlatformAdmin, IsSuperUser, IsAdminUser
 
 from rest_framework.decorators import action
 from django.db import connection
@@ -54,7 +54,12 @@ class SystemSettingSerializer(serializers.ModelSerializer):
 
 class TenantViewSet(viewsets.ModelViewSet):
     serializer_class = TenantSerializer
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSuperUser()]
+        return super().get_permissions()
 
     def get_queryset(self):
         return (
@@ -179,7 +184,7 @@ class ActivityLogView(ListAPIView):
     Used by Activity page and dashboard widgets.
     """
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
     pagination_class = ActivityLogPagination
 
     def get_queryset(self):
@@ -268,7 +273,7 @@ class SystemHealthView(APIView):
 
 
 class SystemSettingsView(APIView):
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         settings = SystemSetting.objects.all()
@@ -291,7 +296,7 @@ class SystemSettingsView(APIView):
 
 
 class ServiceDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, service_name):
         # Mock detailed data for now. In a real application, you would connect to
@@ -346,7 +351,7 @@ class ServiceDetailView(APIView):
 
 
 class ServiceRestartView(APIView):
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, service_name):
         # Mock restart process.

@@ -46,7 +46,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 is_platform_admin: formData.role === 'Super Admin' || formData.role === 'Admin',
                 is_superuser: formData.role === 'Super Admin',
                 is_staff: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
-                is_manager: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
+                is_manager: formData.role === 'Manager',
             };
 
             await usersApi.create({
@@ -63,7 +63,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 first_name: '',
                 last_name: '',
                 password: '',
-                role: 'Admin',
+                role: 'User',
                 custom_title: '',
             });
         } catch (err: any) {
