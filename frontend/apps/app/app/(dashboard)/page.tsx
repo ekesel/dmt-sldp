@@ -10,8 +10,9 @@ import { AssigneeDistributionCard } from "../../components/AssigneeDistributionC
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector } from "../../components/ProjectSelector";
 import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
+import WinnersCorner from '../../components/WinnersCorner';
+import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
-import { SyncProgressOverlay } from "../../components/SyncProgressOverlay";
 import { toast } from "react-hot-toast";
 
 export default function DashboardPage() {
@@ -168,7 +169,10 @@ export default function DashboardPage() {
 
     return (
         <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
-            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8">
+            {/* Winners Corner Ticker */}
+            <WinnersCorner projectId={selectedProjectId || undefined} />
+
+            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8 mt-8">
                 <header className="flex justify-between items-end border-b border-white/5 pb-8">
                     <div>
                         <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">

@@ -17,6 +17,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
         last_name: '',
         role: 'Admin',
         is_active: true,
+        custom_title: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 last_name: user.last_name || '',
                 role: role,
                 is_active: user.is_active ?? true,
+                custom_title: user.custom_title || '',
             });
         }
     }, [user]);
@@ -55,6 +57,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 is_active: formData.is_active,
+                custom_title: formData.custom_title,
                 ...roleFlags
             });
             onSuccess?.();
@@ -140,6 +143,18 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                 <option value="Manager">Manager</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1.5">Custom Title (Winners Corner)</label>
+                        <input
+                            type="text"
+                            name="custom_title"
+                            value={formData.custom_title}
+                            onChange={handleChange}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                            placeholder="e.g. Code Quality Champion"
+                        />
                     </div>
 
                     <div className="flex items-center gap-3 p-3 bg-slate-800/30 rounded-lg border border-slate-800">

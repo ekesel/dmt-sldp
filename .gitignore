@@ -9,6 +9,7 @@ env/
 .env
 db.sqlite3
 *.log
+media/
 
 # Node.js / Next.js
 node_modules/

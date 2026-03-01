@@ -122,6 +122,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+# MEDIA configuration is below in CORS & Security section for organization
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
@@ -141,6 +142,15 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Static & Media Files
+STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Ensure media directory exists
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 # CORS & Security
 def csv_env(name, default):

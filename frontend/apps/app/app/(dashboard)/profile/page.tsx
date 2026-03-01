@@ -1,10 +1,46 @@
 'use client';
-import React from 'react';
+
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { User, Mail, Shield, Building2, BadgeCheck, Key } from 'lucide-react';
+import { User, Mail, Shield, Building2, BadgeCheck, Key, Upload } from 'lucide-react';
+import { auth } from '@dmt/api';
+import { toast } from 'react-hot-toast';
 
 export default function ProfilePage() {
     const { user } = useAuth();
+    const [isUploading, setIsUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(user?.avatar_url || null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+
+        // Upload
+        try {
+            setIsUploading(true);
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            await auth.updateProfile(formData);
+            toast.success('Profile picture updated successfully!');
+
+            // Refresh to update avatar in navbar etc.
+            window.location.reload();
+        } catch (error) {
+            console.error('Failed to upload profile picture:', error);
+            toast.error('Failed to upload profile picture.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const initials = [user?.first_name, user?.last_name]
         .filter(Boolean)
@@ -44,6 +80,7 @@ export default function ProfilePage() {
         user?.is_platform_admin && { label: 'Platform Admin', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
         user?.is_superuser && { label: 'Super Admin', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
         user?.is_staff && { label: 'Staff', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+        user?.custom_title && { label: user.custom_title, color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
     ].filter(Boolean) as { label: string; color: string }[];
 
     return (
@@ -57,14 +94,36 @@ export default function ProfilePage() {
 
                     <div className="relative flex items-center gap-6">
                         {/* Avatar */}
-                        <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center shadow-xl shadow-brand-primary/30">
-                            <span className="text-3xl font-bold text-white">{initials}</span>
+                        <div
+                            className="flex-shrink-0 w-24 h-24 rounded-2xl relative group cursor-pointer overflow-hidden shadow-xl shadow-brand-primary/30"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {previewUrl ? (
+                                <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center">
+                                    <span className="text-3xl font-bold text-white">{initials}</span>
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Upload className="w-6 h-6 text-white" />
+                            </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
                         </div>
 
                         {/* Name + badges */}
                         <div className="flex-1 min-w-0">
                             <h1 className="text-2xl font-bold text-white truncate">{fullName}</h1>
                             <p className="text-slate-400 text-sm mt-0.5">{user?.email}</p>
+                            <p className="text-xs text-brand-primary/80 font-bold uppercase tracking-widest mt-1">
+                                {user?.custom_title || 'Engineering Team'}
+                            </p>
 
                             {badges.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-3">
@@ -104,6 +163,9 @@ export default function ProfilePage() {
                         ))}
                     </ul>
                 </div>
+                <p className="text-[10px] text-slate-500 text-center uppercase tracking-[0.2em] font-bold">
+                    Profile pictures fallback to Gravatar based on your email
+                </p>
 
             </div>
         </div>

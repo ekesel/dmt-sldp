@@ -10,11 +10,30 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
     tenant_slug = serializers.ReadOnlyField(source='tenant.slug')
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 'is_staff', 'is_superuser', 'is_active', 'date_joined']
-        read_only_fields = ['id']
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 
+            'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 
+            'is_staff', 'is_superuser', 'is_active', 'date_joined',
+            'profile_picture', 'custom_title', 'avatar_url'
+        ]
+        read_only_fields = ['id', 'avatar_url']
+
+    def get_avatar_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        
+        # Fallback to Gravatar
+        import hashlib
+        email = obj.email.lower().encode('utf-8')
+        email_hash = hashlib.md5(email).hexdigest()
+        return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
 
 
 class RegisterSerializer(serializers.ModelSerializer):

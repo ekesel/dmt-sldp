@@ -51,15 +51,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                     <div className="hidden sm:flex flex-col items-end">
                         <p className="text-sm font-medium text-white">{user?.first_name || user?.username || 'Guest'}</p>
                         <p className="text-xs text-slate-400">
-                            Company User
+                            {user?.custom_title || 'Company User'}
                         </p>
                     </div>
 
                     {/* User Avatar */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                        <span className="text-white font-semibold text-sm">
-                            {(user?.first_name?.[0] || user?.username?.[0] || 'U').toUpperCase()}
-                        </span>
+                    <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg shadow-brand-primary/20">
+                        {user?.avatar_url ? (
+                            <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center">
+                                <span className="text-white font-semibold text-sm">
+                                    {(user?.first_name?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Dropdown Menu */}

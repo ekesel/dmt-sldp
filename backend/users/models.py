@@ -5,6 +5,8 @@ class User(AbstractUser):
     # Added common fields here
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True)
     is_platform_admin = models.BooleanField(default=False)
+    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    custom_title = models.CharField(max_length=100, null=True, blank=True)
 
 class ExternalIdentity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='external_identities')

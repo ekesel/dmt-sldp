@@ -21,6 +21,7 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      - ./backend/media:/app/media
     environment:
       - DB_NAME=dmt_sldp
       - DB_USER=postgres
@@ -40,6 +41,7 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      - ./backend/media:/app/media
     environment:
       - DB_NAME=dmt_sldp
       - DB_USER=postgres
@@ -63,6 +65,7 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      - ./backend/media:/app/media
     environment:
       - REDIS_URL=redis://redis:6379/1
     depends_on:

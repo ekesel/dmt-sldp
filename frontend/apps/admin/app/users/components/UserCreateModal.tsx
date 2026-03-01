@@ -19,6 +19,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
         last_name: '',
         password: '',
         role: 'Admin', // Default role
+        custom_title: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 last_name: '',
                 password: '',
                 role: 'Admin',
+                custom_title: '',
             });
         } catch (err: any) {
             setError(err.message || 'Failed to create user');
@@ -176,6 +178,18 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                                 <option value="Manager">Manager</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1.5">Custom Title (Winners Corner)</label>
+                        <input
+                            type="text"
+                            name="custom_title"
+                            value={formData.custom_title}
+                            onChange={handleChange}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                            placeholder="e.g. Code Quality Champion"
+                        />
                     </div>
 
                     <div className="pt-4 flex gap-3">

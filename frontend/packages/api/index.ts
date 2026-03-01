@@ -228,6 +228,9 @@ export interface UserProfile {
   email: string;
   first_name?: string;
   last_name?: string;
+  profile_picture?: string;
+  custom_title?: string;
+  avatar_url?: string;
   [key: string]: unknown;
 }
 
@@ -237,7 +240,15 @@ export const auth = {
     post<AuthTokenResponse, { username: string; password: string; portal?: string }>('/auth/token/', { username, password, portal }),
   refreshToken: (refresh: string) =>
     post<AuthRefreshResponse, { refresh: string }>('/auth/token/refresh/', { refresh }),
-  getProfile: () => get<any>('/auth/profile/'),
+  getProfile: () => get<UserProfile>('/auth/profile/'),
+  updateProfile: (data: FormData | Partial<UserProfile>) => {
+    if (data instanceof FormData) {
+      return api.patch<UserProfile>('/auth/profile/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then(res => res.data);
+    }
+    return patch<UserProfile, Partial<UserProfile>>('/auth/profile/', data);
+  },
   logout: () => post<{ success?: boolean; detail?: string }>('/auth/logout/'),
   passwordResetRequest: (email: string) =>
     post<{ message: string }, { email: string }>('/auth/password-reset-request/', { email }),
@@ -326,7 +337,24 @@ export const dashboard = {
       '/analytics/insights/feedback/',
       { insight_id: insightId, suggestion_id: suggestionId, status }
     ),
+  getLeaderboard: (projectId?: string | number) =>
+    get<LeaderboardData>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
 };
+
+export interface LeaderboardWinner {
+  name: string;
+  email: string;
+  title: string;
+  avatar: string;
+  score: number;
+}
+
+export interface LeaderboardData {
+  quality: LeaderboardWinner[];
+  velocity: LeaderboardWinner[];
+  reviewer: LeaderboardWinner[];
+  ai: LeaderboardWinner[];
+}
 
 /* =========================
    1.2 NEW MODULES
@@ -374,6 +402,9 @@ export interface User {
   status?: string;
   first_name?: string;
   last_name?: string;
+  profile_picture?: string;
+  custom_title?: string;
+  avatar_url?: string;
   is_active?: boolean;
   date_joined?: string;
   [key: string]: unknown;

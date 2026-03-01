@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.conf import settings
 # Trigger reload
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -10,6 +11,7 @@ from data.views import (
     ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, SprintListView, AIInsightListView,
     AssigneeDistributionView, AIInsightRefreshView
 )
+from data.leaderboard_views import LeaderboardView
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
 from users.views import (
@@ -49,6 +51,7 @@ urlpatterns = [
     path('api/dashboard/blocked-items/', BlockedItemsView.as_view(), name='dashboard_blocked_items'),
     path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
     path('api/dashboard/assignee-distribution/', AssigneeDistributionView.as_view(), name='assignee_distribution'),
+    path('api/dashboard/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     
     # User management
     path('api/users/<int:pk>/invite/', InviteUserView.as_view(), name='user_invite'),
@@ -88,3 +91,7 @@ urlpatterns = [
 
     path('api/', include(router.urls)),
 ]
+
+if settings.DEBUG:
+    from django.conf.urls.static import static
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

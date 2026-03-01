@@ -13,6 +13,8 @@ interface User {
     is_staff: boolean;
     is_superuser: boolean;
     tenant_name?: string;
+    custom_title?: string;
+    avatar_url?: string;
 }
 
 interface AuthContextType {

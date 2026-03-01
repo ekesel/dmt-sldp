@@ -161,6 +161,7 @@ export function UserList() {
                             <tr>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">User</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Role</th>
+                                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Title</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Status</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Joined</th>
                                 <th className="px-6 py-4 text-right text-sm font-semibold text-slate-300">Actions</th>
@@ -208,6 +209,9 @@ export function UserList() {
                                                     <Shield className={`w-4 h-4 ${role.color}`} />
                                                     {role.label}
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-400 font-medium">
+                                                {user.custom_title || '-'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <Badge
