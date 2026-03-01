@@ -5,9 +5,13 @@ from corsheaders.defaults import default_headers, default_methods
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+IS_PRODUCTION = os.environ.get('PRODUCTION', 'False') == 'True'
+
+if IS_PRODUCTION and not os.environ.get('DJANGO_SECRET_KEY'):
+    raise ValueError("DJANGO_SECRET_KEY environment variable is required in production")
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dummy-key')
 
-DEBUG = os.environ.get('PRODUCTION', 'False') != 'True'
+DEBUG = not IS_PRODUCTION
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 USE_X_FORWARDED_HOST = True
@@ -173,7 +177,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + ['authorization', 'content-type', '
 CORS_ALLOW_METHODS = list(default_methods)
 
 # Production Security
-IS_PRODUCTION = os.environ.get('PRODUCTION', 'False') == 'True'
+# IS_PRODUCTION definition moved to top of file
 
 if IS_PRODUCTION:
     SECURE_SSL_REDIRECT = True

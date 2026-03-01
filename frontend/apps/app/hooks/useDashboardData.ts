@@ -69,7 +69,8 @@ export function useDashboardData(projectId?: number | null) {
 
         const host = window.location.hostname;
         const parts = host.split('.');
-        if (parts.length > 1 && parts[0] !== 'localhost') {
+        const devDomains = process.env.NEXT_PUBLIC_DEV_DOMAINS ? process.env.NEXT_PUBLIC_DEV_DOMAINS.split(',') : ['localhost', '127.0.0.1'];
+        if (parts.length > 1 && !devDomains.includes(parts[0])) {
           return parts[0];
         }
         return 'default';

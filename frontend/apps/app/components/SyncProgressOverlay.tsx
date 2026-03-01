@@ -47,7 +47,8 @@ export const SyncProgressOverlay: React.FC<SyncProgressOverlayProps> = ({ isOpen
         if (typeof window !== 'undefined' && !localStorage.getItem('dmt-tenant')) {
             const host = window.location.hostname;
             const parts = host.split('.');
-            if (parts.length > 1 && parts[0] !== 'localhost') {
+            const devDomains = process.env.NEXT_PUBLIC_DEV_DOMAINS ? process.env.NEXT_PUBLIC_DEV_DOMAINS.split(',') : ['localhost', '127.0.0.1'];
+            if (parts.length > 1 && !devDomains.includes(parts[0])) {
                 localStorage.setItem('dmt-tenant', parts[0]);
             } else if (tenantId) {
                 localStorage.setItem('dmt-tenant', tenantId);

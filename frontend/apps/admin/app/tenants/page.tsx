@@ -70,7 +70,8 @@ export default function TenantsPage() {
     // In production, this would be tenant.slug.domain.com.
     // NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL should be something like ".localhost:3000" or ".company.com"
     const baseUrl = process.env.NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL || '.localhost:3000';
-    const url = `http://${tenant.slug}${baseUrl}`;
+    const protocol = process.env.NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL || 'http';
+    const url = `${protocol}://${tenant.slug}${baseUrl}`;
     window.open(url, '_blank');
   };
 

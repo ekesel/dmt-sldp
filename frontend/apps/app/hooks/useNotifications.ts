@@ -23,7 +23,7 @@ export function useNotifications() {
         const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
         if (!token) return;
 
-        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : (process.env.NEXT_PUBLIC_WS_HOST || 'localhost');
         let wsHost = `${hostname}:8000`;
         const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
 

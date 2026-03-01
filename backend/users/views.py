@@ -166,7 +166,7 @@ class InviteUserView(APIView):
         token = default_token_generator.make_token(user)
 
         # Build the invite URL (frontend handles the set-password page)
-        frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        frontend_base = getattr(settings, 'FRONTEND_URL', os.environ.get('FRONTEND_URL', 'http://localhost:3000'))
         invite_link = f"{frontend_base}/set-password?uid={uid}&token={token}"
 
         return Response({

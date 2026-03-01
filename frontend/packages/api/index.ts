@@ -12,7 +12,7 @@ const getBaseURL = () => {
     const port = 8000; // backend port
     return `http://${hostname}:${port}/api/`;
   }
-  return 'http://localhost:8000/api/';
+  return process.env.NEXT_PUBLIC_API_URL_FALLBACK || 'http://localhost:8000/api/';
 };
 
 const api = axios.create({

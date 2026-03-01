@@ -94,7 +94,7 @@ export default function NewTenantPage() {
                                         required
                                     />
                                     <span className="absolute right-3 top-2.5 text-slate-500 text-sm italic">
-                                        .localhost:3000
+                                        {process.env.NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL || '.localhost:3000'}
                                     </span>
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">Lowercase characters, numbers, and hyphens only.</p>
