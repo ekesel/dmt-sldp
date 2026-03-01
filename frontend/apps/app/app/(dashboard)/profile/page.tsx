@@ -72,7 +72,9 @@ export default function ProfilePage() {
                 ? 'Super Admin'
                 : user?.is_staff
                     ? 'Staff'
-                    : 'Company User',
+                    : user?.is_manager
+                        ? 'Manager'
+                        : 'Company User',
         },
     ];
 
@@ -80,6 +82,7 @@ export default function ProfilePage() {
         user?.is_platform_admin && { label: 'Platform Admin', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
         user?.is_superuser && { label: 'Super Admin', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
         user?.is_staff && { label: 'Staff', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+        user?.is_manager && { label: 'Manager', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
         user?.custom_title && { label: user.custom_title, color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
     ].filter(Boolean) as { label: string; color: string }[];
 

@@ -12,6 +12,7 @@ interface User {
     is_platform_admin: boolean;
     is_staff: boolean;
     is_superuser: boolean;
+    is_manager: boolean;
     tenant_name?: string;
     custom_title?: string;
     avatar_url?: string;

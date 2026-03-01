@@ -47,12 +47,33 @@ class UserViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        # Hierarchical check: Only superusers can set is_superuser or is_platform_admin
+        if not self.request.user.is_superuser:
+            serializer.validated_data['is_superuser'] = False
+            # If they aren't even platform admin, they shouldn't set is_platform_admin
+            if not self.request.user.is_platform_admin:
+                 serializer.validated_data['is_platform_admin'] = False
+
         # Auto-assign tenant if not provided (and user belongs to one)
         user_tenant = getattr(self.request.user, 'tenant', None)
         if not serializer.validated_data.get('tenant') and user_tenant:
              serializer.save(tenant=user_tenant)
         else:
              serializer.save()
+
+    def perform_update(self, serializer):
+        # Hierarchical check: Only superusers can set is_superuser or is_platform_admin
+        if not self.request.user.is_superuser:
+            # Prevent promotion to superuser
+            if serializer.validated_data.get('is_superuser'):
+                serializer.validated_data['is_superuser'] = serializer.instance.is_superuser
+            
+            # Prevent promotion to platform_admin if they aren't one themselves
+            if not self.request.user.is_platform_admin:
+                if serializer.validated_data.get('is_platform_admin'):
+                    serializer.validated_data['is_platform_admin'] = serializer.instance.is_platform_admin
+
+        serializer.save()
 
 
 class RegisterView(APIView):

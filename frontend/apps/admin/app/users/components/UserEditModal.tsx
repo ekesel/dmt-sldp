@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Shield, User as UserIcon, Mail } from 'lucide-react';
 import { users as usersApi } from '@dmt/api';
+import { useAuth } from '../../auth/AuthContext';
 
 interface UserEditModalProps {
     isOpen: boolean;
@@ -21,12 +22,14 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { user: currentUser } = useAuth();
 
     useEffect(() => {
         if (user) {
-            let role = 'Manager';
+            let role = 'User';
             if (user.is_superuser) role = 'Super Admin';
             else if (user.is_platform_admin) role = 'Admin';
+            else if (user.is_manager || user.is_staff) role = 'Manager';
 
             setFormData({
                 first_name: user.first_name || '',
@@ -51,6 +54,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 is_platform_admin: formData.role === 'Super Admin' || formData.role === 'Admin',
                 is_superuser: formData.role === 'Super Admin',
                 is_staff: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
+                is_manager: formData.role === 'Manager' || formData.role === 'Admin' || formData.role === 'Super Admin',
             };
 
             await usersApi.update(user.id, {
@@ -138,9 +142,10 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                 onChange={handleChange}
                                 className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition appearance-none font-['Inter']"
                             >
-                                <option value="Super Admin">Super Admin</option>
-                                <option value="Admin">Admin</option>
+                                {currentUser?.is_superuser && <option value="Super Admin">Super Admin</option>}
+                                {(currentUser?.is_superuser || currentUser?.is_platform_admin) && <option value="Admin">Admin</option>}
                                 <option value="Manager">Manager</option>
+                                <option value="User">User</option>
                             </select>
                         </div>
                     </div>

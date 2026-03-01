@@ -8,9 +8,11 @@ import {
     Settings,
     Shield,
     MessageSquare,
-    LayoutDashboard
+    LayoutDashboard,
+    Trophy
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -45,11 +47,25 @@ const menuItems: MenuItem[] = [
         label: 'Messenger',
         href: '/notifications/send',
     },
+    {
+        icon: Trophy,
+        label: 'Leaderboard',
+        href: '/leaderboard',
+    },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
     const { user } = useAuth();
+    const { features } = usePermissions();
+
+    // Filter menu items based on extensible permissions mapping
+    const visibleMenuItems = menuItems.filter(item => {
+        if (item.label === 'Messenger') return features.canAccessMessenger;
+        if (item.label === 'Compliance') return features.canAccessCompliance;
+        if (item.label === 'Metrics') return features.canAccessMetrics;
+        return true;
+    });
 
     return (
         <>
@@ -66,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     } lg:static lg:z-0`}
             >
                 <nav className="p-4 space-y-2">
-                    {menuItems.map((item) => {
+                    {visibleMenuItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 

@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCurrentTenant } from '../context/TenantContext';
+import { useAuth } from '../auth/AuthContext';
 import {
     LayoutDashboard,
     Building2,
@@ -68,6 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
     const router = useRouter();
     const { currentTenantId } = useCurrentTenant();
+    const { user: currentUser } = useAuth();
 
     // Debugging Sidebar
     console.log('Sidebar Pathname:', pathname);
@@ -109,7 +111,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         });
     }
 
-    const allItems = [...menuItems, ...dynamicItems];
+    // Filter items based on role
+    const allowedMenuItems = menuItems.filter(item => {
+        if (item.label === 'Tenants') {
+            return currentUser?.is_superuser;
+        }
+        return true;
+    });
+
+    const allItems = [...allowedMenuItems, ...dynamicItems];
 
     return (
         <>

@@ -338,7 +338,7 @@ export const dashboard = {
       { insight_id: insightId, suggestion_id: suggestionId, status }
     ),
   getLeaderboard: (projectId?: string | number) =>
-    get<LeaderboardData>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
+    get<LeaderboardResponse>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
 };
 
 export interface LeaderboardWinner {
@@ -347,13 +347,20 @@ export interface LeaderboardWinner {
   title: string;
   avatar: string;
   score: number;
+  reason?: string;
+  history?: { date: string; score: number }[];
 }
 
-export interface LeaderboardData {
+export interface MonthLeaderboardData {
   quality: LeaderboardWinner[];
   velocity: LeaderboardWinner[];
   reviewer: LeaderboardWinner[];
   ai: LeaderboardWinner[];
+}
+
+export interface LeaderboardResponse {
+  current_month: MonthLeaderboardData;
+  past_month: MonthLeaderboardData;
 }
 
 /* =========================

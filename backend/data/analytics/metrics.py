@@ -325,5 +325,74 @@ class MetricService:
                     }
                 )
                 results.append(metric_obj)
+        
+        # --- Automated Title Logic (Post-Calculation) ---
+        self._update_competitive_titles(sprint_id)
                 
         return results
+
+    @classmethod
+    def _update_competitive_titles(cls, sprint_id):
+        """
+        Identify top performers across the tenant for this sprint and update User titles.
+        """
+        from django.contrib.auth import get_user_model
+        from ..models import DeveloperMetrics, Sprint
+        from django.db.models import Sum, Avg
+        
+        User = get_user_model()
+        
+        # 1. Clear ALL existing competitive titles for this tenant first
+        # (This avoids multiple ghosts holding a title from previous syncs)
+        User.objects.filter(tenant__isnull=False).update(
+            competitive_title=None, 
+            competitive_title_reason=None
+        )
+
+        try:
+            sprint = Sprint.objects.get(id=sprint_id)
+        except Sprint.DoesNotExist:
+            return
+
+        # Aggregate across all projects for this sprint per developer
+        top_devs = DeveloperMetrics.objects.filter(
+            sprint_name=sprint.name,
+            sprint_end_date=sprint.end_date.date() if sprint.end_date else None
+        ).values('developer_email', 'developer_name').annotate(
+            total_points=Sum('story_points_completed'),
+            avg_compliance=Avg('dmt_compliance_rate'),
+            total_reviews=Sum('prs_reviewed'),
+            avg_ai=Avg('ai_usage_percent')
+        )
+
+        if not top_devs.exists():
+            return
+
+        # Find category winners
+        winners = {
+            'Velocity King': max(top_devs, key=lambda x: x['total_points'] or 0),
+            'Quality Champion': max(top_devs, key=lambda x: x['avg_compliance'] or 0),
+            'Top Reviewer': max(top_devs, key=lambda x: x['total_reviews'] or 0),
+            'AI Specialist': max(top_devs, key=lambda x: x['avg_ai'] or 0)
+        }
+
+        # Update User objects
+        for title, stats in winners.items():
+            email = stats['developer_email']
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                continue
+
+            reason = ""
+            if title == 'Velocity King':
+                reason = f"Velocity King with {round(stats['total_points'], 1)} story points completed this period."
+            elif title == 'Quality Champion':
+                reason = f"Quality Champion with {round(stats['avg_compliance'], 1)}% DMT compliance rate."
+            elif title == 'Top Reviewer':
+                reason = f"Top Reviewer with {stats['total_reviews']} pull requests reviewed."
+            elif title == 'AI Specialist':
+                reason = f"AI Specialist with {round(stats['avg_ai'], 1)}% AI usage in code."
+
+            user.competitive_title = title
+            user.competitive_title_reason = reason
+            user.save(update_fields=['competitive_title', 'competitive_title_reason'])

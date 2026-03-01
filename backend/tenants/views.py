@@ -6,7 +6,7 @@ from .models import Tenant, Domain, AuditLog, SystemSetting
 from rest_framework import serializers
 from django.db.models import Count
 from django.conf import settings
-from core.permissions import IsPlatformAdmin
+from core.permissions import IsPlatformAdmin, IsSuperUser
 
 from rest_framework.decorators import action
 from django.db import connection
@@ -54,7 +54,7 @@ class SystemSettingSerializer(serializers.ModelSerializer):
 
 class TenantViewSet(viewsets.ModelViewSet):
     serializer_class = TenantSerializer
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get_queryset(self):
         return (
@@ -85,21 +85,21 @@ class TenantViewSet(viewsets.ModelViewSet):
                 new_values=serializer.data
             )
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsPlatformAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsSuperUser])
     def activate(self, request, pk=None):
         tenant = self.get_object()
         tenant.status = 'active'
         tenant.save()
         return Response({'status': 'tenant activated'})
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsPlatformAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsSuperUser])
     def deactivate(self, request, pk=None):
         tenant = self.get_object()
         tenant.status = 'inactive'
         tenant.save()
         return Response({'status': 'tenant deactivated'})
 
-    @action(detail=True, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsPlatformAdmin], url_path='retention-policy')
+    @action(detail=True, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsSuperUser], url_path='retention-policy')
     def retention_policy(self, request, pk=None):
         tenant = self.get_object()
         
@@ -127,7 +127,7 @@ class TenantViewSet(viewsets.ModelViewSet):
         serializer = RetentionPolicySerializer(tenant)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsPlatformAdmin], url_path='archive-data')
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsSuperUser], url_path='archive-data')
     def archive_data(self, request, pk=None):
         tenant = self.get_object()
         
@@ -179,7 +179,7 @@ class ActivityLogView(ListAPIView):
     Used by Activity page and dashboard widgets.
     """
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated, IsSuperUser]
     pagination_class = ActivityLogPagination
 
     def get_queryset(self):
@@ -268,7 +268,7 @@ class SystemHealthView(APIView):
 
 
 class SystemSettingsView(APIView):
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request):
         settings = SystemSetting.objects.all()
@@ -291,7 +291,7 @@ class SystemSettingsView(APIView):
 
 
 class ServiceDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request, service_name):
         # Mock detailed data for now. In a real application, you would connect to
@@ -346,7 +346,7 @@ class ServiceDetailView(APIView):
 
 
 class ServiceRestartView(APIView):
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def post(self, request, service_name):
         # Mock restart process.

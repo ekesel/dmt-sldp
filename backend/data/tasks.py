@@ -183,6 +183,7 @@ def update_all_sprint_metrics(schema_name=None):
     count = 0
     for sprint in sprints:
         metrics = MetricService.populate_sprint_metrics(sprint.id)
+        MetricService.populate_developer_metrics(sprint.id)
         if metrics:
             count += 1
             
