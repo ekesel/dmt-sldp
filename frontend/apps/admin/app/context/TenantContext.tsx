@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
   ReactNode,
+  Suspense,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
 import api, { tenants as tenantsApi } from '../../../../packages/api';
@@ -90,7 +91,32 @@ interface TenantProviderProps {
   autoLoad?: boolean; // Option A: set false in root; load only where needed
 }
 
-export function TenantProvider({ children, autoLoad = false }: TenantProviderProps) {
+export function TenantProvider(props: TenantProviderProps) {
+  return (
+    <Suspense fallback={<TenantProviderFallback {...props} />}>
+      <TenantProviderInner {...props} />
+    </Suspense>
+  );
+}
+
+function TenantProviderFallback({ children }: TenantProviderProps) {
+  const value: TenantContextValue = useMemo(
+    () => ({
+      currentTenantId: '',
+      currentTenant: null,
+      availableTenants: [],
+      isLoading: true,
+      error: null,
+      switchTenant: async () => { },
+      refreshTenants: async () => { },
+    }),
+    []
+  );
+
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+}
+
+function TenantProviderInner({ children, autoLoad = false }: TenantProviderProps) {
   const searchParams = useSearchParams();
 
   const [availableTenants, setAvailableTenants] = useState<Tenant[]>([]);
@@ -168,7 +194,7 @@ export function TenantProvider({ children, autoLoad = false }: TenantProviderPro
       isFetchingRef.current = false;
       setIsLoading(false);
     }
-  }, [persistTenant, resolveInitialTenantId, syncTenantHeaders]);
+  }, [persistTenant, resolveInitialTenantId, syncTenantHeaders, searchParams]);
 
   const switchTenant = useCallback(
     async (tenantId: string) => {
