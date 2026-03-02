@@ -1,11 +1,11 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth as authApi } from '@dmt/api';
 import { Shield, Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-export default function SetPasswordPage() {
+function SetPasswordForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -160,5 +160,17 @@ export default function SetPasswordPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SetPasswordPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+            </div>
+        }>
+            <SetPasswordForm />
+        </Suspense>
     );
 }
