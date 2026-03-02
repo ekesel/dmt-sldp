@@ -123,7 +123,7 @@ export default function LoginPage() {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-slate-600 mt-10">
-                    © 2026 DMT-SLDP. All rights reserved.
+                    © 2026 Elevate. All rights reserved.
                 </p>
             </div>
         </div>

@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                     </button>
                     <div className="flex items-center gap-2">
                         <Shield className="w-6 h-6 text-blue-500" />
-                        <h1 className="text-lg font-bold text-white hidden sm:inline">DMT-SLDP</h1>
+                        <h1 className="text-lg font-bold text-white hidden sm:inline">Elevate</h1>
                     </div>
 
                     {/* Tenant Selector */}

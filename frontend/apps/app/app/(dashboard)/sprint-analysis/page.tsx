@@ -122,7 +122,7 @@ export default function SprintAnalysisPage() {
                         <LayoutDashboard size={16} />
                         Back to Dashboard
                     </Link>
-                    <p>© 2026 DMT-SLDP AI Engine</p>
+                    <p>© 2026 Elevate AI Engine</p>
                 </footer>
             </div>
         </main>

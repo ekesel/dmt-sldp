@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                     </button>
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-brand-primary/20">
-                            D
+                            E
                         </div>
                         <h1 className="text-lg font-bold text-white hidden sm:inline tracking-tight">{user?.tenant_name || 'Company Portal'}</h1>
                     </div>

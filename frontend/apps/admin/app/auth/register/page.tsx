@@ -96,7 +96,7 @@ export default function RegisterPage() {
                         <ShieldCheck className="w-8 h-8 text-blue-400" />
                     </div>
                     <h1 className="text-4xl font-bold text-white mb-3">Create Account</h1>
-                    <p className="text-slate-400 text-lg">Join the DMT-SLDP Admin Portal</p>
+                    <p className="text-slate-400 text-lg">Join the Elevate Admin Portal</p>
                 </div>
 
                 {/* Registration Card */}
@@ -269,7 +269,7 @@ export default function RegisterPage() {
 
                 {/* Footer */}
                 <p className="text-center text-xs text-slate-600 mt-8">
-                    © 2026 DMT-SLDP. All rights reserved.
+                    © 2026 Elevate. All rights reserved.
                 </p>
             </div>
         </div>

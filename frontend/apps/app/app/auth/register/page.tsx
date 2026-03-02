@@ -73,7 +73,7 @@ export default function RegisterPage() {
                         <Shield className="w-6 h-6" />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-2">Create Account</h1>
-                    <p className="text-slate-400">Join your team on DMT Portal</p>
+                    <p className="text-slate-400">Join your team on the Elevate Portal</p>
                 </div>
 
                 {/* Card */}

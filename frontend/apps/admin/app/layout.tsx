@@ -12,7 +12,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DMT-SLDP | Admin Portal",
+  title: "Elevate | Admin Portal",
   description: "Platform Administration and Tenant Management",
 };
 
