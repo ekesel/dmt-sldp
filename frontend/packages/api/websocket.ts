@@ -71,7 +71,13 @@ const DEFAULT_OPTIONS: Required<
 > = {
   baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || (
     typeof window !== 'undefined'
-      ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `ws://localhost:8000/ws/telemetry/{tenant_id}/` : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
+      ? (
+        process.env.NEXT_PUBLIC_WS_HOST
+          ? `wss://${process.env.NEXT_PUBLIC_WS_HOST}/ws/telemetry/{tenant_id}/`
+          : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `ws://localhost:8000/ws/telemetry/{tenant_id}/`
+            : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
+      )
       : `ws://backend:8000/ws/telemetry/{tenant_id}/`
   ),
   tenantStorageKey: "dmt-tenant",

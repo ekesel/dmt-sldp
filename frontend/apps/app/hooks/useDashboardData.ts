@@ -78,11 +78,11 @@ export function useDashboardData(projectId?: number | null) {
 
       const tenant = getTenantId();
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname;
+      const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
       const port = window.location.port;
       const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
       const isLocalhost = host === 'localhost' || host === '127.0.0.1';
-      const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+      const portSuffix = (portValue && !process.env.NEXT_PUBLIC_WS_HOST) ? `:${portValue}` : (isLocalhost ? ':8000' : '');
 
       // Attempt direct connection to backend, fallback to current port
       const directUrl = `${protocol}//${host}${portSuffix}/ws/telemetry/${tenant}/`;
