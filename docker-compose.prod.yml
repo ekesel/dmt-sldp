@@ -104,6 +104,13 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - APP_NAME=admin
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_ADMIN_API_URL:-/api/}
+        - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_ADMIN_API_URL:-/api/}
+        - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-}
+        - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_ADMIN_WS_URL:-/ws/admin/health/}
+        - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-/ws/telemetry/{tenant_id}/}
+        - NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL=${NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL:-}
+        - NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL=${NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL:-https}
     ports:
       - "3001:3000"
     environment:
@@ -123,6 +130,11 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - APP_NAME=app
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_APP_API_URL:-/api/}
+        - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_APP_API_URL:-/api/}
+        - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-}
+        - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-/ws/telemetry/{tenant_id}/}
+        - NEXT_PUBLIC_DEV_DOMAINS=${NEXT_PUBLIC_DEV_DOMAINS:-}
     ports:
       - "3000:3000"
     environment:
