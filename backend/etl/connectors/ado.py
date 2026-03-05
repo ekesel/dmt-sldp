@@ -3,7 +3,7 @@ import requests
 import base64
 from ..base import BaseConnector
 import logging
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote, quote
 from django.utils import timezone
 from datetime import datetime
 from data.models import Sprint, WorkItem, PullRequest, PullRequestStatus
@@ -41,15 +41,15 @@ class AzureDevOpsConnector(BaseConnector):
         # Handle dev.azure.com/{org}
         if 'dev.azure.com' in parsed.netloc:
             if len(path_parts) >= 1:
-                self.organization = path_parts[0]
+                self.organization = unquote(path_parts[0])
             if len(path_parts) >= 2:
-                self.project_name = path_parts[1]
+                self.project_name = unquote(path_parts[1])
         
         # Handle {org}.visualstudio.com
         elif 'visualstudio.com' in parsed.netloc:
-            self.organization = parsed.netloc.split('.')[0]
+            self.organization = unquote(parsed.netloc.split('.')[0])
             if len(path_parts) >= 1:
-                self.project_name = path_parts[0]
+                self.project_name = unquote(path_parts[0])
 
         # Allow override from config (Workspace ID field in UI)
         if self.config.get('workspace_id'):
@@ -89,7 +89,7 @@ class AzureDevOpsConnector(BaseConnector):
         headers = self._get_auth_header()
         
         if self.project_name:
-            url = f"{self.api_base}/_apis/projects/{self.project_name}?api-version=6.0"
+            url = f"{self.api_base}/_apis/projects/{quote(self.project_name)}?api-version=6.0"
         else:
             url = f"{self.api_base}/_apis/projects?api-version=6.0"
         
@@ -122,7 +122,7 @@ class AzureDevOpsConnector(BaseConnector):
         
         # If project is specified, fetch teams for that project
         if self.project_name:
-            url = f"{self.api_base}/_apis/projects/{self.project_name}/teams?api-version=6.0"
+            url = f"{self.api_base}/_apis/projects/{quote(self.project_name)}/teams?api-version=6.0"
             try:
                 resp = requests.get(url, headers=headers)
                 if resp.status_code == 200:
@@ -143,7 +143,7 @@ class AzureDevOpsConnector(BaseConnector):
                     projects = resp.json().get('value', [])
                     for project in projects:
                         p_name = project['name']
-                        t_url = f"{self.api_base}/_apis/projects/{p_name}/teams?api-version=6.0"
+                        t_url = f"{self.api_base}/_apis/projects/{quote(p_name)}/teams?api-version=6.0"
                         t_resp = requests.get(t_url, headers=headers)
                         if t_resp.status_code == 200:
                             teams = t_resp.json().get('value', [])
@@ -230,7 +230,7 @@ class AzureDevOpsConnector(BaseConnector):
         """
         # 1. Try to get all teams first
         teams = []
-        teams_url = f"{self.api_base}/_apis/projects/{project_name}/teams?api-version=6.0"
+        teams_url = f"{self.api_base}/_apis/projects/{quote(project_name)}/teams?api-version=6.0"
         try:
             teams_resp = requests.get(teams_url, headers=headers)
             if teams_resp.status_code == 200:
@@ -252,7 +252,7 @@ class AzureDevOpsConnector(BaseConnector):
 
         for team_name in team_names:
             # GET https://dev.azure.com/{organization}/{project}/{team}/_apis/work/teamsettings/iterations?api-version=6.0
-            url = f"{self.api_base}/{project_name}/{team_name}/_apis/work/teamsettings/iterations?api-version=6.0"
+            url = f"{self.api_base}/{quote(project_name)}/{quote(team_name)}/_apis/work/teamsettings/iterations?api-version=6.0"
             
             try:
                 resp = requests.get(url, headers=headers)
@@ -300,7 +300,7 @@ class AzureDevOpsConnector(BaseConnector):
         """
         Fetch all work items via WIQL and sync.
         """
-        wiql_url = f"{self.api_base}/{project_name}/_apis/wit/wiql?api-version=6.0"
+        wiql_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/wiql?api-version=6.0"
         query = {
             "query": f"Select [System.Id] From WorkItems Where [System.TeamProject] = '{project_name}'"
         }
@@ -324,7 +324,7 @@ class AzureDevOpsConnector(BaseConnector):
             chunk = ids[i:i + chunk_size]
             ids_str = ",".join(chunk)
             # Remove the &fields= parameter so ADO returns all custom fields for compliance checking
-            details_url = f"{self.api_base}/{project_name}/_apis/wit/workitems?ids={ids_str}&api-version=6.0"
+            details_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/workitems?ids={ids_str}&api-version=6.0"
             
             d_resp = requests.get(details_url, headers=headers)
             if d_resp.status_code == 200:
@@ -527,7 +527,7 @@ class AzureDevOpsConnector(BaseConnector):
         Fetch Git Repos -> Pull Requests
         """
         # Get Repos
-        repos_url = f"{self.api_base}/{project_name}/_apis/git/repositories?api-version=6.0"
+        repos_url = f"{self.api_base}/{quote(project_name)}/_apis/git/repositories?api-version=6.0"
         repos_resp = requests.get(repos_url, headers=headers)
         if repos_resp.status_code != 200:
             return 
@@ -539,7 +539,7 @@ class AzureDevOpsConnector(BaseConnector):
             
             # Get PRs (Active and Completed)
             # searchCriteria.status=all 
-            prs_url = f"{self.api_base}/{project_name}/_apis/git/repositories/{repo_id}/pullrequests?searchCriteria.status=all&api-version=6.0"
+            prs_url = f"{self.api_base}/{quote(project_name)}/_apis/git/repositories/{repo_id}/pullrequests?searchCriteria.status=all&api-version=6.0"
             prs_resp = requests.get(prs_url, headers=headers)
             if prs_resp.status_code == 200:
                 prs = prs_resp.json().get('value', [])
