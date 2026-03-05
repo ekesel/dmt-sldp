@@ -31,11 +31,11 @@ services:
       # Production specifics
       - PRODUCTION=True
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?django_secret_key_required}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-backend,localhost}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001}
-      - TENANT_DOMAIN_SUFFIX=${TENANT_DOMAIN_SUFFIX:-localhost}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-backend}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-}
+      - TENANT_DOMAIN_SUFFIX=${TENANT_DOMAIN_SUFFIX:-}
+      - FRONTEND_URL=${FRONTEND_URL:-}
     ports:
       - "8000:8000"
     depends_on:
@@ -108,13 +108,13 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_ADMIN_API_URL:-http://localhost:8000/api/}
-      - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_ADMIN_API_URL:-http://localhost:8000/api/}
-      - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-localhost}
-      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_ADMIN_WS_URL:-ws://localhost:8000/ws/admin/health/}
-      - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-ws://localhost:8000/ws/telemetry/{tenant_id}/}
-      - NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL=${NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL:-.localhost:3000}
-      - NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL=${NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL:-http}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_ADMIN_API_URL:-/api/}
+      - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_ADMIN_API_URL:-/api/}
+      - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_ADMIN_WS_URL:-/ws/admin/health/}
+      - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-/ws/telemetry/{tenant_id}/}
+      - NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL=${NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL:-}
+      - NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL=${NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL:-https}
     restart: unless-stopped
 
   company-portal:
@@ -127,11 +127,11 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_APP_API_URL:-http://localhost:8000/api/}
-      - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_APP_API_URL:-http://localhost:8000/api/}
-      - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-localhost}
-      - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-ws://localhost:8000/ws/telemetry/{tenant_id}/}
-      - NEXT_PUBLIC_DEV_DOMAINS=${NEXT_PUBLIC_DEV_DOMAINS:-localhost,127.0.0.1}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_APP_API_URL:-/api/}
+      - NEXT_PUBLIC_API_URL_FALLBACK=${NEXT_PUBLIC_APP_API_URL:-/api/}
+      - NEXT_PUBLIC_WS_HOST=${NEXT_PUBLIC_WS_HOST:-}
+      - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=${NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE:-/ws/telemetry/{tenant_id}/}
+      - NEXT_PUBLIC_DEV_DOMAINS=${NEXT_PUBLIC_DEV_DOMAINS:-}
     restart: unless-stopped
 
 volumes:
