@@ -45,8 +45,11 @@ export function useDeepSprintAnalysis(projectId: number | null, sprintId: number
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.hostname;
             const port = window.location.port;
+            const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+            const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+            const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
 
-            const directUrl = `${protocol}//${host}:8000/ws/telemetry/${tenant}/`;
+            const directUrl = `${protocol}//${host}${portSuffix}/ws/telemetry/${tenant}/`;
             const fallbackUrl = `${protocol}//${host}${port ? `:${port}` : ''}/ws/telemetry/${tenant}/`;
 
             setWsUrls({ url: directUrl, fallback: fallbackUrl });

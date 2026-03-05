@@ -24,7 +24,10 @@ export function useNotifications() {
         if (!token) return;
 
         const hostname = typeof window !== 'undefined' ? window.location.hostname : (process.env.NEXT_PUBLIC_WS_HOST || 'localhost');
-        let wsHost = `${hostname}:8000`;
+        const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+        let wsHost = `${hostname}${portSuffix}`;
         const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
 
         if (envWsUrl) {

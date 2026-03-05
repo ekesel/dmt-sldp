@@ -83,8 +83,14 @@ export default function SystemStatusPage() {
                     // ignore
                 }
             }
+            const hostname = window.location.hostname;
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${protocol}//${window.location.hostname}:8000`;
+
+            const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+            const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+            const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+
+            return `${protocol}//${hostname}${portSuffix}`;
         };
 
         const wsOrigin = getWsOrigin();

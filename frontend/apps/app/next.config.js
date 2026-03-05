@@ -15,7 +15,7 @@ const nextConfig = {
         return [
             {
                 source: '/ws/:path*',
-                destination: 'http://backend:8000/ws/:path*',
+                destination: `http://backend:${process.env.BACKEND_PORT || process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}/ws/:path*`,
             },
         ];
     },

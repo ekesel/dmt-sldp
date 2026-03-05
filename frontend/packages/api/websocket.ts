@@ -34,7 +34,7 @@ type OutgoingMessage =
 export interface WebSocketManagerOptions {
   /**
    * Example:
-   * - ws://localhost:8000/ws/telemetry/{tenant_id}/
+   * - ws://localhost:${NEXT_PUBLIC_BACKEND_PORT:-8000}/ws/telemetry/{tenant_id}/
    * - wss://api.example.com/ws/telemetry/{tenant_id}/
    */
   baseUrl?: string;
@@ -69,7 +69,7 @@ type EventCallback<T = unknown> = (message: TelemetryMessage<T>) => void;
 const DEFAULT_OPTIONS: Required<
   Omit<WebSocketManagerOptions, "onOpen" | "onClose" | "onError">
 > = {
-  baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || "ws://localhost:8000/ws/telemetry/{tenant_id}/",
+  baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || `ws://localhost:${process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}/ws/telemetry/{tenant_id}/`,
   tenantStorageKey: "dmt-tenant",
   tokenStorageKey: "dmt-access-token",
   reconnect: {

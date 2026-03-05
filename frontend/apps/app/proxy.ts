@@ -26,7 +26,7 @@ export default function proxy(request: NextRequest) {
 
     // Manual API Proxy via Proxy middleware to ensure headers are correctly propagated
     if (request.nextUrl.pathname.startsWith('/api/')) {
-        const newUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, 'http://backend:8000');
+        const newUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `http://backend:${process.env.BACKEND_PORT || process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}`);
         return NextResponse.rewrite(newUrl, {
             request: {
                 headers: requestHeaders,

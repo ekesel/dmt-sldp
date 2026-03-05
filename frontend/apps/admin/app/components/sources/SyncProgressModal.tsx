@@ -43,7 +43,12 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         }
         const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        return `${protocol}//${host}:8000`;
+
+        const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+        const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+        const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+
+        return `${protocol}//${host}${portSuffix}`;
     };
 
     const wsOrigin = getWsOrigin();
