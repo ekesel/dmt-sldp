@@ -9,10 +9,15 @@ const getBaseURL = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname; // e.g., acme-corp.localhost
-    const port = 8000; // backend port
-    return `http://${hostname}:${port}/api/`;
+    const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+    return `http://${hostname}${portSuffix}/api/`;
   }
-  return process.env.NEXT_PUBLIC_API_URL_FALLBACK || `http://localhost:${process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}/api/`;
+
+  const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+  const portSuffix = portValue ? `:${portValue}` : ':8000';
+  return process.env.NEXT_PUBLIC_API_URL_FALLBACK || `http://localhost${portSuffix}/api/`;
 };
 
 const api = axios.create({
