@@ -11,14 +11,7 @@ const nextConfig = {
             },
         ]
     },
-    async rewrites() {
-        return [
-            {
-                source: '/ws/:path*',
-                destination: `http://backend:${process.env.BACKEND_PORT || process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}/ws/:path*`,
-            },
-        ];
-    },
+    // Removed rewrites(): Nginx handles /api/ and /ws/ on api.elevate.samta.ai directly.
 };
 
 module.exports = nextConfig;

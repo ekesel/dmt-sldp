@@ -6,18 +6,21 @@ import { deduplicateRequest } from './deduplication';
    Axios Instance
 ========================= */
 const getBaseURL = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  // 1. ALWAYS respect the explicit environment variable FIRST (e.g. https://api.elevate.samta.ai/api/)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // 2. Only if no env is found, attempt to construct a local fallback (useful for dev without env)
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname; // e.g., acme-corp.localhost
-    const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+    const hostname = window.location.hostname;
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+    const portSuffix = isLocalhost ? ':8000' : '';
     return `http://${hostname}${portSuffix}/api/`;
   }
 
-  const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
-  const portSuffix = portValue ? `:${portValue}` : ':8000';
-  return process.env.NEXT_PUBLIC_API_URL_FALLBACK || `http://localhost${portSuffix}/api/`;
+  // 3. Server-side fallback if all else fails
+  return process.env.NEXT_PUBLIC_API_URL_FALLBACK || 'http://backend:8000/api/';
 };
 
 const api = axios.create({

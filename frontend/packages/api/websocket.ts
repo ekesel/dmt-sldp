@@ -69,7 +69,11 @@ type EventCallback<T = unknown> = (message: TelemetryMessage<T>) => void;
 const DEFAULT_OPTIONS: Required<
   Omit<WebSocketManagerOptions, "onOpen" | "onClose" | "onError">
 > = {
-  baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || `ws://localhost:${process.env.NEXT_PUBLIC_BACKEND_PORT || '8000'}/ws/telemetry/{tenant_id}/`,
+  baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || (
+    typeof window !== 'undefined'
+      ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `ws://localhost:8000/ws/telemetry/{tenant_id}/` : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
+      : `ws://backend:8000/ws/telemetry/{tenant_id}/`
+  ),
   tenantStorageKey: "dmt-tenant",
   tokenStorageKey: "dmt-access-token",
   reconnect: {
