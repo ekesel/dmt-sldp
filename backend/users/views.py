@@ -55,12 +55,35 @@ class UserViewSet(viewsets.ModelViewSet):
             if not self.request.user.is_platform_admin:
                  serializer.validated_data['is_platform_admin'] = False
 
-        # Auto-assign tenant if not provided (and user belongs to one)
-        user_tenant = getattr(self.request.user, 'tenant', None)
-        if not serializer.validated_data.get('tenant') and user_tenant:
-             serializer.save(tenant=user_tenant)
+        # Target tenant identification priority:
+        # 1. Explicit 'tenant' from payload
+        # 2. current admin's own tenant (if any)
+        # 3. 'X-Tenant' header (for platform admins switching views)
+        
+        target_tenant = serializer.validated_data.get('tenant')
+        
+        if not target_tenant:
+            user_tenant = getattr(self.request.user, 'tenant', None)
+            if user_tenant:
+                target_tenant = user_tenant
+            else:
+                # Platform admins using the dashboard switch
+                tenant_id = self.request.headers.get('X-Tenant')
+                if tenant_id:
+                    from tenants.models import Tenant
+                    try:
+                        from django.db.models import Q
+                        if tenant_id.isdigit():
+                            target_tenant = Tenant.objects.get(id=tenant_id)
+                        else:
+                            target_tenant = Tenant.objects.get(Q(slug=tenant_id) | Q(schema_name=tenant_id))
+                    except Tenant.DoesNotExist:
+                        pass
+
+        if target_tenant:
+            serializer.save(tenant=target_tenant)
         else:
-             serializer.save()
+            serializer.save()
 
     def perform_update(self, serializer):
         # Hierarchical check: Only superusers can set is_superuser or is_platform_admin
