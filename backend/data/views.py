@@ -356,7 +356,7 @@ class DeveloperMetricsView(APIView):
                                 developer_email=id,
                                 project_id=project_id,
                                 sprint_name=sprint_obj.name,
-                                sprint_end_date=sprint_obj.end_date or timezone.now().date(),
+                                sprint_end_date=sprint_obj.end_date.date() if sprint_obj.end_date else timezone.now().date(),
                                 story_points_completed=0,
                                 items_completed=0,
                                 commits_count=0,
@@ -376,6 +376,8 @@ class DeveloperMetricsView(APIView):
                         d = m.sprint_end_date
                         if not d:
                             return date.min
+                        # This should no longer be needed now that we cast to date,
+                        # but keeping it for safety in case of DB anomalies.
                         if isinstance(d, datetime):
                             return d.date()
                         return d
