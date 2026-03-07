@@ -223,11 +223,16 @@ class DeveloperListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Fetch all distinct email -> name mappings, sorted so the "best" name wins
-        # Use distinct() on email, pulling the most recent/longest name
-        all_metrics = DeveloperMetrics.objects.values(
+        project_id = request.query_params.get('project_id')
+        
+        queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
+        
+        if project_id and project_id not in ['null', 'undefined', '']:
+            queryset = queryset.filter(project_id=project_id)
+            
+        all_metrics = queryset.order_by('developer_email').values(
             'developer_email', 'developer_name', 'project__id', 'project__name'
-        ).exclude(developer_email__isnull=True).exclude(developer_email='').order_by('developer_email')
+        )
         
         # Deduplicate in Python to handle any DB inconsistencies
         dev_map = {}  # email (lowercase) -> {info dict}

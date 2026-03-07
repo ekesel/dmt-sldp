@@ -6,7 +6,7 @@ import { AuthProvider } from '../context/AuthContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-    title: 'Elevate Company Portal',
+    title: 'Elevate',
     description: 'Engineering Analytics & Compliance',
 };
 

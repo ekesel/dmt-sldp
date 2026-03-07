@@ -11,6 +11,7 @@ from data.views import (
     ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, SprintListView, AIInsightListView,
     AssigneeDistributionView, AIInsightRefreshView
 )
+from data.sprint_comparison_views import SprintComparisonView
 from data.leaderboard_views import LeaderboardView
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
@@ -51,6 +52,7 @@ urlpatterns = [
     path('api/dashboard/blocked-items/', BlockedItemsView.as_view(), name='dashboard_blocked_items'),
     path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
     path('api/dashboard/assignee-distribution/', AssigneeDistributionView.as_view(), name='assignee_distribution'),
+    path('api/dashboard/sprint-comparison/', SprintComparisonView.as_view(), name='sprint_comparison'),
     path('api/dashboard/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     
     # User management

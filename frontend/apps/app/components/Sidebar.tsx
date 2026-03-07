@@ -44,6 +44,11 @@ const menuItems: MenuItem[] = [
         href: '/sprint-analysis',
     },
     {
+        icon: BarChart2,
+        label: 'Sprint Comparison',
+        href: '/sprint-comparison',
+    },
+    {
         icon: ShieldCheck,
         label: 'Compliance',
         href: '/compliance',
@@ -69,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const visibleMenuItems = menuItems.filter(item => {
         if (item.label === 'Messenger') return features.canAccessMessenger;
         if (item.label === 'Compliance') return features.canAccessCompliance;
-        if (item.label === 'Metrics' || item.label === 'Sprint Analysis') return features.canAccessMetrics;
+        if (item.label === 'Metrics' || item.label === 'Sprint Analysis' || item.label === 'Sprint Comparison') return features.canAccessMetrics;
         return true;
     });
 

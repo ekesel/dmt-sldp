@@ -362,6 +362,8 @@ export const dashboard = {
     ),
   getLeaderboard: (projectId?: string | number) =>
     get<LeaderboardResponse>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
+  getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
+    get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 };
 
 export interface LeaderboardWinner {
@@ -401,7 +403,7 @@ export interface Developer {
 }
 
 export const developers = {
-  list: () => get<Developer[]>('/developers/'),
+  list: (projectId?: string | number | null) => get<Developer[]>(`/developers/${buildQuery({ project_id: projectId })}`),
   getMetrics: (id: string, projectId?: string, sprintId?: number | null) =>
     get<any>(`/developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
   getComparison: (id: string, projectId?: string, sprintId?: number | null) =>
