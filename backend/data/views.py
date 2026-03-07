@@ -318,6 +318,7 @@ class DeveloperMetricsView(APIView):
     def get(self, request, id):
         # 'id' here is the developer_email
         project_id = request.query_params.get('project_id')
+        sprint_id = request.query_params.get('sprint_id')
         try:
             limit = int(request.query_params.get('limit', 5))
             if limit > 50: limit = 50
@@ -330,11 +331,61 @@ class DeveloperMetricsView(APIView):
 
         if project_id and project_id not in ['null', 'undefined', 'all']:
             # --- Specific project ---
-            metrics = metrics_qs.filter(project_id=project_id)[:limit]
+            metrics = list(metrics_qs.filter(project_id=project_id)[:limit])
+            
+            sprint_obj = None
+            if sprint_id and sprint_id not in ['null', 'undefined', '']:
+                try:
+                    from .models import Sprint
+                    sprint_obj = Sprint.objects.get(id=sprint_id)
+                    sprint_metric = next((m for m in metrics if m.sprint_name == sprint_obj.name), None)
+                    
+                    if not sprint_metric:
+                        # Fetch it if it exists but wasn't in top 5
+                        sprint_metric = DeveloperMetrics.objects.filter(
+                            developer_email__iexact=id,
+                            project_id=project_id,
+                            sprint_name=sprint_obj.name
+                        ).first()
+                        
+                        if sprint_metric:
+                            metrics.append(sprint_metric)
+                        else:
+                            # Doesn't exist at all, construct an empty synthetic metric
+                            sprint_metric = DeveloperMetrics(
+                                developer_email=id,
+                                project_id=project_id,
+                                sprint_name=sprint_obj.name,
+                                sprint_end_date=sprint_obj.end_date or timezone.now().date(),
+                                story_points_completed=0,
+                                items_completed=0,
+                                commits_count=0,
+                                prs_authored=0,
+                                prs_merged=0,
+                                prs_reviewed=0,
+                                avg_review_time_hours=0,
+                                defects_attributed=0,
+                                coverage_avg_percent=0,
+                                dmt_compliance_rate=0,
+                                ai_usage_percent=0
+                            )
+                            metrics.append(sprint_metric)
+                            
+                    # Re-sort to maintain chronological order for the TrendingChart
+                    metrics.sort(key=lambda x: x.sprint_end_date, reverse=True)
+                except Sprint.DoesNotExist:
+                    pass
+
             if metrics and hasattr(metrics[0], '__dict__'):
                 serializer = DeveloperMetricsSerializer(metrics, many=True)
-                return Response(serializer.data)
-            return Response(list(metrics))
+                data = serializer.data
+                # Inject is_selected field into the serialized output
+                if sprint_obj:
+                    for item in data:
+                        if item['sprint_name'] == sprint_obj.name:
+                            item['is_selected'] = True
+                return Response(data)
+            return Response(metrics)
 
         # --- All Projects Combined ---
         combined = _get_combined_metrics(id)
@@ -414,11 +465,34 @@ class DeveloperComparisonView(APIView):
 
         else:
             # --- Specific Project ---
-            last_sprint = SprintMetrics.objects.filter(
-                project_id=project_id
-            ).order_by('-sprint_end_date').first()
+            sprint_id = request.query_params.get('sprint_id')
+            last_sprint = None
+            requested_sprint_name = None
+
+            if sprint_id and sprint_id not in ['null', 'undefined', '']:
+                try:
+                    from .models import Sprint
+                    sprint_obj = Sprint.objects.get(id=sprint_id)
+                    requested_sprint_name = sprint_obj.name
+                    last_sprint = SprintMetrics.objects.filter(
+                        project_id=project_id,
+                        sprint_name=sprint_obj.name
+                    ).first()
+                except Sprint.DoesNotExist:
+                    pass
+
+            if not last_sprint and not requested_sprint_name:
+                last_sprint = SprintMetrics.objects.filter(
+                    project_id=project_id
+                ).order_by('-sprint_end_date').first()
 
             if not last_sprint:
+                if requested_sprint_name:
+                    return Response({
+                        "velocity": {"you": 0, "team_avg": 0},
+                        "compliance": {"you": 0, "team_avg": 0},
+                        "sprint_name": requested_sprint_name,
+                    })
                 return Response({})
 
             dev_agg = DeveloperMetrics.objects.filter(

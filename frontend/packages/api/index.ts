@@ -402,10 +402,10 @@ export interface Developer {
 
 export const developers = {
   list: () => get<Developer[]>('/developers/'),
-  getMetrics: (id: string, projectId?: string) =>
-    get<any>(`/developers/${id}/metrics/${projectId ? `?project_id=${projectId}` : ''}`),
-  getComparison: (id: string, projectId?: string) =>
-    get<any>(`/developers/${id}/comparison/${projectId ? `?project_id=${projectId}` : ''}`),
+  getMetrics: (id: string, projectId?: string, sprintId?: number | null) =>
+    get<any>(`/developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  getComparison: (id: string, projectId?: string, sprintId?: number | null) =>
+    get<any>(`/developers/${id}/comparison/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
 export const compliance = {

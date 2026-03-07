@@ -20,6 +20,7 @@ import { developers, Developer } from "@dmt/api";
 import { useRouter } from 'next/navigation';
 import { TrendingChart } from "../../../../components/charts/TrendingChart";
 import { ActiveFolderSelector } from "../../../../components/ActiveFolderSelector";
+import { SprintSelector } from "../../../../components/SprintSelector";
 
 export default function DeveloperDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: developerEmail } = use(params);
@@ -29,6 +30,7 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
     const [comparison, setComparison] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -55,8 +57,8 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                 // The current API client doesn't explicitly show 'limit' in params, but our backend now supports it
                 // We'll pass it in the query string manually if needed, but developers.getMetrics might need update
                 const [metricsData, comparisonData] = await Promise.all([
-                    developers.getMetrics(developerEmail, selectedProjectId),
-                    developers.getComparison(developerEmail, selectedProjectId)
+                    developers.getMetrics(developerEmail, selectedProjectId, selectedSprintId),
+                    developers.getComparison(developerEmail, selectedProjectId, selectedSprintId)
                 ]);
 
                 setMetrics(metricsData);
@@ -69,7 +71,7 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
         };
 
         fetchData();
-    }, [developerEmail, selectedProjectId]);
+    }, [developerEmail, selectedProjectId, selectedSprintId]);
 
     if (loading && !developer) {
         return (
@@ -86,7 +88,7 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
         return <div className="p-8 text-white">Developer not found.</div>;
     }
 
-    const latestMetrics = metrics[0] || {};
+    const latestMetrics = metrics.find((m: any) => m.is_selected) || metrics[0] || {};
 
     return (
         <main className="min-h-screen bg-brand-dark p-8 pb-20 selection:bg-brand-primary/30">
@@ -177,6 +179,11 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                     onFolderChanged={() => {
                                         window.location.reload();
                                     }}
+                                />
+                                <SprintSelector
+                                    projectId={selectedProjectId === 'all' ? null : parseInt(selectedProjectId)}
+                                    selectedSprintId={selectedSprintId}
+                                    onSelect={setSelectedSprintId}
                                 />
                             </div>
                         </div>
