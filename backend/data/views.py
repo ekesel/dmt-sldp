@@ -7,7 +7,7 @@ from django.db.models import Sum, Count, Avg, F, Max, Q
 import functools
 import operator
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 from django.db import connection
 
 from .models import WorkItem, SprintMetrics, DeveloperMetrics, AIInsight, PullRequest, Sprint
@@ -372,7 +372,15 @@ class DeveloperMetricsView(APIView):
                             metrics.append(sprint_metric)
                             
                     # Re-sort to maintain chronological order for the TrendingChart
-                    metrics.sort(key=lambda x: x.sprint_end_date, reverse=True)
+                    def _get_sort_date(m):
+                        d = m.sprint_end_date
+                        if not d:
+                            return date.min
+                        if isinstance(d, datetime):
+                            return d.date()
+                        return d
+                        
+                    metrics.sort(key=_get_sort_date, reverse=True)
                 except Sprint.DoesNotExist:
                     pass
 
