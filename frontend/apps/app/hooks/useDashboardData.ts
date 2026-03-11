@@ -10,6 +10,8 @@ interface DashboardSummary {
   compliance_rate: number;
   bugs_resolved: number;
   cycle_time: number;
+  ai_usage_percent: number;
+  code_ai_usage_percent: number;
 }
 
 interface VelocityData {

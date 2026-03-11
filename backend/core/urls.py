@@ -14,6 +14,7 @@ from data.views import (
 from data.sprint_comparison_views import SprintComparisonView
 from data.leaderboard_views import LeaderboardView
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
+from data.identity_views import UserIdentityMappingViewSet
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
 from users.views import (
     RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, 
@@ -90,6 +91,12 @@ urlpatterns = [
     # to prevent DRF's /{pk}/ pattern from greedily matching "send" / "send-bulk"
     path('api/notifications/send/', NotificationViewSet.as_view({'post': 'send_notification'}), name='notification_send'),
     path('api/notifications/send-bulk/', NotificationViewSet.as_view({'post': 'send_notification_bulk'}), name='notification_send_bulk'),
+    
+    # Identity Mapping explicit routes (to avoid router 404s)
+    path('api/admin/identity-mappings/', UserIdentityMappingViewSet.as_view({'get': 'list', 'post': 'create'}), name='identity-list'),
+    path('api/admin/identity-mappings/suggestions/', UserIdentityMappingViewSet.as_view({'get': 'suggestions'}), name='identity-suggestions'),
+    path('api/admin/identity-mappings/search/', UserIdentityMappingViewSet.as_view({'get': 'search'}), name='identity-search'),
+    path('api/admin/identity-mappings/<int:pk>/', UserIdentityMappingViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='identity-detail'),
 
     path('api/', include(router.urls)),
 ]

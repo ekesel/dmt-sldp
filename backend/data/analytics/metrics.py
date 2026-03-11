@@ -146,7 +146,9 @@ class MetricService:
                         filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
-                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    sources_with_folders = sources.filter(
+                        config_json__active_folder_id__isnull=False
+                    ).exclude(config_json__active_folder_id='').values_list('id', flat=True)
                     work_items = work_items.filter(
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
@@ -177,6 +179,14 @@ class MetricService:
             # 6. Cycle Time
             avg_cycle_time = MetricService.calculate_cycle_time(work_items)
 
+            # 7. AI Usage (Rollup from WorkItems and PRs)
+            avg_ai_usage = work_items.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+            
+            # Objective AI from PRs in this project/sprint
+            from ..models import PullRequest
+            pr_filter = Q(source_config_id__in=source_conf_ids, created_at__range=(sprint_start, sprint_end))
+            avg_code_ai = PullRequest.objects.filter(pr_filter).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
                 sprint_end_date=sprint_end.date(),
@@ -193,6 +203,8 @@ class MetricService:
                     'compliance_rate_percent': round(compliance_rate, 2),
                     'defects_found_post_release': defects,
                     'avg_cycle_time_days': avg_cycle_time,
+                    'ai_usage_percent': avg_ai_usage,
+                    'code_ai_usage_percent': avg_code_ai,
                 }
             )
             results.append(metrics_obj)
@@ -248,10 +260,14 @@ class MetricService:
             
             # Use the latest sprint's compliance and insights for the summary
             latest = last_5_metrics[0]
+            avg_ai_usage = sum(m.ai_usage_percent or 0 for m in last_5_metrics) / count
+            avg_code_ai = sum(m.code_ai_usage_percent or 0 for m in last_5_metrics) / count
             
             return {
                 'compliance_rate': round(latest.compliance_rate_percent, 2),
                 'velocity': round(avg_velocity, 1) if avg_velocity is not None else 0,
+                'ai_usage_percent': round(avg_ai_usage, 1),
+                'code_ai_usage_percent': round(avg_code_ai, 1),
                 'active_sprint': {
                     'total_points': round(avg_velocity, 1) if avg_velocity is not None else 0,
                     'item_count': round(avg_items, 1) if avg_items is not None else 0
@@ -297,6 +313,8 @@ class MetricService:
         
         return {
             'compliance_rate': (compliant_count / total_count * 100) if total_count > 0 else 0,
+            'ai_usage_percent': total_items_qs.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0,
+            'code_ai_usage_percent': 0, # Fallback doesn't support deep PR analysis yet
             'active_sprint': {
                 'total_points': round(avg_points, 1),
                 'item_count': round(avg_count, 1)
@@ -316,7 +334,7 @@ class MetricService:
         Calculate and persist metrics for each developer in a specific sprint.
         Accounts for developers working across multiple projects.
         """
-        from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest
+        from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest, PullRequestReviewer, Commit
         from configuration.models import Project, SourceConfiguration
         from django.db.models import Sum, Count, Q, Avg
         
@@ -386,7 +404,9 @@ class MetricService:
                         filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
-                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    sources_with_folders = sources.filter(
+                        config_json__active_folder_id__isnull=False
+                    ).exclude(config_json__active_folder_id='').values_list('id', flat=True)
                     dev_work_items = dev_work_items.filter(
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
@@ -418,10 +438,35 @@ class MetricService:
                 defects = dev_work_items.filter(item_type='bug').count()
                 avg_coverage = dev_work_items.aggregate(avg=Avg('coverage_percent'))['avg']
                 avg_ai_usage = dev_work_items.aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+                avg_code_ai = dev_prs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+                
+                # Fallback: if no PR-level AI scan data, use rollup on WorkItem.code_ai_usage_percent.
+                # This covers PRs matched via pr_links (stored on WorkItem) rather than a direct FK.
+                if not avg_code_ai:
+                    avg_code_ai = dev_work_items.filter(
+                        code_ai_usage_percent__isnull=False,
+                        code_ai_usage_percent__gt=0
+                    ).aggregate(avg=Avg('code_ai_usage_percent'))['avg'] or 0
                 
                 # Code Activity
                 prs_authored = dev_prs.count()
                 prs_merged = dev_prs.filter(merged_at__isnull=False).count()
+                
+                # Fetch reviews done by this developer in this sprint
+                prs_reviewed = PullRequestReviewer.objects.filter(
+                    reviewer_email=email,
+                    pull_request__source_config_id__in=source_conf_ids,
+                    reviewed_at__range=(sprint_start, sprint_end)
+                ).count()
+                
+                # Fetch commits by this developer in this sprint
+                commits_count = Commit.objects.filter(
+                    author_email=email,
+                    source_config_id__in=source_conf_ids,
+                    committed_at__range=(sprint_start, sprint_end)
+                ).count()
+                
+                # Average Review Time integration could be added here later.
                 
                 # Name (Use the most recent name found)
                 dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or email
@@ -438,9 +483,12 @@ class MetricService:
                         'items_completed': items_count,
                         'prs_authored': prs_authored,
                         'prs_merged': prs_merged,
+                        'prs_reviewed': prs_reviewed,
+                        'commits_count': commits_count,
                         'defects_attributed': defects,
                         'coverage_avg_percent': avg_coverage,
                         'ai_usage_percent': avg_ai_usage,
+                        'code_ai_usage_percent': avg_code_ai,
                         'dmt_compliance_rate': round(compliance_rate, 2),
                     }
                 )

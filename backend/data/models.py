@@ -123,7 +123,7 @@ class WorkItem(SoftDeleteMixin, models.Model):
         return f"[{self.external_id}] {self.title[:50]}"
 
 class PullRequest(models.Model):
-    external_id = models.CharField(max_length=100, unique=True)
+    external_id = models.CharField(max_length=100)
     source_config_id = models.IntegerField(db_index=True)
     work_item = models.ForeignKey(WorkItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='pull_requests')
     
@@ -147,6 +147,9 @@ class PullRequest(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     merged_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('source_config_id', 'repository_name', 'external_id')
 
     def __str__(self):
         return f"PR #{self.external_id}: {self.title}"

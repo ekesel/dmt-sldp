@@ -177,12 +177,12 @@ class GitHubPRConnector(BaseConnector):
             pr_obj, created = PullRequest.objects.update_or_create(
                 external_id=pr_id,
                 source_config_id=source_id,
+                repository_name=repo,
                 defaults={
                     'title': title,
                     'author_email': email,
                     'resolved_author': resolved_author,
                     'status': pr_status,
-                    'repository_name': repo,
                     'source_branch': source_ref,
                     'target_branch': target_ref,
                     'created_at': created_at,

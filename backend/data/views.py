@@ -48,14 +48,27 @@ class DashboardSummaryView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         from .analytics.metrics import MetricService
+        from .models import PullRequest
+        from django.db.models import Avg
+        from configuration.models import SourceConfiguration
         summary = MetricService.get_dashboard_summary(project_id)
         
-        # UI expects: velocity (int/float), compliance_rate (float), bugs_resolved (int), cycle_time (float)
+        # Compute code_ai_usage_percent LIVE from analyzed PRs
+        # (SprintMetrics may be stale if not re-populated after PR diff analysis)
+        pr_qs = PullRequest.objects.filter(ai_code_percent__isnull=False, ai_code_percent__gt=0)
+        if project_id:
+            source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            pr_qs = pr_qs.filter(source_config_id__in=source_ids)
+        live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+        
         data = {
             "velocity": summary.get('velocity', 0),
             "compliance_rate": round(summary['compliance_rate'], 2),
             "bugs_resolved": summary['bugs_resolved'],
-            "cycle_time": summary['avg_cycle_time']
+            "cycle_time": summary['avg_cycle_time'],
+            "ai_usage_percent": summary.get('ai_usage_percent', 0),
+            "code_ai_usage_percent": round(live_code_ai, 1),
+            "analyzed_prs_count": pr_qs.count(),
         }
         return Response(data)
 
@@ -311,6 +324,7 @@ def _get_combined_metrics(developer_email):
         'avg_review_time_hours': sum((r.avg_review_time_hours or 0) for r in current_rows) / len(current_rows),
         'coverage_avg_percent': sum((r.coverage_avg_percent or 0) for r in current_rows) / len(current_rows),
         'ai_usage_percent': sum((r.ai_usage_percent or 0) for r in current_rows) / len(current_rows),
+        'code_ai_usage_percent': sum((r.code_ai_usage_percent or 0) for r in current_rows) / len(current_rows),
         'dmt_compliance_rate': sum((r.dmt_compliance_rate or 0) for r in current_rows) / len(current_rows),
         'sprint_name': 'All Projects (Current)',
         'sprint_end_date': None,
@@ -419,10 +433,17 @@ class DeveloperMetricsView(APIView):
                 avg_review_time_hours=Avg('avg_review_time_hours'),
                 defects_attributed=Sum('defects_attributed'),
                 coverage_avg_percent=Avg('coverage_avg_percent'),
+                ai_usage_percent=Avg('ai_usage_percent'),
+                code_ai_usage_percent=Avg('code_ai_usage_percent'),
                 dmt_compliance_rate=Avg('dmt_compliance_rate'),
             )
             .order_by('-sprint_end_date')[:limit]
         )
+
+        # NOTE: combined['code_ai_usage_percent'] is already correctly set by
+        # _get_combined_metrics as the average of each project's LATEST sprint row.
+        # Do NOT override it with an all-time PR query here — that would mix in
+        # historical PRs outside the current sprint window.
 
         # Prepend combined current so metrics[0] is always the true cross-project snapshot
         result = ([combined] + history) if combined else history

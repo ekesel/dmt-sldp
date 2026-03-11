@@ -13,6 +13,11 @@ class BaseConnector(ABC):
         self.base_url = config.get('base_url', '')
         self.api_key = config.get('api_token', '') or config.get('api_key', '')
         self.username = config.get('username', '')
+        
+        # Identity Resolver
+        from data.analytics.identity_resolver import IdentityResolver
+        self.identity_resolver = IdentityResolver()
+        self.identity_resolver.load()
 
     @abstractmethod
     def test_connection(self) -> bool:

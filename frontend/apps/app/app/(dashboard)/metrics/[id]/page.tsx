@@ -14,7 +14,8 @@ import {
     ShieldCheck,
     LineChart as ChartIcon,
     Cpu,
-    ChevronDown
+    ChevronDown,
+    Sparkles
 } from "lucide-react";
 import { developers, Developer } from "@dmt/api";
 import { useRouter } from 'next/navigation';
@@ -103,20 +104,22 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                     </button>
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 py-4">
-                        <div className="flex items-center gap-8">
-                            <div className="relative group">
+                        <div className="flex items-center gap-8 min-w-0">
+                            <div className="relative group shrink-0">
                                 <div className="absolute -inset-1 bg-gradient-to-tr from-brand-primary to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
                                 <div className="relative w-24 h-24 rounded-3xl bg-slate-900 flex items-center justify-center text-brand-primary font-black text-4xl border border-white/10">
                                     {(developer?.developer_name as string)?.charAt(0)}
                                 </div>
                             </div>
-                            <div>
-                                <h1 className="text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                            <div className="min-w-0">
+                                <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 truncate pb-1">
                                     {developer?.developer_name}
                                 </h1>
-                                <div className="flex items-center gap-3 mt-2">
-                                    <span className="text-slate-400 font-bold text-lg">{developer?.developer_email}</span>
-                                </div>
+                                {developer?.developer_name !== developer?.developer_email && (
+                                    <div className="flex items-center gap-3 mt-2">
+                                        <span className="text-slate-400 font-bold text-lg truncate">{developer?.developer_email}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -212,18 +215,19 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
 
                     <Card className="p-6 bg-slate-900/40 border-white/5 hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
                         <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
-                            <Cpu size={120} strokeWidth={3} />
+                            <Sparkles size={120} strokeWidth={3} />
                         </div>
                         <div className="flex items-center gap-3 text-blue-400 mb-6 relative">
                             <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
-                                <Cpu size={20} />
+                                <Sparkles size={20} />
                             </div>
                             <span className="text-xs font-black uppercase tracking-widest text-slate-400">AI Usage</span>
                         </div>
                         <div className="relative">
-                            <div className="text-5xl font-black">{latestMetrics.ai_usage_percent?.toFixed(0) || 0}<span className="text-xl text-blue-500/50 -ml-1">%</span></div>
+                            <div className="text-5xl font-black">{latestMetrics.code_ai_usage_percent?.toFixed(1) || 0}<span className="text-xl text-blue-500/50 -ml-1">%</span></div>
+                            <p className="text-[10px] text-blue-400/60 mt-0.5 font-bold uppercase tracking-wider">Code Scan (Objective)</p>
                             <p className="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">
-                                {selectedProjectId === 'all' ? 'Average across active sprints' : `Average in ${comparison?.sprint_name || 'latest sprint'}`}
+                                Self-reported: {latestMetrics.ai_usage_percent?.toFixed(0) || 0}%
                             </p>
                         </div>
                     </Card>
@@ -323,6 +327,7 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                     <tr>
                                         <th className="px-8 py-6">Sprint</th>
                                         <th className="px-8 py-6">Points</th>
+                                        <th className="px-8 py-6">AI Usage (Obj)</th>
                                         <th className="px-8 py-6">PRs Merged</th>
                                         <th className="px-8 py-6">Reviews</th>
                                         <th className="px-8 py-6 text-right">DMT Compliance</th>
@@ -333,6 +338,10 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                         <tr key={idx} className="hover:bg-white/5 transition-all group">
                                             <td className="px-8 py-6 font-bold group-hover:text-brand-primary transition-colors">{m.sprint_name}</td>
                                             <td className="px-8 py-6">{m.story_points_completed}</td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-blue-400 font-bold">{m.code_ai_usage_percent?.toFixed(1) || 0}%</span>
+                                                <span className="text-[10px] text-slate-500 ml-1">({m.ai_usage_percent?.toFixed(0) || 0}% cust)</span>
+                                            </td>
                                             <td className="px-8 py-6">{m.prs_merged}</td>
                                             <td className="px-8 py-6 text-slate-400">{m.prs_reviewed || 0}</td>
                                             <td className="px-8 py-6 text-right font-black text-brand-primary">
