@@ -1,0 +1,53 @@
+backend/core/settings.py
+  c43be0737f215dd9 19,168,170-188
+docker-compose.yml
+  c43be0737f215dd9 13,84-85,104-105
+backend/users/serializers.py
+  c43be0737f215dd9 14,23,40-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "41b6768ea1cd816702ba2773fa0b9958accd58c8",
+  "prompts": {
+    "4d91697a7a804ba8": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "599f2e7b-2461-4276-9c51-37ed08bceb33",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Himanshu Singh Negi <himanshunegi378@gmail.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 11,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "bd534833d9bc5d89": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "d7f02a26-8cfc-4f73-a83a-69ccecdefb66",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Himanshu Singh Negi <himanshunegi378@gmail.com>",
+      "messages": [],
+      "total_additions": 399,
+      "total_deletions": 70,
+      "accepted_lines": 329,
+      "overriden_lines": 0
+    },
+    "c43be0737f215dd9": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "eaad00ab-fe61-4ecf-b08f-153350fcf99d",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Himanshu Singh Negi <himanshunegi378@gmail.com>",
+      "messages": [],
+      "total_additions": 97,
+      "total_deletions": 124,
+      "accepted_lines": 86,
+      "overriden_lines": 0
+    }
+  }
+}
