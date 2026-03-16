@@ -14,9 +14,9 @@ const getBaseURL = () => {
   // 2. Only if no env is found, attempt to construct a local fallback (useful for dev without env)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
     const portSuffix = isLocalhost ? ':8000' : '';
-    return `http://${hostname}${portSuffix}/api/`;
+    return `${window.location.protocol}//${hostname}${portSuffix}/api/`;
   }
 
   // 3. Server-side fallback if all else fails

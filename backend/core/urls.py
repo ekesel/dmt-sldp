@@ -23,6 +23,9 @@ from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
+from newsapp import urls
+
+
 
 router = DefaultRouter()
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
@@ -92,6 +95,10 @@ urlpatterns = [
     path('api/notifications/send-bulk/', NotificationViewSet.as_view({'post': 'send_notification_bulk'}), name='notification_send_bulk'),
 
     path('api/', include(router.urls)),
+
+
+    # Newsapp
+    path('api/news/', include('newsapp.urls')),
 ]
 
 if settings.DEBUG:

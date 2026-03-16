@@ -37,12 +37,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        # Auto-assign tenant if not provided (and user belongs to one)
+        from rest_framework.exceptions import ValidationError
+        
+        request_tenant = serializer.validated_data.get('tenant')
         user_tenant = getattr(self.request.user, 'tenant', None)
-        if not serializer.validated_data.get('tenant') and user_tenant:
-             serializer.save(tenant=user_tenant)
-        else:
-             serializer.save()
+        
+        tenant_to_use = request_tenant or user_tenant
+        
+        if tenant_to_use and tenant_to_use.schema_name == 'public':
+            raise ValidationError({'tenant': 'Cannot create projects in the public tenant.'})
+            
+        if not tenant_to_use:
+            raise ValidationError({'tenant': 'A valid tenant is required to create a project.'})
+            
+        serializer.save(tenant=tenant_to_use)
 
     @action(detail=True, methods=['post'])
     def trigger_sync(self, request, pk=None):
