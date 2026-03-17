@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ..models import WorkItem, Sprint, DailyMetric, AIInsight
 from django.db.models import Avg, Sum, Count, F
 
@@ -337,6 +338,11 @@ class MetricService:
         from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest, PullRequestReviewer, Commit
         from configuration.models import Project, SourceConfiguration
         from django.db.models import Sum, Count, Q, Avg
+        from .identity_resolver import IdentityResolver
+
+        # Load identity mappings for resolution
+        resolver = IdentityResolver()
+        resolver.load()
         
         sprint = Sprint.objects.get(id=sprint_id)
         if not sprint.end_date:
@@ -358,22 +364,27 @@ class MetricService:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
             # 1. Get all developers who have work items or PRs in this project/sprint
-            # We group by email to handle the 'person' across different source IDs if they vary
-            dev_emails = WorkItem.objects.filter(
-                sprint=sprint, 
+            # Resolve each raw email to its canonical counterpart to aggregate properly
+            raw_emails = WorkItem.objects.filter(
+                sprint=sprint,
                 source_config_id__in=source_conf_ids
             ).values_list('assignee_email', flat=True).distinct()
-            
-            dev_emails = [e for e in dev_emails if e]
-            
-            for email in dev_emails:
+
+            # Map raw emails to canonical emails: canonical_email -> list of raw_emails
+            canonical_to_raw = {}
+            for e in raw_emails:
+                if not e: continue
+                canonical = resolver.resolve(e)
+                canonical_to_raw.setdefault(canonical, []).append(e)
+
+            for canonical_email, aliases in canonical_to_raw.items():
                 # Apply project and folder filtering
                 sources = SourceConfiguration.objects.filter(project=project)
                 source_conf_ids = sources.values_list('id', flat=True)
-                
+
                 dev_work_items = WorkItem.objects.filter(
                     sprint=sprint,
-                    assignee_email=email,
+                    assignee_email__in=aliases,
                     source_config_id__in=source_conf_ids
                 )
                 
@@ -412,18 +423,17 @@ class MetricService:
                     )
                 
                 # Filter PRs for this developer in this sprint (approximate by date if not linked)
-                # In a mature system, PRs are linked to WorkItems or have a sprint field
                 from django.db.models import Q
                 pr_filter = Q(
-                    author_email=email,
+                    author_email__in=aliases,
                     source_config_id__in=source_conf_ids,
                     created_at__lte=sprint_end
                 )
                 if sprint_start:
                     pr_filter &= Q(created_at__gte=sprint_start)
-                
+
                 dev_prs = PullRequest.objects.filter(pr_filter)
-                
+
                 # Calculate stats
                 completed_items = dev_work_items.filter(status_category='done')
                 points = completed_items.aggregate(total=Sum('story_points'))['total'] or 0
@@ -454,30 +464,35 @@ class MetricService:
                 
                 # Fetch reviews done by this developer in this sprint
                 prs_reviewed = PullRequestReviewer.objects.filter(
-                    reviewer_email=email,
+                    reviewer_email__in=aliases,
                     pull_request__source_config_id__in=source_conf_ids,
                     reviewed_at__range=(sprint_start, sprint_end)
                 ).count()
-                
+
                 # Fetch commits by this developer in this sprint
                 commits_count = Commit.objects.filter(
-                    author_email=email,
+                    author_email__in=aliases,
                     source_config_id__in=source_conf_ids,
                     committed_at__range=(sprint_start, sprint_end)
                 ).count()
-                
+
                 # Average Review Time integration could be added here later.
-                
-                # Name (Use the most recent name found)
-                dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or email
+
+                # Name (Use canonical name if mapping exists, else best fragment)
+                from ..models import UserIdentityMapping
+                mapping = UserIdentityMapping.objects.filter(canonical_email=canonical_email).first()
+                if mapping:
+                    dev_name = mapping.canonical_name
+                else:
+                    dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or canonical_email
 
                 metric_obj, created = DeveloperMetrics.objects.update_or_create(
-                    developer_email=email,
+                    developer_email=canonical_email,
                     sprint_name=sprint.name,
                     sprint_end_date=sprint_end.date(),
                     project=project,
                     defaults={
-                        'developer_source_id': email, # Fallback to email as unique source ID
+                        'developer_source_id': canonical_email,  # Use canonical email as consistent ID
                         'developer_name': dev_name,
                         'story_points_completed': points,
                         'items_completed': items_count,

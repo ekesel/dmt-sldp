@@ -538,11 +538,14 @@ class AzureDevOpsConnector(BaseConnector):
         pr_link_val = fields.get('Custom.PRLink') or fields.get('Custom.PullRequestLink')
         pr_links = []
         if pr_link_val and isinstance(pr_link_val, str):
-            # Convert spaces to %20 to normalize, extract multiple if comma separated
-            from urllib.parse import quote, unquote
-            urls = [u.strip() for u in pr_link_val.split(',') if u.strip().startswith('http')]
-            # Ensure the normalized form of spaces is consistent
-            pr_links = [u.replace(' ', '%20') for u in urls]
+            import re
+            # Extract URLs from raw text or HTML hrefs (exclude commas, brackets, spaces)
+            found_urls = re.findall(r'(https?://[^\s<",>]+)', pr_link_val)
+            # ADO sometimes allows weird spaced URLs, normalize them
+            for u in found_urls:
+                clean_url = u.strip().replace(' ', '%20')
+                if clean_url not in pr_links:
+                    pr_links.append(clean_url)
 
         # Prepare for DB
         work_item_data = {

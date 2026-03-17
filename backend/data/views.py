@@ -1,3 +1,4 @@
+from __future__ import annotations
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -236,6 +237,9 @@ class DeveloperListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
         project_id = request.query_params.get('project_id')
         
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
@@ -247,26 +251,27 @@ class DeveloperListView(APIView):
             'developer_email', 'developer_name', 'project__id', 'project__name'
         )
         
-        # Deduplicate in Python to handle any DB inconsistencies
-        dev_map = {}  # email (lowercase) -> {info dict}
+        # Deduplicate in Python using IdentityResolver
+        dev_map = {}  # canonical_email (lowercase) -> {info dict}
         for m in all_metrics:
-            email = (m['developer_email'] or '').strip().lower()
-            if not email:
+            raw_email = (m['developer_email'] or '').strip().lower()
+            if not raw_email:
                 continue
                 
+            email = resolver.resolve(raw_email)
             if email not in dev_map:
                 dev_map[email] = {
-                    'developer_email': m['developer_email'],
-                    'developer_name': m['developer_name'] or m['developer_email'],
-                    'id': email,  # Use lowercase email as consistent ID
+                    'developer_email': email,
+                    'developer_name': m['developer_name'] or email,
+                    'id': email,  # Use canonical email as consistent ID
                     'projects': {}
                 }
-            else:
-                # Prefer the longest/most descriptive name (e.g. "Arun Singh" > "arun")
-                existing_name = dev_map[email]['developer_name']
-                new_name = m['developer_name'] or ''
-                if len(new_name) > len(existing_name) and ' ' in new_name:
-                    dev_map[email]['developer_name'] = new_name
+            
+            # Prefer the longest/most descriptive name
+            existing_name = dev_map[email]['developer_name']
+            new_name = m['developer_name'] or ''
+            if len(new_name) > len(existing_name) and ' ' in new_name:
+                dev_map[email]['developer_name'] = new_name
             
             # Accumulate unique projects
             if m['project__id']:
@@ -344,8 +349,13 @@ class DeveloperMetricsView(APIView):
         except ValueError:
             limit = 5
 
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        resolved_id = resolver.resolve(id)
+
         metrics_qs = DeveloperMetrics.objects.filter(
-            developer_email__iexact=id
+            developer_email__iexact=resolved_id
         ).order_by('-sprint_end_date')
 
         if project_id and project_id not in ['null', 'undefined', 'all']:
@@ -372,7 +382,7 @@ class DeveloperMetricsView(APIView):
                         else:
                             # Doesn't exist at all, construct an empty synthetic metric
                             sprint_metric = DeveloperMetrics(
-                                developer_email=id,
+                                developer_email=resolved_id,
                                 project_id=project_id,
                                 sprint_name=sprint_obj.name,
                                 sprint_end_date=sprint_obj.end_date.date() if sprint_obj.end_date else timezone.now().date(),
@@ -417,7 +427,7 @@ class DeveloperMetricsView(APIView):
             return Response(metrics)
 
         # --- All Projects Combined ---
-        combined = _get_combined_metrics(id)
+        combined = _get_combined_metrics(resolved_id)
 
         # Step 2: Historical trend — group by sprint_name across all projects
         history = list(
@@ -457,9 +467,14 @@ class DeveloperComparisonView(APIView):
         project_id = request.query_params.get('project_id')
         is_all_projects = not project_id or project_id in ['null', 'undefined', 'all']
 
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        resolved_id = resolver.resolve(id)
+
         if is_all_projects:
             # --- All Projects Combined ---
-            combined = _get_combined_metrics(id)
+            combined = _get_combined_metrics(resolved_id)
             if not combined:
                 return Response({})
 

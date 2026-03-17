@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 import logging
 
@@ -21,6 +22,12 @@ class PRDiffAnalyzer:
         re.IGNORECASE
     )
 
+    # Matches trailing signatures: # AI generated via Antigravity IDE
+    SIGNATURE_RE = re.compile(
+        r'^\s*(?:#|//|/\*|\*|<!--)\s*AI\s*generated\s*via\s*Antigravity\s*IDE',
+        re.IGNORECASE
+    )
+
     @classmethod
     def calculate_ai_usage(cls, diff_text: str) -> dict[str, float | int]:
         """
@@ -33,16 +40,29 @@ class PRDiffAnalyzer:
         total_lines = 0
         ai_lines = 0
         in_ai_block = False
+        
+        # State block for trailing signatures
+        hunk_added_lines = 0
+        hunk_is_ai = False
 
         for line in diff_text.splitlines():
-            # Reset block state if we see a new file header in a concatenated diff
-            if line.startswith('--- ') or line.startswith('+++ ') or line.startswith('diff --git'):
+            # Reset block state if we see a new file header or context line change
+            if line.startswith('--- ') or line.startswith('+++ ') or line.startswith('diff --git') or line.startswith('@@'):
                 in_ai_block = False
+                hunk_added_lines = 0
+                hunk_is_ai = False
+                continue
+                
+            # If we hit a context line (starts with space), it means the continuous stream of additions broke
+            if line.startswith(' '):
+                hunk_added_lines = 0
+                hunk_is_ai = False
                 continue
 
             # Only care about additions. Ignore diff headers like +++ b/file.py
             if line.startswith('+') and not line.startswith('+++'):
                 total_lines += 1
+                hunk_added_lines += 1
                 
                 # Strip the leading '+' and whitespace to match comment prefixes
                 clean_line = line[1:].strip()
@@ -55,9 +75,18 @@ class PRDiffAnalyzer:
                 if cls.END_RE.match(clean_line):
                     in_ai_block = False
                     continue
+                    
+                if cls.SIGNATURE_RE.match(clean_line):
+                    # Found a trailing signature, mark the current hunk additions as AI
+                    if not in_ai_block and not hunk_is_ai:
+                        hunk_is_ai = True
+                        # Retroactively add the lines we've seen in this continuous stream
+                        # subtracting 1 so we don't count the signature line itself
+                        ai_lines += max(0, hunk_added_lines - 1)
+                    continue
                 
-                # Count if we're inside an active block
-                if in_ai_block:
+                # Count if we're inside an active block or a marked hunk
+                if in_ai_block or hunk_is_ai:
                     ai_lines += 1
 
         percent = 0.0
