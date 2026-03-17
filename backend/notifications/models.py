@@ -53,9 +53,11 @@ from channels.layers import get_channel_layer
 
 @receiver(post_save, sender=Notification)
 def broadcast_notification(sender, instance, created, **kwargs):
+    print(f"DEBUG: Signal received for Notification {instance.id}, Created: {created}")
     if created:
         channel_layer = get_channel_layer()
         group_name = f'user_{instance.user.id}'
+        print(f"DEBUG: Sending notification to group: {group_name}")
         
         async_to_sync(channel_layer.group_send)(
             group_name,
@@ -72,3 +74,4 @@ def broadcast_notification(sender, instance, created, **kwargs):
                 }
             }
         )
+        print(f"DEBUG: Notification sent to channel layer for user {instance.user.id}")
