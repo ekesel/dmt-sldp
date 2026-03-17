@@ -75,7 +75,7 @@ class DeleteCommentView(APIView):
                 return Response({"error": "You do not have permission to delete this comment"}, status=status.HTTP_403_FORBIDDEN)
 
             comment.delete()
-            return Response({"message": "Comment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -112,9 +112,6 @@ class PostReactionsView(APIView):
     """Get all reactions for a post via path parameters."""
     def get(self, request, post_id):
         try:
-            if not post_id:
-                return Response({"error": "post_id query parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-
             reactions = Reaction.objects.filter(post_id=post_id)
             total_reactions = reactions.count()
             serializer = ReactionSerializer(reactions, many=True)
@@ -133,6 +130,6 @@ class DeleteReactionView(APIView):
                 return Response({"error": "Reaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
             reaction.delete()
-            return Response({"message": "Reaction removed successfully"}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

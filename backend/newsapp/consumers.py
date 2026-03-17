@@ -24,7 +24,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         try:
             # find the tenant schema name based on the host header, if not found return "public" as default schema name
             return Domain.objects.get(domain=host).tenant.schema_name
-        except:
+        except Domain.DoesNotExist:
             return "public"
 
 
@@ -46,7 +46,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({"status": "news app websocket is connected", "group": self.group_name})
 
     def is_manager(self):
-        return self.user.is_manager == True
+        return self.user.is_manager
     
     def format_dates(self, data):
         if isinstance(data, list):
@@ -142,8 +142,9 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         def delete_post_from_db():
             with schema_context(self.schema_name):
                 obj = Post.objects.get(post_id=data.get("id"))
+                post_title = obj.title
                 obj.delete()
-                return obj.title
+                return post_title
 
         try:
             post_title = await delete_post_from_db()
@@ -161,6 +162,8 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 post = Post.objects.select_related('author').get(post_id=data.get("id"))
                 post.title = data.get("title")
                 post.content = data.get("content")
+                post.category = data.get("category")
+                post.media_file = data.get("media_file")
                 post.save()
                 return PostSerializer(post).data
 

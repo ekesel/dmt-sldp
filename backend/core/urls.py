@@ -23,7 +23,6 @@ from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
-from newsapp import urls
 
 
 

@@ -11,7 +11,7 @@ class PostSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_media_file(self, obj):
-        """Returns the absolute URL of the media file if it exists."""
+        """Returns the URL of the media file if it exists."""
         if obj.media_file:
             return obj.media_file.url
         return None

@@ -1,7 +1,6 @@
 from django.db import models
 from users.models import User
 
-import os
 
 def get_post_media_upload_path(instance, filename):
     # Retrieve tenant and user IDs to organize the uploaded files
@@ -27,7 +26,7 @@ class Post(models.Model):
         verbose_name = "Post"
 
     def __str__(self):
-        return self.title + self.author.username
+        return f"{self.title} - {self.author.username}"
 
 
 
@@ -66,6 +65,7 @@ class Reaction(models.Model):
 
     class Meta:
         verbose_name = "Reaction"
+        unique_together = ("user", "post")
 
     def __str__(self):
         return f"{self.reaction_type} by {self.user.username} on {self.post.title}"

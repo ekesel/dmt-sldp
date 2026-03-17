@@ -3,6 +3,7 @@ from .models import Project, SourceConfiguration
 from .serializers import ProjectSerializer, SourceConfigurationSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -37,10 +38,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        from rest_framework.exceptions import ValidationError
         
         request_tenant = serializer.validated_data.get('tenant')
         user_tenant = getattr(self.request.user, 'tenant', None)
+        is_platform_admin = getattr(self.request.user, 'is_platform_admin', False)
+
+        # Only platform admins can create projects in a different tenant
+        if request_tenant and request_tenant != user_tenant and not is_platform_admin:
+            raise ValidationError({'tenant': 'You do not have permission to create projects in this tenant.'})
         
         tenant_to_use = request_tenant or user_tenant
         
