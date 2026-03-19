@@ -110,18 +110,24 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         def save_post_to_db():
             with schema_context(self.schema_name):
                 image_id = data.get("image_id")
+                temp = None # Initialize so it exists even if image_id is None
                 if image_id:
-                    temp = Image.objects.get(id=image_id)
+                    try:
+                        temp = Image.objects.get(id=image_id)
+                    except Image.DoesNotExist:
+                        return {"error": "Temp image not found"}
+
                 post = Post.objects.create(
                     title=data.get("title"),
                     content=data.get("content"),
                     category=data.get("category"),
                     author=self.user,
-                    media_file=temp.file.url if image_id else None 
-
+                    media_file=temp.file.url if temp else None 
                 )
-                # delete the temp image after saving the post .
-                temp.delete()
+                
+                # Only delete if we actually found a temp image
+                if temp:
+                    temp.delete()
 
                 return PostSerializer(post).data
 
@@ -167,27 +173,39 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         def update_post_in_db():
             with schema_context(self.schema_name):
                 image_id = data.get("image_id")
+                temp = None # Initialize so it exists even if image_id is None
                 if image_id:
                     try:
                         temp = Image.objects.get(id=image_id)
                     except Image.DoesNotExist:
-                        temp = None
                         return {"error": "Temp image not found"}
 
-                post = Post.objects.select_related('author').get(post_id=data.get("id"))
-                post.title = data.get("title")
-                post.content = data.get("content")
-                post.category = data.get("category")
+                try:
+                    post = Post.objects.select_related('author').get(post_id=data.get("id"))
+                except Post.DoesNotExist:
+                    return {"error": "Post not found"}
+
+                # Update text fields safely
+                post.title = data.get("title", post.title)
+                post.content = data.get("content", post.content)
+                post.category = data.get("category", post.category)
+
                 # update the image iif the image is already prestent in the post 
                 if temp:
                     post.media_file = temp.file.url 
                     temp.delete() # delete the temp image after saving the post 
+                
                 post.save()
-            
                 return PostSerializer(post).data
 
         try:
             post_data = await update_post_in_db()
+            
+            # Check for error signals
+            if isinstance(post_data, dict) and 'error' in post_data:
+                await self.send_json(post_data)
+                return
+
             post_data = self.format_dates(post_data)
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast_message", "event": "post_updated", "data": post_data}
