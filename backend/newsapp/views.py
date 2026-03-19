@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -5,6 +6,10 @@ from django.shortcuts import get_object_or_404
 from .models import Post, Comment, Reaction
 from .serializers import CommentSerializer, ReactionSerializer
 from rest_framework.permissions import IsAuthenticated
+from .models import Image
+from rest_framework.decorators import api_view, permission_classes
+from django.views.decorators.csrf import csrf_exempt
+from core.permissions import IsManager
 
 # --- Comment Views ---
 
@@ -133,3 +138,26 @@ class DeleteReactionView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# Image Upload Api --
+@permission_classes([IsManager])
+@csrf_exempt
+@api_view(["POST"])
+def upload_temp_image(request):
+    if request.method != "POST":
+        return Response({"error": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
+
+    file = request.FILES.get("file")
+    if not file:
+        return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Save the temp image
+    temp_image =  Image.objects.create(file=file)
+    print(f"Temp image saved with ID: {temp_image.id} and URL: {temp_image.file.url}")
+
+    return Response({
+        "image_id": str(temp_image.id),  # UUID returned
+        "file_url": temp_image.file.url
+    })

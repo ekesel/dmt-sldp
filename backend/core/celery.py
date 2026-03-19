@@ -33,4 +33,8 @@ app.conf.beat_schedule = {
         'task': 'data.tasks.run_daily_aggregation',
         'schedule': crontab(hour=0, minute=0),
     },
+    'nightly-unused-images-cleanup': {
+        'task': 'newsapp.tasks.run_nightly_unused_images_cleanup',
+        'schedule': crontab(hour=0, minute=0),
+    },
 }

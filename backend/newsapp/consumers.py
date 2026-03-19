@@ -1,8 +1,9 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django_tenants.utils import schema_context
+from httpx import post
 from tenants.models import Domain
-from .models import Post
+from .models import Post, Image
 from .serializers import PostSerializer
 from users.models import User
 import json 
@@ -108,14 +109,20 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         @sync_to_async
         def save_post_to_db():
             with schema_context(self.schema_name):
-
+                image_id = data.get("image_id")
+                if image_id:
+                    temp = Image.objects.get(id=image_id)
                 post = Post.objects.create(
                     title=data.get("title"),
                     content=data.get("content"),
                     category=data.get("category"),
                     author=self.user,
-                    media_file=data.get("media_file")
+                    media_file=temp.file.url if image_id else None 
+
                 )
+                # delete the temp image after saving the post .
+                temp.delete()
+
                 return PostSerializer(post).data
 
         try:
@@ -159,12 +166,24 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         @sync_to_async
         def update_post_in_db():
             with schema_context(self.schema_name):
+                image_id = data.get("image_id")
+                if image_id:
+                    try:
+                        temp = Image.objects.get(id=image_id)
+                    except Image.DoesNotExist:
+                        temp = None
+                        return {"error": "Temp image not found"}
+
                 post = Post.objects.select_related('author').get(post_id=data.get("id"))
                 post.title = data.get("title")
                 post.content = data.get("content")
                 post.category = data.get("category")
-                post.media_file = data.get("media_file")
+                # update the image iif the image is already prestent in the post 
+                if temp:
+                    post.media_file = temp.file.url 
+                    temp.delete() # delete the temp image after saving the post 
                 post.save()
+            
                 return PostSerializer(post).data
 
         try:

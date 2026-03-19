@@ -6,7 +6,8 @@ from .views import (
     DeleteCommentView,
     ReactPostView,
     PostReactionsView,
-    DeleteReactionView
+    DeleteReactionView,
+    upload_temp_image
 )
 
 app_name = "newsapp"
@@ -22,4 +23,7 @@ urlpatterns = [
     path("reactions/create/", ReactPostView.as_view(), name="reaction-create"),
     path("reactions/post/<int:post_id>/", PostReactionsView.as_view(), name="post-reactions"),
     path("reactions/delete/<int:post_id>/", DeleteReactionView.as_view(), name="reaction-delete"),
+
+    # Image upload endpoint
+    path("upload-image/", upload_temp_image, name="upload-image"),
 ]

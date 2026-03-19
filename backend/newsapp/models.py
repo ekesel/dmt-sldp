@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import User
+import uuid
 
 
 def get_post_media_upload_path(instance, filename):
@@ -71,3 +72,15 @@ class Reaction(models.Model):
         return f"{self.reaction_type} by {self.user.username} on {self.post.title}"
 
 
+
+
+
+
+# Temp IMG model -
+
+class Image(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.FileField(upload_to="PostImages/")
+    is_used = models.BooleanField(default=False) #just to make sure that the temp image is not used more than once, we can set this flag to true after using it for a post and delete the temp image after saving the post.
+    created_at = models.DateTimeField(auto_now_add=True)
+    
