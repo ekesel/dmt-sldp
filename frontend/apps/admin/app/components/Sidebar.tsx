@@ -126,14 +126,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+                    className="fixed inset-0 bg-background/50 z-30 lg:hidden"
                     onClick={onClose}
                 />
             )}
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-slate-900/80 border-r border-slate-800 backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-muted-foreground/10 border-r border-border backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <nav className="p-4 space-y-2">
@@ -147,20 +147,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 href={item.href}
                                 onClick={onClose}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
-                                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                                    ? 'bg-primary/10 text-primary border border-primary/20'
+                                    : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                                     }`}
                             >
                                 <Icon className="w-5 h-5 flex-shrink-0" />
                                 <span className="font-medium">{item.label}</span>
                                 {item.section && (
-                                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-semibold ${isActive ? 'bg-blue-500/30 text-blue-300' : 'bg-slate-800 text-slate-500'
+                                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider font-semibold ${isActive ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
                                         }`}>
                                         {item.section}
                                     </span>
                                 )}
                                 {!item.section && isActive && (
-                                    <div className="ml-auto w-2 h-2 bg-blue-400 rounded-full" />
+                                    <div className="ml-auto w-2 h-2 bg-primary rounded-full" />
                                 )}
                             </Link>
                         );
@@ -168,11 +168,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800 bg-gradient-to-t from-slate-900 to-transparent">
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                        <Shield className="w-5 h-5 text-blue-400 mb-2" />
-                        <p className="text-sm font-medium text-white">Admin Portal</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-gradient-to-t from-muted to-transparent">
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                        <Shield className="w-5 h-5 text-primary mb-2" />
+                        <p className="text-sm font-medium text-foreground">Admin Portal</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                             Manage platform tenants and configurations
                         </p>
                     </div>

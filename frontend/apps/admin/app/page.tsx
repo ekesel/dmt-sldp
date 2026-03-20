@@ -134,13 +134,13 @@ export default function AdminHome() {
             {/* Header */}
             <div className="mb-8 flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-                    <p className="text-slate-400">Welcome to the Elevate Admin Portal. Manage tenants and system configurations.</p>
+                    <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
+                    <p className="text-muted-foreground">Welcome to the Elevate Admin Portal. Manage tenants and system configurations.</p>
                 </div>
                 <button
                     onClick={() => fetchData()}
                     disabled={refreshing}
-                    className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2"
+                    className="p-2 bg-secondary hover:bg-secondary/80 rounded-lg text-secondary-foreground transition flex items-center gap-2"
                 >
                     <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
                     <span className="text-sm font-medium">Refresh</span>
@@ -188,12 +188,12 @@ export default function AdminHome() {
             {/* System Health Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Services Status */}
-                <div className="lg:col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-white mb-6">Services Status</h2>
+                <div className="lg:col-span-1 bg-card/50 border border-border rounded-xl p-6">
+                    <h2 className="text-lg font-semibold text-foreground mb-6">Services Status</h2>
                     <div className="space-y-3">
                         {Object.entries(services).map(([name, status]) => (
-                            <div key={name} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition">
-                                <span className="text-slate-300 font-medium capitalize">{name.replace(/_/g, ' ')}</span>
+                            <div key={name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition">
+                                <span className="text-foreground font-medium capitalize">{name.replace(/_/g, ' ')}</span>
                                 <Badge label={status === 'up' ? 'Operational' : 'Down'} variant={status === 'up' ? 'success' : 'error'} />
                             </div>
                         ))}
@@ -212,32 +212,32 @@ export default function AdminHome() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-6">Quick Actions</h2>
+            <div className="bg-card/50 border border-border rounded-xl p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-6">Quick Actions</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {user?.is_superuser && (
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 font-medium transition"
+                            className="px-4 py-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-primary font-medium transition"
                         >
                             Create Tenant
                         </button>
                     )}
                     <button
                         onClick={() => router.push('/users')}
-                        className="px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400 font-medium transition"
+                        className="px-4 py-3 bg-accent/10 hover:bg-accent/20 border border-accent/30 rounded-lg text-accent font-medium transition"
                     >
                         Manage Users
                     </button>
                     <button
                         onClick={() => router.push('/analytics')}
-                        className="px-4 py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 font-medium transition"
+                        className="px-4 py-3 bg-success/10 hover:bg-success/20 border border-success/30 rounded-lg text-success font-medium transition"
                     >
                         View Reports
                     </button>
                     <button
                         onClick={() => router.push('/settings')}
-                        className="px-4 py-3 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 font-medium transition"
+                        className="px-4 py-3 bg-warning/10 hover:bg-warning/20 border border-warning/30 rounded-lg text-warning font-medium transition"
                     >
                         System Settings
                     </button>

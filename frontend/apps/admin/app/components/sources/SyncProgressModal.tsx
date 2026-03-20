@@ -112,31 +112,31 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-slate-900 border border-slate-700 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="bg-popover border border-border rounded-lg shadow-xl w-full max-w-md overflow-hidden">
                 <div className="p-6">
                     <h3 className="text-xl font-semibold text-white mb-2">Syncing {sourceName}</h3>
                     <p className="text-slate-400 text-sm mb-6">Please wait while we fetch data from the source.</p>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-slate-700 rounded-full h-2.5 mb-2">
+                    <div className="w-full bg-muted rounded-full h-2.5 mb-2">
                         <div
-                            className={`h-2.5 rounded-full transition-all duration-300 ${syncState.status === 'failed' ? 'bg-red-500' :
-                                syncState.status === 'success' ? 'bg-green-500' : 'bg-blue-600'
+                            className={`h-2.5 rounded-full transition-all duration-300 ${syncState.status === 'failed' ? 'bg-destructive' :
+                                syncState.status === 'success' ? 'bg-success' : 'bg-primary'
                                 }`}
                             style={{ width: `${syncState.progress}%` }}
                         ></div>
                     </div>
 
-                    <div className="flex justify-between text-xs text-slate-400 mb-6">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-6">
                         <span>{syncState.progress}%</span>
                         <span>{syncState.status === 'in_progress' ? 'Processing...' : syncState.status}</span>
                     </div>
 
                     {/* Status Message */}
-                    <div className={`p-4 rounded-md flex items-start space-x-3 mb-6 ${syncState.status === 'failed' ? 'bg-red-500/10 text-red-400' :
-                        syncState.status === 'success' ? 'bg-green-500/10 text-green-400' :
-                            'bg-blue-500/10 text-blue-400'
+                    <div className={`p-4 rounded-md flex items-start space-x-3 mb-6 ${syncState.status === 'failed' ? 'bg-destructive/10 text-destructive' :
+                        syncState.status === 'success' ? 'bg-success/10 text-success' :
+                            'bg-primary/10 text-primary'
                         }`}>
                         {syncState.status === 'in_progress' && <Loader2 className="w-5 h-5 animate-spin mt-0.5" />}
                         {syncState.status === 'success' && <CheckCircle className="w-5 h-5 mt-0.5" />}
@@ -156,7 +156,7 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
                     <div className="flex justify-end">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition-colors"
+                            className="px-4 py-2 text-sm font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-md transition-colors"
                             disabled={syncState.status === 'in_progress'}
                         >
                             {syncState.status === 'in_progress' ? 'Running in background...' : 'Close'}

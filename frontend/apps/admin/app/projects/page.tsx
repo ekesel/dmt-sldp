@@ -34,11 +34,11 @@ export default function ProjectsPage() {
             <div className="space-y-8">
                 <header className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-1 flex items-center gap-2">
-                            <LayoutDashboard className="text-blue-500" />
+                        <h1 className="text-3xl font-bold text-foreground mb-1 flex items-center gap-2">
+                            <LayoutDashboard className="text-primary" />
                             Project Management
                         </h1>
-                        <p className="text-slate-400">System-wide projects and their health status.</p>
+                        <p className="text-muted-foreground">System-wide projects and their health status.</p>
                     </div>
                     <div className="flex gap-4">
                         <div className="relative">
@@ -49,7 +49,7 @@ export default function ProjectsPage() {
                                 className="bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
                             />
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition">
+                        <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/80 text-primary-foreground rounded-lg font-medium transition">
                             <Plus size={18} />
                             New Project
                         </button>
@@ -58,25 +58,25 @@ export default function ProjectsPage() {
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">
-                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {projectList.map((p) => (
-                            <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4 hover:border-slate-700 transition">
+                            <div key={p.id} className="bg-card/50 border border-border rounded-xl p-6 flex flex-col gap-4 hover:border-primary/50 transition">
                                 <div>
-                                    <h3 className="text-xl font-semibold text-white">{p.name}</h3>
-                                    <p className="text-slate-400 text-sm">Tenant: {(p as any).tenant_name || 'Global'}</p>
+                                    <h3 className="text-xl font-semibold text-foreground">{p.name}</h3>
+                                    <p className="text-muted-foreground text-sm">Tenant: {(p as any).tenant_name || 'Global'}</p>
                                 </div>
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-end">
-                                        <p className="text-slate-400 text-xs uppercase tracking-wider">Health Score</p>
-                                        <p className={`font-bold ${(p as any).health > 90 ? 'text-blue-400' : 'text-amber-400'}`}>{(p as any).health || 0}%</p>
+                                        <p className="text-muted-foreground text-xs uppercase tracking-wider">Health Score</p>
+                                        <p className={`font-bold ${(p as any).health > 90 ? 'text-primary' : 'text-warning'}`}>{(p as any).health || 0}%</p>
                                     </div>
-                                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                                         <div
-                                            className={`h-full ${(p as any).health > 90 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                                            className={`h-full ${(p as any).health > 90 ? 'bg-primary' : 'bg-warning'}`}
                                             style={{ width: `${(p as any).health || 0}%` }}
                                         />
                                     </div>
@@ -84,7 +84,7 @@ export default function ProjectsPage() {
 
                                 <button
                                     onClick={() => router.push(`/projects/${p.id}/sources`)}
-                                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg mt-2 transition text-sm font-medium"
+                                    className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-2 rounded-lg mt-2 transition text-sm font-medium border border-border"
                                 >
                                     Configure Sources
                                 </button>

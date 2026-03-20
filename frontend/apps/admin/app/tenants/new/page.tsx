@@ -44,28 +44,28 @@ export default function NewTenantPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 transition"
+                        className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-1">Create New Tenant</h1>
-                        <p className="text-slate-400 text-sm">Register a new company and initialize their dedicated workspace.</p>
+                        <h1 className="text-3xl font-bold text-foreground mb-1">Create New Tenant</h1>
+                        <p className="text-muted-foreground text-sm">Register a new company and initialize their dedicated workspace.</p>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                    <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive">
                         <AlertCircle className="w-5 h-5" />
                         <p className="text-sm">{error}</p>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-6">
+                    <div className="bg-card/50 border border-border rounded-2xl p-6 space-y-6 backdrop-blur-sm">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label htmlFor="name" className="block text-sm font-medium text-slate-300">
+                                <label htmlFor="name" className="block text-sm font-medium text-muted-foreground">
                                     Company Name
                                 </label>
                                 <input
@@ -74,13 +74,13 @@ export default function NewTenantPage() {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g. Acme Corp"
-                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+                                    className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                                     required
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label htmlFor="slug" className="block text-sm font-medium text-slate-300">
+                                <label htmlFor="slug" className="block text-sm font-medium text-muted-foreground">
                                     Subdomain Slug
                                 </label>
                                 <div className="relative">
@@ -90,14 +90,14 @@ export default function NewTenantPage() {
                                         value={slug}
                                         onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                                         placeholder="acme-corp"
-                                        className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+                                        className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                                         required
                                     />
-                                    <span className="absolute right-3 top-2.5 text-slate-500 text-sm italic">
+                                    <span className="absolute right-3 top-2.5 text-muted-foreground/50 text-sm italic">
                                         {process.env.NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL || '.localhost:3000'}
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500 mt-1">Lowercase characters, numbers, and hyphens only.</p>
+                                <p className="text-xs text-muted-foreground/50 mt-1">Lowercase characters, numbers, and hyphens only.</p>
                             </div>
                         </div>
                     </div>
@@ -106,14 +106,14 @@ export default function NewTenantPage() {
                         <button
                             type="button"
                             onClick={() => router.back()}
-                            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition"
+                            className="px-6 py-2.5 bg-muted hover:bg-secondary text-foreground rounded-lg font-medium transition"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
                         >
                             {isLoading ? (
                                 'Creating...'

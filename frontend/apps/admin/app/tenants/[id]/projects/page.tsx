@@ -59,7 +59,7 @@ export default function ProjectListPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
                 </div>
             </DashboardLayout>
         );
@@ -70,62 +70,62 @@ export default function ProjectListPage() {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-1">Projects</h1>
-                        <p className="text-slate-400">Manage projects and their configurations for tenant {tenantId}</p>
+                        <h1 className="text-3xl font-bold text-foreground mb-1">Projects</h1>
+                        <p className="text-muted-foreground">Manage projects and their configurations for tenant {tenantId}</p>
                     </div>
                     <button
                         onClick={handleCreate}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition shadow-lg shadow-primary/20"
                     >
                         <Plus className="w-4 h-4" /> New Project
                     </button>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-3">
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                    <div className="bg-card/50 border border-border rounded-xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-slate-400 text-sm font-medium">Total Projects</h3>
-                            <FolderKanban className="h-4 w-4 text-blue-400" />
+                            <h3 className="text-muted-foreground text-sm font-medium">Total Projects</h3>
+                            <FolderKanban className="h-4 w-4 text-primary" />
                         </div>
-                        <div className="text-2xl font-bold text-white">{projects.length}</div>
+                        <div className="text-2xl font-bold text-foreground">{projects.length}</div>
                     </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-800">
-                        <h2 className="text-lg font-semibold text-white">All Projects</h2>
-                        <p className="text-sm text-slate-500">List of all projects associated with this tenant.</p>
+                <div className="bg-card/50 border border-border rounded-xl overflow-hidden backdrop-blur-sm">
+                    <div className="px-6 py-4 border-b border-border">
+                        <h2 className="text-lg font-semibold text-foreground">All Projects</h2>
+                        <p className="text-sm text-muted-foreground">List of all projects associated with this tenant.</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-slate-800/50 border-b border-slate-800">
+                            <thead className="bg-muted/50 border-b border-border">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Name</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Key</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Status</th>
-                                    <th className="px-6 py-4 text-right text-sm font-semibold text-slate-300">Actions</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Key</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                                    <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
+                            <tbody className="divide-y divide-border">
                                 {projects.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
                                             No projects found. Create one to get started.
                                         </td>
                                     </tr>
                                 ) : (
                                     projects.map((project) => (
-                                        <tr key={project.id} className="hover:bg-slate-800/30 transition">
+                                        <tr key={project.id} className="hover:bg-accent/30 transition">
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-white font-medium cursor-pointer hover:underline" onClick={() => handleEdit(project)}>
+                                                    <span className="text-foreground font-medium cursor-pointer hover:underline" onClick={() => handleEdit(project)}>
                                                         {project.name}
                                                     </span>
-                                                    <span className="text-xs text-slate-500">{project.description}</span>
+                                                    <span className="text-xs text-muted-foreground">{project.description}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-400 border border-slate-700">
+                                                <span className="px-2 py-1 bg-muted rounded text-xs text-muted-foreground border border-border">
                                                     {project.key}
                                                 </span>
                                             </td>
@@ -139,15 +139,15 @@ export default function ProjectListPage() {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleEdit(project)}
-                                                        className="px-3 py-1.5 text-sm text-blue-400 hover:bg-blue-400/10 rounded transition"
+                                                        className="px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded transition"
                                                     >
                                                         Edit
                                                     </button>
                                                     <button
                                                         onClick={() => router.push(`/projects/${project.id}/sources`)}
-                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-800 border border-slate-700 text-white hover:bg-slate-700 rounded transition"
+                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted border border-border text-foreground hover:bg-secondary rounded transition"
                                                     >
-                                                        <Settings className="w-4 h-4 text-slate-400" />
+                                                        <Settings className="w-4 h-4 text-muted-foreground" />
                                                         Sources
                                                     </button>
                                                 </div>

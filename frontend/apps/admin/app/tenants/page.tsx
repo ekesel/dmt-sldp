@@ -119,13 +119,13 @@ export default function TenantsPage() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Tenants</h1>
-            <p className="text-slate-400">Manage all registered tenants and their configurations.</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Tenants</h1>
+            <p className="text-muted-foreground">Manage all registered tenants and their configurations.</p>
           </div>
           <button
             type="button"
             onClick={handleCreateTenant}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition"
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition shadow-lg shadow-primary/20"
           >
             <Plus className="w-5 h-5" />
             New Tenant
@@ -134,35 +134,35 @@ export default function TenantsPage() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 px-4 py-3 text-sm">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 text-destructive px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
         {/* Table */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="bg-card/50 border border-border rounded-xl overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-800/50 border-b border-slate-800">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Users</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Created</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-slate-300">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Users</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Created</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                       Loading tenants...
                     </td>
                   </tr>
                 ) : tenants.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                       No tenants found.
                     </td>
                   </tr>
@@ -173,15 +173,15 @@ export default function TenantsPage() {
                     const isBusy = busyTenantId === tenant.id;
 
                     return (
-                      <tr key={tenant.id} className="hover:bg-slate-800/30 transition">
+                      <tr key={tenant.id} className="hover:bg-accent/30 transition">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/40 to-blue-600/40 flex items-center justify-center font-semibold text-blue-300">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center font-semibold text-primary">
                               {(tenant.name || 'T')[0]}
                             </div>
                             <div>
-                              <p className="text-white font-medium">{tenant.name}</p>
-                              <p className="text-xs text-slate-500">{tenant.slug}</p>
+                              <p className="text-foreground font-medium">{tenant.name}</p>
+                              <p className="text-xs text-muted-foreground">{tenant.slug}</p>
                             </div>
                           </div>
                         </td>
@@ -190,8 +190,8 @@ export default function TenantsPage() {
                           <Badge label={status.label} variant={status.variant} />
                         </td>
 
-                        <td className="px-6 py-4 text-white font-medium">{tenant.usersCount}</td>
-                        <td className="px-6 py-4 text-slate-400 text-sm">{formatDate(tenant.createdAt)}</td>
+                        <td className="px-6 py-4 text-foreground font-medium">{tenant.usersCount}</td>
+                        <td className="px-6 py-4 text-muted-foreground text-sm">{formatDate(tenant.createdAt)}</td>
 
                         <td className="px-6 py-4">
                           <div className="relative flex justify-end gap-2">
@@ -199,7 +199,7 @@ export default function TenantsPage() {
                               type="button"
                               onClick={() => handleEditTenant(tenant.id)}
                               disabled={isBusy}
-                              className="p-2 hover:bg-slate-800 rounded-lg transition text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                              className="p-2 hover:bg-muted rounded-lg transition text-primary hover:text-primary/80 disabled:opacity-50"
                               title="Manage Tenant"
                             >
                               <Pencil className="w-4 h-4" />
@@ -209,21 +209,21 @@ export default function TenantsPage() {
                               type="button"
                               onClick={() => handleOpenTenant(tenant)}
                               disabled={isBusy}
-                              className="p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-slate-300 disabled:opacity-50"
+                              className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground disabled:opacity-50"
                               title="Open Client Portal"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </button>
 
                             {isMenuOpen && (
-                              <div className="absolute right-0 top-10 z-20 min-w-[190px] rounded-lg border border-slate-700 bg-slate-900 shadow-lg p-1">
+                              <div className="absolute right-0 top-10 z-20 min-w-[190px] rounded-lg border border-border bg-popover shadow-lg p-1">
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditTenant(tenant.id);
                                   }}
-                                  className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded"
+                                  className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded"
                                 >
                                   <span className="inline-flex items-center gap-2">
                                     <Pencil className="w-4 h-4" /> Edit tenant
@@ -233,7 +233,7 @@ export default function TenantsPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleToggleStatus(tenant.id, tenant.status)}
-                                  className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded"
+                                  className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded"
                                 >
                                   <span className="inline-flex items-center gap-2">
                                     <Power className="w-4 h-4" />
@@ -244,7 +244,7 @@ export default function TenantsPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteTenant(tenant.id)}
-                                  className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-slate-800 rounded"
+                                  className="w-full px-3 py-2 text-left text-sm text-destructive hover:bg-muted rounded"
                                 >
                                   <span className="inline-flex items-center gap-2">
                                     <Trash2 className="w-4 h-4" /> Delete tenant
