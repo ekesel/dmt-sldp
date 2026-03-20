@@ -59,7 +59,7 @@ export default function DashboardPage() {
             const mainCanvas = await html2canvas(element, {
                 scale: 2, // High resolution
                 useCORS: true,
-                backgroundColor: '#0f172a',
+                backgroundColor: '#f9fafa',
                 logging: false,
                 width: 1400,
             });
@@ -90,7 +90,7 @@ export default function DashboardPage() {
                 if (pageNum > 1) pdf.addPage();
 
                 // Set page background
-                pdf.setFillColor('#0f172a');
+                pdf.setFillColor('#f9fafa');
                 pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
 
                 // Determine the height of this slice
@@ -160,26 +160,26 @@ export default function DashboardPage() {
     };
 
     if (loading && !summary) {
-        return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Loading...</div>;
+        return <div className="min-h-screen bg-background flex items-center justify-center text-foreground">Loading...</div>;
     }
 
     if (error && !summary) {
-        return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-rose-500">{error}</div>;
+        return <div className="min-h-screen bg-background flex items-center justify-center text-destructive">{error}</div>;
     }
 
     return (
-        <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
+        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
             <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8 mt-8">
-                <header className="flex justify-between items-end border-b border-white/5 pb-8">
+                <header className="flex justify-between items-end border-b border-border pb-8">
                     <div>
-                        <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
                             <TrendingUp size={16} />
                             Performance Overview
                         </div>
-                        <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
                             {selectedProjectId ? 'Project Analytics' : 'Organizational Analytics'}
                         </h1>
-                        <p className="text-slate-400 mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
+                        <p className="text-muted-foreground mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>
                     <div className="flex gap-4 items-center flex-wrap justify-end">
                         <ProjectSelector
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                             <button
                                 onClick={handleResync}
                                 disabled={isSyncing}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all font-bold border border-white/10 cursor-pointer ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 title="Resync Project Data"
                             >
                                 <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                         <button
                             onClick={handleExportPDF}
                             disabled={isExporting}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 transition-all font-bold shadow-lg shadow-brand-primary/20 cursor-pointer ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <FileText size={18} />
                             {isExporting ? 'Exporting...' : 'Export PDF'}
@@ -248,30 +248,30 @@ export default function DashboardPage() {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
+                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl">
                         <div className="flex items-center justify-between mb-10">
                             <div>
-                                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                                    <BarChart3 className="text-brand-primary" />
+                                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                    <BarChart3 className="text-primary" />
                                     Velocity History
                                 </h2>
-                                <p className="text-slate-500 text-sm mt-1">Sprint-over-sprint delivery trends</p>
+                                <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
                             </div>
                         </div>
-                        <div className="flex-1 w-full bg-slate-800/10 rounded-2xl border border-white/5 p-4">
+                        <div className="flex-1 w-full bg-muted/10 rounded-2xl border border-border p-4">
                             <VelocityChart data={velocity} />
                         </div>
                     </Card>
 
-                    <Card className="min-h-[450px] flex flex-col p-8 bg-slate-900/40 border-white/5 backdrop-blur-xl">
+                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl">
                         <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                                <TrendingUp className="text-brand-primary" />
+                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                <TrendingUp className="text-primary" />
                                 Delivery Forecast
                             </h2>
-                            <p className="text-slate-500 text-sm mt-1">Stochastic prediction based on historical cycle times</p>
+                            <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
                         </div>
-                        <div className="flex-1 w-full flex items-center justify-center text-slate-500">
+                        <div className="flex-1 w-full flex items-center justify-center text-muted-foreground">
                             {forecast ? (
                                 <ForecastChart data={forecast} />
                             ) : (
@@ -282,37 +282,37 @@ export default function DashboardPage() {
 
                     {/* Critical Alerts - Simplified logic based on compliance */}
                     <div className="lg:col-span-3 space-y-6">
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                            <AlertCircle className="text-rose-500" />
+                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                            <AlertCircle className="text-destructive" />
                             Compliance Alerts
                         </h2>
                         {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                            <Card className="bg-rose-500/5 border-rose-500/20 p-6 group hover:bg-rose-500/10 transition-colors cursor-default">
+                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default">
                                 <div className="flex justify-between items-start">
-                                    <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-rose-500 text-white leading-none">High Risk</span>
+                                    <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                 </div>
-                                <p className="text-rose-100 font-bold mt-4 group-hover:text-white transition-colors">Low Compliance Rate</p>
-                                <p className="text-rose-200/40 text-sm mt-2 leading-relaxed">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                <p className="text-destructive font-bold mt-4 group-hover:text-destructive-foreground transition-colors">Low Compliance Rate</p>
+                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
                             </Card>
                         )}
                         {(!summary || (summary.compliance_rate >= 80)) && (
-                            <p className="text-slate-400">No critical alerts at this time.</p>
+                            <p className="text-muted-foreground">No critical alerts at this time.</p>
                         )}
                     </div>
                 </div>
 
-                <div className="pt-8 border-t border-white/5">
+                <div className="pt-8 border-t border-border">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <Share2 className="text-brand-primary w-5 h-5" />
-                            <h2 className="text-2xl font-bold text-white">
+                            <Share2 className="text-primary w-5 h-5" />
+                            <h2 className="text-2xl font-bold text-foreground">
                                 {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
                             </h2>
                         </div>
                         <button
                             onClick={refreshInsights}
                             disabled={isRefreshingInsights}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-all text-xs font-bold border border-white/10 ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
                             {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
@@ -328,18 +328,20 @@ export default function DashboardPage() {
                                 suggestions={insights[0].suggestions}
                                 onAllHandled={refreshInsights}
                             />
-                            <div className="mt-4 p-4 bg-slate-800/20 rounded-xl border border-white/5">
-                                <h4 className="text-sm font-bold text-slate-300 mb-2">AI Summary</h4>
-                                <p className="text-sm text-slate-400 leading-relaxed">{insights[0].summary}</p>
+                            <div className="mt-4 p-4 bg-muted/20 rounded-xl border border-border">
+                                <h4 className="text-sm font-bold text-foreground/80 mb-2">AI Summary</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{insights[0].summary}</p>
                             </div>
                         </>
                     ) : (
-                        <Card className="p-8 bg-slate-900/40 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-                            <TrendingUp className="text-slate-600 mb-4" size={32} />
-                            <p className="text-slate-400 font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
+                        <Card className="p-8 bg-card border-dashed border-border flex flex-col items-center justify-center text-center">
+                            <TrendingUp className="text-muted-foreground/60 mb-4" size={32} />
+                            <p className="text-muted-foreground font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
                         </Card>
                     )}
                 </div>
+
+                <div className="pt-8 border-t border-border" />
             </div>
 
             {selectedProjectId && (

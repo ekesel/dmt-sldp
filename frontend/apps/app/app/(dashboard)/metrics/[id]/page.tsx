@@ -75,28 +75,28 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
 
     if (loading && !developer) {
         return (
-            <div className="min-h-screen bg-brand-dark flex items-center justify-center">
+            <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
-                    <p className="text-slate-400 font-medium animate-pulse">Loading developer performance data...</p>
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    <p className="text-muted-foreground font-medium animate-pulse">Loading developer performance data...</p>
                 </div>
             </div>
         );
     }
 
     if (!developer && !loading) {
-        return <div className="p-8 text-white">Developer not found.</div>;
+        return <div className="p-8 text-foreground">Developer not found.</div>;
     }
 
     const latestMetrics = metrics.find((m: any) => m.is_selected) || metrics[0] || {};
 
     return (
-        <main className="min-h-screen bg-brand-dark p-8 pb-20 selection:bg-brand-primary/30">
-            <div className="max-w-7xl mx-auto space-y-12 text-white">
+        <main className="min-h-screen bg-background p-8 pb-20 selection:bg-primary/30">
+            <div className="max-w-7xl mx-auto space-y-12 text-foreground">
                 <header className="space-y-6">
                     <button
                         onClick={() => router.back()}
-                        className="group flex items-center gap-2 text-slate-400 hover:text-white transition-all text-sm font-bold bg-white/5 px-4 py-2 rounded-full border border-white/5 hover:border-white/10"
+                        className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-sm font-bold bg-accent px-4 py-2 rounded-full border border-border hover:border-border/80"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         Back to Team
@@ -105,35 +105,35 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 py-4">
                         <div className="flex items-center gap-8">
                             <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-tr from-brand-primary to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                                <div className="relative w-24 h-24 rounded-3xl bg-slate-900 flex items-center justify-center text-brand-primary font-black text-4xl border border-white/10">
+                                <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                                <div className="relative w-24 h-24 rounded-3xl bg-card flex items-center justify-center text-primary font-black text-4xl border border-border">
                                     {(developer?.developer_name as string)?.charAt(0)}
                                 </div>
                             </div>
                             <div>
-                                <h1 className="text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                                <h1 className="text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
                                     {developer?.developer_name}
                                 </h1>
                                 <div className="flex items-center gap-3 mt-2">
-                                    <span className="text-slate-400 font-bold text-lg">{developer?.developer_email}</span>
+                                    <span className="text-muted-foreground font-bold text-lg">{developer?.developer_email}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 ml-1">Current Context</label>
+                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">Current Context</label>
                             <div className="flex flex-col gap-3">
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => setDropdownOpen(o => !o)}
-                                        className="flex items-center gap-3 bg-slate-900 border border-white/10 hover:border-brand-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
+                                        className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
                                     >
-                                        <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/20 shrink-0">
+                                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                                             <Briefcase size={20} />
                                         </div>
                                         <div className="flex flex-col flex-1 truncate text-left">
-                                            <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 leading-none mb-1">Project</span>
-                                            <span className="font-bold text-sm text-white truncate leading-none">
+                                            <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">Project</span>
+                                            <span className="font-bold text-sm text-foreground truncate leading-none">
                                                 {selectedProjectId === 'all'
                                                     ? 'All Projects Combined'
                                                     : developer?.projects?.find(p => String(p.id) === selectedProjectId)?.name ?? 'Project'}
@@ -141,12 +141,12 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                         </div>
                                         <ChevronDown
                                             size={18}
-                                            className={`text-slate-400 shrink-0 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
+                                            className={`text-muted-foreground shrink-0 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}
                                         />
                                     </button>
 
                                     {dropdownOpen && (
-                                        <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                                             <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                                                 {[{ id: 'all', name: 'All Projects Combined' }, ...(developer?.projects ?? [])].map(p => {
                                                     const isActive = String(p.id) === selectedProjectId;
@@ -155,15 +155,15 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                                             key={p.id}
                                                             onClick={() => { setSelectedProjectId(String(p.id)); setDropdownOpen(false); }}
                                                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
-                                                                ? 'bg-brand-primary/15 text-white'
-                                                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                                                ? 'bg-primary/15 text-primary-foreground'
+                                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                                                 }`}
                                                         >
-                                                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-brand-primary shadow-[0_0_6px_var(--color-brand-primary)]' : 'bg-slate-700 group-hover:bg-slate-400'
+                                                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-primary shadow-[0_0_6px_var(--color-primary)]' : 'bg-muted group-hover:bg-muted-foreground'
                                                                 }`} />
                                                             <span className="font-semibold text-sm truncate">{p.name}</span>
                                                             {isActive && (
-                                                                <span className="ml-auto text-brand-primary shrink-0">
+                                                                <span className="ml-auto text-primary shrink-0">
                                                                     <CheckCircle2 size={14} />
                                                                 </span>
                                                             )}
@@ -192,25 +192,25 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card className="p-6 bg-slate-900/40 border-white/5 hover:border-brand-primary/30 transition-all duration-500 group overflow-hidden relative">
-                        <div className="absolute -right-4 -top-4 text-brand-primary/5 group-hover:text-brand-primary/10 transition-colors">
+                    <Card className="p-6 bg-card border-border hover:border-primary/30 transition-all duration-500 group overflow-hidden relative">
+                        <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/10 transition-colors">
                             <TrendingUp size={120} strokeWidth={3} />
                         </div>
-                        <div className="flex items-center gap-3 text-brand-primary mb-6 relative">
-                            <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20">
+                        <div className="flex items-center gap-3 text-primary mb-6 relative">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                                 <TrendingUp size={20} />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Velocity</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Velocity</span>
                         </div>
                         <div className="relative">
                             <div className="text-5xl font-black">{latestMetrics.story_points_completed || 0}</div>
-                            <p className="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">
+                            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
                                 {selectedProjectId === 'all' ? 'Points across active sprints' : `Points in ${comparison?.sprint_name || 'latest sprint'}`}
                             </p>
                         </div>
                     </Card>
 
-                    <Card className="p-6 bg-slate-900/40 border-white/5 hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
+                    <Card className="p-6 bg-card border-border hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
                         <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
                             <Cpu size={120} strokeWidth={3} />
                         </div>
@@ -218,45 +218,45 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                             <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
                                 <Cpu size={20} />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">AI Usage</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">AI Usage</span>
                         </div>
                         <div className="relative">
                             <div className="text-5xl font-black">{latestMetrics.ai_usage_percent?.toFixed(0) || 0}<span className="text-xl text-blue-500/50 -ml-1">%</span></div>
-                            <p className="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">
+                            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
                                 {selectedProjectId === 'all' ? 'Average across active sprints' : `Average in ${comparison?.sprint_name || 'latest sprint'}`}
                             </p>
                         </div>
                     </Card>
 
-                    <Card className="p-6 bg-slate-900/40 border-white/5 hover:border-yellow-400/30 transition-all duration-500 group overflow-hidden relative">
-                        <div className="absolute -right-4 -top-4 text-yellow-400/5 group-hover:text-yellow-400/10 transition-colors">
+                    <Card className="p-6 bg-card border-border hover:border-warning/30 transition-all duration-500 group overflow-hidden relative">
+                        <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/10 transition-colors">
                             <ShieldCheck size={120} strokeWidth={3} />
                         </div>
-                        <div className="flex items-center gap-3 text-yellow-400 mb-6 relative">
-                            <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                        <div className="flex items-center gap-3 text-warning mb-6 relative">
+                            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/20">
                                 <CheckCircle2 size={20} />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Compliance</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Compliance</span>
                         </div>
                         <div className="relative">
-                            <div className="text-5xl font-black">{latestMetrics.dmt_compliance_rate?.toFixed(0) || 0}<span className="text-xl text-yellow-500/50 -ml-1">%</span></div>
-                            <p className="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">Standard adherence score</p>
+                            <div className="text-5xl font-black">{latestMetrics.dmt_compliance_rate?.toFixed(0) || 0}<span className="text-xl text-warning/50 -ml-1">%</span></div>
+                            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">Standard adherence score</p>
                         </div>
                     </Card>
 
-                    <Card className="p-6 bg-slate-900/40 border-white/5 hover:border-rose-500/30 transition-all duration-500 group overflow-hidden relative">
-                        <div className="absolute -right-4 -top-4 text-rose-500/5 group-hover:text-rose-500/10 transition-colors">
+                    <Card className="p-6 bg-card border-border hover:border-destructive/30 transition-all duration-500 group overflow-hidden relative">
+                        <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/10 transition-colors">
                             <AlertCircle size={120} strokeWidth={3} />
                         </div>
-                        <div className="flex items-center gap-3 text-rose-500 mb-6 relative">
-                            <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+                        <div className="flex items-center gap-3 text-destructive mb-6 relative">
+                            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center border border-destructive/20">
                                 <AlertCircle size={20} />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Quality Gap</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Quality Gap</span>
                         </div>
                         <div className="relative">
                             <div className="text-5xl font-black">{latestMetrics.defects_attributed || 0}</div>
-                            <p className="text-xs text-slate-500 mt-2 font-bold uppercase tracking-wider">
+                            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
                                 {selectedProjectId === 'all' ? 'Bugs across active sprints' : `Bugs in ${comparison?.sprint_name || 'current sprint'}`}
                             </p>
                         </div>
@@ -268,22 +268,22 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                     <div className="lg:col-span-2 space-y-8">
                         <div className="flex items-center justify-between">
                             <h2 className="text-2xl font-black flex items-center gap-4">
-                                <Activity className="text-brand-primary" />
+                                <Activity className="text-primary" />
                                 Performance Trends
-                                <span className="px-3 py-1 bg-white/5 text-slate-400 text-[10px] font-black uppercase rounded-full border border-white/5">
+                                <span className="px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border">
                                     Last {metrics.length} Sprints
                                 </span>
                             </h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
-                            <Card className="p-6 bg-slate-900 border-white/5 relative group">
+                            <Card className="p-6 bg-card border-border relative group">
                                 <div className="flex justify-between items-start mb-6">
                                     <div>
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Velocity History</h3>
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Velocity History</h3>
                                         <p className="text-lg font-bold">Story Points</p>
                                     </div>
-                                    <TrendingUp size={16} className="text-brand-primary" />
+                                    <TrendingUp size={16} className="text-primary" />
                                 </div>
                                 <TrendingChart
                                     data={metrics}
@@ -294,13 +294,13 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                 />
                             </Card>
 
-                            <Card className="p-6 bg-slate-900 border-white/5 relative group">
+                            <Card className="p-6 bg-card border-border relative group">
                                 <div className="flex justify-between items-start mb-6">
                                     <div>
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Compliance Trend</h3>
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Compliance Trend</h3>
                                         <p className="text-lg font-bold">DMT Score %</p>
                                     </div>
-                                    <ShieldCheck size={16} className="text-yellow-400" />
+                                    <ShieldCheck size={16} className="text-warning" />
                                 </div>
                                 <TrendingChart
                                     data={metrics}
@@ -314,12 +314,12 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                         </div>
 
                         <h2 className="text-2xl font-black flex items-center gap-4 pt-4">
-                            <Clock className="text-brand-primary" />
+                            <Clock className="text-primary" />
                             Sprint History
                         </h2>
-                        <Card className="bg-slate-900/40 border-white/5 overflow-hidden rounded-3xl">
+                        <Card className="bg-card border-border overflow-hidden rounded-3xl">
                             <table className="w-full text-left">
-                                <thead className="bg-white/5 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                                <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">
                                     <tr>
                                         <th className="px-8 py-6">Sprint</th>
                                         <th className="px-8 py-6">Points</th>
@@ -328,17 +328,17 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                         <th className="px-8 py-6 text-right">DMT Compliance</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 font-medium">
+                                <tbody className="divide-y divide-border font-medium">
                                     {metrics.map((m, idx) => (
-                                        <tr key={idx} className="hover:bg-white/5 transition-all group">
-                                            <td className="px-8 py-6 font-bold group-hover:text-brand-primary transition-colors">{m.sprint_name}</td>
+                                        <tr key={idx} className="hover:bg-accent transition-all group">
+                                            <td className="px-8 py-6 font-bold group-hover:text-primary transition-colors">{m.sprint_name}</td>
                                             <td className="px-8 py-6">{m.story_points_completed}</td>
                                             <td className="px-8 py-6">{m.prs_merged}</td>
-                                            <td className="px-8 py-6 text-slate-400">{m.prs_reviewed || 0}</td>
-                                            <td className="px-8 py-6 text-right font-black text-brand-primary">
+                                            <td className="px-8 py-6 text-muted-foreground">{m.prs_reviewed || 0}</td>
+                                            <td className="px-8 py-6 text-right font-black text-primary">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <div className="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-brand-primary" style={{ width: `${m.dmt_compliance_rate}%` }} />
+                                                    <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                                                        <div className="h-full bg-primary" style={{ width: `${m.dmt_compliance_rate}%` }} />
                                                     </div>
                                                     {m.dmt_compliance_rate?.toFixed(0)}%
                                                 </div>
@@ -352,48 +352,48 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
 
                     <div className="space-y-8">
                         <h2 className="text-2xl font-black flex items-center gap-4">
-                            <ChartIcon className="text-brand-primary" />
+                            <ChartIcon className="text-primary" />
                             Benchmarks
                             {comparison?.sprint_name && (
-                                <span className="px-3 py-1 bg-white/5 text-slate-400 text-[10px] font-black uppercase rounded-full border border-white/5 tracking-wider">
+                                <span className="px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border tracking-wider">
                                     {comparison.sprint_name}
                                 </span>
                             )}
                         </h2>
-                        <Card className="p-8 bg-gradient-to-br from-slate-900 to-slate-900/50 border-white/10 space-y-10 rounded-3xl shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/10 blur-[60px]" />
+                        <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px]" />
 
                             <div className="space-y-4">
-                                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-slate-400">
+                                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
                                     <span>Relative Velocity</span>
-                                    <span className="text-white">{comparison?.velocity?.you || 0} / {comparison?.velocity?.team_avg?.toFixed(1) || 0} pts</span>
+                                    <span className="text-foreground">{comparison?.velocity?.you || 0} / {comparison?.velocity?.team_avg?.toFixed(1) || 0} pts</span>
                                 </div>
-                                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                <div className="h-3 w-full bg-muted rounded-full overflow-hidden p-0.5 border border-border">
                                     <div
-                                        className="h-full bg-gradient-to-r from-blue-600 to-brand-primary rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                                        className="h-full bg-gradient-to-r from-blue-600 to-primary rounded-full shadow-[0_0_15px_var(--color-primary)]"
                                         style={{ width: `${Math.min(100, comparison?.velocity?.team_avg > 0 ? ((comparison?.velocity?.you || 0) / comparison.velocity.team_avg) * 100 : 0)}%` }}
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Your output vs project average</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Your output vs project average</p>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-slate-400">
+                                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
                                     <span>DMT Standards</span>
-                                    <span className="text-white">{comparison?.compliance?.you?.toFixed(1) || 0}% / {comparison?.compliance?.team_avg?.toFixed(1) || 0}%</span>
+                                    <span className="text-foreground">{comparison?.compliance?.you?.toFixed(1) || 0}% / {comparison?.compliance?.team_avg?.toFixed(1) || 0}%</span>
                                 </div>
-                                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-white/5">
+                                <div className="h-3 w-full bg-muted rounded-full overflow-hidden p-0.5 border border-border">
                                     <div
-                                        className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full shadow-[0_0_15px_rgba(250,204,21,0.5)]"
+                                        className="h-full bg-gradient-to-r from-yellow-600 to-warning rounded-full shadow-[0_0_15px_var(--color-warning)]"
                                         style={{ width: `${comparison?.compliance?.you || 0}%` }}
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Standards adherence benchmark</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Standards adherence benchmark</p>
                             </div>
 
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                <p className="text-xs text-slate-400 italic leading-relaxed">
-                                    "Your compliance is <span className="text-brand-primary font-bold">{comparison?.compliance?.you > comparison?.compliance?.team_avg ? 'above' : 'below'}</span> average.
+                            <div className="p-4 bg-muted/50 rounded-2xl border border-border">
+                                <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                    "Your compliance is <span className="text-primary font-bold">{comparison?.compliance?.you > comparison?.compliance?.team_avg ? 'above' : 'below'}</span> average.
                                     Maintain strong DMT signoffs to improve overall project governance."
                                 </p>
                             </div>
@@ -413,8 +413,8 @@ export default function DeveloperDetailsPage({ params }: { params: Promise<{ id:
                                     { label: 'Defects', value: latestMetrics.defects_attributed ?? 0 },
                                 ].map(({ label, value }) => (
                                     <div key={label} className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-400 font-medium">{label}</span>
-                                        <span className="text-white font-black">{value}</span>
+                                        <span className="text-muted-foreground font-medium">{label}</span>
+                                        <span className="text-foreground font-black">{value}</span>
                                     </div>
                                 ))}
                             </div>

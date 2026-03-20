@@ -69,32 +69,32 @@ function SetPasswordForm() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <div className="max-w-md w-full">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-primary/20 text-brand-primary mb-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 text-primary mb-4">
                         <Shield className="w-6 h-6" />
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Set New Password</h1>
-                    <p className="text-slate-400">Choose a strong password for your account</p>
+                    <h1 className="text-2xl font-bold text-foreground mb-2">Set New Password</h1>
+                    <p className="text-muted-foreground">Choose a strong password for your account</p>
                 </div>
 
                 {/* Card */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-xl">
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-xl backdrop-blur-xl">
                     {success ? (
                         <div className="text-center space-y-4 py-4">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 text-green-500 mb-2">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent mb-2">
                                 <CheckCircle2 className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-medium text-white">Password Updated!</h3>
-                            <p className="text-slate-400 text-sm">
+                            <h3 className="text-xl font-medium text-foreground">Password Updated!</h3>
+                            <p className="text-muted-foreground text-sm">
                                 Your password has been successfully reset. Redirecting you to login...
                             </p>
                             <div className="pt-4">
                                 <Link
                                     href="/auth/login"
-                                    className="inline-flex items-center justify-center w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-medium py-2.5 rounded-lg transition-all"
+                                    className="inline-flex items-center justify-center w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2.5 rounded-lg transition-all"
                                 >
                                     Log In Now
                                 </Link>
@@ -103,21 +103,21 @@ function SetPasswordForm() {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {error && (
-                                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                                    <p className="text-sm text-red-400">{error}</p>
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-destructive">{error}</p>
                                 </div>
                             )}
 
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-300">New Password</label>
+                                <label className="text-sm font-medium text-muted-foreground">New Password</label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <input
                                         type="password"
                                         required
                                         disabled={!uid || !token || success}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all outline-none disabled:opacity-50"
+                                        className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none disabled:opacity-50"
                                         placeholder="••••••••"
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -126,14 +126,14 @@ function SetPasswordForm() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-300">Confirm Password</label>
+                                <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <input
                                         type="password"
                                         required
                                         disabled={!uid || !token || success}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary transition-all outline-none disabled:opacity-50"
+                                        className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none disabled:opacity-50"
                                         placeholder="••••••••"
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -144,7 +144,7 @@ function SetPasswordForm() {
                             <button
                                 type="submit"
                                 disabled={isLoading || !uid || !token || !formData.password || formData.password !== formData.confirmPassword || success}
-                                className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                             >
                                 {isLoading ? (
                                     <>
@@ -166,8 +166,8 @@ function SetPasswordForm() {
 export default function SetPasswordPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         }>
             <SetPasswordForm />

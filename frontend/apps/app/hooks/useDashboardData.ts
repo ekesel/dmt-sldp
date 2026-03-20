@@ -98,7 +98,7 @@ export function useDashboardData(projectId?: number | null) {
     }
   }, []);
 
-  const { lastMessage } = useWebSocket(wsUrls.url || '', wsUrls.fallback || undefined);
+  const { lastMessage } = useWebSocket();
 
   const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
 

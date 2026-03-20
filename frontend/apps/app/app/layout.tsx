@@ -18,12 +18,12 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en" className="dark">
-            <body className={`${inter.className} min-h-screen bg-slate-950 text-slate-200`} suppressHydrationWarning>
+        <html lang="en">
+            <body className={`${inter.className} min-h-screen bg-background text-foreground`} suppressHydrationWarning>
                 <AuthProvider>
                     {children}
                     <Toaster position="bottom-right" toastOptions={{
-                        className: 'bg-slate-900 text-white border border-white/10',
+                        className: 'bg-popover text-foreground border border-border',
                         duration: 5000,
                     }} />
                 </AuthProvider>
