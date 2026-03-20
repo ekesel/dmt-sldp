@@ -10,6 +10,9 @@ from .models import Image
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from core.permissions import IsManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 # --- Comment Views ---
 
@@ -31,7 +34,8 @@ class CreateCommentView(APIView):
                 }, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in CreateCommentView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PostCommentsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -46,7 +50,8 @@ class PostCommentsView(APIView):
             serializer = CommentSerializer(comments, many=True)
             return Response({"total_comments": total_comments, "comments": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in PostCommentsView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UpdateCommentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -65,7 +70,8 @@ class UpdateCommentView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in UpdateCommentView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DeleteCommentView(APIView):   
     permission_classes = [IsAuthenticated]
@@ -82,7 +88,8 @@ class DeleteCommentView(APIView):
             comment.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in DeleteCommentView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # --- Reaction Views ---
 
@@ -110,7 +117,8 @@ class ReactPostView(APIView):
             serializer = ReactionSerializer(reaction)
             return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in ReactPostView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PostReactionsView(APIView):
     permission_classes = [IsAuthenticated] 
@@ -122,7 +130,8 @@ class PostReactionsView(APIView):
             serializer = ReactionSerializer(reactions, many=True)
             return Response({"total_reactions": total_reactions, "reactions": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in PostReactionsView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DeleteReactionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -137,27 +146,28 @@ class DeleteReactionView(APIView):
             reaction.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error in DeleteReactionView: {str(e)}", exc_info=True)
+            return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
-# Image Upload Api --
-@permission_classes([IsManager])
-@csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsManager])
 def upload_temp_image(request):
-    if request.method != "POST":
-        return Response({"error": "Invalid request method"}, status=status.HTTP_400_BAD_REQUEST)
 
     file = request.FILES.get("file")
     if not file:
         return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Save the temp image
-    temp_image =  Image.objects.create(file=file)
-    print(f"Temp image saved with ID: {temp_image.id} and URL: {temp_image.file.url}")
+    try:
+        # Save the temp image
+        temp_image = Image.objects.create(file=file)
+        # print(f"Temp image saved with ID: {temp_image.id} and URL: {temp_image.file.url}") # Removed print for production readiness
 
-    return Response({
-        "image_id": str(temp_image.id),  # UUID returned
-        "file_url": temp_image.file.url
-    })
+        return Response({
+            "image_id": str(temp_image.id),  # UUID returned
+            "file_url": temp_image.file.url
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        logger.error(f"Error in upload_temp_image: {str(e)}", exc_info=True)
+        return Response({"error": "An internal server error occurred during image upload"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

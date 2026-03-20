@@ -1,16 +1,17 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django_tenants.utils import schema_context
-from httpx import post
 from tenants.models import Domain
 from .models import Post, Image
 from .serializers import PostSerializer
 from users.models import User
 import json 
+import logging
 from django.core.paginator import Paginator
 from django.utils.timezone import localtime
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
 
 class NewsConsumer(AsyncJsonWebsocketConsumer):
@@ -109,6 +110,13 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         @sync_to_async
         def save_post_to_db():
             with schema_context(self.schema_name):
+                title = data.get("title")
+                content = data.get("content")
+                category = data.get("category")
+
+                if not (title and title.strip() and content and content.strip() and category and category.strip()):
+                    return {"error": "title, content, and category are required and cannot be empty"}
+
                 image_id = data.get("image_id")
                 temp = None # Initialize so it exists even if image_id is None
                 if image_id:
@@ -118,11 +126,11 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                         return {"error": "Temp image not found"}
 
                 post = Post.objects.create(
-                    title=data.get("title"),
-                    content=data.get("content"),
-                    category=data.get("category"),
+                    title=title,
+                    content=content,
+                    category=category,
                     author=self.user,
-                    media_file=temp.file.url if temp else None 
+                    media_file=temp.file if temp else None 
                 )
                 
                 # Only delete if we actually found a temp image
@@ -145,8 +153,11 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 self.group_name, {"type": "broadcast_message", "event": "post_created", "data": post_data}
             )
             
+        except Image.DoesNotExist:
+             await self.send_json({"error": "Temporary image not found"})
         except Exception as e:
-            await self.send_json({"error": str(e)})
+            logger.error(f"Error in create_post: {str(e)}", exc_info=True)
+            await self.send_json({"error": "An unexpected error occurred while creating the post"})
 
 
 # for delete the post best on id 
@@ -154,7 +165,13 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         @sync_to_async
         def delete_post_from_db():
             with schema_context(self.schema_name):
-                obj = Post.objects.get(post_id=data.get("id"))
+                post_id = data.get("id")
+                if not post_id:
+                    return {"error": "Post ID is required"}
+                obj = Post.objects.select_related('author').get(post_id=post_id)
+                if obj.author != self.user:
+                    raise PermissionError("You can only delete your own posts")
+                
                 post_title = obj.title
                 obj.delete()
                 return post_title
@@ -164,14 +181,23 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast_message", "event": "post_deleted", "data": {"id": data.get("id"), "title": post_title}}
             )
-        except Exception as e:
+        except PermissionError as e:
             await self.send_json({"error": str(e)})
+        except Post.DoesNotExist:
+            await self.send_json({"error": "Post not found or already deleted"})
+        except Exception as e:
+            logger.error(f"Error in delete_post: {str(e)}", exc_info=True)
+            await self.send_json({"error": "An unexpected error occurred while deleting the post"})
 
 # update the post based on id and send the updated post data to all users in the group
     async def update_post(self, data):
         @sync_to_async
         def update_post_in_db():
             with schema_context(self.schema_name):
+                post_id = data.get("id")
+                if not post_id:
+                    return {"error": "Post ID is required"}
+                
                 image_id = data.get("image_id")
                 temp = None # Initialize so it exists even if image_id is None
                 if image_id:
@@ -181,18 +207,35 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                         return {"error": "Temp image not found"}
 
                 try:
-                    post = Post.objects.select_related('author').get(post_id=data.get("id"))
+                    post = Post.objects.select_related('author').get(post_id=post_id)
+                    if post.author != self.user:
+                        raise PermissionError("You can only update your own posts")
                 except Post.DoesNotExist:
                     return {"error": "Post not found"}
 
-                # Update text fields safely
-                post.title = data.get("title", post.title)
-                post.content = data.get("content", post.content)
-                post.category = data.get("category", post.category)
+                # Update text fields safely and validate if provided
+                title = data.get("title")
+                content = data.get("content")
+                category = data.get("category")
+
+                if title is not None:
+                    if not title.strip():
+                        return {"error": "title cannot be empty"}
+                    post.title = title
+                
+                if content is not None:
+                    if not content.strip():
+                        return {"error": "content cannot be empty"}
+                    post.content = content
+                
+                if category is not None:
+                    if not category.strip():
+                        return {"error": "category cannot be empty"}
+                    post.category = category
 
                 # update the image iif the image is already prestent in the post 
                 if temp:
-                    post.media_file = temp.file.url 
+                    post.media_file = temp.file 
                     temp.delete() # delete the temp image after saving the post 
                 
                 post.save()
@@ -210,8 +253,15 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast_message", "event": "post_updated", "data": post_data}
             )
-        except Exception as e:
+        except PermissionError as e:
             await self.send_json({"error": str(e)})
+        except Post.DoesNotExist:
+            await self.send_json({"error": "Post not found"})
+        except Image.DoesNotExist:
+             await self.send_json({"error": "Temporary image not found"})
+        except Exception as e:
+            logger.error(f"Error in update_post: {str(e)}", exc_info=True)
+            await self.send_json({"error": "An unexpected error occurred while updating the post"})
 
     # get all posts with pagination and send the data to the client that requested it (not broadcast to all users)
     async def get_posts(self, data):
@@ -237,7 +287,8 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 "has_next": has_next
             })
         except Exception as e:
-            await self.send_json({"error": str(e)})
+            logger.error(f"Error in get_posts: {str(e)}", exc_info=True)
+            await self.send_json({"error": "An unexpected error occurred while fetching posts"})
 
     # Broadcast helper its send the message to the all clients in the group with the event type and data
     async def broadcast_message(self, event):

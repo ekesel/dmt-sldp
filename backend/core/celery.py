@@ -35,6 +35,6 @@ app.conf.beat_schedule = {
     },
     'nightly-unused-images-cleanup': {
         'task': 'newsapp.tasks.run_nightly_unused_images_cleanup',
-        'schedule': crontab(hour=0, minute=0),
+        'schedule': crontab(hour=1, minute=0),
     },
 }

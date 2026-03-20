@@ -126,7 +126,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+# STATIC_URL is defined below in Static & Media Files section
 # MEDIA configuration is below in CORS & Security section for organization
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -155,8 +155,8 @@ CHANNEL_LAYERS = {
 }
 
 # Static & Media Files
-STATIC_URL = 'static/'
-MEDIA_URL = 'media/'
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Ensure media directory exists
