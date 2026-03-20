@@ -13,30 +13,30 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ selectedProjec
 
     const selectedProject = projects.find(p => p.id === selectedProjectId);
 
-    if (loading) return <div className="animate-pulse w-32 h-10 bg-slate-800 rounded-lg"></div>;
-    if (error) return <div className="text-red-500 text-xs">Error loading projects</div>;
+    if (loading) return <div className="animate-pulse w-32 h-10 bg-muted rounded-lg"></div>;
+    if (error) return <div className="text-destructive text-xs">Error loading projects</div>;
 
     return (
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 transition-all font-medium border border-slate-700 w-48 justify-between"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between"
             >
                 <div className="flex items-center gap-2 truncate">
-                    <Folder size={16} className="text-brand-primary" />
+                    <Folder size={16} className="text-primary" />
                     <span className="truncate">{selectedProject ? selectedProject.name : 'All Projects'}</span>
                 </div>
                 <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-                <div className="absolute top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute top-full mt-2 w-56 bg-popover border border-border rounded-lg shadow-xl z-50 py-1">
                     <button
                         onClick={() => {
                             onSelect(null);
                             setIsOpen(false);
                         }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 flex items-center gap-2 ${!selectedProjectId ? 'text-brand-primary bg-slate-700/50' : 'text-slate-300'}`}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 ${!selectedProjectId ? 'text-primary bg-accent/50' : 'text-muted-foreground'}`}
                     >
                         <Folder size={14} />
                         All Projects
@@ -48,7 +48,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ selectedProjec
                                 onSelect(project.id);
                                 setIsOpen(false);
                             }}
-                            className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-700 flex items-center gap-2 ${selectedProjectId === project.id ? 'text-brand-primary bg-slate-700/50' : 'text-slate-300'}`}
+                            className={`w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 ${selectedProjectId === project.id ? 'text-primary bg-accent/50' : 'text-muted-foreground'}`}
                         >
                             <span className="w-1 h-1 rounded-full bg-current opacity-50"></span>
                             {project.name}

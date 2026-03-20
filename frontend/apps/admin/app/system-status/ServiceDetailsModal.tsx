@@ -73,25 +73,25 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="bg-popover w-full max-w-2xl rounded-xl shadow-2xl border border-border overflow-hidden transform transition-all">
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Server className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white capitalize">
+                            <h2 className="text-xl font-bold text-foreground capitalize">
                                 {serviceName?.replace('_', ' ')}
                             </h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Service Inspector</p>
+                            <p className="text-sm text-muted-foreground">Service Inspector</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-full text-slate-500 transition-colors"
+                        className="p-2 hover:bg-muted rounded-full text-muted-foreground transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -101,27 +101,27 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
                 <div className="p-6 max-h-[70vh] overflow-y-auto">
                     {loading ? (
                         <div className="flex justify-center py-12">
-                            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
+                            <RefreshCw className="w-8 h-8 text-primary animate-spin" />
                         </div>
                     ) : details ? (
                         <div className="space-y-6">
                             {/* Status Banner */}
                             <div className={`flex items-center justify-between p-4 rounded-lg border ${details.status === 'up'
-                                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/30'
-                                : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/30'
+                                ? 'bg-success/10 border-success/20'
+                                : 'bg-destructive/10 border-destructive/20'
                                 }`}>
                                 <div className="flex items-center gap-3">
                                     {details.status === 'up' ? (
-                                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                        <CheckCircle className="w-5 h-5 text-success" />
                                     ) : (
-                                        <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                        <AlertTriangle className="w-5 h-5 text-destructive" />
                                     )}
-                                    <span className={`font-semibold ${details.status === 'up' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                                    <span className={`font-semibold ${details.status === 'up' ? 'text-success' : 'text-destructive'
                                         }`}>
                                         Status: {details.status.toUpperCase()}
                                     </span>
                                 </div>
-                                <div className="text-sm text-slate-500 dark:text-slate-400">
+                                <div className="text-sm text-muted-foreground">
                                     Uptime: {details.uptime}
                                 </div>
                             </div>
@@ -146,17 +146,17 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
 
                             {/* Logs Section */}
                             <div>
-                                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                                     <FileText size={16} /> Recent Logs
                                 </h3>
-                                <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                                <div className="bg-slate-950 border border-border rounded-lg p-4 font-mono text-sm overflow-x-auto shadow-inner">
                                     {details.logs.map((log, idx) => (
                                         <div key={idx} className="mb-1 last:mb-0">
                                             <span className="text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                                            <span className={`mx-2 font-bold ${log.level === 'INFO' ? 'text-blue-400' :
-                                                log.level === 'WARNING' ? 'text-yellow-400' : 'text-red-400'
+                                            <span className={`mx-2 font-bold ${log.level === 'INFO' ? 'text-primary' :
+                                                log.level === 'WARNING' ? 'text-warning' : 'text-destructive'
                                                 }`}>[{log.level}]</span>
-                                            <span className="text-slate-300">{log.message}</span>
+                                            <span className="text-slate-200">{log.message}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -170,10 +170,10 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
+                <div className="px-6 py-4 border-t border-border bg-muted/50 flex justify-end gap-3">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white font-medium transition-colors"
+                        className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors"
                     >
                         Close
                     </button>
@@ -181,7 +181,7 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
                         <button
                             onClick={handleRestart}
                             disabled={restarting}
-                            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-destructive/20"
                         >
                             {restarting ? (
                                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -198,8 +198,8 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
 };
 
 const MetricCard = ({ label, value }: { label: string; value: string }) => (
-    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-        <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{label}</div>
-        <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={value}>{value}</div>
+    <div className="bg-muted/50 p-3 rounded-lg border border-border">
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{label}</div>
+        <div className="font-semibold text-foreground truncate" title={value}>{value}</div>
     </div>
 );

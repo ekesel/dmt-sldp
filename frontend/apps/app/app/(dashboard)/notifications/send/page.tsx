@@ -50,8 +50,8 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                     ${dim} flex items-center justify-center rounded-[5px] cursor-pointer
                     border transition-all duration-150
                     ${checked || indeterminate
-                        ? 'bg-brand-primary border-brand-primary shadow-[0_0_0_3px_rgba(var(--color-brand-primary-rgb,99,102,241),0.18)]'
-                        : 'bg-slate-800 border-slate-600 hover:border-brand-primary/60'
+                        ? 'bg-primary border-primary ring-2 ring-primary/20'
+                        : 'bg-accent border-border hover:border-primary/60'
                     }
                 `}
             >
@@ -217,27 +217,27 @@ export default function SendNotificationPage() {
     return (
         <div className="p-8 max-w-5xl mx-auto">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                    <Bell className="w-8 h-8 text-brand-primary" />
+                <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                    <Bell className="w-8 h-8 text-primary" />
                     Notification Center
                 </h1>
-                <p className="text-slate-400 mt-2">
+                <p className="text-muted-foreground mt-2">
                     Select one or more users and broadcast an in-app notification.
                 </p>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* ── User list panel ── */}
-                <div className="lg:col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[600px]">
+                <div className="lg:col-span-1 bg-card border border-border rounded-xl overflow-hidden flex flex-col h-[600px]">
 
                     {/* Search */}
-                    <div className="p-4 border-b border-slate-800 bg-slate-900/80 space-y-3">
+                    <div className="p-4 border-b border-border bg-muted/30 space-y-3">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="Search users..."
-                                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-brand-primary transition"
+                                className="w-full pl-10 pr-4 py-2 bg-accent border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary transition"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -254,13 +254,13 @@ export default function SendNotificationPage() {
                                 />
                                 <span
                                     onClick={toggleSelectAll}
-                                    className="text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
+                                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
                                 >
                                     {allFilteredSelected ? 'Deselect all' : 'Select all'}{' '}
-                                    <span className="text-slate-600">({filteredUsers.length})</span>
+                                    <span className="text-muted-foreground">({filteredUsers.length})</span>
                                 </span>
                                 {selectedIds.size > 0 && (
-                                    <span className="ml-auto flex items-center gap-1 bg-brand-primary/20 text-brand-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    <span className="ml-auto flex items-center gap-1 bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
                                         <Users className="w-3 h-3" />
                                         {selectedIds.size}
                                     </span>
@@ -272,9 +272,9 @@ export default function SendNotificationPage() {
                     {/* User rows */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                         {loading ? (
-                            <div className="p-4 text-center text-slate-500 italic">Loading users...</div>
+                            <div className="p-4 text-center text-muted-foreground italic">Loading users...</div>
                         ) : filteredUsers.length === 0 ? (
-                            <div className="p-4 text-center text-slate-500 italic">No users found</div>
+                            <div className="p-4 text-center text-muted-foreground italic">No users found</div>
                         ) : (
                             filteredUsers.map((u) => {
                                 const uid = Number(u.id);
@@ -284,8 +284,8 @@ export default function SendNotificationPage() {
                                         key={u.id}
                                         onClick={() => toggleUser(uid)}
                                         className={`w-full text-left p-3 rounded-lg flex items-center gap-3 cursor-pointer transition select-none ${selected
-                                                ? 'bg-brand-primary/20 border border-brand-primary/30'
-                                                : 'hover:bg-slate-800 border border-transparent'
+                                                ? 'bg-primary/20 border border-primary/30'
+                                                : 'hover:bg-accent border border-transparent'
                                             }`}
                                     >
                                         <Checkbox
@@ -294,14 +294,14 @@ export default function SendNotificationPage() {
                                             ariaLabel={`Select ${displayName(u)}`}
                                             size="sm"
                                         />
-                                        <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-brand-primary border border-slate-700 flex-shrink-0">
+                                        <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-primary border border-border flex-shrink-0">
                                             <UserIcon className="w-4 h-4" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-white truncate">
+                                            <p className="text-sm font-semibold text-foreground truncate">
                                                 {displayName(u)}
                                             </p>
-                                            <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                                         </div>
                                     </div>
                                 );
@@ -311,26 +311,26 @@ export default function SendNotificationPage() {
                 </div>
 
                 {/* ── Compose panel ── */}
-                <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
                     {selectedIds.size > 0 ? (
                         <form onSubmit={handleSend} className="space-y-6">
                             {/* Recipient badge */}
-                            <div className="flex items-center gap-4 p-4 bg-brand-primary/5 rounded-lg border border-brand-primary/10">
-                                <div className="p-2 bg-brand-primary/20 rounded-full">
-                                    <Users className="w-6 h-6 text-brand-primary" />
+                            <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                                <div className="p-2 bg-primary/20 rounded-full">
+                                    <Users className="w-6 h-6 text-primary" />
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-xs text-brand-primary uppercase font-bold tracking-wider">
+                                    <p className="text-xs text-primary uppercase font-bold tracking-wider">
                                         {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
                                     </p>
-                                    <p className="text-base font-bold text-white truncate">
+                                    <p className="text-base font-bold text-foreground truncate">
                                         {recipientLabel()}
                                     </p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setSelectedIds(new Set())}
-                                    className="ml-auto text-xs text-slate-500 hover:text-rose-400 transition"
+                                    className="ml-auto text-xs text-muted-foreground hover:text-destructive transition"
                                     aria-label="Clear selection"
                                 >
                                     Clear
@@ -339,7 +339,7 @@ export default function SendNotificationPage() {
 
                             {/* Notification type picker */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Notification Type
                                 </label>
                                 <div className="grid grid-cols-4 gap-3">
@@ -354,12 +354,12 @@ export default function SendNotificationPage() {
                                             type="button"
                                             onClick={() => setType(t.id)}
                                             className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${type === t.id
-                                                ? 'bg-slate-800 border-slate-600 ring-2 ring-brand-primary/50'
-                                                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                                                ? 'bg-accent border-border ring-2 ring-primary/50'
+                                                : 'bg-card border-border hover:border-border/80'
                                                 }`}
                                         >
                                             <t.icon className={`w-6 h-6 ${t.color}`} />
-                                            <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                                            <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                                                 {t.id}
                                             </span>
                                         </button>
@@ -369,13 +369,13 @@ export default function SendNotificationPage() {
 
                             {/* Title */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Notification Title
                                 </label>
                                 <input
                                     type="text"
                                     placeholder="Brief summary..."
-                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-primary transition"
+                                    className="w-full px-4 py-3 bg-accent border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                 />
@@ -383,13 +383,13 @@ export default function SendNotificationPage() {
 
                             {/* Message */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Message Content
                                 </label>
                                 <textarea
                                     placeholder="Enter your message here..."
                                     rows={5}
-                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-primary transition resize-none"
+                                    className="w-full px-4 py-3 bg-accent border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition resize-none"
                                     value={message}
                                     onChange={(e) => setMessage(e.target.value)}
                                     required
@@ -421,7 +421,7 @@ export default function SendNotificationPage() {
                             <button
                                 type="submit"
                                 disabled={sending || !message}
-                                className="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed group"
                             >
                                 {sending ? (
                                     'Sending...'
@@ -436,14 +436,14 @@ export default function SendNotificationPage() {
                             </button>
                         </form>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-12 text-slate-500">
-                            <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6 border border-slate-700">
+                        <div className="h-full flex flex-col items-center justify-center text-center p-12 text-muted-foreground">
+                            <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center mb-6 border border-border">
                                 <Users className="w-10 h-10 opacity-20" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-300 mb-2">No Recipients Selected</h3>
+                            <h3 className="text-xl font-bold text-foreground/80 mb-2">No Recipients Selected</h3>
                             <p className="max-w-xs mx-auto">
                                 Check one or more users from the list on the left. Use{' '}
-                                <span className="text-slate-300 font-medium">Select all</span> to target everyone at once.
+                                <span className="text-foreground/80 font-medium">Select all</span> to target everyone at once.
                             </p>
                         </div>
                     )}

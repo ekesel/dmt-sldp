@@ -45,37 +45,37 @@ export const AIInsightsList: React.FC<AIInsightsListProps> = ({ insightId, sugge
 
     return (
         <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles size={18} className="text-brand-primary" />
+            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Sparkles size={18} className="text-primary" />
                 AI Optimization Suggestions
             </h3>
             <div className="grid grid-cols-1 gap-4">
                 {suggestions.map((s) => (
-                    <Card key={s.id} className="bg-slate-900/60 border-white/5 p-4 hover:border-brand-primary/20 transition-all">
+                    <Card key={s.id} className="bg-card/60 border-border p-4 hover:border-primary/20 transition-all">
                         <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${s.impact === 'High' ? 'bg-rose-500 text-white' :
-                                        s.impact === 'Medium' ? 'bg-amber-500 text-black' :
-                                            'bg-slate-700 text-slate-300'
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${s.impact === 'High' ? 'bg-destructive text-destructive-foreground' :
+                                        s.impact === 'Medium' ? 'bg-warning text-warning-foreground' :
+                                            'bg-muted text-muted-foreground'
                                         }`}>
                                         {s.impact} Impact
                                     </span>
-                                    <p className="text-sm font-bold text-white">{s.title}</p>
+                                    <p className="text-sm font-bold text-foreground">{s.title}</p>
                                 </div>
-                                <p className="text-xs text-slate-400 leading-relaxed">{s.description}</p>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{s.description}</p>
                             </div>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleFeedback(s.id, 'rejected')}
-                                    className="p-2 rounded-lg bg-white/5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+                                    className="p-2 rounded-lg bg-secondary text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
                                     title="Discard"
                                 >
                                     <X size={16} />
                                 </button>
                                 <button
                                     onClick={() => handleFeedback(s.id, 'accepted')}
-                                    className="p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-lg shadow-brand-primary/10"
+                                    className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-lg shadow-primary/10"
                                     title="Accept Strategy"
                                 >
                                     <Check size={16} />

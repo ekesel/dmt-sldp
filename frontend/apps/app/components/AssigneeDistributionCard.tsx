@@ -31,8 +31,8 @@ function avatarColor(name: string): string {
 export function AssigneeDistributionCard({ assignees, loading }: Props) {
     if (loading) {
         return (
-            <div className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-6 flex items-center justify-center h-48">
-                <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+            <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 flex items-center justify-center h-48">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
             </div>
         );
     }
@@ -52,15 +52,15 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
     const maxTotal = Math.max(...uniqueAssignees.map((a) => a.total), 1);
 
     return (
-        <div className="bg-slate-800/60 backdrop-blur border border-slate-700/50 rounded-2xl p-6">
+        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6">
             {/* Header */}
             <div className="flex items-center gap-2 mb-5">
-                <Users className="text-brand-primary w-5 h-5" />
+                <Users className="text-primary w-5 h-5" />
                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-xl font-bold text-white">Team Workload</h2>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Last 5 sprints</span>
+                    <h2 className="text-xl font-bold text-foreground">Team Workload</h2>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Last 5 sprints</span>
                 </div>
-                <span className="ml-auto text-xs text-slate-400">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>
 
             <div className="space-y-4">
@@ -74,7 +74,7 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                             <div className="flex items-center gap-3 mb-1.5">
                                 {/* Avatar */}
                                 <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md"
+                                    className="w-9 h-9 rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold flex-shrink-0 shadow-md"
                                     style={{ backgroundColor: color }}
                                 >
                                     {getInitials(person.name)}
@@ -83,28 +83,28 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                                 {/* Name + badges */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-sm font-medium text-white">{person.name}</span>
+                                        <span className="text-sm font-medium text-foreground">{person.name}</span>
                                         {person.is_portal_user && (
                                             <span title="Can log in to portal">
-                                                <UserCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                                                <UserCheck className="w-3.5 h-3.5 text-brand-accent flex-shrink-0" />
                                             </span>
                                         )}
                                     </div>
-                                    <span className="text-xs text-slate-500">{person.email}</span>
+                                    <span className="text-xs text-muted-foreground">{person.email}</span>
                                 </div>
 
                                 {/* Stats */}
                                 <div className="flex items-center gap-3 flex-shrink-0 text-xs">
-                                    <span className="flex items-center gap-1 text-amber-400" title="In progress">
+                                    <span className="flex items-center gap-1 text-warning" title="In progress">
                                         <Loader2 className="w-3 h-3" />
                                         {person.in_progress}
                                     </span>
-                                    <span className="flex items-center gap-1 text-emerald-400" title="Completed">
+                                    <span className="flex items-center gap-1 text-brand-accent" title="Completed">
                                         <CheckCircle2 className="w-3 h-3" />
                                         {person.completed}
                                     </span>
                                     {person.avg_cycle_time_days !== null && (
-                                        <span className="flex items-center gap-1 text-slate-400" title="Avg cycle time">
+                                        <span className="flex items-center gap-1 text-muted-foreground" title="Avg cycle time">
                                             <Clock className="w-3 h-3" />
                                             {person.avg_cycle_time_days}d
                                         </span>
@@ -113,7 +113,7 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                             </div>
 
                             {/* Workload bar */}
-                            <div className="ml-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div className="ml-12 h-1.5 bg-border rounded-full overflow-hidden">
                                 <div
                                     className="h-full rounded-full transition-all duration-500"
                                     style={{
@@ -125,9 +125,9 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
 
                             {/* In-progress sub-bar overlay */}
                             {person.in_progress > 0 && (
-                                <div className="ml-12 mt-0.5 h-0.5 bg-amber-400/30 rounded-full overflow-hidden">
+                                <div className="ml-12 mt-0.5 h-0.5 bg-warning/30 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full rounded-full bg-amber-400"
+                                        className="h-full rounded-full bg-warning"
                                         style={{ width: `${inProgressPct}%` }}
                                     />
                                 </div>
@@ -138,11 +138,11 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 mt-5 pt-4 border-t border-slate-700/50 text-xs text-slate-400">
-                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 text-amber-400" /> In Progress</span>
-                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400" /> Completed</span>
+            <div className="flex items-center gap-4 mt-5 pt-4 border-t border-border text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 text-warning" /> In Progress</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-brand-accent" /> Completed</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Avg Cycle</span>
-                <span className="flex items-center gap-1 ml-auto"><UserCheck className="w-3 h-3 text-emerald-400" /> Portal access</span>
+                <span className="flex items-center gap-1 ml-auto"><UserCheck className="w-3 h-3 text-brand-accent" /> Portal access</span>
             </div>
         </div>
     );

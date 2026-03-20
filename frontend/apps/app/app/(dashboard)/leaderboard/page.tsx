@@ -38,7 +38,7 @@ const CategoryCard = ({
                 {sortedHistory.map((h, i) => (
                     <div key={i} className="flex flex-col justify-end items-center group relative cursor-help h-full">
                         {/* Tooltip */}
-                        <div className="absolute -top-8 bg-slate-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 transition-opacity pointers-events-none">
+                        <div className="absolute -top-8 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 transition-opacity pointers-events-none">
                             {h.date}: {h.score}
                         </div>
                         {/* Bar */}
@@ -53,7 +53,7 @@ const CategoryCard = ({
     };
 
     return (
-        <Card className="flex flex-col p-6 bg-slate-900 border-slate-800 shadow-xl overflow-hidden relative">
+        <Card className="flex flex-col p-6 bg-card border-border shadow-xl overflow-hidden relative">
             <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none ${colorClass}`} />
 
             <div className="flex items-center justify-between mb-6">
@@ -62,14 +62,14 @@ const CategoryCard = ({
                         <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">{title}</h3>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{calculationText}</p>
+                        <h3 className="text-xl font-bold text-card-foreground tracking-tight">{title}</h3>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{calculationText}</p>
                     </div>
                 </div>
             </div>
 
             {topWinner ? (
-                <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 relative mb-6">
+                <div className="bg-accent/50 rounded-2xl p-6 border border-border relative mb-6">
                     <div className="absolute top-0 right-6 -translate-y-1/2">
                         <div className="bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1">
                             <Trophy size={12} />
@@ -83,42 +83,42 @@ const CategoryCard = ({
                             className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg"
                         />
                         <div className="flex-1 min-w-0">
-                            <h4 className="text-lg font-bold text-white truncate">{topWinner.name}</h4>
+                            <h4 className="text-lg font-bold text-foreground truncate">{topWinner.name}</h4>
                             <p className="text-sm font-medium text-amber-500/90 truncate">{topWinner.title}</p>
                             {topWinner.reason && (
-                                <p className="text-xs text-slate-400 mt-1 italic">&quot;{topWinner.reason}&quot;</p>
+                                <p className="text-xs text-muted-foreground mt-1 italic">&quot;{topWinner.reason}&quot;</p>
                             )}
                         </div>
                         <div className="text-right flex flex-col items-end">
-                            <div className="text-2xl font-black text-white">{topWinner.score}</div>
-                            <div className="text-xs font-medium text-slate-500 uppercase mb-1">{scoreLabel}</div>
+                            <div className="text-2xl font-black text-foreground">{topWinner.score}</div>
+                            <div className="text-xs font-medium text-muted-foreground uppercase mb-1">{scoreLabel}</div>
                             {renderHistory(topWinner.history)}
                         </div>
                     </div>
                 </div>
             ) : (
-                <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30 text-center mb-6">
-                    <p className="text-slate-500">No data available yet</p>
+                <div className="bg-muted/30 rounded-2xl p-6 border border-border text-center mb-6">
+                    <p className="text-muted-foreground">No data available yet</p>
                 </div>
             )}
 
             {contenders.length > 0 && (
                 <div className="space-y-4 flex-1">
-                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Top Contenders</h5>
+                    <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Top Contenders</h5>
                     {contenders.map((contender, idx) => (
-                        <div key={idx} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-800/50 transition-colors">
-                            <div className="text-lg font-bold text-slate-600 w-4">{idx + 2}</div>
+                        <div key={idx} className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors">
+                            <div className="text-lg font-bold text-muted-foreground w-4">{idx + 2}</div>
                             <img
                                 src={contender.avatar || `https://ui-avatars.com/api/?name=${contender.name}&background=random`}
                                 alt={contender.name}
                                 className="w-10 h-10 rounded-full"
                             />
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-slate-200 truncate">{contender.name}</h4>
-                                <p className="text-xs text-slate-500 truncate">{contender.title}</p>
+                                <h4 className="text-sm font-bold text-foreground truncate">{contender.name}</h4>
+                                <p className="text-xs text-muted-foreground truncate">{contender.title}</p>
                             </div>
                             <div className="text-right flex flex-col items-end">
-                                <div className="text-sm font-bold text-slate-300">{contender.score}</div>
+                                <div className="text-sm font-bold text-foreground">{contender.score}</div>
                                 {renderHistory(contender.history)}
                             </div>
                         </div>
@@ -151,16 +151,16 @@ export default function LeaderboardPage() {
     }, [selectedProjectId]);
 
     return (
-        <main className="min-h-screen bg-brand-dark p-8 selection:bg-brand-primary/30">
+        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
             <div className="max-w-7xl mx-auto space-y-8 mt-8 pb-16">
-                <header className="flex justify-between items-end border-b border-white/5 pb-8">
+                <header className="flex justify-between items-end border-b border-border pb-8">
                     <div>
-                        <div className="flex items-center gap-2 text-brand-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
                             <Award size={16} />
                             Monthly Awards
                         </div>
-                        <h1 className="text-4xl font-extrabold text-white tracking-tight">Leaderboard</h1>
-                        <p className="text-slate-400 mt-2 font-medium">Recognizing engineering excellence across the organization.</p>
+                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
+                        <p className="text-muted-foreground mt-2 font-medium">Recognizing engineering excellence across the organization.</p>
                     </div>
                     <div className="flex gap-4 items-center flex-wrap justify-end">
                         <ProjectSelector
@@ -178,12 +178,12 @@ export default function LeaderboardPage() {
                 </header>
 
                 {loading ? (
-                    <div className="text-brand-primary text-center py-12">Loading competition data...</div>
+                    <div className="text-primary text-center py-12">Loading competition data...</div>
                 ) : data ? (
                     <div className="space-y-16">
                         {/* CURRENT MONTH */}
                         <div>
-                            <h2 className="text-2xl font-bold text-white mb-6 border-l-4 border-brand-primary pl-4 py-1">Current Month Leaders</h2>
+                            <h2 className="text-2xl font-bold text-foreground mb-6 border-l-4 border-primary pl-4 py-1">Current Month Leaders</h2>
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                                 <CategoryCard
                                     title="Velocity King"
@@ -223,8 +223,8 @@ export default function LeaderboardPage() {
                         {/* PAST MONTH */}
                         {data.past_month && (
                             <div className="pt-8 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                                <h2 className="text-2xl font-bold text-slate-400 mb-6 border-l-4 border-slate-600 pl-4 py-1 flex items-center gap-2">
-                                    <Trophy size={24} className="text-slate-500" />
+                                <h2 className="text-2xl font-bold text-foreground mb-6 border-l-4 border-primary pl-4 py-1 flex items-center gap-2">
+                                    <Trophy size={24} className="text-primary" />
                                     Past Month Leaders
                                 </h2>
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -265,7 +265,7 @@ export default function LeaderboardPage() {
                         )}
                     </div>
                 ) : (
-                    <div className="text-slate-500 text-center py-12">Failed to load leaderboard.</div>
+                    <div className="text-muted-foreground text-center py-12">Failed to load leaderboard.</div>
                 )}
             </div>
         </main>

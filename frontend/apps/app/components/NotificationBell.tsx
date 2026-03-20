@@ -33,25 +33,25 @@ export function NotificationBell() {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white"
+                className="relative p-2 rounded-lg hover:bg-accent transition text-foreground"
                 title="Notifications"
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-slate-900">
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-background">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                        <h3 className="font-semibold text-white">Notifications</h3>
+                <div className="absolute right-0 mt-2 w-80 bg-popover border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-4 border-b border-border flex items-center justify-between">
+                        <h3 className="font-semibold text-foreground">Notifications</h3>
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllAsRead}
-                                className="text-xs text-blue-400 hover:text-blue-300 transition flex items-center gap-1"
+                                className="text-xs text-primary hover:text-primary/80 transition flex items-center gap-1"
                             >
                                 <Check className="w-3 h-3" />
                                 Mark all as read
@@ -62,38 +62,38 @@ export function NotificationBell() {
                     <div className="max-h-96 overflow-y-auto">
                         {notifications.length === 0 ? (
                             <div className="p-8 text-center">
-                                <Bell className="w-8 h-8 text-slate-700 mx-auto mb-2 opacity-20" />
-                                <p className="text-sm text-slate-500">No notifications yet</p>
+                                <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
+                                <p className="text-sm text-muted-foreground">No notifications yet</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-800/50">
+                            <div className="divide-y divide-border">
                                 {notifications.map((n) => (
                                     <div
                                         key={n.id}
-                                        className={`p-4 hover:bg-slate-800/50 transition relative group ${!n.is_read ? 'bg-blue-500/5' : ''}`}
+                                        className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''}`}
                                         onClick={() => !n.is_read && markAsRead(n.id)}
                                     >
                                         <div className="flex gap-3">
                                             <div className="mt-0.5">{getIcon(n.notification_type)}</div>
                                             <div className="flex-1 min-w-0">
                                                 {n.title && n.title !== 'Notification' && (
-                                                    <p className={`text-xs font-semibold mb-0.5 truncate ${!n.is_read ? 'text-white' : 'text-slate-300'}`}>
+                                                    <p className={`text-xs font-semibold mb-0.5 truncate ${!n.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                                                         {n.title}
                                                     </p>
                                                 )}
-                                                <p className={`text-sm leading-relaxed ${!n.is_read ? 'text-slate-200' : 'text-slate-400'}`}>
+                                                <p className={`text-sm leading-relaxed ${!n.is_read ? 'text-foreground/90' : 'text-muted-foreground'}`}>
                                                     {n.message}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1.5">
-                                                    <Clock className="w-3 h-3 text-slate-600" />
-                                                    <span className="text-[10px] text-slate-600">
+                                                    <Clock className="w-3 h-3 text-muted-foreground" />
+                                                    <span className="text-[10px] text-muted-foreground">
                                                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                         {!n.is_read && (
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full" />
                                         )}
                                     </div>
                                 ))}
@@ -101,8 +101,8 @@ export function NotificationBell() {
                         )}
                     </div>
 
-                    <div className="p-3 bg-slate-800/30 border-t border-slate-800 text-center">
-                        <button className="text-xs text-slate-500 hover:text-slate-300 transition">
+                    <div className="p-3 bg-muted/30 border-t border-border text-center">
+                        <button className="text-xs text-muted-foreground hover:text-foreground transition">
                             View all activities
                         </button>
                     </div>

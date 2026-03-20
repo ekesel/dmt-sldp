@@ -53,39 +53,39 @@ export default function SprintComparisonPage() {
     }, [sprintAName, sprintBName, projectId, developerId]);
 
     return (
-        <div className="flex flex-col gap-8 w-full pb-10 px-6">
+        <div className="flex flex-col gap-8 w-full min-h-screen bg-background pb-10 px-6">
             {/* Header / Sticky Filter */}
-            <div className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-white/10 py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 shadow-xl shadow-black/20 transition-all duration-300">
+            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 shadow-xl shadow-black/20 transition-all duration-300">
                 <div className="flex items-center gap-6 flex-wrap">
-                    <div className="font-bold text-xl text-white tracking-tight mr-2 border-r border-white/10 pr-6">Sprint Comparison</div>
+                    <div className="font-bold text-xl text-foreground tracking-tight mr-2 border-r border-border pr-6">Sprint Comparison</div>
 
                     <div className="flex items-center gap-4 flex-wrap">
                         <ProjectSelector selectedProjectId={projectId} onSelect={(id) => { setProjectId(id); setSprintAId(null); setSprintBId(null); setDeveloperId(null); }} />
 
-                        <div className="h-6 w-px bg-white/10 hidden md:block" />
+                        <div className="h-6 w-px bg-border hidden md:block" />
 
-                        <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 pr-3 rounded-lg border border-white/5">
-                            <span className="text-xs font-bold text-slate-500 uppercase ml-2">Baseline:</span>
+                        <div className="flex items-center gap-3 bg-muted/50 p-1.5 pr-3 rounded-lg border border-border">
+                            <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Baseline:</span>
                             <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} />
                         </div>
 
-                        <div className="flex items-center gap-3 bg-slate-800/50 p-1.5 pr-3 rounded-lg border border-white/5">
-                            <span className="text-xs font-bold text-slate-500 uppercase ml-2">Target:</span>
+                        <div className="flex items-center gap-3 bg-muted/50 p-1.5 pr-3 rounded-lg border border-border">
+                            <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Target:</span>
                             <SprintSelector projectId={projectId} selectedSprintId={sprintBId} onSelect={setSprintBId} />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 bg-brand-primary/10 p-1.5 pr-3 rounded-lg border border-brand-primary/20">
-                    <Users size={16} className="text-brand-primary ml-2" />
+                <div className="flex items-center gap-3 bg-primary/10 p-1.5 pr-3 rounded-lg border border-primary/20">
+                    <Users size={16} className="text-primary ml-2" />
                     <select
-                        className="bg-transparent text-slate-200 text-sm font-medium focus:outline-none"
+                        className="bg-transparent text-foreground/80 text-sm font-medium focus:outline-none"
                         value={developerId || ''}
                         onChange={(e) => setDeveloperId(e.target.value || null)}
                     >
-                        <option value="" className="bg-slate-900">All Developers (Team View)</option>
+                        <option value="" className="bg-popover">All Developers (Team View)</option>
                         {devsList.map(dev => (
-                            <option key={dev.id} value={dev.id} className="bg-slate-900">{dev.developer_name}</option>
+                            <option key={dev.id} value={dev.id} className="bg-popover">{dev.developer_name}</option>
                         ))}
                     </select>
                 </div>
@@ -94,16 +94,16 @@ export default function SprintComparisonPage() {
             {/* Content Container */}
             <div className="max-w-[1600px] mx-auto w-full flex flex-col gap-10">
                 {!sprintAId || !sprintBId ? (
-                    <div className="flex flex-col items-center justify-center p-24 text-slate-500 bg-slate-800/10 rounded-2xl border border-dashed border-slate-700/50 my-10">
-                        <div className="p-4 bg-slate-800/50 rounded-full mb-6 text-slate-400">
+                    <div className="flex flex-col items-center justify-center p-24 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed border-border/50 my-10">
+                        <div className="p-4 bg-muted/50 rounded-full mb-6 text-muted-foreground">
                             <AlertTriangle size={48} className="opacity-50" />
                         </div>
-                        <h2 className="text-xl font-semibold text-slate-300 mb-2">Comparison Pending</h2>
+                        <h2 className="text-xl font-semibold text-foreground/80 mb-2">Comparison Pending</h2>
                         <p className="max-w-md text-center">Please select both a baseline and target sprint from the filters above to begin your analysis.</p>
                     </div>
                 ) : loading || !data ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="h-40 bg-slate-800/50 rounded-2xl border border-white/5" />)}
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="h-40 bg-muted rounded-2xl border border-border" />)}
                     </div>
                 ) : (
                     <div className="flex flex-col gap-12">
@@ -133,9 +133,9 @@ export default function SprintComparisonPage() {
                                         }}
                                         description={
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <span className="text-slate-500 font-bold uppercase tracking-tighter text-[10px]">Baseline:</span>
-                                                <span className="text-slate-300 font-bold">{baseValue}</span>
-                                                <span className="text-slate-500 font-medium italic opacity-80">({sprintAName})</span>
+                                                <span className="text-muted-foreground font-bold uppercase tracking-tighter text-[10px]">Baseline:</span>
+                                                <span className="text-foreground/80 font-bold">{baseValue}</span>
+                                                <span className="text-muted-foreground font-medium italic opacity-80">({sprintAName})</span>
                                             </div>
                                         }
                                     />
@@ -145,13 +145,13 @@ export default function SprintComparisonPage() {
 
                         {/* Charts Grid */}
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                            <div className="bg-slate-800/20 p-8 rounded-3xl border border-white/5 shadow-2xl">
+                            <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl">
                                 <RadarChartComponent data={data.charts.radar} sprintA={sprintAName} sprintB={sprintBName} />
                             </div>
 
                             <div className="flex flex-col gap-8">
                                 {data.charts.planned_vs_completed && data.charts.planned_vs_completed.length > 0 && (
-                                    <div className="bg-slate-800/20 p-8 rounded-3xl border border-white/5 shadow-2xl h-full flex flex-col justify-center">
+                                    <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl h-full flex flex-col justify-center">
                                         <SideBySideBarChart
                                             title="Planned vs Completed Points"
                                             data={data.charts.planned_vs_completed}
@@ -162,7 +162,7 @@ export default function SprintComparisonPage() {
                                 )}
 
                                 {data.charts.blocked_time && data.charts.blocked_time.length > 0 && (
-                                    <div className="bg-slate-800/20 p-8 rounded-3xl border border-white/5 shadow-2xl h-full flex flex-col justify-center">
+                                    <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl h-full flex flex-col justify-center">
                                         <BlockedTimeChart
                                             data={data.charts.blocked_time}
                                         />
@@ -174,10 +174,10 @@ export default function SprintComparisonPage() {
                         {/* Workload Distribution Section (Team Only) */}
                         {!developerId && data.charts.workload_distribution?.length > 0 && (
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                <div className="bg-slate-800/20 p-8 rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+                                <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl overflow-hidden">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-lg font-semibold text-white">Story Points Distribution</h3>
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-800/50 px-2 py-1 rounded">By Developer</span>
+                                        <h3 className="text-lg font-semibold text-foreground">Story Points Distribution</h3>
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded">By Developer</span>
                                     </div>
                                     <WorkloadDistributionChart
                                         data={data.charts.workload_distribution}
@@ -187,10 +187,10 @@ export default function SprintComparisonPage() {
                                     />
                                 </div>
 
-                                <div className="bg-slate-800/20 p-8 rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+                                <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl overflow-hidden">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-lg font-semibold text-white">Work Items Distribution</h3>
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-800/50 px-2 py-1 rounded">By Developer</span>
+                                        <h3 className="text-lg font-semibold text-foreground">Work Items Distribution</h3>
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded">By Developer</span>
                                     </div>
                                     <WorkloadDistributionChart
                                         data={data.charts.workload_distribution}
