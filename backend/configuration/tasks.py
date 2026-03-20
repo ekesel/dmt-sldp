@@ -19,10 +19,8 @@ def perform_sync_task(self, source_id: int):
     channel_layer = get_channel_layer()
     
     tenant_id = None
-    group_name = None
-
-    # tenant_id = None # No longer needed directly for group_name
-    group_name = None # Will be set after source is fetched
+    group_names = []
+    project_id = None
 
     def emit_progress(progress: int, message: str, status: str = 'in_progress', stats: dict = None):
         """Helper to send WS update"""
@@ -30,13 +28,13 @@ def perform_sync_task(self, source_id: int):
             event = {
                 "type": "sync_progress",
                 "source_id": source_id,
-                "project_id": source.project.id,
+                "project_id": project_id,
                 "progress": progress,
                 "message": message,
                 "status": status,
                 "stats": stats
             }
-            if 'group_names' in locals():
+            if group_names:
                 for gn in group_names:
                     async_to_sync(channel_layer.group_send)(gn, event)
             else:
@@ -49,6 +47,12 @@ def perform_sync_task(self, source_id: int):
         tenant_id = source.project.tenant.id # Use tenant ID
         tenant_slug = source.project.tenant.slug # Use tenant slug
         group_names = [f"telemetry_{tenant_slug}", f"telemetry_{tenant_id}"] # Broadcast to both
+        
+        # We need nonlocal project_id logic or we can just push it into a dict,
+        # wait! In Python, assigning to an outer variable requires `nonlocal`.
+        # Alternatively, we can just replace project_id = None with a mutable dict!
+        
+        project_id = source.project.id
         
         # 1. Start
         source.last_sync_status = 'in_progress'

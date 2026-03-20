@@ -205,6 +205,9 @@ class ClickupConnector(BaseConnector):
         report(95, "Resolving parent/child links and aggregating points...")
         self._post_sync_linking(source_id)
 
+        # 7. Post-Sync: Infer assignees from PRs for unassigned work items
+        self._infer_unassigned_assignees(source_id)
+
         report(100, f"Sync complete. Processed {item_count} items.")
         return {'item_count': item_count}
 
@@ -227,6 +230,51 @@ class ClickupConnector(BaseConnector):
         # Avoid artificial rollup of story points to parents, as this leads to 
         # double-counting during metric aggregations!
         # Points and AI Usage will remain exactly as defined in the source system.
+
+    def _infer_unassigned_assignees(self, source_id: int):
+        """
+        Infers assignee_email from linked Pull Requests for unassigned work items.
+        """
+        from data.models import WorkItem, PullRequest
+        from users.resolver import UserResolver
+        from tenants.models import Tenant
+        from django.db import connection
+
+        unassigned_items = WorkItem.objects.filter(
+            source_config_id=source_id,
+            assignee_email__isnull=True
+        ).exclude(pr_links=[])
+
+        if not unassigned_items.exists():
+            return
+
+        logger.info(f"Checking {unassigned_items.count()} unassigned items for PR-based inference...")
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+
+        for item in unassigned_items:
+            for link in item.pr_links:
+                # Search for PR in DB by URL
+                pr = PullRequest.objects.filter(pr_url=link).first()
+                if not pr:
+                    # Try fuzzy match if URL has slight variations
+                    pr = PullRequest.objects.filter(pr_url__icontains=str(link).strip()).first()
+                
+                if pr and pr.author_email:
+                    item.assignee_email = pr.author_email
+                    item.assignee_name = pr.author_name or pr.author_email
+                    item.inferred_assignee = True
+                    
+                    # Resolve the author to a User object
+                    item.resolved_assignee = UserResolver.resolve_or_create(
+                        provider='clickup',
+                        external_user_id=pr.author_email,
+                        email=pr.author_email,
+                        name=pr.author_name or pr.author_email,
+                        tenant=tenant
+                    )
+                    item.save()
+                    logger.info(f"Inferred assignee {pr.author_email} for ClickUp Task {item.external_id} from PR {pr.external_id}")
+                    break
 
     def normalize_status(self, raw_status: str) -> str:
         """
@@ -274,7 +322,7 @@ class ClickupConnector(BaseConnector):
         priority = task.get('priority', {}).get('priority', 'normal') if task.get('priority') else 'normal'
         
         assignee_data = task.get('assignees', [{}])[0] if task.get('assignees') else {}
-        assignee_email = assignee_data.get('email')
+        assignee_email = self.identity_resolver.resolve(assignee_data.get('email'))
         assignee_name = assignee_data.get('username') or assignee_data.get('name')
         assignee_cu_id = str(assignee_data.get('id', '')) if assignee_data.get('id') else ''
 
@@ -454,7 +502,7 @@ class ClickupConnector(BaseConnector):
             'story_points': story_points,
             'ai_usage_percent': ai_usage_percent,
             'parent': parent_obj,
-            'creator_email': task.get('creator', {}).get('email'),
+            'creator_email': self.identity_resolver.resolve(task.get('creator', {}).get('email')),
             'assignee_email': assignee_email,
             'assignee_name': task.get('assignees', [{}])[0].get('username') if task.get('assignees') else None,
             'created_at': created_at,

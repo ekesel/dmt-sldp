@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -215,7 +215,7 @@ export default function DashboardPage() {
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                     <KPICard
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
@@ -235,10 +235,17 @@ export default function DashboardPage() {
                         description="Minimum Threshold: 80%"
                     />
                     <KPICard
+                        label="Objective AI"
+                        value={`${(summary?.code_ai_usage_percent || 0).toFixed(1)}%`}
+                        trend={{ direction: 'neutral', value: 'Analyzed' }}
+                        description="PR-based AI evaluation"
+                        icon={<Sparkles size={16} className="text-brand-primary" />}
+                    />
+                    <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
-                        description="Bugs fixed in the last 5 sprints"
+                        description="Bugs fixed in last 5 sprints"
                     />
                 </div>
 

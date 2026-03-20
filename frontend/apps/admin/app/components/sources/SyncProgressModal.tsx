@@ -27,33 +27,6 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         message: 'Initializing...',
     });
 
-    // Helper to get WS base origin
-    const getWsOrigin = () => {
-        const envUrl = process.env.NEXT_PUBLIC_WS_URL;
-        if (envUrl) {
-            try {
-                if (envUrl.includes('://')) {
-                    const url = new URL(envUrl);
-                    return `${url.protocol}//${url.host}`;
-                }
-                return envUrl;
-            } catch (e) {
-                console.warn('Invalid NEXT_PUBLIC_WS_URL, falling back to window location');
-            }
-        }
-        const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-
-        const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
-        const isLocalhost = host === 'localhost' || host === '127.0.0.1';
-        const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
-
-        return `${protocol}//${host}${portSuffix}`;
-    };
-
-    const wsOrigin = getWsOrigin();
-    const WS_URL = `${wsOrigin}/ws/telemetry`;
-
     useEffect(() => {
         if (!isOpen) {
             setSyncState({ progress: 0, status: 'pending', message: 'Initializing...' });
@@ -61,15 +34,41 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         }
 
         // Connect to WebSocket
-        const token = localStorage.getItem('dmt-access-token');
-        const dmtTenant = localStorage.getItem('dmt-tenant');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
 
-        // Use dmtTenant if available (matches what we did for the portal), otherwise fallback
+        let wsHost = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname) : 'localhost';
+        const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
+        const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
+        const portSuffix = (portValue && !process.env.NEXT_PUBLIC_WS_HOST) ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+
+        wsHost = `${wsHost}${portSuffix}`;
+        const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+
+        if (envWsUrl) {
+            try {
+                if (envWsUrl.includes('://')) {
+                    const urlObj = new URL(envWsUrl);
+                    wsHost = urlObj.host;
+                } else {
+                    wsHost = envWsUrl;
+                }
+            } catch (e) {
+                console.warn('Failed to parse NEXT_PUBLIC_WS_URL', e);
+            }
+        }
+
+        const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const WS_URL = `${protocol}//${wsHost}/ws/telemetry`;
+
+        const dmtTenant = typeof window !== 'undefined' ? localStorage.getItem('dmt-tenant') : null;
         const resolvedTenantId = dmtTenant || tenantId;
+
         const urlWithToken = token ? `${WS_URL}/${resolvedTenantId}/?token=${token}` : `${WS_URL}/${resolvedTenantId}/`;
 
         console.log(`[SyncProgressModal] Connecting to WS: ${urlWithToken}`);
         const ws = new WebSocket(urlWithToken);
+
+        let isIntentionallyClosed = false;
 
         ws.onopen = () => {
             console.log('Connected to Telemetry WS');
@@ -78,15 +77,13 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // Filter events for this source (or all sync events if broad)
-                if (data.type === 'sync_progress' && (data.source_id === sourceId || !data.source_id)) {
-                    setSyncState(prev => ({
-                        ...prev,
+                if (data.type === 'sync_progress' && data.source_id === sourceId) {
+                    setSyncState({
                         progress: data.progress,
                         status: data.status,
                         message: data.message,
                         stats: data.stats
-                    }));
+                    });
 
                     if (data.status === 'success') {
                         toast.success('Sync Completed!');
@@ -94,20 +91,25 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
                         toast.error('Sync Failed');
                     }
                 }
-            } catch (e) {
-                console.error('WS Parse Error', e);
+            } catch (err) {
+                console.error('Failed to parse WS message', err);
             }
         };
 
-        ws.onerror = (e) => {
-            console.error('WebSocket Error', e);
-            // toast.error('Connection to sync service lost');
+        ws.onerror = (error) => {
+            if (!isIntentionallyClosed) {
+                console.error('WebSocket Error', error);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Telemetry WS Closed');
         };
 
         return () => {
             ws.close();
         };
-    }, [isOpen, sourceId, WS_URL]);
+    }, [isOpen, sourceId]);
 
     if (!isOpen) return null;
 

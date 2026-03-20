@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ..models import WorkItem, Sprint, DailyMetric, AIInsight
 from django.db.models import Avg, Sum, Count, F
 
@@ -146,7 +147,9 @@ class MetricService:
                         filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
-                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    sources_with_folders = sources.filter(
+                        config_json__active_folder_id__isnull=False
+                    ).exclude(config_json__active_folder_id='').values_list('id', flat=True)
                     work_items = work_items.filter(
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
@@ -177,6 +180,14 @@ class MetricService:
             # 6. Cycle Time
             avg_cycle_time = MetricService.calculate_cycle_time(work_items)
 
+            # 7. AI Usage (Rollup from WorkItems and PRs)
+            avg_ai_usage = work_items.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+            
+            # Objective AI from PRs in this project/sprint
+            from ..models import PullRequest
+            pr_filter = Q(source_config_id__in=source_conf_ids, created_at__range=(sprint_start, sprint_end))
+            avg_code_ai = PullRequest.objects.filter(pr_filter).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
                 sprint_end_date=sprint_end.date(),
@@ -193,6 +204,8 @@ class MetricService:
                     'compliance_rate_percent': round(compliance_rate, 2),
                     'defects_found_post_release': defects,
                     'avg_cycle_time_days': avg_cycle_time,
+                    'ai_usage_percent': avg_ai_usage,
+                    'code_ai_usage_percent': avg_code_ai,
                 }
             )
             results.append(metrics_obj)
@@ -248,10 +261,14 @@ class MetricService:
             
             # Use the latest sprint's compliance and insights for the summary
             latest = last_5_metrics[0]
+            avg_ai_usage = sum(m.ai_usage_percent or 0 for m in last_5_metrics) / count
+            avg_code_ai = sum(m.code_ai_usage_percent or 0 for m in last_5_metrics) / count
             
             return {
                 'compliance_rate': round(latest.compliance_rate_percent, 2),
                 'velocity': round(avg_velocity, 1) if avg_velocity is not None else 0,
+                'ai_usage_percent': round(avg_ai_usage, 1),
+                'code_ai_usage_percent': round(avg_code_ai, 1),
                 'active_sprint': {
                     'total_points': round(avg_velocity, 1) if avg_velocity is not None else 0,
                     'item_count': round(avg_items, 1) if avg_items is not None else 0
@@ -297,6 +314,8 @@ class MetricService:
         
         return {
             'compliance_rate': (compliant_count / total_count * 100) if total_count > 0 else 0,
+            'ai_usage_percent': total_items_qs.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0,
+            'code_ai_usage_percent': 0, # Fallback doesn't support deep PR analysis yet
             'active_sprint': {
                 'total_points': round(avg_points, 1),
                 'item_count': round(avg_count, 1)
@@ -316,9 +335,14 @@ class MetricService:
         Calculate and persist metrics for each developer in a specific sprint.
         Accounts for developers working across multiple projects.
         """
-        from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest
+        from ..models import DeveloperMetrics, WorkItem, Sprint, PullRequest, PullRequestReviewer, Commit
         from configuration.models import Project, SourceConfiguration
         from django.db.models import Sum, Count, Q, Avg
+        from .identity_resolver import IdentityResolver
+
+        # Load identity mappings for resolution
+        resolver = IdentityResolver()
+        resolver.load()
         
         sprint = Sprint.objects.get(id=sprint_id)
         if not sprint.end_date:
@@ -340,22 +364,27 @@ class MetricService:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
             # 1. Get all developers who have work items or PRs in this project/sprint
-            # We group by email to handle the 'person' across different source IDs if they vary
-            dev_emails = WorkItem.objects.filter(
-                sprint=sprint, 
+            # Resolve each raw email to its canonical counterpart to aggregate properly
+            raw_emails = WorkItem.objects.filter(
+                sprint=sprint,
                 source_config_id__in=source_conf_ids
             ).values_list('assignee_email', flat=True).distinct()
-            
-            dev_emails = [e for e in dev_emails if e]
-            
-            for email in dev_emails:
+
+            # Map raw emails to canonical emails: canonical_email -> list of raw_emails
+            canonical_to_raw = {}
+            for e in raw_emails:
+                if not e: continue
+                canonical = resolver.resolve(e)
+                canonical_to_raw.setdefault(canonical, []).append(e)
+
+            for canonical_email, aliases in canonical_to_raw.items():
                 # Apply project and folder filtering
                 sources = SourceConfiguration.objects.filter(project=project)
                 source_conf_ids = sources.values_list('id', flat=True)
-                
+
                 dev_work_items = WorkItem.objects.filter(
                     sprint=sprint,
-                    assignee_email=email,
+                    assignee_email__in=aliases,
                     source_config_id__in=source_conf_ids
                 )
                 
@@ -386,24 +415,25 @@ class MetricService:
                         filters |= Q(source_config_id=source.id) & folder_filters
                 
                 if has_folder_filters:
-                    sources_with_folders = sources.filter(config_json__active_folder_id__isnull=False).values_list('id', flat=True)
+                    sources_with_folders = sources.filter(
+                        config_json__active_folder_id__isnull=False
+                    ).exclude(config_json__active_folder_id='').values_list('id', flat=True)
                     dev_work_items = dev_work_items.filter(
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
                 
                 # Filter PRs for this developer in this sprint (approximate by date if not linked)
-                # In a mature system, PRs are linked to WorkItems or have a sprint field
                 from django.db.models import Q
                 pr_filter = Q(
-                    author_email=email,
+                    author_email__in=aliases,
                     source_config_id__in=source_conf_ids,
                     created_at__lte=sprint_end
                 )
                 if sprint_start:
                     pr_filter &= Q(created_at__gte=sprint_start)
-                
+
                 dev_prs = PullRequest.objects.filter(pr_filter)
-                
+
                 # Calculate stats
                 completed_items = dev_work_items.filter(status_category='done')
                 points = completed_items.aggregate(total=Sum('story_points'))['total'] or 0
@@ -418,29 +448,62 @@ class MetricService:
                 defects = dev_work_items.filter(item_type='bug').count()
                 avg_coverage = dev_work_items.aggregate(avg=Avg('coverage_percent'))['avg']
                 avg_ai_usage = dev_work_items.aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+                avg_code_ai = dev_prs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+                
+                # Fallback: if no PR-level AI scan data, use rollup on WorkItem.code_ai_usage_percent.
+                # This covers PRs matched via pr_links (stored on WorkItem) rather than a direct FK.
+                if not avg_code_ai:
+                    avg_code_ai = dev_work_items.filter(
+                        code_ai_usage_percent__isnull=False,
+                        code_ai_usage_percent__gt=0
+                    ).aggregate(avg=Avg('code_ai_usage_percent'))['avg'] or 0
                 
                 # Code Activity
                 prs_authored = dev_prs.count()
                 prs_merged = dev_prs.filter(merged_at__isnull=False).count()
                 
-                # Name (Use the most recent name found)
-                dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or email
+                # Fetch reviews done by this developer in this sprint
+                prs_reviewed = PullRequestReviewer.objects.filter(
+                    reviewer_email__in=aliases,
+                    pull_request__source_config_id__in=source_conf_ids,
+                    reviewed_at__range=(sprint_start, sprint_end)
+                ).count()
+
+                # Fetch commits by this developer in this sprint
+                commits_count = Commit.objects.filter(
+                    author_email__in=aliases,
+                    source_config_id__in=source_conf_ids,
+                    committed_at__range=(sprint_start, sprint_end)
+                ).count()
+
+                # Average Review Time integration could be added here later.
+
+                # Name (Use canonical name if mapping exists, else best fragment)
+                from ..models import UserIdentityMapping
+                mapping = UserIdentityMapping.objects.filter(canonical_email=canonical_email).first()
+                if mapping:
+                    dev_name = mapping.canonical_name
+                else:
+                    dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or canonical_email
 
                 metric_obj, created = DeveloperMetrics.objects.update_or_create(
-                    developer_email=email,
+                    developer_email=canonical_email,
                     sprint_name=sprint.name,
                     sprint_end_date=sprint_end.date(),
                     project=project,
                     defaults={
-                        'developer_source_id': email, # Fallback to email as unique source ID
+                        'developer_source_id': canonical_email,  # Use canonical email as consistent ID
                         'developer_name': dev_name,
                         'story_points_completed': points,
                         'items_completed': items_count,
                         'prs_authored': prs_authored,
                         'prs_merged': prs_merged,
+                        'prs_reviewed': prs_reviewed,
+                        'commits_count': commits_count,
                         'defects_attributed': defects,
                         'coverage_avg_percent': avg_coverage,
                         'ai_usage_percent': avg_ai_usage,
+                        'code_ai_usage_percent': avg_code_ai,
                         'dmt_compliance_rate': round(compliance_rate, 2),
                     }
                 )

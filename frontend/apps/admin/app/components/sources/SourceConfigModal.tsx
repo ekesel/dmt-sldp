@@ -15,10 +15,11 @@ interface SourceConfigModalProps {
 }
 
 const SOURCE_TYPES = [
-    { value: 'jira', label: 'Jira' },
-    { value: 'clickup', label: 'ClickUp' },
-    { value: 'azure_devops', label: 'Azure DevOps' },
-    { value: 'github', label: 'GitHub' },
+    { value: 'jira', label: 'Jira', group: 'Project Management' },
+    { value: 'clickup', label: 'ClickUp', group: 'Project Management' },
+    { value: 'azure_devops', label: 'Azure DevOps (Boards)', group: 'Project Management' },
+    { value: 'github', label: 'GitHub (Code & PRs)', group: 'Git / Code Analysis' },
+    { value: 'azure_devops_git', label: 'Azure DevOps (Git & PRs)', group: 'Git / Code Analysis' },
 ];
 
 export function SourceConfigModal({ isOpen, onClose, projectId, source, onSuccess }: SourceConfigModalProps) {
@@ -30,6 +31,7 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
         username: '',
         active_folder_id: '',
         active_folder_name: '',
+        repos: '', // comma separated list
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
@@ -45,6 +47,7 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                 username: source.username || '',
                 active_folder_id: source.config_json?.active_folder_id || '',
                 active_folder_name: source.config_json?.active_folder_name || '',
+                repos: source.config_json?.repos?.join(', ') || '',
             });
 
             // Fetch available folders for this source
@@ -63,7 +66,7 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
             };
             fetchFolders();
         } else {
-            setFormData({ name: '', source_type: '', base_url: '', api_key: '', username: '', active_folder_id: '', active_folder_name: '' });
+            setFormData({ name: '', source_type: '', base_url: '', api_key: '', username: '', active_folder_id: '', active_folder_name: '', repos: '' });
             setFolders([]);
         }
     }, [source, isOpen]);
@@ -89,13 +92,15 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                 config_json: {
                     ...(source?.config_json || {}),
                     active_folder_id: formData.active_folder_id,
-                    active_folder_name: formData.active_folder_name
+                    active_folder_name: formData.active_folder_name,
+                    repos: formData.repos ? formData.repos.split(',').map(r => r.trim()).filter(Boolean) : []
                 }
             };
 
             // Remove flat mapped items so they aren't rejected by strict serializers if they aren't models fields
             delete (payload as any).active_folder_id;
             delete (payload as any).active_folder_name;
+            delete (payload as any).repos;
 
             if (source && !formData.api_key) {
                 delete (payload as any).api_key;
@@ -147,9 +152,16 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                         required
                     >
                         <option value="">Select type</option>
-                        {SOURCE_TYPES.map(type => (
-                            <option key={type.value} value={type.value}>{type.label}</option>
-                        ))}
+                        <optgroup label="Project Management">
+                            {SOURCE_TYPES.filter(t => t.group === 'Project Management').map(type => (
+                                <option key={type.value} value={type.value}>{type.label}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="Git / Code Analysis">
+                            {SOURCE_TYPES.filter(t => t.group === 'Git / Code Analysis').map(type => (
+                                <option key={type.value} value={type.value}>{type.label}</option>
+                            ))}
+                        </optgroup>
                     </select>
                 </div>
 
@@ -163,6 +175,22 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                         required
                     />
                 </div>
+
+                {formData.source_type === 'github' && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center justify-between">
+                            Target Repositories
+                            <span className="text-xs text-slate-500 font-normal">Comma separated</span>
+                        </label>
+                        <input
+                            value={formData.repos}
+                            onChange={(e) => setFormData({ ...formData, repos: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition font-mono text-sm"
+                            placeholder="owner/repo-1, owner/repo-2"
+                            required
+                        />
+                    </div>
+                )}
 
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1.5">Username / Email (Optional)</label>

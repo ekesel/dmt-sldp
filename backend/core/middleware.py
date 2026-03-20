@@ -37,10 +37,10 @@ class JWTAuthMiddleware(BaseMiddleware):
 
         return await super().__call__(scope, receive, send)
 
-class TenantHeaderMiddleware(BaseMiddleware):
+class TenantHeaderMiddleware:
     """
     Middleware to handle tenant context switching based on X-Tenant header.
-    Expects header 'X-Tenant: <tenant_id>'
+    Expects header 'X-Tenant: <tenant_id_or_slug_or_schema>'
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -53,22 +53,22 @@ class TenantHeaderMiddleware(BaseMiddleware):
         
         if tenant_id:
             try:
-                # We need to find the tenant to get its schema_name
-                # This assumes Tenant model has 'schema_name' or we can derive it
-                # For django-tenants, the model itself holds the schema info
-                if tenant_id.isdigit():
+                # Cache lookup for performance if needed, but for now simple check
+                from django.db.models import Q
+                if str(tenant_id).isdigit():
                     tenant = Tenant.objects.get(id=tenant_id)
                 else:
-                    from django.db.models import Q
                     tenant = Tenant.objects.get(Q(slug=tenant_id) | Q(schema_name=tenant_id))
+                
                 with schema_context(tenant.schema_name):
                     return self.get_response(request)
-            except Tenant.DoesNotExist:
-                # If tenant doesn't exist, we just proceed with public schema (or default)
-                # potentially logging a warning
+            except (Tenant.DoesNotExist, ValueError):
+                # Fallback if tenant not found or invalid ID
                 pass
             except Exception as e:
-                print(f"Error switching tenant context: {e}")
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error switching tenant context: {e}")
 
         return self.get_response(request)
 

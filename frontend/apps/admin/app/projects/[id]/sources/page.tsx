@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Settings, RefreshCw, Eye, AlertCircle, Plus, Loader2, Trash2, Zap, ShieldCheck } from "lucide-react";
+import { Settings, RefreshCw, Eye, AlertCircle, Plus, Loader2, Trash2, Zap, ShieldCheck, Code2 } from "lucide-react";
 import { DashboardLayout } from '../../../components/DashboardLayout';
 import { Badge } from '../../../components/UIComponents';
 import { SourceConfigModal } from '../../../components/sources/SourceConfigModal';
 import SyncProgressModal from '../../../components/sources/SyncProgressModal';
+import PRAnalysisProgressModal from '../../../components/sources/PRAnalysisProgressModal';
 import { sources as sourcesApi, Source as ApiSource } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
@@ -32,6 +33,10 @@ export default function SourceConfigPage() {
     // Sync Progress Modal State
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
     const [syncSource, setSyncSource] = useState<{ id: number, name: string, tenantId: string } | null>(null);
+
+    // PR Analysis Progress Modal State
+    const [isPRModalOpen, setIsPRModalOpen] = useState(false);
+    const [prSource, setPrSource] = useState<{ id: number, name: string } | null>(null);
 
     useEffect(() => {
         if (projectId) {
@@ -98,6 +103,19 @@ export default function SourceConfigPage() {
             await sourcesApi.triggerSync(source.id);
         } catch (err: any) {
             toast.error(`Failed to trigger sync: ${err.message}`);
+        }
+    };
+
+    const handleTriggerPRAnalysis = async (source: Source) => {
+        setPrSource({
+            id: source.id,
+            name: source.name,
+        });
+        setIsPRModalOpen(true);
+        try {
+            await (sourcesApi as any).triggerPrAnalysis(source.id);
+        } catch (err: any) {
+            toast.error(`Failed to trigger PR analysis: ${err.message}`);
         }
     };
 
@@ -198,6 +216,15 @@ export default function SourceConfigPage() {
                                             >
                                                 <Zap size={18} />
                                             </button>
+                                            {['github', 'azure_devops_git'].includes(s.source_type) && (
+                                                <button
+                                                    onClick={() => handleTriggerPRAnalysis(s)}
+                                                    className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 p-2 rounded-lg transition"
+                                                    title="Analyze PR Diffs"
+                                                >
+                                                    <Code2 size={18} />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleEditSource(s)}
                                                 className="bg-btn-secondary hover:bg-btn-secondary-hover p-2 rounded-lg text-btn-secondary-foreground hover:text-btn-secondary-foreground transition"
@@ -248,6 +275,18 @@ export default function SourceConfigPage() {
                     sourceId={syncSource.id}
                     sourceName={syncSource.name}
                     tenantId={syncSource.tenantId}
+                />
+            )}
+
+            {prSource && (
+                <PRAnalysisProgressModal
+                    isOpen={isPRModalOpen}
+                    onClose={() => {
+                        setIsPRModalOpen(false);
+                        fetchSources(); // AI flags might have updated
+                    }}
+                    sourceId={prSource.id}
+                    sourceName={prSource.name}
                 />
             )}
         </DashboardLayout>

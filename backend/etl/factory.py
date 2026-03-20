@@ -3,6 +3,7 @@ from .base import BaseConnector
 from .connectors.jira import JiraConnector
 from .connectors.clickup import ClickupConnector
 from .connectors.ado import AzureDevOpsConnector
+from .connectors.github_pr import GitHubPRConnector
 
 class ConnectorFactory:
     _registry: Dict[str, Type[BaseConnector]] = {
@@ -10,6 +11,8 @@ class ConnectorFactory:
         'clickup': ClickupConnector,
         'azure_devops': AzureDevOpsConnector,
         'azure_boards': AzureDevOpsConnector, # Alias
+        'azure_devops_git': AzureDevOpsConnector, # PR Sync
+        'github': GitHubPRConnector,
     }
 
     @classmethod
