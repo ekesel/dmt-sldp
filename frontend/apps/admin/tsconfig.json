@@ -21,7 +21,15 @@
         "name": "next"
       }
     ],
-    "target": "ES2017"
+    "target": "ES2017",
+    "baseUrl": ".",
+    "paths": {
+      "@dmt/api": ["../../packages/api/index.ts"],
+      "@dmt/api/*": ["../../packages/api/*"],
+      "@dmt/ui": ["../../packages/ui/index.tsx"],
+      "@dmt/ui/*": ["../../packages/ui/*"],
+      "@/*": ["./*"]
+    }
   },
   "include": [
     "next-env.d.ts",

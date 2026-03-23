@@ -86,7 +86,7 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                                         <span className="text-sm font-medium text-foreground">{person.name}</span>
                                         {person.is_portal_user && (
                                             <span title="Can log in to portal">
-                                                <UserCheck className="w-3.5 h-3.5 text-brand-accent flex-shrink-0" />
+                                                <UserCheck className="w-3.5 h-3.5 text-accent flex-shrink-0" />
                                             </span>
                                         )}
                                     </div>
@@ -99,7 +99,7 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
                                         <Loader2 className="w-3 h-3" />
                                         {person.in_progress}
                                     </span>
-                                    <span className="flex items-center gap-1 text-brand-accent" title="Completed">
+                                    <span className="flex items-center gap-1 text-accent" title="Completed">
                                         <CheckCircle2 className="w-3 h-3" />
                                         {person.completed}
                                     </span>
@@ -140,9 +140,9 @@ export function AssigneeDistributionCard({ assignees, loading }: Props) {
             {/* Legend */}
             <div className="flex items-center gap-4 mt-5 pt-4 border-t border-border text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 text-warning" /> In Progress</span>
-                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-brand-accent" /> Completed</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-accent" /> Completed</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Avg Cycle</span>
-                <span className="flex items-center gap-1 ml-auto"><UserCheck className="w-3 h-3 text-brand-accent" /> Portal access</span>
+                <span className="flex items-center gap-1 ml-auto"><UserCheck className="w-3 h-3 text-accent" /> Portal access</span>
             </div>
         </div>
     );
