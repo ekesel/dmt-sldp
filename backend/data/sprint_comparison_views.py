@@ -89,6 +89,14 @@ class SprintComparisonView(APIView):
                 'a': _get_val(m_a, 'avg_review_time_hours'),
                 'b': _get_val(m_b, 'avg_review_time_hours'),
             }
+            kpis['ai_usage'] = {
+                'a': _get_val(m_a, 'ai_usage_percent'),
+                'b': _get_val(m_b, 'ai_usage_percent'),
+            }
+            kpis['code_ai_usage'] = {
+                'a': _get_val(m_a, 'code_ai_usage_percent'),
+                'b': _get_val(m_b, 'code_ai_usage_percent'),
+            }
             
             # Calculate item volume from WorkItems (Total vs Completed)
             def _get_dev_items(m, s_name):
@@ -131,6 +139,14 @@ class SprintComparisonView(APIView):
             kpis['pr_review_speed'] = {
                 'a': _get_val(m_a, 'avg_time_to_first_review_hours'),
                 'b': _get_val(m_b, 'avg_time_to_first_review_hours'),
+            }
+            kpis['ai_usage'] = {
+                'a': _get_val(m_a, 'ai_usage_percent'),
+                'b': _get_val(m_b, 'ai_usage_percent'),
+            }
+            kpis['code_ai_usage'] = {
+                'a': _get_val(m_a, 'code_ai_usage_percent'),
+                'b': _get_val(m_b, 'code_ai_usage_percent'),
             }
             kpis['item_volume'] = {
                 'a': _get_val(m_a, 'total_items'),
@@ -187,7 +203,8 @@ class SprintComparisonView(APIView):
             {"subject": "Throughput", "A": _get_val(m_a, 'items_completed'), "B": _get_val(m_b, 'items_completed'), "fullMark": max(_get_val(m_a, 'items_completed'), _get_val(m_b, 'items_completed'), 100)},
             {"subject": "Compliance (%)", "A": _get_val(m_a, 'compliance_rate_percent'), "B": _get_val(m_b, 'compliance_rate_percent'), "fullMark": 100},
             {"subject": "Cycle Time", "A": _get_val(m_a, 'avg_cycle_time_days'), "B": _get_val(m_b, 'avg_cycle_time_days'), "fullMark": max(_get_val(m_a, 'avg_cycle_time_days'), _get_val(m_b, 'avg_cycle_time_days'), 14)},
-            {"subject": "PR Speed", "A": _get_val(m_a, 'avg_time_to_first_review_hours'), "B": _get_val(m_b, 'avg_time_to_first_review_hours'), "fullMark": max(_get_val(m_a, 'avg_time_to_first_review_hours'), _get_val(m_b, 'avg_time_to_first_review_hours'), 48)}
+            {"subject": "PR Speed", "A": _get_val(m_a, 'avg_time_to_first_review_hours'), "B": _get_val(m_b, 'avg_time_to_first_review_hours'), "fullMark": max(_get_val(m_a, 'avg_time_to_first_review_hours'), _get_val(m_b, 'avg_time_to_first_review_hours'), 48)},
+            {"subject": "AI Usage (PR)", "A": _get_val(m_a, 'code_ai_usage_percent'), "B": _get_val(m_b, 'code_ai_usage_percent'), "fullMark": 100}
         ]
 
     def _build_developer_charts(self, charts, m_a, m_b, name_a, name_b):
@@ -200,7 +217,8 @@ class SprintComparisonView(APIView):
             {"subject": "Commits", "A": _get_val(m_a, 'commits_count'), "B": _get_val(m_b, 'commits_count'), "fullMark": max(_get_val(m_a, 'commits_count'), _get_val(m_b, 'commits_count'), 50)},
             {"subject": "PRs Authored", "A": _get_val(m_a, 'prs_authored'), "B": _get_val(m_b, 'prs_authored'), "fullMark": max(_get_val(m_a, 'prs_authored'), _get_val(m_b, 'prs_authored'), 20)},
             {"subject": "PRs Reviewed", "A": _get_val(m_a, 'prs_reviewed'), "B": _get_val(m_b, 'prs_reviewed'), "fullMark": max(_get_val(m_a, 'prs_reviewed'), _get_val(m_b, 'prs_reviewed'), 20)},
-            {"subject": "Compliance (%)", "A": _get_val(m_a, 'dmt_compliance_rate'), "B": _get_val(m_b, 'dmt_compliance_rate'), "fullMark": 100}
+            {"subject": "Compliance (%)", "A": _get_val(m_a, 'dmt_compliance_rate'), "B": _get_val(m_b, 'dmt_compliance_rate'), "fullMark": 100},
+            {"subject": "AI Usage (PR)", "A": _get_val(m_a, 'code_ai_usage_percent'), "B": _get_val(m_b, 'code_ai_usage_percent'), "fullMark": 100}
         ]
 
     def _build_work_type_distribution(self, charts, name_a, name_b, project_id):

@@ -11,9 +11,10 @@ interface KPIProps {
         sentiment?: 'positive' | 'negative' | 'neutral';
     };
     description?: React.ReactNode;
+    icon?: React.ReactNode;
 }
 
-export const KPICard = ({ label, value, trend, description }: KPIProps) => {
+export const KPICard = ({ label, value, trend, description, icon }: KPIProps) => {
     const getSentimentColor = () => {
         if (!trend) return 'text-slate-400';
         if (trend.sentiment) {
@@ -26,7 +27,10 @@ export const KPICard = ({ label, value, trend, description }: KPIProps) => {
 
     return (
         <Card className="flex flex-col gap-3 p-5 hover:border-brand-primary/40 transition-colors duration-200 group">
-            <h3 className="text-slate-400 text-sm font-medium group-hover:text-slate-300 transition-colors uppercase tracking-wider">{label}</h3>
+            <div className="flex items-center justify-between">
+                <h3 className="text-slate-400 text-sm font-medium group-hover:text-slate-300 transition-colors uppercase tracking-wider">{label}</h3>
+                {icon && <div className="p-1.5 rounded-md bg-brand-primary/10 text-brand-primary">{icon}</div>}
+            </div>
             <div className="flex items-end gap-3 flex-wrap">
                 <p className="text-4xl font-bold text-white tracking-tight">{value}</p>
                 {trend && (

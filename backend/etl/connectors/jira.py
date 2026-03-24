@@ -138,8 +138,59 @@ class JiraConnector(BaseConnector):
             pct = 10 + int((start_at / total) * 80) if total > 0 else 90
             report(min(pct, 95), f"Processed {start_at}/{total} Jira issues...")
 
+        # 1. Sync issues (already handled in loop)
+        
+        # 2. Post-sync: Infer assignees from PRs for unassigned work items
+        self._infer_unassigned_assignees(source_id)
+
         report(100, f"Sync complete. Processed {item_count} items.")
         return {'item_count': item_count}
+
+    def _infer_unassigned_assignees(self, source_id: int):
+        """
+        Infers assignee_email from linked Pull Requests for unassigned work items.
+        """
+        from data.models import WorkItem, PullRequest
+        from users.resolver import UserResolver
+        from tenants.models import Tenant
+        from django.db import connection
+
+        unassigned_items = WorkItem.objects.filter(
+            source_config_id=source_id,
+            assignee_email__isnull=True
+        ).exclude(pr_links=[])
+
+        if not unassigned_items.exists():
+            return
+
+        logger.info(f"Checking {unassigned_items.count()} unassigned items for PR-based inference...")
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+
+        for item in unassigned_items:
+            for link in item.pr_links:
+                # Jira PR links often contain the PR number/ID
+                # Try simple match first
+                pr = PullRequest.objects.filter(pr_url=link).first()
+                if not pr:
+                    # Try to extract ID or slug from URL
+                    pr = PullRequest.objects.filter(pr_url__icontains=str(link).strip()).first()
+                
+                if pr and pr.author_email:
+                    item.assignee_email = pr.author_email
+                    item.assignee_name = pr.author_name or pr.author_email
+                    item.inferred_assignee = True
+                    
+                    # Resolve the author to a User object
+                    item.resolved_assignee = UserResolver.resolve_or_create(
+                        provider='jira',
+                        external_user_id=pr.author_email,
+                        email=pr.author_email,
+                        name=pr.author_name or pr.author_email,
+                        tenant=tenant
+                    )
+                    item.save()
+                    logger.info(f"Inferred assignee {pr.author_email} for Jira Issue {item.external_id} from PR {pr.external_id}")
+                    break
 
     def _sync_issue(self, issue: Dict[str, Any], source_id: int, sprint_map: Dict[str, Sprint] = None): # Modified: Added sprint_map parameter
         """
@@ -177,7 +228,7 @@ class JiraConnector(BaseConnector):
         
         description = self._flatten_adf(fields.get('description'))
         
-        assignee_email = fields.get('assignee', {}).get('emailAddress') if fields.get('assignee') else None
+        assignee_email = self.identity_resolver.resolve(fields.get('assignee', {}).get('emailAddress')) if fields.get('assignee') else None
         assignee_name = fields.get('assignee', {}).get('displayName') if fields.get('assignee') else None
         assignee_account_id = fields.get('assignee', {}).get('accountId') if fields.get('assignee') else None
 
@@ -225,7 +276,7 @@ class JiraConnector(BaseConnector):
             'status': raw_status,
             'status_category': status_category,
             'priority': priority.lower(),
-            'creator_email': fields.get('creator', {}).get('emailAddress'),
+            'creator_email': self.identity_resolver.resolve(fields.get('creator', {}).get('emailAddress')),
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,
             'created_at': created_at,

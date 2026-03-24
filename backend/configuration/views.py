@@ -176,3 +176,47 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
             return Response({'status': 'success', 'folders': folders})
         except Exception as e:
             return Response({'status': 'failed', 'message': str(e)}, status=400)
+
+    @action(detail=True, methods=['post'])
+    def trigger_pr_analysis(self, request, pk=None):
+        source = self.get_object()
+        if source.source_type not in ['github', 'azure_devops_git']:
+            return Response({'status': 'failed', 'message': 'PR analysis is only available for Git sources'}, status=400)
+            
+        from data.tasks import analyze_pr_ai_usage
+        
+        # Trigger Celery task
+        task = analyze_pr_ai_usage.delay(source.id, schema_name=source.project.tenant.schema_name)
+        
+        return Response({
+            'status': 'success', 
+            'message': f'PR diff analysis triggered for {source.name}',
+            'task_id': task.id
+        })
+
+    @action(detail=True, methods=['get'])
+    def pr_analysis_status(self, request, pk=None):
+        source = self.get_object()
+        from data.models import TaskLog
+        from django_tenants.utils import schema_context
+        
+        # Get the latest task log for PR analysis for this source
+        with schema_context(source.project.tenant.schema_name):
+            log = TaskLog.objects.filter(
+                task_name="analyze_pr_ai_usage",
+                target_id=str(source.id)
+            ).order_by('-created_at').first()
+            
+            if not log:
+                return Response({
+                    'status': 'not_started',
+                    'message': 'No analysis task found for this source.'
+                })
+                
+            return Response({
+                'status': log.status,
+                'message': log.error_message or '',
+                'error_message': log.error_message or '',
+                'created_at': log.created_at,
+                'finished_at': getattr(log, 'finished_at', None)
+            })

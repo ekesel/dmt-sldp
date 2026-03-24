@@ -14,9 +14,15 @@ const getBaseURL = () => {
   // 2. Only if no env is found, attempt to construct a local fallback (useful for dev without env)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    const isLocalhost = hostname.includes('localhost') || hostname === '127.0.0.1';
-    const portSuffix = isLocalhost ? ':8000' : '';
-    return `${window.location.protocol}//${hostname}${portSuffix}/api/`;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    
+    // If not localhost, use a relative path to inherit the current protocol and domain
+    if (!isLocalhost) {
+      return '/api/';
+    }
+    
+    // For local development, default to http://localhost:8000/api/
+    return `http://${hostname}:8000/api/`;
   }
 
   // 3. Server-side fallback if all else fails
@@ -35,8 +41,13 @@ api.interceptors.request.use((config) => {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Explicitly pull from defaults if not in config (Axios should do this but sometimes it's shaky with interceptors)
+    if (!config.headers['X-Tenant'] && api.defaults.headers.common['X-Tenant']) {
+      config.headers['X-Tenant'] = api.defaults.headers.common['X-Tenant'];
+    }
+
     // Auto-inject X-Tenant from hostname if not already set (preventing overriding Admin Portal explicit setting)
-    if (!config.headers['X-Tenant'] && !api.defaults.headers.common['X-Tenant']) {
+    if (!config.headers['X-Tenant']) {
       const host = window.location.hostname;
       const parts = host.split('.');
       const devDomains = process.env.NEXT_PUBLIC_DEV_DOMAINS
@@ -141,10 +152,32 @@ function handleApiError(error: unknown): never {
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
 
+/* =========================
+   Identity Mapping Types
+========================= */
+
+export interface IdentityMapping {
+  id: number;
+  canonical_email: string;
+  canonical_name: string;
+  source_identities: Array<{
+    system: string;
+    email: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdentitySuggestion {
+  name: string;
+  emails: string[];
+}
+
 interface RequestConfig {
   cache?: boolean;
   ttl?: number;
   deduplicate?: boolean;
+  headers?: Record<string, string>;
 }
 
 async function get<T>(url: string, params?: Record<string, unknown>, config?: RequestConfig): Promise<T> {
@@ -158,7 +191,10 @@ async function get<T>(url: string, params?: Record<string, unknown>, config?: Re
 
   const performRequest = async () => {
     try {
-      const res = await api.get<T>(url, { params });
+      const res = await api.get<T>(url, {
+        params,
+        ...(config?.headers ? { headers: config.headers } : {})
+      });
       return res.data;
     } catch (error) {
       handleApiError(error);
@@ -194,27 +230,27 @@ async function get<T>(url: string, params?: Record<string, unknown>, config?: Re
   }
 }
 
-async function post<TResponse, TBody = unknown>(url: string, body?: TBody): Promise<TResponse> {
+async function post<TResponse, TBody = unknown>(url: string, body?: TBody, headers?: Record<string, string>): Promise<TResponse> {
   try {
-    const res = await api.post<TResponse>(url, body);
+    const res = await api.post<TResponse>(url, body, headers ? { headers } : undefined);
     return res.data;
   } catch (error) {
     handleApiError(error);
   }
 }
 
-async function patch<TResponse, TBody = unknown>(url: string, body?: TBody): Promise<TResponse> {
+async function patch<TResponse, TBody = unknown>(url: string, body?: TBody, headers?: Record<string, string>): Promise<TResponse> {
   try {
-    const res = await api.patch<TResponse>(url, body);
+    const res = await api.patch<TResponse>(url, body, headers ? { headers } : undefined);
     return res.data;
   } catch (error) {
     handleApiError(error);
   }
 }
 
-async function del<TResponse = void>(url: string): Promise<TResponse> {
+async function del<TResponse = void>(url: string, headers?: Record<string, string>): Promise<TResponse> {
   try {
-    const res = await api.delete<TResponse>(url);
+    const res = await api.delete<TResponse>(url, headers ? { headers } : undefined);
     return res.data;
   } catch (error) {
     handleApiError(error);
@@ -323,6 +359,8 @@ export const sources = {
   sync: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/sync/`),
   testConnection: (sourceId: string | number) => post<{ status: string; message: string }>(`/admin/sources/${sourceId}/test_connection/`),
   triggerSync: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_sync/`),
+  triggerPrAnalysis: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_pr_analysis/`),
+  prAnalysisStatus: (sourceId: string | number) => get<{ status: string; message: string; error_message?: string; created_at?: string; finished_at?: string }>(`/admin/sources/${sourceId}/pr_analysis_status/`),
   remoteFolders: (sourceId: string | number) => get<{ status: string; folders?: { id: string; name: string }[] }>(`/admin/sources/${sourceId}/remote_folders/`),
   delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/sources/${sourceId}/`),
   create: (data: any) => post<Source, any>('/admin/sources/', data),
@@ -664,6 +702,15 @@ export const notifications = {
     message: string;
     notification_type?: string;
   }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, any>('/notifications/send-bulk/', data),
+};
+
+export const identity = {
+  getMappings: (tenantId: string) => get<IdentityMapping[]>('/admin/identity-mappings/', {}, { headers: { 'X-Tenant': tenantId } }),
+  getSuggestions: (tenantId: string) => get<IdentitySuggestion[]>('/admin/identity-mappings/suggestions/', {}, { headers: { 'X-Tenant': tenantId } }),
+  search: (query: string, tenantId: string) => get<{ email: string; name: string }[]>(`/admin/identity-mappings/search/?q=${encodeURIComponent(query)}`, {}, { headers: { 'X-Tenant': tenantId } }),
+  createMapping: (data: Partial<IdentityMapping>, tenantId: string) => post<IdentityMapping>('/admin/identity-mappings/', data, { 'X-Tenant': tenantId }),
+  updateMapping: (id: number, data: Partial<IdentityMapping>, tenantId: string) => patch<IdentityMapping>(`/admin/identity-mappings/${id}/`, data, { 'X-Tenant': tenantId }),
+  deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`/admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
 };
 
 export { getWebSocketManager } from './websocket';

@@ -51,6 +51,7 @@ class WorkItem(SoftDeleteMixin, models.Model):
     priority = models.CharField(max_length=50, blank=True, null=True)
     story_points = models.FloatField(null=True, blank=True)
     ai_usage_percent = models.FloatField(null=True, blank=True)
+    code_ai_usage_percent = models.FloatField(null=True, blank=True)
     
     # Status tracking
     status = models.CharField(max_length=50)
@@ -59,6 +60,7 @@ class WorkItem(SoftDeleteMixin, models.Model):
         ('in_progress', 'In Progress'),
         ('done', 'Done'),
     ], default='todo')
+    inferred_assignee = models.BooleanField(default=False)
     
     # Timestamps
     created_at = models.DateTimeField()
@@ -121,12 +123,13 @@ class WorkItem(SoftDeleteMixin, models.Model):
         return f"[{self.external_id}] {self.title[:50]}"
 
 class PullRequest(models.Model):
-    external_id = models.CharField(max_length=100, unique=True)
+    external_id = models.CharField(max_length=100)
     source_config_id = models.IntegerField(db_index=True)
     work_item = models.ForeignKey(WorkItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='pull_requests')
     
     title = models.CharField(max_length=500)
     author_email = models.EmailField()
+    author_name = models.CharField(max_length=255, null=True, blank=True)
     resolved_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='pull_requests')
     status = models.CharField(max_length=50) # open, merged, closed
     
@@ -134,9 +137,19 @@ class PullRequest(models.Model):
     source_branch = models.CharField(max_length=255)
     target_branch = models.CharField(max_length=255)
     
+    # Diff Analytics
+    pr_url = models.URLField(null=True, blank=True)
+    ai_code_percent = models.FloatField(null=True, blank=True)
+    ai_generated_lines = models.IntegerField(null=True, blank=True)
+    total_changed_lines = models.IntegerField(null=True, blank=True)
+    diff_analyzed_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     merged_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('source_config_id', 'repository_name', 'external_id')
 
     def __str__(self):
         return f"PR #{self.external_id}: {self.title}"
@@ -152,6 +165,44 @@ class PullRequestStatus(models.Model):
 
     def __str__(self):
         return f"{self.pull_request} - {self.name}: {self.state}"
+
+class PullRequestReviewer(models.Model):
+    pull_request = models.ForeignKey(PullRequest, on_delete=models.CASCADE, related_name='reviewers')
+    reviewer_email = models.EmailField()
+    reviewer_name = models.CharField(max_length=255, blank=True)
+    resolved_reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='pull_request_reviews')
+    vote = models.IntegerField(null=True, blank=True)  # E.g., ADO: 10=approved, 5=approved with suggestions
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.reviewer_email} - {self.pull_request}"
+
+class Commit(models.Model):
+    external_id = models.CharField(max_length=100) # SHA
+    source_config_id = models.IntegerField(db_index=True)
+    repository_name = models.CharField(max_length=255)
+    
+    author_email = models.EmailField()
+    author_name = models.CharField(max_length=255, blank=True)
+    resolved_author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='commits')
+    
+    message = models.TextField(blank=True)
+    additions = models.IntegerField(default=0)
+    deletions = models.IntegerField(default=0)
+    
+    committed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'data_commit'
+        unique_together = ('source_config_id', 'external_id')
+        indexes = [
+            models.Index(fields=['source_config_id', 'author_email']),
+            models.Index(fields=['committed_at']),
+        ]
+
+    def __str__(self):
+        return f"Commit {self.external_id[:8]} by {self.author_email}"
 
 class AIInsight(models.Model):
     INSIGHT_TYPES = [
@@ -255,6 +306,10 @@ class SprintMetrics(models.Model):
     avg_time_to_first_review_hours = models.FloatField(null=True, blank=True)
     prs_with_reviews_percent = models.FloatField(default=0)
     
+    # AI Usage
+    ai_usage_percent = models.FloatField(default=0) # Subjective (Custom Field)
+    code_ai_usage_percent = models.FloatField(default=0) # Objective (Analyzed PRs)
+    
     calculated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -298,7 +353,8 @@ class DeveloperMetrics(models.Model):
     
     # DMT
     dmt_compliance_rate = models.FloatField(default=0)
-    ai_usage_percent = models.FloatField(default=0)
+    ai_usage_percent = models.FloatField(default=0)     # Subjective (Custom)
+    code_ai_usage_percent = models.FloatField(default=0) # Objective (PR Analyzed)
     
     calculated_at = models.DateTimeField(auto_now=True)
     
@@ -311,5 +367,23 @@ class DeveloperMetrics(models.Model):
 
     def __str__(self):
         return f"{self.developer_name} - {self.sprint_name}"
+
+
+class UserIdentityMapping(models.Model):
+    """
+    Maps various source identities (emails) to a single canonical user identity.
+    """
+    canonical_email = models.EmailField(db_index=True, unique=True)
+    canonical_name = models.CharField(max_length=255)
+    # List of identities: [{"system": "clickup", "email": "..."}, {"system": "azure_devops", "email": "..."}]
+    source_identities = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'data_useridentitymapping'
+
+    def __str__(self):
+        return f"Mapping for {self.canonical_name} ({self.canonical_email})"
 
 

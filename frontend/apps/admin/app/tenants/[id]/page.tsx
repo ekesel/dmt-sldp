@@ -141,6 +141,23 @@ export default function TenantDetailsPage() {
                             </div>
                         </div>
 
+                        {/* Identity Resolution Section */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-medium text-white">Identity Resolution</h2>
+                                    <p className="text-sm text-slate-400">Merge disparate user identities across systems (ClickUp, ADO, etc.)</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => router.push(`/tenants/${id}/identity`)}
+                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition shadow-lg shadow-blue-500/20"
+                                >
+                                    Manage Identities
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Projects Section */}
                         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-4">
                             <div className="flex items-center justify-between">

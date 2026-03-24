@@ -1,22 +1,24 @@
 # STATE.md
 
-> **Current Context**: Milestone v1.4 verified and live. Milestone v1.5 defined based on PRD gaps.
-> **Last Goal**: Scoping Milestone v1.5.
+> **Current Context**: Milestone v1.4 verified and live. Completed critical bug fixes in Identity Resolution / Management (backend and frontend races) before moving to 1.5.
+> **Last Goal**: Verified Identity Management works end-to-end.
 > **Next Goal**: Plan Phase 21: Developer Analytics.
-**Status**: Paused at 2026-02-14T18:12:45+05:30
+**Status**: Completed at 2026-03-10
 
 ## Current Position
-- **Milestone**: v1.5 (Planning)
+- **Milestone**: v1.5
 - **Phase**: 20 (Completed)
-- **Status**: 🔄 Milestone v1.5 Defined in ROADMAP.md
+- **Status**: ✅ Ready for Phase 21
 
 ## Last Session Summary
 Finished Milestone v1.4 implementation and verification. Conducted a PRD audit which revealed gaps in Individual Metrics, Data Lifecycle, and Multi-Workspace scaling.
-Defined Milestone v1.5 (Ecosystem Scale & Advanced Data Lifecycle) with four new phases (21-24) to address these gaps.
+Received bug report for Identity Management feature. Fixed schema context leaks in `suggestions`/`search` endpoints. Discovered a complex React race condition in `TenantContext.tsx` where the `X-Tenant` header was asynchronously wiped from the global Axios instance. Fixed by migrating the `@dmt/api` client and `IdentityResolutionPage` to use explicit per-request `headers`.
+Fixed a quick UI issue in developer metrics where the user's email was duplicated when identical to their name, and added truncation to handle excessively long names/emails gracefully.
 
 ## In-Progress Work
-- ROADMAP.md updated with Milestone v1.5 phases.
-- No uncommitted code changes.
+- Identity Management bug fixes deployed to Docker containers.
+- Frontend API client updated to inject explicit headers, bypassing global state collisions. Code compiled successfully and validated against Python backend integration script.
+- Ready to proceed to Developer Analytics planning.
 
 ## Context Dump
 ### Decisions Made
@@ -33,3 +35,5 @@ Defined Milestone v1.5 (Ecosystem Scale & Advanced Data Lifecycle) with four new
 ## Next Steps
 1. Run `/plan 21` to decompose the Developer Analytics implementation.
 2. Implement Phase 22 Archival Engine (S3/MinIO integration).
+## Next Steps
+- [NEW] Generic GitHub PR Connector functionality finalized, tests added and verified.

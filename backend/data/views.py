@@ -1,3 +1,4 @@
+from __future__ import annotations
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -48,14 +49,27 @@ class DashboardSummaryView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         from .analytics.metrics import MetricService
+        from .models import PullRequest
+        from django.db.models import Avg
+        from configuration.models import SourceConfiguration
         summary = MetricService.get_dashboard_summary(project_id)
         
-        # UI expects: velocity (int/float), compliance_rate (float), bugs_resolved (int), cycle_time (float)
+        # Compute code_ai_usage_percent LIVE from analyzed PRs
+        # (SprintMetrics may be stale if not re-populated after PR diff analysis)
+        pr_qs = PullRequest.objects.filter(ai_code_percent__isnull=False, ai_code_percent__gt=0)
+        if project_id:
+            source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            pr_qs = pr_qs.filter(source_config_id__in=source_ids)
+        live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+        
         data = {
             "velocity": summary.get('velocity', 0),
             "compliance_rate": round(summary['compliance_rate'], 2),
             "bugs_resolved": summary['bugs_resolved'],
-            "cycle_time": summary['avg_cycle_time']
+            "cycle_time": summary['avg_cycle_time'],
+            "ai_usage_percent": summary.get('ai_usage_percent', 0),
+            "code_ai_usage_percent": round(live_code_ai, 1),
+            "analyzed_prs_count": pr_qs.count(),
         }
         return Response(data)
 
@@ -223,6 +237,9 @@ class DeveloperListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
         project_id = request.query_params.get('project_id')
         
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
@@ -234,26 +251,27 @@ class DeveloperListView(APIView):
             'developer_email', 'developer_name', 'project__id', 'project__name'
         )
         
-        # Deduplicate in Python to handle any DB inconsistencies
-        dev_map = {}  # email (lowercase) -> {info dict}
+        # Deduplicate in Python using IdentityResolver
+        dev_map = {}  # canonical_email (lowercase) -> {info dict}
         for m in all_metrics:
-            email = (m['developer_email'] or '').strip().lower()
-            if not email:
+            raw_email = (m['developer_email'] or '').strip().lower()
+            if not raw_email:
                 continue
                 
+            email = resolver.resolve(raw_email)
             if email not in dev_map:
                 dev_map[email] = {
-                    'developer_email': m['developer_email'],
-                    'developer_name': m['developer_name'] or m['developer_email'],
-                    'id': email,  # Use lowercase email as consistent ID
+                    'developer_email': email,
+                    'developer_name': m['developer_name'] or email,
+                    'id': email,  # Use canonical email as consistent ID
                     'projects': {}
                 }
-            else:
-                # Prefer the longest/most descriptive name (e.g. "Arun Singh" > "arun")
-                existing_name = dev_map[email]['developer_name']
-                new_name = m['developer_name'] or ''
-                if len(new_name) > len(existing_name) and ' ' in new_name:
-                    dev_map[email]['developer_name'] = new_name
+            
+            # Prefer the longest/most descriptive name
+            existing_name = dev_map[email]['developer_name']
+            new_name = m['developer_name'] or ''
+            if len(new_name) > len(existing_name) and ' ' in new_name:
+                dev_map[email]['developer_name'] = new_name
             
             # Accumulate unique projects
             if m['project__id']:
@@ -311,6 +329,7 @@ def _get_combined_metrics(developer_email):
         'avg_review_time_hours': sum((r.avg_review_time_hours or 0) for r in current_rows) / len(current_rows),
         'coverage_avg_percent': sum((r.coverage_avg_percent or 0) for r in current_rows) / len(current_rows),
         'ai_usage_percent': sum((r.ai_usage_percent or 0) for r in current_rows) / len(current_rows),
+        'code_ai_usage_percent': sum((r.code_ai_usage_percent or 0) for r in current_rows) / len(current_rows),
         'dmt_compliance_rate': sum((r.dmt_compliance_rate or 0) for r in current_rows) / len(current_rows),
         'sprint_name': 'All Projects (Current)',
         'sprint_end_date': None,
@@ -330,8 +349,13 @@ class DeveloperMetricsView(APIView):
         except ValueError:
             limit = 5
 
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        resolved_id = resolver.resolve(id)
+
         metrics_qs = DeveloperMetrics.objects.filter(
-            developer_email__iexact=id
+            developer_email__iexact=resolved_id
         ).order_by('-sprint_end_date')
 
         if project_id and project_id not in ['null', 'undefined', 'all']:
@@ -358,7 +382,7 @@ class DeveloperMetricsView(APIView):
                         else:
                             # Doesn't exist at all, construct an empty synthetic metric
                             sprint_metric = DeveloperMetrics(
-                                developer_email=id,
+                                developer_email=resolved_id,
                                 project_id=project_id,
                                 sprint_name=sprint_obj.name,
                                 sprint_end_date=sprint_obj.end_date.date() if sprint_obj.end_date else timezone.now().date(),
@@ -403,7 +427,7 @@ class DeveloperMetricsView(APIView):
             return Response(metrics)
 
         # --- All Projects Combined ---
-        combined = _get_combined_metrics(id)
+        combined = _get_combined_metrics(resolved_id)
 
         # Step 2: Historical trend — group by sprint_name across all projects
         history = list(
@@ -419,10 +443,17 @@ class DeveloperMetricsView(APIView):
                 avg_review_time_hours=Avg('avg_review_time_hours'),
                 defects_attributed=Sum('defects_attributed'),
                 coverage_avg_percent=Avg('coverage_avg_percent'),
+                ai_usage_percent=Avg('ai_usage_percent'),
+                code_ai_usage_percent=Avg('code_ai_usage_percent'),
                 dmt_compliance_rate=Avg('dmt_compliance_rate'),
             )
             .order_by('-sprint_end_date')[:limit]
         )
+
+        # NOTE: combined['code_ai_usage_percent'] is already correctly set by
+        # _get_combined_metrics as the average of each project's LATEST sprint row.
+        # Do NOT override it with an all-time PR query here — that would mix in
+        # historical PRs outside the current sprint window.
 
         # Prepend combined current so metrics[0] is always the true cross-project snapshot
         result = ([combined] + history) if combined else history
@@ -436,9 +467,14 @@ class DeveloperComparisonView(APIView):
         project_id = request.query_params.get('project_id')
         is_all_projects = not project_id or project_id in ['null', 'undefined', 'all']
 
+        from .analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        resolved_id = resolver.resolve(id)
+
         if is_all_projects:
             # --- All Projects Combined ---
-            combined = _get_combined_metrics(id)
+            combined = _get_combined_metrics(resolved_id)
             if not combined:
                 return Response({})
 

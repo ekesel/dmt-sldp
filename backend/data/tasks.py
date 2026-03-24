@@ -1,3 +1,4 @@
+import logging
 from celery import shared_task
 from django.utils import timezone
 from django.db import connection
@@ -10,6 +11,8 @@ from core.telemetry.models import DataSyncPayload
 from core.celery_utils import tenant_aware_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+logger = logging.getLogger(__name__)
 
 @shared_task
 @tenant_aware_task
@@ -62,7 +65,11 @@ def sync_tenant_data(source_id, schema_name=None):
         
         log.status = 'success'
         
-        # 3. Trigger Metric Recalculation (Async)
+        # 3. Trigger PR Analysis if Source is Git-based
+        if source.source_type in ['github', 'azure_devops_git']:
+            analyze_pr_ai_usage.delay(source.id, schema_name=schema_name or connection.schema_name)
+            
+        # 4. Trigger Metric Recalculation (Async)
         update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
         
         return f"Successfully synced {source.name}. Processed {stats.get('item_count', 0)} items."
@@ -205,3 +212,168 @@ def update_all_sprint_metrics(schema_name=None):
         print(f"Failed to broadcast metrics update: {e}")
 
     return f"Updated metrics for {count} sprints in {connection.schema_name}"
+
+@shared_task
+@tenant_aware_task
+def analyze_pr_ai_usage(source_id, schema_name=None):
+    """
+    Analyzes pull requests to compute AI usage percent from diffs.
+    Also syncs Reviewers and Commits via the Git Connector.
+    """
+    start_time = timezone.now()
+    log = TaskLog.objects.create(
+        task_name="analyze_pr_ai_usage",
+        target_id=str(source_id),
+        status='running'
+    )
+    
+    try:
+        source = SourceConfiguration.objects.get(id=source_id)
+        
+        full_config = {
+            **(source.config_json or {}),
+            'base_url': source.base_url,
+            'api_key': source.api_key,
+            'username': source.username,
+        }
+        
+        # 1. Sync PRs, Diff, Reviews, and Commits via connector
+        # This connector call internally updates PullRequest.ai_code_percent
+        # as well as PullRequestReviewer and Commit models.
+        connector = ConnectorFactory.get_connector(source.source_type, full_config)
+        
+        def progress_cb(percent, msg):
+            log.error_message = f"{percent}%: {msg}"
+            log.save(update_fields=['error_message'])
+            
+        if connector:
+            connector.sync(source.project.tenant.id, source.id, progress_callback=progress_cb)
+            
+        # 2. Rollup: WorkItem.code_ai_usage_percent 
+        # (Weighted average based on pr_links mapped to WorkItems)
+        project_source_ids = list(SourceConfiguration.objects.filter(project_id=source.project.id).values_list('id', flat=True))
+        items = WorkItem.objects.filter(source_config_id__in=project_source_ids)
+        rollup_count = 0
+        prs_matched = 0
+        
+        for item in items:
+            matched_prs = []
+            
+            # Explicit PR Links
+            if item.pr_links:
+                for link in item.pr_links:
+                    parts = link.strip('/').split('/')
+                    if parts and parts[-1].isdigit():
+                        pr_id = parts[-1]
+                        matches = PullRequest.objects.filter(
+                            source_config_id__in=project_source_ids,
+                            external_id=pr_id
+                        )
+                        for m in matches:
+                            if m not in matched_prs:
+                                matched_prs.append(m)
+                                
+            # Fallback
+            if not matched_prs:
+                matches = PullRequest.objects.filter(
+                    source_config_id__in=project_source_ids,
+                    pr_url__icontains=item.external_id
+                )
+                for m in matches:
+                    if m not in matched_prs:
+                        matched_prs.append(m)
+            
+            if matched_prs:
+                total_ai_lines = 0
+                total_changed_lines = 0
+                
+                for pr in matched_prs:
+                    if pr.ai_generated_lines is not None and pr.total_changed_lines is not None:
+                        total_ai_lines += pr.ai_generated_lines
+                        total_changed_lines += pr.total_changed_lines
+                
+                if total_changed_lines > 0:
+                    percent = (total_ai_lines / total_changed_lines) * 100.0
+                    item.code_ai_usage_percent = round(percent, 2)
+                    item.save(update_fields=['code_ai_usage_percent'])
+                    rollup_count += 1
+                
+                prs_matched += len(matched_prs)
+                    
+        log.status = 'success'
+        if source.source_type in ['azure_devops_git', 'azure_devops', 'azure_boards']:
+            log.error_message = f"Analyzed PRs. Matched {prs_matched} PRs. Native ADO AI Usage metrics preserved."
+        else:
+            log.error_message = f"Analyzed PRs. Matched {prs_matched} PRs to Work Items. Rolled up metrics for {rollup_count} work items."
+
+        # 3. Trigger metrics update to surface these bounds to DeveloperMetrics
+        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
+        
+        return log.error_message
+        
+    except Exception as e:
+        log.status = 'failed'
+        log.error_message = str(e)
+        raise e
+    finally:
+        end_time = timezone.now()
+        log.execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+        log.finished_at = end_time
+        log.save()
+
+
+@shared_task
+@tenant_aware_task
+def backfill_identity_merge(mapping_id, schema_name=None):
+    """
+    Retroactively updates all historical records to use the canonical email
+    defined in a UserIdentityMapping.
+    """
+    from .models import UserIdentityMapping, WorkItem, PullRequest, PullRequestReviewer, Commit, DeveloperMetrics
+    from django.db import connection
+    
+    try:
+        mapping = UserIdentityMapping.objects.get(id=mapping_id)
+    except UserIdentityMapping.DoesNotExist:
+        return f"Mapping {mapping_id} not found."
+
+    canonical_email = mapping.canonical_email
+    aliases = [ident.get('email') for ident in mapping.source_identities if ident.get('email')]
+    # Include canonical email in the update set to ensure consistency
+    all_emails = list(set([canonical_email] + aliases))
+    
+    logger.info(f"Backfilling identity merge for {canonical_email}. Aliases: {aliases}")
+
+    # 1. Update WorkItems
+    WorkItem.objects.filter(assignee_email__in=all_emails).update(
+        assignee_email=canonical_email,
+        assignee_name=mapping.canonical_name
+    )
+    WorkItem.objects.filter(creator_email__in=all_emails).update(creator_email=canonical_email)
+    
+    # 2. Update PullRequests
+    PullRequest.objects.filter(author_email__in=all_emails).update(
+        author_email=canonical_email,
+        author_name=mapping.canonical_name
+    )
+    
+    # 3. Update PR Reviewers
+    PullRequestReviewer.objects.filter(reviewer_email__in=all_emails).update(
+        reviewer_email=canonical_email,
+        reviewer_name=mapping.canonical_name
+    )
+    
+    # 4. Update Commits
+    Commit.objects.filter(author_email__in=all_emails).update(
+        author_email=canonical_email,
+        author_name=mapping.canonical_name
+    )
+    
+    # 5. Delete stale DeveloperMetrics for aliases (excluding canonical to keep history)
+    DeveloperMetrics.objects.filter(developer_email__in=aliases).exclude(developer_email=canonical_email).delete()
+    
+    # 6. Re-calculate DeveloperMetrics
+    # Trigger a full refresh of all sprints for this tenant
+    update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
+    
+    return f"Successfully backfilled identity merge for {canonical_email}."
