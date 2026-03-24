@@ -10,6 +10,7 @@ from .models import Image
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from core.permissions import IsManager
+from django_tenants.utils import schema_context
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,15 +25,18 @@ class CreateCommentView(APIView):
     """
     def post(self, request):
         try:
-            serializer = CommentSerializer(data=request.data)
-            if serializer.is_valid():
-                # Setting the user manually from the request
-                serializer.save(user=request.user)
-                return Response({
-                    "message": "Comment created successfully",
-                    "data": serializer.data
-                }, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Ensure we are in the user's tenant context
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                serializer = CommentSerializer(data=request.data)
+                if serializer.is_valid():
+                    # Setting the user manually from the request
+                    serializer.save(user=request.user)
+                    return Response({
+                        "message": "Comment created successfully",
+                        "data": serializer.data
+                    }, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Error in CreateCommentView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -42,13 +46,15 @@ class PostCommentsView(APIView):
     """Retrieve all top-level comments for a specific post with nested replies."""
     def get(self, request, post_id):
         try:
-            # Check if post exists
-            get_object_or_404(Post, post_id=post_id)
-            
-            comments = Comment.objects.filter(post_id=post_id, parent_comment=None).order_by('-created_at')
-            total_comments = comments.count()
-            serializer = CommentSerializer(comments, many=True)
-            return Response({"total_comments": total_comments, "comments": serializer.data}, status=status.HTTP_200_OK)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                # Check if post exists
+                get_object_or_404(Post, post_id=post_id)
+                
+                comments = Comment.objects.filter(post_id=post_id, parent_comment=None).order_by('-created_at')
+                total_comments = comments.count()
+                serializer = CommentSerializer(comments, many=True)
+                return Response({"total_comments": total_comments, "comments": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in PostCommentsView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -58,17 +64,19 @@ class UpdateCommentView(APIView):
     """Update a comment text. Only the author can update."""
     def put(self, request, comment_id):
         try:
-            comment = get_object_or_404(Comment, comment_id=comment_id)
-            
-            # Permission check: Only the owner can update
-            if comment.user != request.user:
-                return Response({"error": "You do not have permission to edit this comment"}, status=status.HTTP_403_FORBIDDEN)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                comment = get_object_or_404(Comment, comment_id=comment_id)
+                
+                # Permission check: Only the owner can update
+                if comment.user != request.user:
+                    return Response({"error": "You do not have permission to edit this comment"}, status=status.HTTP_403_FORBIDDEN)
 
-            serializer = CommentSerializer(comment, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                serializer = CommentSerializer(comment, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Error in UpdateCommentView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -79,14 +87,16 @@ class DeleteCommentView(APIView):
     def delete(self, request, comment_id):
     
         try:
-            comment = get_object_or_404(Comment, comment_id=comment_id)
-         
-            # Check permissions: Owner or Post Author
-            if comment.user != request.user and comment.post.author != request.user:
-                return Response({"error": "You do not have permission to delete this comment"}, status=status.HTTP_403_FORBIDDEN)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                comment = get_object_or_404(Comment, comment_id=comment_id)
+            
+                # Check permissions: Owner or Post Author
+                if comment.user != request.user and comment.post.author != request.user:
+                    return Response({"error": "You do not have permission to delete this comment"}, status=status.HTTP_403_FORBIDDEN)
 
-            comment.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+                comment.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             logger.error(f"Error in DeleteCommentView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -104,18 +114,20 @@ class ReactPostView(APIView):
             if not post_id or not reaction_type:
                 return Response({"error": "post id and reaction_type are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if post exists
-            get_object_or_404(Post, post_id=post_id)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                # Check if post exists
+                get_object_or_404(Post, post_id=post_id)
 
-            # update_or_create handles the logic of preventing double likes
-            reaction, created = Reaction.objects.update_or_create(
-                post_id=post_id,
-                user=request.user,
-                defaults={"reaction_type": reaction_type}
-            )
+                # update_or_create handles the logic of preventing double likes
+                reaction, created = Reaction.objects.update_or_create(
+                    post_id=post_id,
+                    user=request.user,
+                    defaults={"reaction_type": reaction_type}
+                )
 
-            serializer = ReactionSerializer(reaction)
-            return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+                serializer = ReactionSerializer(reaction)
+                return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in ReactPostView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -125,10 +137,12 @@ class PostReactionsView(APIView):
     """Get all reactions for a post via path parameters."""
     def get(self, request, post_id):
         try:
-            reactions = Reaction.objects.filter(post_id=post_id)
-            total_reactions = reactions.count()
-            serializer = ReactionSerializer(reactions, many=True)
-            return Response({"total_reactions": total_reactions, "reactions": serializer.data}, status=status.HTTP_200_OK)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                reactions = Reaction.objects.filter(post_id=post_id)
+                total_reactions = reactions.count()
+                serializer = ReactionSerializer(reactions, many=True)
+                return Response({"total_reactions": total_reactions, "reactions": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in PostReactionsView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -138,13 +152,15 @@ class DeleteReactionView(APIView):
     """Remove a user's reaction from a post."""
     def delete(self, request, post_id):
         try:
-            reaction = Reaction.objects.filter(post_id=post_id, user=request.user).first()
-            
-            if not reaction:
-                return Response({"error": "Reaction not found"}, status=status.HTTP_404_NOT_FOUND)
+            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(tenant_name):
+                reaction = Reaction.objects.filter(post_id=post_id, user=request.user).first()
+                
+                if not reaction:
+                    return Response({"error": "Reaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            reaction.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+                reaction.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             logger.error(f"Error in DeleteReactionView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -160,14 +176,14 @@ def upload_temp_image(request):
         return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Save the temp image
-        temp_image = Image.objects.create(file=file)
-        # print(f"Temp image saved with ID: {temp_image.id} and URL: {temp_image.file.url}") # Removed print for production readiness
-
-        return Response({
-            "image_id": str(temp_image.id),  # UUID returned
-            "file_url": temp_image.file.url
-        }, status=status.HTTP_201_CREATED)
+        # Save the temp image with the user's tenant context
+        tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+        with schema_context(tenant_name):
+            temp_image = Image.objects.create(file=file)
+            return Response({
+                "image_id": str(temp_image.id),  # UUID returned
+                "file_url": temp_image.file.url
+            }, status=status.HTTP_201_CREATED)
     except Exception as e:
         logger.error(f"Error in upload_temp_image: {str(e)}", exc_info=True)
         return Response({"error": "An internal server error occurred during image upload"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
