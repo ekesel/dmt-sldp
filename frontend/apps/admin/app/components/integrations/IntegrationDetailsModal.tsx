@@ -21,7 +21,12 @@ export const IntegrationDetailsModal: React.FC<IntegrationDetailsModalProps> = (
     const statusColor = integration.is_active ? 'text-success' : 'text-muted-foreground';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="integration-details-title"
+        >
             <div className="bg-popover w-full max-w-lg rounded-xl shadow-2xl border border-border flex flex-col">
 
                 {/* Header */}
@@ -31,7 +36,7 @@ export const IntegrationDetailsModal: React.FC<IntegrationDetailsModalProps> = (
                             <StatusIcon size={20} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold text-foreground">
+                            <h2 id="integration-details-title" className="text-xl font-semibold text-foreground">
                                 {integration.name}
                             </h2>
                             <p className="text-sm text-muted-foreground capitalize">
@@ -39,7 +44,11 @@ export const IntegrationDetailsModal: React.FC<IntegrationDetailsModalProps> = (
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">
+                    <button 
+                        onClick={onClose} 
+                        aria-label="Close"
+                        className="text-muted-foreground hover:text-foreground transition"
+                    >
                         <X size={20} />
                     </button>
                 </div>

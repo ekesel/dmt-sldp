@@ -7,9 +7,10 @@ import { NotificationBell } from "./NotificationBell";
 
 interface NavbarProps {
   onMenuClick?: () => void;
+  isMenuOpen: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
@@ -31,6 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-4">
           <button
             onClick={onMenuClick}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            aria-controls="navbar-menu"
             className="p-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition lg:hidden"
           >
             <Menu className="w-5 h-5 text-muted-foreground" />
@@ -84,6 +88,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              aria-label="Toggle profile menu"
+              aria-expanded={isDropdownOpen}
+              aria-haspopup="true"
+              aria-controls="profile-dropdown"
               className="p-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition"
             >
               <ChevronDown
@@ -93,6 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
 
             {/* Dropdown Items */}
             <div
+              id="profile-dropdown"
               className={`absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-xl transition-all duration-200 z-[100] ${isDropdownOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}
             >
               <button

@@ -15,10 +15,10 @@ Parameter Description
 
 Real Connection Examples
 Manager connecting:
-ws://samta.localhost:8000/ws/news/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzczMzA0NzgxLCJpYXQiOjE3NzMzMDExODEsImp0aSI6ImU1MjQxMmUzNjJiMjRiYTc4ZGFhMGFmM2ZjM2M2MDg3IiwidXNlcl9pZCI6IjE4IiwiaXNfcGxhdGZvcm1fYWRtaW4iOmZhbHNlfQ.oaPtlXqwh_O3ZYsDP7Kcv8PgvCY72G_Zr2_Uc-ZmprE
+ws://samta.localhost:8000/ws/news/?token=<JWT_TOKEN_HERE>
 
 Normal user connecting:
-ws://samta.localhost:8000/ws/news/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzczMzA0NzgxLCJpYXQiOjE3NzMzMDExODEsImp0aSI6ImU1MjQxMmUzNjJiMjRiYTc4ZGFhMGFmM2ZjM2M2MDg3IiwidXNlcl9pZCI6IjE4IiwiaXNfcGxhdGZvcm1fYWRtaW4iOmZhbHNlfQ.oaPtlXqwh_O3ZYsDP7Kcv8PgvCY72G_Zr2_Uc-ZmprE
+ws://samta.localhost:8000/ws/news/?token=<JWT_TOKEN_HERE>
 
 3. Authentication & Permissions
    Every WebSocket connection must carry a valid JWT access token in the query string. The server rejects connections with missing or expired tokens before processing any message.

@@ -88,8 +88,9 @@ export default function RegisterPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-muted-foreground">First Name</label>
+                                <label htmlFor="first_name" className="text-sm font-medium text-muted-foreground">First Name</label>
                                 <input
+                                    id="first_name"
                                     type="text"
                                     className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
                                     placeholder="John"
@@ -98,8 +99,9 @@ export default function RegisterPage() {
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-muted-foreground">Last Name</label>
+                                <label htmlFor="last_name" className="text-sm font-medium text-muted-foreground">Last Name</label>
                                 <input
+                                    id="last_name"
                                     type="text"
                                     className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
                                     placeholder="Doe"
@@ -110,10 +112,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Username</label>
+                            <label htmlFor="username" className="text-sm font-medium text-muted-foreground">Username</label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="username"
                                     type="text"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
@@ -125,10 +128,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+                            <label htmlFor="email" className="text-sm font-medium text-muted-foreground">Email Address</label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="email"
                                     type="email"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
@@ -141,10 +145,11 @@ export default function RegisterPage() {
 
                         {/* Tenant Selection - Optional for now or specific field */}
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Tenant Slug (Optional)</label>
+                            <label htmlFor="tenant_slug" className="text-sm font-medium text-muted-foreground">Tenant Slug (Optional)</label>
                             <div className="relative">
                                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="tenant_slug"
                                     type="text"
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
                                     placeholder="acme-corp"
@@ -155,10 +160,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Password</label>
+                            <label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="password"
                                     type="password"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
@@ -170,10 +176,11 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
+                            <label htmlFor="password2" className="text-sm font-medium text-muted-foreground">Confirm Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="password2"
                                     type="password"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"

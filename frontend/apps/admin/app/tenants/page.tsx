@@ -215,6 +215,19 @@ export default function TenantsPage() {
                               <ExternalLink className="w-4 h-4" />
                             </button>
 
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuTenantId(openMenuTenantId === tenant.id ? null : tenant.id);
+                              }}
+                              disabled={isBusy}
+                              className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground disabled:opacity-50"
+                              title="Tenant Actions"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
                             {isMenuOpen && (
                               <div className="absolute right-0 top-10 z-20 min-w-[190px] rounded-lg border border-border bg-popover shadow-lg p-1">
                                 <button

@@ -9,6 +9,10 @@ class WSClient {
     this.url = url;
   }
 
+  get isConnected(): boolean {
+    return this.socket !== null && this.socket.readyState === WebSocket.OPEN;
+  }
+
   connect() {
     if (
       this.socket &&

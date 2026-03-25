@@ -23,6 +23,23 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({ isOpen, onClose }) =>
         };
     }, [isOpen]);
 
+    // Handle Escape-key dismissal
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            window.addEventListener('keydown', handleEscape);
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleEscape);
+        };
+    }, [isOpen, onClose]);
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -44,7 +61,12 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({ isOpen, onClose }) =>
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+        <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-post-title"
+        >
             {/* Backdrop */}
             <div 
                 className="absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity" 
@@ -56,9 +78,10 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({ isOpen, onClose }) =>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <div className="w-8" /> {/* Spacer */}
-                    <h2 className="text-xl font-bold text-foreground">Create Post</h2>
+                    <h2 id="create-post-title" className="text-xl font-bold text-foreground">Create Post</h2>
                     <button 
                         onClick={onClose}
+                        aria-label="Close"
                         className="bg-muted p-2 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

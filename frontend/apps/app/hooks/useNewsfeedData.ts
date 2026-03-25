@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
+import api from '@dmt/api';
 
 export interface NewsAuthor {
   id: number;
@@ -34,7 +35,7 @@ export interface NewsPost {
   updated_at: string;
 }
 
-export function useNews() {
+export function useNewsfeedData() {
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [status, setStatus] = useState<'connecting' | 'open' | 'closed' | 'error'>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -75,15 +76,11 @@ export function useNews() {
   useEffect(() => {
     if (!socket) return;
 
-    const bootstrapOpen = () => {
+    const onOpen = () => {
       setStatus('open');
       setError(null);
       // Automatically fetch initial posts when connection opens
       socket.emit('get_posts', { page: 1 });
-    };
-
-    const onOpen = () => {
-      bootstrapOpen();
     };
 
     const onClose = () => setStatus('closed');
@@ -99,10 +96,10 @@ export function useNews() {
     socket.on('post_deleted', handleMessage);
 
     // Initial status check
-    // Since the socket might already be open, we trigger the fetching manually if it's open
-    if (socket.isConnected) {
-      bootstrapOpen();
+    if (socket && socket.isConnected) {
+        onOpen();
     }
+    
     return () => {
       socket.off('open', onOpen);
       socket.off('close', onClose);
@@ -130,6 +127,20 @@ export function useNews() {
     socket?.emit('delete_post', { id });
   };
 
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await api.post<{ image_id: string; file_url: string }>('/news/upload-image/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('Failed to upload image:', err);
+      throw err;
+    }
+  };
+
   return {
     posts,
     status,
@@ -139,6 +150,7 @@ export function useNews() {
     fetchNextPage,
     createPost,
     updatePost,
-    deletePost
+    deletePost,
+    uploadImage
   };
 }
