@@ -5,6 +5,11 @@ class WSClient {
   private url: string;
   private listeners: Map<string, Set<Callback>> = new Map();
 
+  private messageQueue: string[] = [];
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+
   constructor(url: string) {
     this.url = url;
   }
@@ -18,11 +23,24 @@ class WSClient {
       return;
     }
 
-    this.socket = new WebSocket(this.url); //browser initiates the handshake
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error(`[WSClient] Max reconnection attempts (${this.maxReconnectAttempts}) reached. Giving up.`);
+      this.dispatchEvent("error", new Error("Max reconnection attempts reached"));
+      return;
+    }
+
+    console.log(`[WSClient] Connecting to ${this.url}... (Attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+    this.socket = new WebSocket(this.url);
 
     this.socket.onopen = () => {
-      console.log(`[WSClient] Connected to ${this.url}`);
+      console.log(`[WSClient] Connected successfully to ${this.url}`);
+      this.reconnectAttempts = 0;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       this.dispatchEvent("open", null);
+      this.flushQueue();
     };
 
     this.socket.onmessage = (event) => {
@@ -44,14 +62,35 @@ class WSClient {
     this.socket.onclose = () => {
       console.log("[WSClient] WebSocket closed");
       this.dispatchEvent("close", null);
+      
+      // Auto-reconnect logic
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+        console.log(`[WSClient] Reconnecting in ${delay}ms...`);
+        this.reconnectAttempts++;
+        this.reconnectTimer = setTimeout(() => this.connect(), delay);
+      }
     };
   }
 
-  emit(action: string, data: any = {}) {
+  private flushQueue() {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({ action, ...data }));
+      while (this.messageQueue.length > 0) {
+        const message = this.messageQueue.shift();
+        if (message) {
+          this.socket.send(message);
+        }
+      }
+    }
+  }
+
+  emit(action: string, data: any = {}) {
+    const payload = JSON.stringify({ action, ...data });
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(payload);
     } else {
-      console.warn("[WSClient] Cannot emit, socket not open");
+      console.warn(`[WSClient] Socket not open, queuing action: ${action}`);
+      this.messageQueue.push(payload);
     }
   }
 
@@ -74,6 +113,14 @@ class WSClient {
     if (eventListeners) {
       eventListeners.forEach((callback) => callback(data));
     }
+  }
+
+  isConnected() {
+    return this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+
+  getReadyState() {
+    return this.socket ? this.socket.readyState : WebSocket.CLOSED;
   }
 
   disconnect() {

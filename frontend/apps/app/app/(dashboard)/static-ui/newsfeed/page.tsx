@@ -3,39 +3,16 @@
 import React, { useState } from 'react';
 import StaticPostCard from '../../../../components/StaticUI/StaticPostCard';
 import StaticPostModal from '../../../../components/StaticUI/StaticPostModal';
+import { useNewsfeedData } from '../../../../hooks/useNewsfeedData';
 
 const NewsfeedPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    
-    const posts = [
-        {
-            user: { name: "John Doe", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80" },
-            time: "2 hours ago",
-            content: "Just finished building this amazing Facebook-style UI with React and Tailwind CSS! The developer experience is just next level. 🚀 #webdev #react #tailwindcss",
-            image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-            likes: 124,
-            comments: 18,
-            shares: 5
-        },
-        {
-            user: { name: "Jane Smith", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80" },
-            time: "5 hours ago",
-            content: "Nothing beats a calm evening walk by the beach. Nature is truly the best healer. 🌊✨",
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-            likes: 89,
-            comments: 4,
-            shares: 2
-        },
-        {
-            user: { name: "Mike Johnson", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80" },
-            time: "1 day ago",
-            content: "Who's excited for the upcoming tech conference? Can't wait to see all the latest innovations in AI and robotics! 🤖🦾",
-            likes: 56,
-            comments: 12,
-            shares: 1
-        }
-    ];
+    const { posts, loading, currentUser, createPost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
 
+    if (loading && posts.length === 0) {
+        return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading feed...</div>;
+    }
+    
     return (
         <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
             <main className="flex justify-center max-w-screen-xl mx-auto py-10 px-4">
@@ -58,9 +35,22 @@ const NewsfeedPage = () => {
 
                     {/* Posts List - Starts immediately after header now */}
                     <div className="flex flex-col">
-                        {posts.map((post, idx) => (
-                            <StaticPostCard key={idx} {...post} />
-                        ))}
+                        {posts.length === 0 ? (
+                            <div className="text-center p-8 bg-card border border-border rounded-xl shadow-sm text-muted-foreground w-full">No posts available</div>
+                        ) : (
+                            <>
+                                {posts.map((post, idx) => (
+                                    <StaticPostCard key={post.post_id || idx} post={post} />
+                                ))}
+                                {hasNextPage && (
+                                    <div className="flex justify-center p-4 mb-8">
+                                        <button onClick={loadMorePosts} className="bg-muted text-foreground hover:bg-muted/80 px-4 py-2 rounded-lg font-medium transition-colors">
+                                            Load More
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </main>
@@ -69,6 +59,9 @@ const NewsfeedPage = () => {
             <StaticPostModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
+                userProfile={currentUser}
+                createPost={createPost}
+                uploadImage={uploadImage}
             />
         </div>
     );

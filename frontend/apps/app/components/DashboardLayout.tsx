@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import { useAuth } from '../context/AuthContext';
 import { WebSocketProvider } from '../context/WebSocketContext';
 
 interface DashboardLayoutProps {
@@ -9,20 +10,24 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+    const { token, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [wsUrl, setWsUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        // Construct WebSocket URL
-        const tenant = localStorage.getItem('dmt-tenant') || 'samta';
-        const token = localStorage.getItem('dmt-access-token');
-
         if (token) {
-            const host = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            setWsUrl(`${protocol}//${tenant}.${host}/ws/news/?token=${token}`);
+            console.log('[DashboardLayout] Found auth token, initializing WebSocket...');
+            
+            // Using deployed backend as per latest instructions
+            const finalWsUrl = `wss://api.elevate.samta.ai/ws/news/?token=${token}`;
+            
+            console.log(`[DashboardLayout] Connecting to Newsfeed WS: wss://api.elevate.samta.ai/ws/news/?token=***${token.slice(-6)}`);
+            setWsUrl(finalWsUrl);
+        } else {
+            console.warn('[DashboardLayout] No auth token available, skipping Newsfeed WebSocket initialization');
+            setWsUrl(null);
         }
-    }, []);
+    }, [token]); // Still react to token from useAuth to trigger re-run
 
     const content = (
         <div className="flex flex-col h-screen bg-background transition-colors duration-200">

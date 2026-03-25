@@ -40,7 +40,7 @@ export function useNews() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
-  
+
   const { client: socket } = useWebSocket();
 
   const handleMessage = useCallback((message: any) => {
@@ -84,7 +84,7 @@ export function useNews() {
 
     const onClose = () => setStatus('closed');
     const onError = () => setStatus('error');
-    
+
     // Listen for events
     socket.on('open', onOpen);
     socket.on('close', onClose);
@@ -96,7 +96,7 @@ export function useNews() {
 
     // Initial status check
     // Since the socket might already be open, we trigger the fetching manually if it's open
-    
+
     return () => {
       socket.off('open', onOpen);
       socket.off('close', onClose);

@@ -15,12 +15,12 @@ const getBaseURL = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    
+
     // If not localhost, use a relative path to inherit the current protocol and domain
     if (!isLocalhost) {
       return '/api/';
     }
-    
+
     // For local development, default to http://localhost:8000/api/
     return `http://${hostname}:8000/api/`;
   }

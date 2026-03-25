@@ -34,13 +34,15 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const initAuth = async () => {
-            const token = localStorage.getItem('dmt-access-token');
-            if (token) {
+            const storedToken = localStorage.getItem('dmt-access-token');
+            if (storedToken) {
+                setToken(storedToken);
                 try {
                     const userData = await auth.getProfile() as any;
                     setUser(userData);
@@ -52,7 +54,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     localStorage.removeItem('dmt-refresh-token');
                     localStorage.removeItem('dmt-tenant');
                     setUser(null);
+                    setToken(null);
                 }
+            } else {
+                setToken(null);
             }
             setIsLoading(false);
         };
@@ -66,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const response = await auth.login(username, password, portal);
             localStorage.setItem('dmt-access-token', response.access);
             localStorage.setItem('dmt-refresh-token', response.refresh);
+            setToken(response.access);
             if (response.user?.tenant_slug) {
                 localStorage.setItem('dmt-tenant', response.user.tenant_slug);
             }
@@ -105,6 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStorage.removeItem('dmt-refresh-token');
             localStorage.removeItem('dmt-tenant');
             setUser(null);
+            setToken(null);
             setIsLoading(false);
         }
     };
@@ -122,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 register,
                 logout,
                 clearError,
-                token: typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null,
+                token,
             }}
         >
             {children}
