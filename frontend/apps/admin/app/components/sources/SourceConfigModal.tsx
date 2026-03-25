@@ -132,23 +132,23 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
         >
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Name</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Name</label>
                     <input
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="e.g. Corporate Jira"
                         required
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Source Type</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Source Type</label>
                     <select
                         value={formData.source_type}
                         onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
                         disabled={!!source}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition disabled:opacity-50"
                         required
                     >
                         <option value="">Select type</option>
@@ -166,11 +166,11 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Base URL</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Base URL</label>
                     <input
                         value={formData.base_url}
                         onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="https://your-domain.atlassian.net"
                         required
                     />
@@ -178,14 +178,14 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
 
                 {formData.source_type === 'github' && (
                     <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5 flex items-center justify-between">
                             Target Repositories
-                            <span className="text-xs text-slate-500 font-normal">Comma separated</span>
+                            <span className="text-xs text-muted-foreground/50 font-normal">Comma separated</span>
                         </label>
                         <input
                             value={formData.repos}
                             onChange={(e) => setFormData({ ...formData, repos: e.target.value })}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition font-mono text-sm"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition font-mono text-sm"
                             placeholder="owner/repo-1, owner/repo-2"
                             required
                         />
@@ -193,37 +193,37 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                 )}
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Username / Email (Optional)</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Username / Email (Optional)</label>
                     <input
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="user@example.com"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">API Token / Key</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">API Token / Key</label>
                     <input
                         type="password"
                         value={formData.api_key}
                         onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder={source ? "Leave blank to keep unchanged" : "Enter API Token"}
                         required={!source}
                     />
                 </div>
 
                 {source && (formData.source_type === 'clickup' || formData.source_type.includes('azure')) && (
-                    <div className="pt-2 border-t border-slate-700/50">
-                        <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center gap-2">
+                    <div className="pt-2 border-t border-border/50">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5 flex items-center gap-2">
                             Active Sync Folder (Target Scope)
-                            {isLoadingFolders && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+                            {isLoadingFolders && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
                         </label>
                         <select
                             value={formData.active_folder_id}
                             onChange={handleFolderChange}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition disabled:opacity-50"
                             disabled={isLoadingFolders}
                         >
                             <option value="">Sync All Scope (No Filter)</option>
@@ -231,7 +231,7 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                                 <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
                         </select>
-                        <p className="text-xs text-slate-500 mt-1">If selected, metrics will be restricted purely to this folder or team.</p>
+                        <p className="text-xs text-muted-foreground mt-1">If selected, metrics will be restricted purely to this folder or team.</p>
                     </div>
                 )}
 
@@ -239,14 +239,14 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition"
+                        className="flex-1 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium rounded-lg border border-border transition"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
                     >
                         {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                         {source ? 'Save Changes' : 'Add Source'}

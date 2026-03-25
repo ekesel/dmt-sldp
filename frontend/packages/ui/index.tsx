@@ -17,7 +17,7 @@ export const Card = ({ children, className }: { children: React.ReactNode; class
 
 export const Button = ({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button className={cn(
-        "px-4 py-2 bg-brand-primary hover:bg-brand-primary/80 text-white rounded-lg transition-all active:scale-95 font-medium",
+        "px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-all active:scale-95 font-medium",
         className
     )} {...props}>
         {children}

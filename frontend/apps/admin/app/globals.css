@@ -1,10 +1,169 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --background: #0f172a;
-  --foreground: #ffffff;
+  --background: rgb(249, 250, 251);
+  --foreground: rgb(0, 0, 0);
+
+  --primary: rgb(31, 133, 189);
+  --primary-foreground: rgb(255, 255, 255);
+
+  --accent: rgb(245, 158, 11);
+  --accent-foreground: rgb(255, 255, 255);
+
+  --secondary: rgb(226, 232, 240);
+  --secondary-foreground: rgb(17, 24, 39);
+
+  --muted: rgb(226, 232, 240);
+  --muted-foreground: rgb(30, 41, 59);
+
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(17, 24, 39);
+
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(17, 24, 39);
+
+  --border: rgb(229, 231, 235);
+  --input: rgb(229, 231, 235);
+  --ring: rgb(31, 133, 189);
+
+  --destructive: rgb(220, 38, 38);
+  --destructive-foreground: rgb(255, 255, 255);
+
+  --success: rgb(34, 197, 94);
+  --success-foreground: rgb(255, 255, 255);
+
+  --info: rgb(59, 130, 246);
+  --info-foreground: rgb(255, 255, 255);
+
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
+}
+
+.dark {
+  --background: rgb(15, 23, 42);
+  --foreground: rgb(241, 245, 249);
+
+  --primary: rgb(59, 130, 246);
+  --primary-foreground: rgb(255, 255, 255);
+
+  --accent: rgb(245, 158, 11);
+  --accent-foreground: rgb(255, 255, 255);
+
+  --secondary: rgb(30, 41, 59);
+  --secondary-foreground: rgb(241, 245, 249);
+
+  --muted: rgb(30, 41, 59);
+  --muted-foreground: rgb(148, 163, 184);
+
+  --popover: rgb(15, 23, 42);
+  --popover-foreground: rgb(241, 245, 249);
+
+  --card: rgb(15, 23, 42);
+  --card-foreground: rgb(241, 245, 249);
+
+  --border: rgb(30, 41, 59);
+  --input: rgb(30, 41, 59);
+  --ring: rgb(59, 130, 246);
+
+  --destructive: rgb(127, 29, 29);
+  --destructive-foreground: rgb(255, 255, 255);
+
+  --success: rgb(21, 128, 61);
+  --success-foreground: rgb(255, 255, 255);
+
+  --info: rgb(30, 64, 175);
+  --info-foreground: rgb(255, 255, 255);
+
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
+}
+
+@theme {
+  /* Radii */
+  --radius-lg: 0.625rem;
+  --radius-md: calc(0.625rem - 2px);
+  --radius-sm: calc(0.625rem - 4px);
+
+  /* Core */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Secondary */
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  /* Muted */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* Destructive */
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Success */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  /* Info */
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Warning */
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+
+
+  /* ================= BADGE INTENSITY ================= */
+
+  /* General (Blue tone) */
+  --badge-general-bg-strong: rgb(203, 213, 225);
+  --badge-general-border-strong: rgb(148, 163, 184);
+
+  /* Alert (Red tone) */
+  --badge-alert-bg-strong: rgb(252, 165, 165);
+  --badge-alert-border-strong: rgb(239, 68, 68);
+
+  /* Announcement (Neutral stronger) */
+  --badge-announcement-bg-strong: rgb(229, 231, 235);
+  --badge-announcement-border-strong: rgb(156, 163, 175);
+
+  /* Background Images */
+  --background-image-glass-gradient: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05));
+
+  /* Shadows */
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
+  /* Animations */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+
+    100% {
+      background-position: 1000px 0;
+    }
+  }
 }
 
 html {
@@ -12,8 +171,8 @@ html {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--color-foreground);
+  background: var(--color-background);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -56,6 +215,7 @@ textarea:focus {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -69,10 +229,10 @@ textarea:focus {
 
 
 /* Hide number input arrows/spinners */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 input[type=number] {

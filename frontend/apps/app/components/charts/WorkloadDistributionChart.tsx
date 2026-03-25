@@ -46,10 +46,10 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                     barSize={20}
                     barGap={4}
                 >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
                     <XAxis
                         type="number"
-                        stroke="#64748b"
+                        stroke="var(--color-muted-foreground)"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
@@ -57,7 +57,7 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                     <YAxis
                         dataKey="name"
                         type="category"
-                        stroke="#94a3b8"
+                        stroke="var(--color-muted-foreground)"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
@@ -65,12 +65,12 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                     />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #1e293b',
+                            backgroundColor: 'var(--color-popover)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '8px',
-                            color: '#f8fafc'
+                            color: 'var(--color-popover-foreground)'
                         }}
-                        cursor={{ fill: '#1e293b', opacity: 0.4 }}
+                        cursor={{ fill: 'var(--color-muted)', opacity: 0.4 }}
                     />
                     <Legend
                         verticalAlign="top"
@@ -80,14 +80,14 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                     <Bar
                         name={`${sprintAName} (${label})`}
                         dataKey={dataKeyA}
-                        fill="#6366f1"
+                        fill="var(--color-primary)"
                         radius={[0, 4, 4, 0]}
                         opacity={0.6}
                     />
                     <Bar
                         name={`${sprintBName} (${label})`}
                         dataKey={dataKeyB}
-                        fill="#10b981"
+                        fill="var(--color-accent)"
                         radius={[0, 4, 4, 0]}
                     />
                 </BarChart>

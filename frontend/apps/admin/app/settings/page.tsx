@@ -106,7 +106,7 @@ export default function SettingsPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <RefreshCcw className="w-8 h-8 text-blue-500 animate-spin" />
+                    <RefreshCcw className="w-8 h-8 text-primary animate-spin" />
                 </div>
             </DashboardLayout>
         );
@@ -118,12 +118,12 @@ export default function SettingsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">Settings</h1>
-                        <p className="text-slate-500 dark:text-slate-400">Configure platform-wide settings and retention policies.</p>
+                        <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
+                        <p className="text-muted-foreground">Configure platform-wide settings and retention policies.</p>
 
                     </div>
                     {hasUnsavedChanges && (
-                        <div className="flex items-center gap-2 bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full text-xs font-medium border border-amber-500/20">
+                        <div className="flex items-center gap-2 bg-warning/10 text-warning px-3 py-1 rounded-full text-xs font-medium border border-warning/20">
                             <AlertTriangle size={14} />
                             Unsaved Changes
                         </div>
@@ -134,25 +134,25 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     {/* General Settings */}
-                    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+                    <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <Settings className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">General</h2>
+                            <Settings className="w-5 h-5 text-primary" />
+                            <h2 className="text-lg font-semibold text-foreground">General</h2>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">Theme</label>
+                                <label className="block text-sm font-medium text-muted-foreground mb-3">Theme</label>
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
                                         onClick={() => handleThemeChange('dark')}
-                                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition ${theme === 'dark' ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition ${theme === 'dark' ? 'bg-primary/10 border-primary text-primary' : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/30'}`}
                                     >
                                         <Moon size={18} />
                                         <span>Dark Mode</span>
                                     </button>
                                     <button
                                         onClick={() => handleThemeChange('light')}
-                                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition ${theme === 'light' ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition ${theme === 'light' ? 'bg-primary/10 border-primary text-primary' : 'bg-muted/50 border-border text-muted-foreground hover:border-muted-foreground/30'}`}
                                     >
                                         <Sun size={18} />
                                         <span>Light Mode</span>
@@ -164,12 +164,12 @@ export default function SettingsPage() {
 
                     {/* Data Retention Settings - Conditionally Rendered */}
                     {currentTenantId ? (
-                        <div className="lg:col-span-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+                        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
                             <div className="flex items-center gap-2 mb-6">
-                                <HardDrive className="w-5 h-5 text-orange-500 dark:text-orange-400" />
+                                <HardDrive className="w-5 h-5 text-primary" />
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Data Retention Policy</h2>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">Configuring for: <span className="font-medium text-slate-700 dark:text-slate-300">{currentTenant?.name}</span></p>
+                                    <h2 className="text-lg font-semibold text-foreground">Data Retention Policy</h2>
+                                    <p className="text-xs text-muted-foreground">Configuring for: <span className="font-medium text-foreground">{currentTenant?.name}</span></p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -182,7 +182,7 @@ export default function SettingsPage() {
                                     const showWarning = val < 3;
                                     return (
                                         <div key={policy.id} className="space-y-2">
-                                            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300">{policy.label} Retention</label>
+                                            <label className="block text-sm font-medium text-muted-foreground">{policy.label} Retention</label>
                                             <div className="relative">
                                                 <input
                                                     type="number"
@@ -190,12 +190,12 @@ export default function SettingsPage() {
                                                     max="60"
                                                     value={val}
                                                     onChange={(e) => handleRetentionChange(policy.id, parseInt(e.target.value) || 0)}
-                                                    className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border rounded-lg text-slate-900 dark:text-white focus:outline-none transition ${showWarning ? 'border-amber-500/50 focus:border-amber-500' : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'}`}
+                                                    className={`w-full px-3 py-2 bg-muted/50 border rounded-lg text-foreground focus:outline-none transition ${showWarning ? 'border-warning/50 focus:border-warning' : 'border-border focus:border-primary'}`}
                                                 />
-                                                <span className="absolute right-3 top-2 text-xs text-slate-500">Months</span>
+                                                <span className="absolute right-3 top-2 text-xs text-muted-foreground">Months</span>
                                             </div>
                                             {showWarning && (
-                                                <p className="text-[10px] text-amber-500 flex items-center gap-1 mt-1">
+                                                <p className="text-[10px] text-warning flex items-center gap-1 mt-1">
                                                     <AlertTriangle size={10} />
                                                     Recommended: 3+ months
                                                 </p>
@@ -204,23 +204,23 @@ export default function SettingsPage() {
                                     );
                                 })}
                             </div>
-                            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 rounded-lg">
-                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                                <p className="text-xs text-muted-foreground leading-relaxed">
                                     Data older than the specified duration will be automatically archived or purged according to the system's background worker processes. Changes may take up to 24 hours to take effect globally.
                                 </p>
                             </div>
 
                             {/* Archive Action */}
-                            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                            <div className="mt-6 pt-6 border-t border-border">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-sm font-medium text-slate-800 dark:text-white">Manual Archival</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Trigger immediate archival for {currentTenant?.name}.</p>
+                                        <h3 className="text-sm font-medium text-foreground">Manual Archival</h3>
+                                        <p className="text-xs text-muted-foreground mt-1">Trigger immediate archival for {currentTenant?.name}.</p>
                                     </div>
                                     <button
                                         onClick={handleArchiveData}
                                         disabled={archiving || !currentTenantId}
-                                        className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium transition border border-slate-200 dark:border-slate-700 flex items-center gap-2"
+                                        className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition border border-border flex items-center gap-2"
                                     >
                                         {archiving ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
                                         <span>Archive Data Now</span>
@@ -230,12 +230,12 @@ export default function SettingsPage() {
                         </div>
                     ) : (
                         // Global View Placeholder
-                        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center">
-                            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                <HardDrive className="w-6 h-6 text-slate-400" />
+                        <div className="lg:col-span-2 bg-muted/30 border border-border border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center">
+                            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+                                <HardDrive className="w-6 h-6 text-muted-foreground" />
                             </div>
-                            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">Select a Tenant</h3>
-                            <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                            <h3 className="text-lg font-semibold text-foreground mb-2">Select a Tenant</h3>
+                            <p className="text-muted-foreground max-w-md">
                                 Data Retention Policies are configured per-tenant. Please select a specific tenant from the top navigation bar to configure its retention policy and archival settings.
                             </p>
                         </div>
@@ -247,7 +247,7 @@ export default function SettingsPage() {
                     <button
                         onClick={saveSettings}
                         disabled={saving || !hasUnsavedChanges}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold transition shadow-lg ${hasUnsavedChanges ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'}`}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold transition shadow-lg ${hasUnsavedChanges ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20' : 'bg-muted text-muted-foreground cursor-not-allowed border border-border'}`}
                     >
                         {saving ? (
                             <RefreshCcw className="w-5 h-5 animate-spin" />

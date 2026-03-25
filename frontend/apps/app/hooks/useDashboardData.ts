@@ -57,50 +57,8 @@ export function useDashboardData(projectId?: number | null) {
   const [aiStatus, setAiStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamically determine WebSocket URL based on tenant
-  const [wsUrls, setWsUrls] = useState<{ url: string | null; fallback: string | null }>({
-    url: null,
-    fallback: null
-  });
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const getTenantId = () => {
-        const stored = localStorage.getItem('dmt-tenant');
-        if (stored && stored !== 'undefined' && stored !== 'null') return stored;
-
-        const host = window.location.hostname;
-        const parts = host.split('.');
-        const devDomains = process.env.NEXT_PUBLIC_DEV_DOMAINS ? process.env.NEXT_PUBLIC_DEV_DOMAINS.split(',') : ['localhost', '127.0.0.1'];
-        if (parts.length > 1 && !devDomains.includes(parts[0])) {
-          return parts[0];
-        }
-        return 'default';
-      };
-
-      const tenant = getTenantId();
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-      const port = window.location.port;
-      const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
-      const isLocalhost = host === 'localhost' || host === '127.0.0.1';
-      const portSuffix = (portValue && !process.env.NEXT_PUBLIC_WS_HOST) ? `:${portValue}` : (isLocalhost ? ':8000' : '');
-
-      // Attempt direct connection to backend, fallback to current port
-      const directUrl = `${protocol}//${host}${portSuffix}/ws/telemetry/${tenant}/`;
-      const fallbackUrl = `${protocol}//${host}${port ? `:${port}` : ''}/ws/telemetry/${tenant}/`;
-
-      setWsUrls({
-        url: directUrl,
-        fallback: fallbackUrl
-      });
-
-      // Logic for fallback handling is currently partially in useWebSocket component logic 
-      // but we force the preferred order here.
-    }
-  }, []);
-
-  const { lastMessage } = useWebSocket(wsUrls.url || '', wsUrls.fallback || undefined);
+  const { lastMessage } = useWebSocket();
 
   const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
 

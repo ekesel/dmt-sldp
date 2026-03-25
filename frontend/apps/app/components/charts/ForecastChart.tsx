@@ -7,7 +7,7 @@ interface ForecastChartProps {
 }
 
 export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
-    if (!data) return <div className="h-full flex items-center justify-center text-slate-500">No forecast data</div>;
+    if (!data) return <div className="h-full flex items-center justify-center text-muted-foreground">No forecast data</div>;
 
     // Transform data for Recharts
     // We want to show a probability curve. We can represent percentiles as "Accumulated Probability"
@@ -26,14 +26,14 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
                 <AreaChart data={chartData} margin={{ top: 25, right: 30, left: 0, bottom: 0 }}>
                     <defs>
                         <linearGradient id="colorProb" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                     <XAxis
                         dataKey="date"
-                        stroke="#94a3b8"
+                        stroke="var(--color-muted-foreground)"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
@@ -44,18 +44,18 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
                     />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: '#0f172a',
-                            border: '1px solid #ffffff10',
+                            backgroundColor: 'var(--color-popover)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '8px',
                             fontSize: '12px'
                         }}
-                        itemStyle={{ color: '#6366f1' }}
+                        itemStyle={{ color: 'var(--color-primary)' }}
                         formatter={(value: any, name: string, props: any) => [`${props.payload.percentile}% Confidence`, 'Probability']}
                     />
                     <Area
                         type="monotone"
                         dataKey="probability"
-                        stroke="#6366f1"
+                        stroke="var(--color-primary)"
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorProb)"
@@ -63,9 +63,9 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
                     {/* Add a marker for the 85th percentile "Target" */}
                     <ReferenceLine
                         x={chartData.find(d => d.percentile === 85)?.date}
-                        stroke="#ef4444"
+                        stroke="var(--color-destructive)"
                         strokeDasharray="3 3"
-                        label={{ value: 'Target (85%)', position: 'top', fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }}
+                        label={{ value: 'Target (85%)', position: 'top', fill: 'var(--color-destructive)', fontSize: 10, fontWeight: 'bold' }}
                     />
                 </AreaChart>
             </ResponsiveContainer>

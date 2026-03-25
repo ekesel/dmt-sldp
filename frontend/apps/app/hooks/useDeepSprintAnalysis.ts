@@ -56,7 +56,7 @@ export function useDeepSprintAnalysis(projectId: number | null, sprintId: number
         }
     }, []);
 
-    const { lastMessage } = useWebSocket(wsUrls.url || '', wsUrls.fallback || undefined);
+    const { lastMessage } = useWebSocket();
     const { token } = useAuth();
     const fetchingRef = useRef(false);
 

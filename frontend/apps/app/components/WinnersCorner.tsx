@@ -48,14 +48,14 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
     const current = allWinners[currentIndex];
 
     return (
-        <div className="relative w-full overflow-hidden bg-white/5 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2 mb-6 flex items-center justify-between shadow-lg">
+        <div className="relative w-full overflow-hidden bg-card/50 backdrop-blur-md border border-border rounded-xl px-4 py-2 mb-6 flex items-center justify-between shadow-lg">
             <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0 relative">
-                    <div className="absolute inset-0 bg-blue-500/20 blur-lg rounded-full animate-pulse" />
+                    <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full animate-pulse" />
                     <img
                         src={current.avatar}
                         alt={current.name}
-                        className="w-10 h-10 rounded-full border-2 border-blue-500/50 object-cover relative z-10"
+                        className="w-10 h-10 rounded-full border-2 border-primary/50 object-cover relative z-10"
                     />
                 </div>
 
@@ -68,14 +68,14 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
                         transition={{ duration: 0.5 }}
                         className="flex flex-col"
                     >
-                        <span className="text-xs text-blue-400 font-bold uppercase tracking-wider">
+                        <span className="text-xs text-primary font-bold uppercase tracking-wider">
                             {current.category}
                         </span>
                         <div className="flex items-center space-x-2">
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-foreground">
                                 {current.name}
                             </span>
-                            <span className="text-xs text-white/60">
+                            <span className="text-xs text-muted-foreground">
                                 — {current.title}
                             </span>
                         </div>
@@ -84,17 +84,17 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
             </div>
 
             <div className="hidden md:flex flex-col items-end">
-                <span className="text-[10px] text-white/40 uppercase">Score</span>
-                <span className="text-sm font-mono font-bold text-blue-400">{current.score}</span>
+                <span className="text-[10px] text-muted-foreground uppercase">Score</span>
+                <span className="text-sm font-mono font-bold text-primary">{current.score}</span>
             </div>
 
-            <div className="absolute bottom-0 left-0 h-0.5 bg-blue-500/30 w-full overflow-hidden">
+            <div className="absolute bottom-0 left-0 h-0.5 bg-primary/30 w-full overflow-hidden">
                 <motion.div
                     key={currentIndex}
                     initial={{ width: '0%' }}
                     animate={{ width: '100%' }}
                     transition={{ duration: 5, ease: 'linear' }}
-                    className="h-full bg-blue-500"
+                    className="h-full bg-primary"
                 />
             </div>
         </div>

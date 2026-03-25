@@ -133,22 +133,22 @@ export default function SourceConfigPage() {
             <div className="space-y-8">
                 <header className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                            <Settings className="text-blue-500" />
+                        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+                            <Settings className="text-primary" />
                             Source Configurations
                         </h1>
-                        <p className="text-slate-400">Manage integrations for Project ID: {projectId}</p>
+                        <p className="text-muted-foreground">Manage integrations for Project ID: {projectId}</p>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={() => router.back()}
-                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition font-medium text-sm"
+                            className="px-4 py-2 bg-btn-secondary hover:bg-btn-secondary-hover text-btn-secondary-foreground rounded-lg transition font-medium text-sm"
                         >
                             Back to Project
                         </button>
                         <button
                             onClick={handleAddSource}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition font-medium"
+                            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition font-medium"
                         >
                             <Plus size={18} />
                             Add Source
@@ -158,46 +158,46 @@ export default function SourceConfigPage() {
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">
-                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         {sources.length === 0 ? (
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
-                                <Settings className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-white mb-2">No sources configured</h3>
-                                <p className="text-slate-500 mb-6">Connect ClickUp, Azure DevOps or other tools to start analyzing data.</p>
+                            <div className="bg-card/50 border border-border rounded-xl p-12 text-center">
+                                <Settings className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                                <h3 className="text-lg font-medium text-foreground mb-2">No sources configured</h3>
+                                <p className="text-muted-foreground mb-6">Connect ClickUp, Azure DevOps or other tools to start analyzing data.</p>
                                 <button
                                     onClick={handleAddSource}
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
+                                    className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition shadow-lg shadow-primary/20"
                                 >
                                     Connect First Source
                                 </button>
                             </div>
                         ) : (
                             sources.map((s) => (
-                                <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between hover:border-slate-700 transition gap-4">
+                                <div key={s.id} className="bg-card/50 border border-border rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between hover:border-primary/50 transition gap-4">
                                     <div className="flex items-center gap-6">
-                                        <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center font-bold text-white uppercase text-xl">
+                                        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center font-bold text-foreground uppercase text-xl border border-border">
                                             {s.source_type[0]}
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-semibold text-white">{s.name}</h3>
-                                            <p className="text-slate-400 text-sm uppercase tracking-wider">{s.source_type}</p>
+                                            <h3 className="text-xl font-semibold text-foreground">{s.name}</h3>
+                                            <p className="text-muted-foreground text-sm uppercase tracking-wider">{s.source_type}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-8">
                                         <div className="text-center">
-                                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Status</p>
+                                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Status</p>
                                             <Badge
                                                 label={s.last_sync_status || 'Never Synced'}
                                                 variant={getStatusColor(s.last_sync_status) as any}
                                             />
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Last Sync</p>
-                                            <p className="text-white font-medium text-sm">
+                                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Last Sync</p>
+                                            <p className="text-foreground font-medium text-sm">
                                                 {s.last_sync_at ? new Date(s.last_sync_at).toLocaleString() : 'Never'}
                                             </p>
                                         </div>
@@ -227,7 +227,7 @@ export default function SourceConfigPage() {
                                             )}
                                             <button
                                                 onClick={() => handleEditSource(s)}
-                                                className="bg-slate-800 hover:bg-slate-700 p-2 rounded-lg text-slate-400 hover:text-white transition"
+                                                className="bg-btn-secondary hover:bg-btn-secondary-hover p-2 rounded-lg text-btn-secondary-foreground hover:text-btn-secondary-foreground transition"
                                                 title="Edit Config"
                                             >
                                                 <RefreshCw size={18} />
@@ -248,9 +248,9 @@ export default function SourceConfigPage() {
                 )}
 
                 {sources.length > 0 && (
-                    <div className="bg-amber-500/10 border border-amber-500/20 flex gap-4 p-4 rounded-xl">
-                        <AlertCircle className="text-amber-500 shrink-0" />
-                        <p className="text-amber-200 text-sm">
+                    <div className="bg-warning/10 border border-warning/20 flex gap-4 p-4 rounded-xl">
+                        <AlertCircle className="text-warning shrink-0" />
+                        <p className="text-warning text-sm">
                             Configuration changes may take a few minutes to reflect in the analytics dashboard.
                         </p>
                     </div>

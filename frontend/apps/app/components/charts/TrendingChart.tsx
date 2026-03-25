@@ -25,7 +25,7 @@ interface TrendingChartProps {
 export const TrendingChart: React.FC<TrendingChartProps> = ({
     data,
     dataKey,
-    color = "#3b82f6",
+    color = "var(--color-primary)",
     label,
     type = 'line',
     valuePrefix = '',
@@ -37,10 +37,10 @@ export const TrendingChart: React.FC<TrendingChartProps> = ({
     const CustomTooltip = ({ active, payload, label: xLabel }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-slate-900 border border-white/10 p-3 rounded-lg shadow-xl text-xs">
-                    <p className="text-slate-400 font-bold mb-1">{xLabel}</p>
+                <div className="bg-popover border border-border p-3 rounded-lg shadow-xl text-xs">
+                    <p className="text-muted-foreground font-bold mb-1">{xLabel}</p>
                     <p style={{ color }}>
-                        {label || dataKey}: <span className="text-white font-bold">{valuePrefix}{payload[0].value}{valueSuffix}</span>
+                        {label || dataKey}: <span className="text-foreground font-bold">{valuePrefix}{payload[0].value}{valueSuffix}</span>
                     </p>
                 </div>
             );
@@ -53,7 +53,7 @@ export const TrendingChart: React.FC<TrendingChartProps> = ({
             <ResponsiveContainer width="100%" height="100%">
                 {type === 'line' ? (
                     <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                         <XAxis
                             dataKey="sprint_name"
                             hide
@@ -66,7 +66,7 @@ export const TrendingChart: React.FC<TrendingChartProps> = ({
                             stroke={color}
                             strokeWidth={3}
                             dot={{ fill: color, r: 4, strokeWidth: 0 }}
-                            activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
+                            activeDot={{ r: 6, stroke: "var(--color-background)", strokeWidth: 2 }}
                             animationDuration={1500}
                         />
                     </LineChart>
@@ -78,7 +78,7 @@ export const TrendingChart: React.FC<TrendingChartProps> = ({
                                 <stop offset="95%" stopColor={color} stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                         <XAxis
                             dataKey="sprint_name"
                             hide

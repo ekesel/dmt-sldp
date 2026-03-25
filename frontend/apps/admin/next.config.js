@@ -2,6 +2,7 @@
 const nextConfig = {
     reactStrictMode: true,
     trailingSlash: true,
+    transpilePackages: ['@dmt/api', '@dmt/ui'],
     async redirects() {
         return [
             {
