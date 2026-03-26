@@ -4,12 +4,12 @@ import uuid
 
 
 def get_post_media_upload_path(instance, filename):
-    # Retrieve tenant and user IDs to organize the uploaded files
-    # E.g., 'media/tenants/<tenant_id>/users/<user_id>/posts/<filename>'
-    tenant_id = instance.author.tenant.id if instance.author and instance.author.tenant else 'unknown_tenant'
-    user_id = instance.author.id if instance.author else 'unknown_user'
+    from django.db import connection
+    schema = connection.schema_name
     
-    return f'tenants/{tenant_id}/users/{user_id}/posts/{filename}'
+    if getattr(instance, 'post_id', None):
+        return f'{schema}/post/{instance.post_id}/{filename}'
+    return f'{schema}/post/temp_initial/{filename}'
 
 """post model"""
 class Post(models.Model):
@@ -77,10 +77,13 @@ class Reaction(models.Model):
 
 
 # Temp IMG model -
-
+def temp_image_upload_path(instance, filename):
+    from django.db import connection
+    return f"{connection.schema_name}/temp/{filename}"
 class Image(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    file = models.FileField(upload_to="PostImages/")
+    file = models.FileField(upload_to=temp_image_upload_path)
     is_used = models.BooleanField(default=False) #just to make sure that the temp image is not used more than once, we can set this flag to true after using it for a post and delete the temp image after saving the post.
     created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     
