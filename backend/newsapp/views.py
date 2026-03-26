@@ -7,7 +7,8 @@ from .models import Post, Comment, Reaction
 from .serializers import CommentSerializer, ReactionSerializer
 from rest_framework.permissions import IsAuthenticated
 from .models import Image
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.views.decorators.csrf import csrf_exempt
 from core.permissions import IsManager
 from django_tenants.utils import schema_context
@@ -26,8 +27,8 @@ class CreateCommentView(APIView):
     def post(self, request):
         try:
             # Ensure we are in the user's tenant context
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 serializer = CommentSerializer(data=request.data)
                 if serializer.is_valid():
                     # Setting the user manually from the request
@@ -46,8 +47,8 @@ class PostCommentsView(APIView):
     """Retrieve all top-level comments for a specific post with nested replies."""
     def get(self, request, post_id):
         try:
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 # Check if post exists
                 get_object_or_404(Post, post_id=post_id)
                 
@@ -64,8 +65,8 @@ class UpdateCommentView(APIView):
     """Update a comment text. Only the author can update."""
     def put(self, request, comment_id):
         try:
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 comment = get_object_or_404(Comment, comment_id=comment_id)
                 
                 # Permission check: Only the owner can update
@@ -87,8 +88,8 @@ class DeleteCommentView(APIView):
     def delete(self, request, comment_id):
     
         try:
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 comment = get_object_or_404(Comment, comment_id=comment_id)
             
                 # Check permissions: Owner or Post Author
@@ -114,8 +115,8 @@ class ReactPostView(APIView):
             if not post_id or not reaction_type:
                 return Response({"error": "post id and reaction_type are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 # Check if post exists
                 get_object_or_404(Post, post_id=post_id)
 
@@ -137,8 +138,8 @@ class PostReactionsView(APIView):
     """Get all reactions for a post via path parameters."""
     def get(self, request, post_id):
         try:
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 reactions = Reaction.objects.filter(post_id=post_id)
                 total_reactions = reactions.count()
                 serializer = ReactionSerializer(reactions, many=True)
@@ -152,8 +153,8 @@ class DeleteReactionView(APIView):
     """Remove a user's reaction from a post."""
     def delete(self, request, post_id):
         try:
-            tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-            with schema_context(tenant_name):
+            schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+            with schema_context(schema_name):
                 reaction = Reaction.objects.filter(post_id=post_id, user=request.user).first()
                 
                 if not reaction:
@@ -169,21 +170,25 @@ class DeleteReactionView(APIView):
 
 @api_view(["POST"])
 @permission_classes([IsManager])
+@parser_classes([MultiPartParser, FormParser])
 def upload_temp_image(request):
-
+    # Log the keys in request.FILES to help debugging
+    logger.info(f"Uploading image. Received files: {list(request.FILES.keys())}")
+    
     file = request.FILES.get("file")
     if not file:
         return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         # Save the temp image with the user's tenant context
-        tenant_name = request.user.tenant.schema_name if request.user.tenant else 'public'
-        with schema_context(tenant_name):
-            temp_image = Image.objects.create(file=file)
+        schema_name = request.user.tenant.schema_name if request.user.tenant else 'public'
+        with schema_context(schema_name):
+            temp_image = Image.objects.create(file=file, user=request.user)
             return Response({
                 "image_id": str(temp_image.id),  # UUID returned
-                "file_url": temp_image.file.url
+
             }, status=status.HTTP_201_CREATED)
     except Exception as e:
         logger.error(f"Error in upload_temp_image: {str(e)}", exc_info=True)
         return Response({"error": "An internal server error occurred during image upload"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

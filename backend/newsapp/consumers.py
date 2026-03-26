@@ -19,14 +19,11 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
     #  Helper to get schema name from Websocket connection
     @sync_to_async
     def get_schema_name(self):
-        # convert headers to dict for easier access becouse Django Channels scope conatin some value like header ,path ,client ip ...
-        headers = dict(self.scope.get('headers', []))
-        # finding host header and extract domain name (without port) to find the corresponding tenant
-        host = headers.get(b'host', b'').decode('utf-8').split(':')[0]
         try:
-            # find the tenant schema name based on the host header, if not found return "public" as default schema name
-            return Domain.objects.get(domain=host).tenant.schema_name
-        except Domain.DoesNotExist:
+            # Match views.py: Use the tenant assigned to the authenticated user 
+            return self.user.tenant.schema_name if hasattr(self.user, 'tenant') and self.user.tenant else "public"
+        except Exception as e:
+            logger.error(f"Error getting schema name: {e}")
             return "public"
 
 
@@ -109,6 +106,9 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
     async def create_post(self, data):
         @sync_to_async
         def save_post_to_db():
+            if self.schema_name == "public":
+                return {"error": "News app features are only available for tenants. Please connect via a tenant domain."}
+
             with schema_context(self.schema_name):
                 title = data.get("title")
                 content = data.get("content")
@@ -120,21 +120,35 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 image_id = data.get("image_id")
                 temp = None # Initialize so it exists even if image_id is None
                 if image_id:
+                    logger.info(f"Looking for Image with ID: {image_id} in schema: {self.schema_name}")
                     try:
-                        temp = Image.objects.get(id=image_id)
+                        temp = Image.objects.get(id=image_id, user=self.user)
+                        logger.info(f"Image found: {temp}")
                     except Image.DoesNotExist:
+                        logger.error(f"Image with ID {image_id} DOES NOT EXIST in schema {self.schema_name}")
+                        # Log all images to see if it's there
+                        all_images = list(Image.objects.values_list('id', flat=True))
+                        logger.error(f"Available images in this schema: {all_images}")
                         return {"error": "Temp image not found"}
 
+                # Step 1: Create the post without the media file first to generate the post_id
                 post = Post.objects.create(
                     title=title,
                     content=content,
                     category=category,
                     author=self.user,
-                    media_file=temp.file if temp else None 
                 )
                 
-                # Only delete if we actually found a temp image
+                # Step 2: If a temp image was provided, attach it and save again 
                 if temp:
+                    import os
+                    filename = os.path.basename(temp.file.name)
+                    
+                    # Using save() on a FileField handles the storage layer transfer
+                    post.media_file.save(filename, temp.file, save=True)
+                    
+                    # Cleanup old temp file in storage and Image instance
+                    temp.file.delete(save=False)
                     temp.delete()
 
                 return PostSerializer(post).data
@@ -164,6 +178,8 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
     async def delete_post(self, data):
         @sync_to_async
         def delete_post_from_db():
+            if self.schema_name == "public":
+                return {"error": "News app features are only available for tenants."}
             with schema_context(self.schema_name):
                 post_id = data.get("id")
                 if not post_id:
@@ -178,6 +194,10 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
         try:
             post_title = await delete_post_from_db()
+            if isinstance(post_title, dict) and 'error' in post_title:
+                await self.send_json(post_title)
+                return
+
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast_message", "event": "post_deleted", "data": {"id": data.get("id"), "title": post_title}}
             )
@@ -193,6 +213,8 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
     async def update_post(self, data):
         @sync_to_async
         def update_post_in_db():
+            if self.schema_name == "public":
+                return {"error": "News app features are only available for tenants."}
             with schema_context(self.schema_name):
                 post_id = data.get("id")
                 if not post_id:
@@ -202,7 +224,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 temp = None # Initialize so it exists even if image_id is None
                 if image_id:
                     try:
-                        temp = Image.objects.get(id=image_id)
+                        temp = Image.objects.get(id=image_id, user=self.user)
                     except Image.DoesNotExist:
                         return {"error": "Temp image not found"}
 
@@ -235,8 +257,19 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
                 # update the image iif the image is already prestent in the post 
                 if temp:
-                    post.media_file = temp.file 
-                    temp.delete() # delete the temp image after saving the post 
+                    import os
+                    # if post already had a media file, clear it from storage
+                    if post.media_file:
+                        post.media_file.delete(save=False)
+                        
+                    filename = os.path.basename(temp.file.name)
+                    
+                    # save the new file, triggering get_post_media_upload_path
+                    post.media_file.save(filename, temp.file, save=False)
+                    
+                    # eliminate temp file from storage and database
+                    temp.file.delete(save=False)
+                    temp.delete()
                 
                 post.save()
                 return PostSerializer(post).data
@@ -269,6 +302,8 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
         @sync_to_async
         def fetch_posts_from_db():
+            if self.schema_name == "public":
+                return {"error": "News app features are only available for tenants."}, False
             with schema_context(self.schema_name):
                 posts = Post.objects.select_related('author').all().order_by("-created_at")
                 
@@ -279,6 +314,10 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
         try:
             posts_data, has_next = await fetch_posts_from_db()
+            if isinstance(posts_data, dict) and 'error' in posts_data:
+                await self.send_json(posts_data)
+                return
+
             posts_data = self.format_dates(posts_data)
             await self.send_json({
                 "type": "posts",
