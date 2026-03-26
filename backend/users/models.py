@@ -4,6 +4,8 @@ from django.db import models
 
 def get_user_media_upload_path(instance, filename):
     from django.db import connection
+    from django.utils.text import get_valid_filename
+    filename = get_valid_filename(filename)
     return f'{connection.schema_name}/profile_pics/{filename}'
 
 class User(AbstractUser):

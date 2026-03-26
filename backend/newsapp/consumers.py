@@ -122,7 +122,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 if image_id:
                     logger.info(f"Looking for Image with ID: {image_id} in schema: {self.schema_name}")
                     try:
-                        temp = Image.objects.get(id=image_id)
+                        temp = Image.objects.get(id=image_id, user=self.user)
                         logger.info(f"Image found: {temp}")
                     except Image.DoesNotExist:
                         logger.error(f"Image with ID {image_id} DOES NOT EXIST in schema {self.schema_name}")
@@ -194,6 +194,10 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
         try:
             post_title = await delete_post_from_db()
+            if isinstance(post_title, dict) and 'error' in post_title:
+                await self.send_json(post_title)
+                return
+
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast_message", "event": "post_deleted", "data": {"id": data.get("id"), "title": post_title}}
             )
@@ -220,7 +224,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                 temp = None # Initialize so it exists even if image_id is None
                 if image_id:
                     try:
-                        temp = Image.objects.get(id=image_id)
+                        temp = Image.objects.get(id=image_id, user=self.user)
                     except Image.DoesNotExist:
                         return {"error": "Temp image not found"}
 
@@ -299,7 +303,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         @sync_to_async
         def fetch_posts_from_db():
             if self.schema_name == "public":
-                return [], False
+                return {"error": "News app features are only available for tenants."}, False
             with schema_context(self.schema_name):
                 posts = Post.objects.select_related('author').all().order_by("-created_at")
                 
@@ -310,6 +314,10 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
 
         try:
             posts_data, has_next = await fetch_posts_from_db()
+            if isinstance(posts_data, dict) and 'error' in posts_data:
+                await self.send_json(posts_data)
+                return
+
             posts_data = self.format_dates(posts_data)
             await self.send_json({
                 "type": "posts",

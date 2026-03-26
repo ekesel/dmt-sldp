@@ -97,7 +97,7 @@ class DeleteCommentView(APIView):
                     return Response({"error": "You do not have permission to delete this comment"}, status=status.HTTP_403_FORBIDDEN)
 
                 comment.delete()
-                return Response({"message": "Comment deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             logger.error(f"Error in DeleteCommentView: {str(e)}", exc_info=True)
             return Response({"error": "An internal server error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
