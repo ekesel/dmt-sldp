@@ -39,41 +39,7 @@ export function useNewsfeedData() {
 
     const { client: socket } = useWebSocket();
 
-    const handleMessage = useCallback((payload: any) => {
-        if (payload.error) {
-            console.error('[Newsfeed WS Error]:', payload.error);
-            setError(payload.error);
-            return;
-        }
 
-        const type = payload.type;
-        switch (type) {
-            case 'posts':
-                if (payload.page === 1 || !payload.page) {
-                    setPosts(payload.data || []);
-                } else {
-                    setPosts(prev => {
-                        // Deduplicate newly arriving posts
-                        const existingIds = new Set(prev.map(p => p.post_id));
-                        const newPosts = payload.data.filter((p: Post) => !existingIds.has(p.post_id));
-                        return [...prev, ...newPosts];
-                    });
-                }
-                if (payload.page) setPage(payload.page);
-                setHasNextPage(!!payload.has_next);
-                setLoading(false);
-                break;
-            case 'post_created':
-                setPosts(prev => [payload.data, ...prev]);
-                break;
-            case 'post_updated':
-                setPosts(prev => prev.map(p => p.post_id === payload.data.post_id ? payload.data : p));
-                break;
-            case 'post_deleted':
-                setPosts(prev => prev.filter(p => p.post_id !== payload.data.post_id));
-                break;
-        }
-    }, []);
 
     useEffect(() => {
         if (!socket) return;
@@ -82,7 +48,7 @@ export function useNewsfeedData() {
             console.log('[Newsfeed] WebSocket connected successfully.');
             setError(null);
             socket.emit('get_posts', { page: 1 });
-            setLoading(false);
+            // Loading will be set to false when posts arrive
         };
 
         const onError = (err: any) => {
@@ -95,14 +61,75 @@ export function useNewsfeedData() {
             console.log('[Newsfeed] WebSocket disconnected');
         };
 
+        const onPosts = (payload: any) => {
+            console.log("WS: posts received", payload);
+
+            if (payload.error) {
+                console.error('[Newsfeed WS Error]:', payload.error);
+                setError(payload.error);
+                return;
+            }
+
+            const incoming = payload.data || [];
+
+            setPosts(prev => {
+                const existingIds = new Set(prev.map(p => p.post_id));
+                const newPosts = incoming.filter((p: Post) => !existingIds.has(p.post_id));
+
+                return [...newPosts, ...prev];
+            });
+
+            if (payload.page) setPage(payload.page);
+            setHasNextPage(!!payload.has_next);
+            setLoading(false);
+        };
+
+        const onPostCreated = (payload: any) => {
+            console.log("WS: post_created received", payload);
+
+            const newPost = payload.data || payload;
+
+            if (!newPost || !newPost.post_id) {
+                console.error("Invalid post data:", payload);
+                return;
+            }
+
+            setPosts(prev => {
+                // Remove matching optimistic post (same content + author)
+                const filtered = prev.filter(p =>
+                    !(p.title === newPost.title &&
+                      p.content === newPost.content &&
+                      p.author?.id === newPost.author?.id)
+                );
+
+                return [newPost, ...filtered];
+            });
+        };
+
+        const onPostUpdated = (payload: any) => {
+            const updated = payload.data || payload;
+
+            setPosts(prev =>
+                prev.map(p => p.post_id === updated.post_id ? updated : p)
+            );
+        };
+
+        const onPostDeleted = (payload: any) => {
+            const deleted = payload.data || payload;
+
+            setPosts(prev =>
+                prev.filter(p => p.post_id !== deleted.post_id)
+            );
+        };
+
         // Register listeners
         socket.on('open', onOpen);
         socket.on('error', onError);
         socket.on('close', onClose);
-        socket.on('posts', handleMessage);
-        socket.on('post_created', handleMessage);
-        socket.on('post_updated', handleMessage);
-        socket.on('post_deleted', handleMessage);
+        socket.on('posts', onPosts);
+        socket.on('post_created', onPostCreated);
+        socket.on('post_updated', onPostUpdated);
+        socket.on('post_deleted', onPostDeleted);
 
         // If socket is already open, trigger initial fetch
         if (socket.isConnected?.()) {
@@ -113,12 +140,12 @@ export function useNewsfeedData() {
             socket.off('open', onOpen);
             socket.off('error', onError);
             socket.off('close', onClose);
-            socket.off('posts', handleMessage);
-            socket.off('post_created', handleMessage);
-            socket.off('post_updated', handleMessage);
-            socket.off('post_deleted', handleMessage);
+            socket.off('posts', onPosts);
+            socket.off('post_created', onPostCreated);
+            socket.off('post_updated', onPostUpdated);
+            socket.off('post_deleted', onPostDeleted);
         };
-    }, [socket, handleMessage]);
+    }, [socket]);
 
     const uploadImage = async (file: File): Promise<{ image_id: string; file_url: string }> => {
         const formData = new FormData();
@@ -140,6 +167,30 @@ export function useNewsfeedData() {
 
     const createPost = async (title: string, content: string, category: string, imageId?: string) => {
         if (!user) return;
+
+        if (!socket || !socket.isConnected?.()) {
+            console.error("Socket not connected");
+            return;
+        }
+
+        // Optimistic UI update
+        const tempPost: Post = {
+            post_id: Date.now(),
+            title,
+            content,
+            category,
+            author: {
+                id: user.id,
+                username: user.username,
+                avatar_url: (user as any).avatar_url || null
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            likes: 0,
+            comments: 0
+        };
+
+        setPosts(prev => [tempPost, ...prev]);
 
         // Reverting to WebSocket emit as per the contract to ensure it shows up in the WebSocket tab
         socket.emit('create_post', {
