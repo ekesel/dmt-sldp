@@ -12,6 +12,7 @@ import {
   Trophy,
   Sparkles,
   Newspaper,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
@@ -70,6 +71,11 @@ const menuItems: MenuItem[] = [
     label: "Leaderboard",
     href: "/leaderboard",
   },
+  {
+    icon: BookOpen,
+    label: "Knowledge Base",
+    href: "/knowledge-base",
+  },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
@@ -101,10 +107,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       )}
 
       <aside
-        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card/80 border-r border-border backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-card/80 border-r border-border backdrop-blur-xl z-40 transition-transform duration-300 flex flex-col lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
           } lg:static lg:z-0`}
       >
-        <nav className="p-4 space-y-2">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-none">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -141,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-gradient-to-t from-card to-transparent">
+        <div className="p-4 border-t border-border bg-card">
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
             <Shield className="w-5 h-5 text-primary mb-2" />
             <p className="text-sm font-bold text-foreground">

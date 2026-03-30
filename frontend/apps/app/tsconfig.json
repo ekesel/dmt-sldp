@@ -28,6 +28,8 @@
       "@dmt/api/*": ["../../packages/api/*"],
       "@dmt/ui": ["../../packages/ui/index.tsx"],
       "@dmt/ui/*": ["../../packages/ui/*"],
+      "@/lib/*": ["lib/*"],
+      "@/components/*": ["components/*"],
       "@/*": ["./*"]
     }
   },
