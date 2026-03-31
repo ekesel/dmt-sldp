@@ -19,10 +19,29 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         if (token) {
             console.log('[DashboardLayout] Found auth token, initializing WebSocket...');
 
-            // Using deployed backend as per latest instructions
-            const finalWsUrl = `wss://api.elevate.samta.ai/ws/news/?token=${token}`;
+            // Using dynamic WebSocket URL based on environment
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // debugger;
+            let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
 
-            console.log(`[DashboardLayout] Connecting to Newsfeed WS: wss://api.elevate.samta.ai/ws/news/?token=***${token.slice(-6)}`);
+
+            const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
+
+            // Special case for local development without local backend
+            // In most DMT setups, newsfeed might be on a central hub or we use a fallback
+            if (isLocalhost && !process.env.NEXT_PUBLIC_WS_HOST) {
+                wsHost = 'api.elevate.samta.ai';
+            } else if (isLocalhost) {
+                wsHost = `${wsHost}:8000`;
+            } else if (!wsHost.includes(':') && window.location.port) {
+                wsHost = `${wsHost}:${window.location.port}`;
+            }
+
+            // Path must include tenant slug for proper routing in Django Channels
+            const tenantSlug = user?.tenant_slug || localStorage.getItem('dmt-tenant') || 'default';
+            const finalWsUrl = `${wsHost}/news/?token=${token}`;
+
+            console.log(`[DashboardLayout] Connecting to Newsfeed WS: ${finalWsUrl.split('?')[0]}?token=***${token.slice(-6)}`);
             setWsUrl(finalWsUrl);
         } else {
             console.warn('[DashboardLayout] No auth token available, skipping Newsfeed WebSocket initialization');

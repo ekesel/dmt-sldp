@@ -62,7 +62,7 @@ const menuItems: MenuItem[] = [
   {
     icon: Newspaper,
     label: "Newsfeed",
-    href: "/static-ui/newsfeed",
+    href: "/newsfeed",
   },
 
   {

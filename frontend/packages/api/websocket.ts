@@ -72,11 +72,23 @@ const DEFAULT_OPTIONS: Required<
   baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || (
     typeof window !== 'undefined'
       ? (
-        process.env.NEXT_PUBLIC_WS_HOST
-          ? `wss://${process.env.NEXT_PUBLIC_WS_HOST}/ws/telemetry/{tenant_id}/`
-          : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? `wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/`
-            : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
+        (() => {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          // Use explicit host if provided, otherwise current location
+          let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
+          
+          const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
+          
+          if (isLocalhost) {
+            // Default local backend port
+            wsHost = `${wsHost}:8000`;
+          } else if (!wsHost.includes(':') && window.location.port) {
+            // Keep current port if on a custom non-localhost domain
+            wsHost = `${wsHost}:${window.location.port}`;
+          }
+
+          return `${wsProtocol}//${wsHost}/ws/telemetry/{tenant_id}/`;
+        })()
       )
       : `wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/`
   ),

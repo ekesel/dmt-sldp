@@ -52,8 +52,13 @@ export function useNewsfeedData() {
         };
 
         const onError = (err: any) => {
-            console.error('[Newsfeed] WebSocket Error:', err);
-            setError('WebSocket Connection Error');
+            // Determine if we should be noisy based on environment
+            const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+            if (!isLocal) {
+                console.error('[Newsfeed] WebSocket Error:', err);
+            } else {
+                console.warn('[Newsfeed] WebSocket connection failed (expected in local dev if backend is missing)');
+            }
             setLoading(false);
         };
 
@@ -115,11 +120,19 @@ export function useNewsfeedData() {
         };
 
         const onPostDeleted = (payload: any) => {
-            const deleted = payload.data || payload;
+            console.log("WS: post_deleted received", payload);
+            const deletedId = payload.data?.id || payload.id;
 
-            setPosts(prev =>
-                prev.filter(p => p.post_id !== deleted.post_id)
-            );
+            if (deletedId) {
+                setPosts(prev =>
+                    prev.filter(p => p.post_id !== deletedId)
+                );
+            }
+        };
+
+        const onActionError = (payload: any) => {
+            const msg = payload.message || payload.error || 'Action failed';
+            import('react-hot-toast').then(({ toast }) => toast.error(msg));
         };
 
         // Register listeners
@@ -130,6 +143,7 @@ export function useNewsfeedData() {
         socket.on('post_created', onPostCreated);
         socket.on('post_updated', onPostUpdated);
         socket.on('post_deleted', onPostDeleted);
+        socket.on('action_error', onActionError);
 
         // If socket is already open, trigger initial fetch
         if (socket.isConnected?.()) {
@@ -144,6 +158,7 @@ export function useNewsfeedData() {
             socket.off('post_created', onPostCreated);
             socket.off('post_updated', onPostUpdated);
             socket.off('post_deleted', onPostDeleted);
+            socket.off('action_error', onActionError);
         };
     }, [socket]);
 
@@ -152,8 +167,8 @@ export function useNewsfeedData() {
         formData.append('file', file); // Contract says "file": binary_img
 
         try {
-            // Using /api/news/ as it's a more standard pattern than the failing /api/news/upload-image/
-            const response = await api.post<{ image_id: string; file_url: string }>('news/', formData, {
+            const uploadUrl = process.env.NEXT_PUBLIC_NEWS_IMAGE_UPLOAD_URL || 'news/upload-image/';
+            const response = await api.post<{ image_id: string; file_url: string }>(uploadUrl, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -167,6 +182,11 @@ export function useNewsfeedData() {
 
     const createPost = async (title: string, content: string, category: string, imageId?: string) => {
         if (!user) return;
+        
+        if (!user.is_manager) {
+            import('react-hot-toast').then(({ toast }) => toast.error('Only managers can perform this action'));
+            return;
+        }
 
         if (!socket || !socket.isConnected?.()) {
             console.error("Socket not connected");
@@ -203,6 +223,11 @@ export function useNewsfeedData() {
     };
 
     const updatePost = useCallback(async (id: number, title?: string, content?: string, category?: string, imageId?: string | null) => {
+        if (!user?.is_manager) {
+            import('react-hot-toast').then(({ toast }) => toast.error('Only managers can perform this action'));
+            return;
+        }
+
         if (!socket) throw new Error('WebSocket is not connected');
         socket.emit('update_post', {
             id,
@@ -211,12 +236,17 @@ export function useNewsfeedData() {
             ...(category && { category }),
             ...(imageId !== undefined && { image_id: imageId })
         });
-    }, [socket]);
+    }, [socket, user]);
 
     const deletePost = useCallback(async (id: number) => {
+        if (!user?.is_manager) {
+            import('react-hot-toast').then(({ toast }) => toast.error('Only managers can perform this action'));
+            return;
+        }
+
         if (!socket) throw new Error('WebSocket is not connected');
         socket.emit('delete_post', { id });
-    }, [socket]);
+    }, [socket, user]);
 
     const loadMorePosts = useCallback(() => {
         if (socket && hasNextPage) {

@@ -6,6 +6,7 @@ import { deduplicateRequest } from './deduplication';
    Axios Instance
 ========================= */
 const getBaseURL = () => {
+  console.log('dfgz', process.env.NEXT_PUBLIC_API_URL);
   // 1. ALWAYS respect the explicit environment variable FIRST (e.g. https://api.elevate.samta.ai/api/)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
@@ -711,6 +712,85 @@ export const identity = {
   createMapping: (data: Partial<IdentityMapping>, tenantId: string) => post<IdentityMapping>('/admin/identity-mappings/', data, { 'X-Tenant': tenantId }),
   updateMapping: (id: number, data: Partial<IdentityMapping>, tenantId: string) => patch<IdentityMapping>(`/admin/identity-mappings/${id}/`, data, { 'X-Tenant': tenantId }),
   deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`/admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
+};
+
+/** ---------- newsfeed ---------- */
+
+export interface Comment {
+  comment_id: number;
+  post: number;
+  user: number | { id: number; username: string; avatar_url?: string };
+  user_name?: string;
+  user_avatar?: string;
+  comment_text: string;
+  parent_comment?: number | null;
+  replies?: Comment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentSummary {
+  total_comments: number;
+  comments: Comment[];
+}
+
+export const comments = {
+  list: (postId: number) => {
+    const url = `/news/comments/post/${postId}/`;
+    console.log(`[API Request] GET Newsfeed: ${url}`);
+    return get<CommentSummary>(url);
+  },
+  create: (data: { post: number; comment_text: string; parent_comment?: number | null }) => {
+    const url = '/news/comments/create/';
+    console.log(`[API Request] POST Newsfeed: ${url}`, data);
+    return post<Comment, typeof data>(url, data);
+  },
+  update: (id: number, data: { comment_text: string }) => {
+    const url = `/news/comments/update/${id}/`;
+    console.log(`[API Request] PUT Newsfeed: ${url}`, data);
+    return api.put<Comment>(url, data).then(res => res.data);
+  },
+  delete: (id: number) => {
+    const url = `/news/comments/delete/${id}/`;
+    console.log(`[API Request] DELETE Comment: ${url}`);
+    return del<{ success?: boolean }>(url);
+  },
+};
+
+export type ReactionType = 'like' | 'love' | 'haha' | 'sad';
+
+export interface ReactionSummary {
+  total_reactions: number;
+  reactions: any[];
+  types: Record<ReactionType, number>;
+  user_reaction?: ReactionType;
+}
+
+export const reactions = {
+  getSummary: (postId: number) => {
+    const url = `/news/reactions/post/${postId}/`;
+    console.log(`[API Request] GET Newsfeed: ${url}`);
+    return get<ReactionSummary>(url).then(data => {
+      console.log(`[API Response] GET Reactions Data:`, data);
+      return data;
+    });
+  },
+  create: (data: { post: number; reaction_type: ReactionType }) => {
+    const url = '/news/reactions/create/';
+    console.log(`[API Request] POST Newsfeed: ${url}`, data);
+    return post<{ success: boolean; reaction: any }, typeof data>(url, data).then(res => {
+      console.log(`[API Response] POST Reaction Success:`, res);
+      return res;
+    });
+  },
+  delete: (postId: number) => {
+    const url = `/news/reactions/delete/${postId}/`;
+    console.log(`[API Request] DELETE Newsfeed: ${url}`);
+    return del<{ success: boolean }>(url).then(res => {
+      console.log(`[API Response] DELETE Reaction Success:`, res);
+      return res;
+    });
+  },
 };
 
 export { getWebSocketManager } from './websocket';

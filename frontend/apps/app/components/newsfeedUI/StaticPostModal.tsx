@@ -2,17 +2,25 @@
 
 import React, { useEffect, useState, useRef } from "react";
 
-import { Author } from "../../hooks/useNewsfeedData";
+import { Author, Post } from "../../hooks/useNewsfeedData";
 
 interface StaticPostModalProps {
   isOpen: boolean;
   onClose: () => void;
   userProfile?: Author | null;
+  editingPost?: Post | null;
   createPost?: (
     title: string,
     content: string,
     category: string,
     imageId: string | null,
+  ) => Promise<void>;
+  updatePost?: (
+    id: number,
+    title?: string,
+    content?: string,
+    category?: string,
+    imageId?: string | null,
   ) => Promise<void>;
   uploadImage?: (
     file: File,
@@ -23,7 +31,9 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
   isOpen,
   onClose,
   userProfile,
+  editingPost,
   createPost,
+  updatePost,
   uploadImage,
 }) => {
   const [title, setTitle] = useState("");
@@ -41,15 +51,33 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Prevent scrolling when modal is open
+  // Prevent scrolling and pre-fill data
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      // Reset state
-      setTitle("");
-      setContent("");
-      setCategory("General");
-      setSelectedImagePreview(null);
+      
+      if (editingPost) {
+        setTitle(editingPost.title);
+        setContent(editingPost.content);
+        setCategory(editingPost.category || "General");
+        
+        if (editingPost.media_file) {
+          const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "").replace(/\/$/, "");
+          const fullUrl = editingPost.media_file.startsWith("http") 
+            ? editingPost.media_file 
+            : `${MEDIA_BASE}${editingPost.media_file}`;
+          setSelectedImagePreview(fullUrl);
+        } else {
+          setSelectedImagePreview(null);
+        }
+      } else {
+        // Reset state for new post
+        setTitle("");
+        setContent("");
+        setCategory("General");
+        setSelectedImagePreview(null);
+      }
+      
       setSelectedImageFile(null);
       setUploadedImageId(null);
       setIsUploading(false);
@@ -61,34 +89,31 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, editingPost]);
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Clean up object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (selectedImagePreview && selectedImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
+    };
+  }, [selectedImagePreview]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Revoke the old URL if one exists
+      if (selectedImagePreview && selectedImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
+
       setSelectedImageFile(file);
       setUploadError(null);
 
-      // Show local preview immediately
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Trigger upload
-      if (uploadImage) {
-        setIsUploading(true);
-        try {
-          const res = await uploadImage(file);
-          setUploadedImageId(res.image_id);
-        } catch (err) {
-          console.error("Failed to upload image:", err);
-          setUploadError("Failed to upload image. Please try again.");
-        } finally {
-          setIsUploading(false);
-        }
-      }
+      // Show local preview immediately using URL.createObjectURL for better performance
+      const previewUrl = URL.createObjectURL(file);
+      setSelectedImagePreview(previewUrl);
     }
   };
 
@@ -103,13 +128,46 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
   };
 
   const handlePost = async () => {
-    if (!title.trim() || !content.trim() || !createPost || isUploading) return;
+    const isEdit = !!editingPost;
+    const action = isEdit ? updatePost : createPost;
+    
+    if (!title.trim() || !content.trim() || !action || isSubmitting || isUploading) return;
+    
     setIsSubmitting(true);
+    setUploadError(null);
+    let currentImageId = uploadedImageId;
+
     try {
-      await createPost(title, content, category, uploadedImageId);
+      // 1. Upload image if it's new and hasn't been uploaded yet
+      if (selectedImageFile && !currentImageId && uploadImage) {
+        setIsUploading(true);
+        try {
+          const res = await uploadImage(selectedImageFile);
+          currentImageId = res.image_id;
+          setUploadedImageId(res.image_id);
+        } catch (err) {
+          console.error("Failed to upload image:", err);
+          setUploadError("Failed to upload image. Please try again.");
+          setIsSubmitting(false);
+          setIsUploading(false);
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
+      // 2. Perform action (Create or Update)
+      if (isEdit && editingPost) {
+        console.log("Updating post via WebSocket...", { id: editingPost.post_id, title, category });
+        await updatePost?.(editingPost.post_id, title, content, category, currentImageId);
+      } else {
+        console.log("Creating post via WebSocket...", { title, category, image_id: currentImageId });
+        await createPost?.(title, content, category, currentImageId);
+      }
+      
       onClose();
     } catch (err) {
-      console.error("Failed to create post:", err);
+      console.error(`Failed to ${isEdit ? 'update' : 'create'} post:`, err);
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +188,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="w-8" /> {/* Spacer */}
-          <h2 className="text-xl font-bold text-foreground">Create Post</h2>
+          <h2 className="text-xl font-bold text-foreground">{editingPost ? 'Edit Post' : 'Create Post'}</h2>
           <button
             onClick={onClose}
             className="bg-muted p-2 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
@@ -325,10 +383,10 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg transition-all active:scale-[0.98] shadow-lg shadow-primary/20 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting
-              ? "Posting..."
+              ? (editingPost ? "Saving..." : "Posting...")
               : isUploading
                 ? "Uploading Image..."
-                : "Post"}
+                : (editingPost ? "Save Changes" : "Post")}
           </button>
         </div>
       </div>
