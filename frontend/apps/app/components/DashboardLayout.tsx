@@ -51,7 +51,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
     const content = (
         <div className="flex flex-col h-screen bg-background transition-colors duration-200">
-            <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMenuOpen={sidebarOpen} />
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main className="flex-1 overflow-y-auto">

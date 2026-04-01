@@ -1,12 +1,19 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
+def get_user_media_upload_path(instance, filename):
+    from django.db import connection
+    from django.utils.text import get_valid_filename
+    filename = get_valid_filename(filename)
+    return f'{connection.schema_name}/profile_pics/{filename}'
+
 class User(AbstractUser):
     # Added common fields here
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True)
     is_platform_admin = models.BooleanField(default=False)
     is_manager = models.BooleanField(default=False)
-    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    profile_picture = models.ImageField(upload_to=get_user_media_upload_path, null=True, blank=True)
     custom_title = models.CharField(max_length=100, null=True, blank=True)
     competitive_title = models.CharField(max_length=100, null=True, blank=True)
     competitive_title_reason = models.TextField(null=True, blank=True)

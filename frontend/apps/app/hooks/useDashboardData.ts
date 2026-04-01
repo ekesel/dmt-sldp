@@ -58,7 +58,6 @@ export function useDashboardData(projectId?: number | null) {
   const [error, setError] = useState<string | null>(null);
 
 
-
   const { lastMessage } = useWebSocket();
 
   const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken

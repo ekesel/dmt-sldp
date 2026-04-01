@@ -90,10 +90,13 @@ export default function NewTenantPage() {
                                         value={slug}
                                         onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                                         placeholder="acme-corp"
-                                        className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                                        className="w-full bg-muted border border-border rounded-lg pl-4 pr-[200px] py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                                         required
                                     />
-                                    <span className="absolute right-3 top-2.5 text-muted-foreground/50 text-sm italic">
+                                    <span 
+                                        className="absolute right-3 top-2.5 text-muted-foreground/50 text-sm italic pointer-events-none"
+                                        aria-hidden="true"
+                                    >
                                         {process.env.NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL || '.localhost:3000'}
                                     </span>
                                 </div>

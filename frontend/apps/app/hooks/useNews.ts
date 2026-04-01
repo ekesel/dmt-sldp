@@ -75,11 +75,15 @@ export function useNews() {
   useEffect(() => {
     if (!socket) return;
 
-    const onOpen = () => {
+    const bootstrapOpen = () => {
       setStatus('open');
       setError(null);
       // Automatically fetch initial posts when connection opens
       socket.emit('get_posts', { page: 1 });
+    };
+
+    const onOpen = () => {
+      bootstrapOpen();
     };
 
     const onClose = () => setStatus('closed');
@@ -96,6 +100,9 @@ export function useNews() {
 
     // Initial status check
     // Since the socket might already be open, we trigger the fetching manually if it's open
+    if (socket.isConnected) {
+      onOpen();
+    }
 
     return () => {
       socket.off('open', onOpen);

@@ -14,6 +14,10 @@ class WSClient {
     this.url = url;
   }
 
+  get isConnected(): boolean {
+    return this.socket !== null && this.socket.readyState === WebSocket.OPEN;
+  }
+
   connect() {
     if (
       this.socket &&
@@ -124,9 +128,6 @@ class WSClient {
     }
   }
 
-  isConnected() {
-    return this.socket && this.socket.readyState === WebSocket.OPEN;
-  }
 
   getReadyState() {
     return this.socket ? this.socket.readyState : WebSocket.CLOSED;

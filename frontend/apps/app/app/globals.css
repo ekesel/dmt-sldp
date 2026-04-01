@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
+}
+
 @theme {
   /* Radii */
   --radius-lg: 0.625rem;
@@ -39,8 +44,8 @@
   --color-destructive-foreground: rgb(255, 255, 255);
 
   /* Warning */
-  --color-warning: rgb(251, 191, 36);
-  --color-warning-foreground: rgb(17, 24, 39);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 
 
 
@@ -83,8 +88,8 @@ html {
 }
 
 body {
-  color: var(--foreground);
-  background-color: var(--background);
+  color: var(--color-foreground);
+  background-color: var(--color-background);
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
     "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;

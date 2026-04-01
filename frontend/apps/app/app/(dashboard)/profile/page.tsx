@@ -97,9 +97,11 @@ export default function ProfilePage() {
 
                     <div className="relative flex items-center gap-6">
                         {/* Avatar */}
-                        <div
+                        <button
+                            type="button"
                             className="flex-shrink-0 w-24 h-24 rounded-2xl relative group cursor-pointer overflow-hidden shadow-xl shadow-primary/30"
                             onClick={() => fileInputRef.current?.click()}
+                            aria-label="Upload avatar"
                         >
                             {previewUrl ? (
                                 <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -118,7 +120,7 @@ export default function ProfilePage() {
                                 accept="image/*"
                                 onChange={handleFileChange}
                             />
-                        </div>
+                        </button>
 
                         {/* Name + badges */}
                         <div className="flex-1 min-w-0">

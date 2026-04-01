@@ -67,8 +67,6 @@ export function useNewsfeedData() {
         };
 
         const onPosts = (payload: any) => {
-
-
             if (payload.error) {
                 console.error('[Newsfeed WS Error]:', payload.error);
                 setError(payload.error);
@@ -76,12 +74,17 @@ export function useNewsfeedData() {
             }
 
             const incoming = payload.data || [];
+            const isInitialPage = (payload.page || 1) === 1;
 
             setPosts(prev => {
                 const existingIds = new Set(prev.map(p => p.post_id));
                 const newPosts = incoming.filter((p: Post) => !existingIds.has(p.post_id));
 
-                return [...newPosts, ...prev];
+                if (isInitialPage) {
+                    return [...newPosts, ...prev];
+                } else {
+                    return [...prev, ...newPosts];
+                }
             });
 
             if (payload.page) setPage(payload.page);
@@ -146,7 +149,7 @@ export function useNewsfeedData() {
         socket.on('action_error', onActionError);
 
         // If socket is already open, trigger initial fetch
-        if (socket.isConnected?.()) {
+        if (socket.isConnected) {
             onOpen();
         }
 
@@ -188,7 +191,7 @@ export function useNewsfeedData() {
             return;
         }
 
-        if (!socket || !socket.isConnected?.()) {
+        if (!socket || !socket.isConnected) {
             console.error("Socket not connected");
             return;
         }

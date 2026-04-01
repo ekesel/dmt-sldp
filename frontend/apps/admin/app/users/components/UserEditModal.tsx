@@ -87,7 +87,11 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                         <UserIcon className="text-primary" size={20} />
                         Edit User
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition text-muted-foreground hover:text-foreground">
+                    <button 
+                        onClick={onClose} 
+                        aria-label="Close"
+                        className="p-2 hover:bg-accent rounded-lg transition text-muted-foreground hover:text-foreground"
+                    >
                         <X size={20} />
                     </button>
                 </div>
