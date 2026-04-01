@@ -14,16 +14,16 @@ interface CommentSectionProps {
 
 const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) => {
   const { user } = useAuth();
-  const { 
-    comments, 
-    loading, 
+  const {
+    comments,
+    loading,
     error,
-    fetchComments, 
-    addComment, 
-    updateComment, 
-    deleteComment 
+    fetchComments,
+    addComment,
+    updateComment,
+    deleteComment
   } = useComments(postId);
-  
+
   const [newCommentText, setNewCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -70,7 +70,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) =
             placeholder="Write a comment..."
             className="flex-1 bg-transparent border-none text-sm focus:outline-none placeholder:text-muted-foreground mr-2"
           />
-          <button 
+          <button
             type="submit"
             disabled={!newCommentText.trim() || isSubmitting}
             className="text-primary hover:bg-primary/10 p-1.5 rounded-full transition-all disabled:opacity-50 disabled:grayscale"
@@ -99,7 +99,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) =
       ) : (
         <div className="flex flex-col divide-y divide-border/20">
           {(() => {
-            console.log(`[CommentSection] Rendering for post ${postId}, total comments: ${comments.length}`);
+
             if (!Array.isArray(comments) || comments.length === 0) {
               return (
                 <div className="text-center py-8 text-muted-foreground text-sm">
@@ -108,8 +108,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) =
               );
             }
             return comments.map((comment, index) => (
-              <CommentItem 
-                key={comment.comment_id || `comment-${index}`} 
+              <CommentItem
+                key={comment.comment_id || `comment-${index}`}
                 comment={comment}
                 postAuthor={postAuthor}
                 onUpdate={updateComment}

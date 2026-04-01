@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Edit3, Trash2, MoreHorizontal, MessageCircle } from "lucide-react";
+import { Edit3, Trash2, MessageCircle } from "lucide-react";
 import { Post } from "../../hooks/useNewsfeedData";
 import { useAuth } from "../../context/AuthContext";
 import ReactionBar from "./ReactionBar";
@@ -36,7 +36,7 @@ const formatTimestamp = (timestamp?: string) => {
   }
 };
 
-const StaticPostCard = ({
+const PostCard = ({
   post,
   onEdit,
   onDelete
@@ -60,10 +60,10 @@ const StaticPostCard = ({
     comments: initialComments = 0,
   } = post;
 
-  const { totalComments } = useComments(post.post_id);
+  const { totalComments } = useComments(post.post_id, { enabled: showComments });
   const displayCommentCount = totalComments || initialComments;
 
-  console.log("Rendering post:", post);
+
 
   return (
     <div className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -142,9 +142,6 @@ const StaticPostCard = ({
               </button>
             </div>
           )}
-          <button className="text-muted-foreground hover:bg-muted p-2 rounded-full transition-colors">
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -162,7 +159,7 @@ const StaticPostCard = ({
             src={(() => {
               const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "").replace(/\/$/, "");
               const fullUrl = image.startsWith("http") ? image : `${MEDIA_BASE}${image}`;
-              console.log("Final Image URL:", fullUrl);
+
               return fullUrl;
             })()}
             alt="post media"
@@ -238,4 +235,4 @@ const StaticPostCard = ({
   );
 };
 
-export default StaticPostCard;
+export default PostCard;

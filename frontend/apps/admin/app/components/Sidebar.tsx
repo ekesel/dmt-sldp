@@ -71,9 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const { currentTenantId } = useCurrentTenant();
     const { user: currentUser } = useAuth();
 
-    // Debugging Sidebar
-    console.log('Sidebar Pathname:', pathname);
-    console.log('Current Tenant ID (Context):', currentTenantId);
+
+
+
 
     // Dynamic Navigation Logic
     const tenantMatch = pathname?.match(/\/tenants\/([^\/]+)/);

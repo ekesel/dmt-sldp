@@ -33,11 +33,11 @@ class WSClient {
       return;
     }
 
-    console.log(`[WSClient] Connecting to ${this.url}... (Attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+
     this.socket = new WebSocket(this.url);
 
     this.socket.onopen = () => {
-      console.log(`[WSClient] Connected successfully to ${this.url}`);
+
       this.reconnectAttempts = 0;
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
@@ -69,13 +69,13 @@ class WSClient {
     };
 
     this.socket.onclose = () => {
-      console.log("[WSClient] WebSocket closed");
+
       this.dispatchEvent("close", null);
-      
+
       // Auto-reconnect logic
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-        console.log(`[WSClient] Reconnecting in ${delay}ms...`);
+
         this.reconnectAttempts++;
         this.reconnectTimer = setTimeout(() => this.connect(), delay);
       }

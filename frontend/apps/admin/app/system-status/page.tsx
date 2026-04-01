@@ -96,11 +96,11 @@ export default function SystemStatusPage() {
         const wsOrigin = getWsOrigin();
         const wsUrl = `${wsOrigin}/ws/admin/health/?token=${token}`;
 
-        console.log("Connecting to System Health WS:", wsUrl);
+
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            console.log('Connected to Health WebSocket');
+
             setWsConnected(true);
         };
 
@@ -126,7 +126,7 @@ export default function SystemStatusPage() {
         };
 
         ws.onclose = () => {
-            console.log('Health WebSocket disconnected');
+
             setWsConnected(false);
             // Attempt reconnect after 5s
             setTimeout(() => {
@@ -152,8 +152,7 @@ export default function SystemStatusPage() {
                 setLastUpdated(new Date());
             }
         } catch (error) {
-            console.error('Failed to fetch health data:', error);
-            // Don't show toast on every poll failure, maybe only manual?
+
         } finally {
             setLoading(false);
         }

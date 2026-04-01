@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import StaticPostCard from '../../../components/newsfeedUI/StaticPostCard';
-import StaticPostModal from '../../../components/newsfeedUI/StaticPostModal';
+import PostCard from '../../../components/newsfeedUI/PostCard';
+import PostModal from '../../../components/newsfeedUI/PostModal';
 import CreatePostButton from '../../../components/newsfeedUI/CreatePostButton';
 import { useNewsfeedData, Post } from '../../../hooks/useNewsfeedData';
 import { useAuth } from '../../../context/AuthContext';
@@ -14,9 +14,9 @@ const NewsfeedPage = () => {
     const { posts, loading, currentUser, createPost, updatePost, deletePost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
 
     // Role-based access control check
-    console.log("Current user from NewsfeedPage:", user);
+
     const isManager = user?.is_manager || user?.role?.toLowerCase() === "manager";
-    console.log("Is manager check result:", isManager);
+
 
     const handleEdit = (post: Post) => {
         setEditingPost(post);
@@ -58,7 +58,7 @@ const NewsfeedPage = () => {
                         ) : (
                             <>
                                 {posts.map((post, idx) => (
-                                    <StaticPostCard
+                                    <PostCard
                                         key={post.post_id || idx}
                                         post={post}
                                         onEdit={handleEdit}
@@ -79,7 +79,7 @@ const NewsfeedPage = () => {
             </main>
 
             {/* Post Modal */}
-            <StaticPostModal
+            <PostModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 userProfile={currentUser}

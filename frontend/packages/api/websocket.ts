@@ -76,9 +76,9 @@ const DEFAULT_OPTIONS: Required<
           const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           // Use explicit host if provided, otherwise current location
           let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-          
+
           const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
-          
+
           if (isLocalhost) {
             // Default local backend port
             wsHost = `${wsHost}:8000`;
@@ -169,12 +169,12 @@ export class WebSocketConnectionManager {
     const baseUrl = this.options.baseUrl.replace("{tenant_id}", encodeURIComponent(tenantId));
     const token = this.getJwtToken();
     if (token) {
-      console.log("[WebSocketManager] Found auth token, constructing URL with token...");
+
       // Append token to query string
       const url = new URL(baseUrl);
       url.searchParams.set('token', token);
       const finalUrl = url.toString();
-      console.log(`[WebSocketManager] Connecting to: ${finalUrl.split('?')[0]}?token=***${token.slice(-6)}`);
+
       return finalUrl;
     }
     console.warn(`[WebSocketManager] No JWT token found in localStorage keys. Connecting without token.`);
@@ -185,7 +185,7 @@ export class WebSocketConnectionManager {
     if (!isBrowser()) return null;
     const token = localStorage.getItem(this.options.tokenStorageKey);
     if (token) return token;
-    
+
     // Fallback for access_token as reported in Newsfeed issue
     return localStorage.getItem("access_token");
   }

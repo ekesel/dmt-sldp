@@ -55,7 +55,7 @@ export function useNotifications() {
 
         ws.current.onopen = () => {
             setStatus('open');
-            console.log('Notifications WebSocket Connected');
+
         };
 
         ws.current.onmessage = (event) => {
@@ -71,13 +71,13 @@ export function useNotifications() {
                     });
                 }
             } catch (e) {
-                console.error('Failed to parse notification message', e);
+
             }
         };
 
         ws.current.onclose = () => {
             setStatus('closed');
-            console.log('Notifications WebSocket Disconnected');
+
             // Only schedule a reconnect if the component is still mounted
             if (!isMounted.current) return;
             reconnectTimer.current = setTimeout(connectWebSocket, 5000);

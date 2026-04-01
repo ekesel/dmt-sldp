@@ -41,7 +41,7 @@ const updateCache = (postId: number, newState: PostCommentsState) => {
   }
 };
 
-export function useComments(postId: number) {
+export function useComments(postId: number, options: { enabled?: boolean } = { enabled: true }) {
   const { user: currentUser } = useAuth();
   const [localState, setLocalState] = useState<PostCommentsState>(
     commentsCache[postId] || { list: [], total: 0 }
@@ -51,19 +51,20 @@ export function useComments(postId: number) {
 
 
   const fetchComments = useCallback(async () => {
+    if (postId > 1e11) return; // Skip optimistic IDs
     setLoading(true);
     try {
       const data = await commentsApi.list(postId);
-      console.log(`[useComments] Raw API response for post ID ${postId}:`, data);
-      
+
+
       const commentsArray = Array.isArray(data?.comments) ? data.comments : [];
-      console.log(`[useComments] Extracted comments array:`, commentsArray);
-      
+
+
       const newState = {
         list: buildCommentTree(commentsArray),
         total: data?.total_comments || 0
       };
-      
+
       updateCache(postId, newState);
       setError(null);
     } catch (err: any) {
@@ -83,7 +84,7 @@ export function useComments(postId: number) {
 
       // Handle potential nesting in response (e.g., { data: comment } or { comment: comment })
       const newCommentRaw: any = (response as any).data || (response as any).comment || response;
-      
+
       // Ensure the comment has the text and user info for immediate display
       const newComment: Comment = {
         ...newCommentRaw,
@@ -123,7 +124,7 @@ export function useComments(postId: number) {
         list: newList,
         total: current.total + 1
       });
-      
+
       toast.success('Comment added!');
     } catch (err: any) {
       toast.error(err.message || 'Failed to add comment');
@@ -134,7 +135,7 @@ export function useComments(postId: number) {
     try {
       const updated = await commentsApi.update(commentId, { comment_text: text });
       const current = commentsCache[postId] || { list: [], total: 0 };
-      
+
       const updateList = (list: Comment[]): Comment[] => {
         if (!Array.isArray(list)) return [];
         return list.map(c => {
@@ -152,7 +153,7 @@ export function useComments(postId: number) {
         ...current,
         list: updateList(current.list)
       });
-      
+
       toast.success('Comment updated!');
     } catch (err: any) {
       toast.error(err.message || 'Failed to update comment');
@@ -163,7 +164,7 @@ export function useComments(postId: number) {
     try {
       await commentsApi.delete(commentId);
       const current = commentsCache[postId] || { list: [], total: 0 };
-      
+
       const removeFromList = (list: Comment[]): Comment[] => {
         if (!Array.isArray(list)) return [];
         return list
@@ -178,7 +179,7 @@ export function useComments(postId: number) {
         list: removeFromList(current.list),
         total: Math.max(0, current.total - 1)
       });
-      
+
       toast.success('Comment deleted!');
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete comment');
@@ -195,12 +196,12 @@ export function useComments(postId: number) {
     };
   }, [postId]);
 
-  // Auto-fetch comments on initial mount if not in cache
+  // Auto-fetch comments on initial mount if not in cache and enabled
   useEffect(() => {
-    if (!commentsCache[postId]) {
+    if (options.enabled && !commentsCache[postId] && postId < 1e11) {
       fetchComments();
     }
-  }, [postId, fetchComments]);
+  }, [postId, fetchComments, options.enabled]);
 
   return {
     comments: localState.list,

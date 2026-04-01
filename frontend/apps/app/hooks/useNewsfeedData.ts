@@ -45,7 +45,7 @@ export function useNewsfeedData() {
         if (!socket) return;
 
         const onOpen = () => {
-            console.log('[Newsfeed] WebSocket connected successfully.');
+
             setError(null);
             socket.emit('get_posts', { page: 1 });
             // Loading will be set to false when posts arrive
@@ -67,7 +67,7 @@ export function useNewsfeedData() {
         };
 
         const onPosts = (payload: any) => {
-            console.log("WS: posts received", payload);
+
 
             if (payload.error) {
                 console.error('[Newsfeed WS Error]:', payload.error);
@@ -90,7 +90,7 @@ export function useNewsfeedData() {
         };
 
         const onPostCreated = (payload: any) => {
-            console.log("WS: post_created received", payload);
+
 
             const newPost = payload.data || payload;
 
@@ -103,8 +103,8 @@ export function useNewsfeedData() {
                 // Remove matching optimistic post (same content + author)
                 const filtered = prev.filter(p =>
                     !(p.title === newPost.title &&
-                      p.content === newPost.content &&
-                      p.author?.id === newPost.author?.id)
+                        p.content === newPost.content &&
+                        p.author?.id === newPost.author?.id)
                 );
 
                 return [newPost, ...filtered];
@@ -120,7 +120,7 @@ export function useNewsfeedData() {
         };
 
         const onPostDeleted = (payload: any) => {
-            console.log("WS: post_deleted received", payload);
+
             const deletedId = payload.data?.id || payload.id;
 
             if (deletedId) {
@@ -182,7 +182,7 @@ export function useNewsfeedData() {
 
     const createPost = async (title: string, content: string, category: string, imageId?: string) => {
         if (!user) return;
-        
+
         if (!user.is_manager) {
             import('react-hot-toast').then(({ toast }) => toast.error('Only managers can perform this action'));
             return;

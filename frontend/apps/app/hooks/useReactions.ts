@@ -8,30 +8,31 @@ export function useReactions(postId: number) {
   const pendingFetches = useRef<Set<number>>(new Set());
 
   const fetchReactions = useCallback(async (id: number, force = false) => {
+    if (id > 1e11) return; // Skip optimistic IDs
     if (pendingFetches.current.has(id) && !force) {
-      console.log(`[useReactions] Fetch already in progress for ID: ${id}, skipping.`);
+
       return;
     }
 
-    console.log(`[useReactions] Fetching reactions for ID: ${id}${force ? ' (forced)' : ''}`);
+
     pendingFetches.current.add(id);
     setLoading(true);
 
     try {
       const data = await reactionsApi.getSummary(id);
-      
-      console.log(`[useReactions] API returned ${data.total_reactions} for ID: ${id}`);
-      
+
+
+
       setReactions(prev => {
         const current = prev[id];
-        
+
         // ANTI-RESET LOGIC: 
         if (data.total_reactions === 0 && current && current.total_reactions > 0) {
           console.warn(`[useReactions] Ignoring suspected outdated response (0) for ID: ${id} when current is ${current.total_reactions}`);
           return prev;
         }
 
-        console.log(`[useReactions] Updating state for ID: ${id}, Total: ${data.total_reactions}`);
+
         return {
           ...prev,
           [id]: {
@@ -55,7 +56,7 @@ export function useReactions(postId: number) {
     if (!reactions[postId]) {
       fetchReactions(postId);
     } else {
-      console.log(`[useReactions] Reactions for ID: ${postId} already present, skipping initial fetch.`);
+
     }
   }, [postId, fetchReactions, reactions[postId]]);
 
@@ -75,19 +76,19 @@ export function useReactions(postId: number) {
     const previousReactions = { ...reactions };
 
     // Optimistic UI update
-    console.log(`[useReactions] Optimistic ADD: ${type} for ID: ${postId}`);
+
     setReactions(prev => {
-      const current = prev[postId] || { 
-        total_reactions: 0, 
-        types: { like: 0, love: 0, haha: 0, sad: 0 }, 
-        reactions: [] 
+      const current = prev[postId] || {
+        total_reactions: 0,
+        types: { like: 0, love: 0, haha: 0, sad: 0 },
+        reactions: []
       };
       const newTypes = { ...current.types };
       if (current.user_reaction) {
         newTypes[current.user_reaction] = Math.max(0, (newTypes[current.user_reaction] || 0) - 1);
       }
       newTypes[type] = (newTypes[type] || 0) + 1;
-      
+
       return {
         ...prev,
         [postId]: {
@@ -115,13 +116,13 @@ export function useReactions(postId: number) {
     const previousReactions = { ...reactions };
     const currentType = reactions[postId].user_reaction!;
 
-    console.log(`[useReactions] Optimistic REMOVE for ID: ${postId}`);
+
     setReactions(prev => {
       const current = prev[postId];
       if (!current) return prev;
       const newTypes = { ...current.types };
       newTypes[currentType] = Math.max(0, (newTypes[currentType] || 0) - 1);
-      
+
       return {
         ...prev,
         [postId]: {

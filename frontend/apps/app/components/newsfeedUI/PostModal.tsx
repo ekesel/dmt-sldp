@@ -55,16 +55,16 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      
+
       if (editingPost) {
         setTitle(editingPost.title);
         setContent(editingPost.content);
         setCategory(editingPost.category || "General");
-        
+
         if (editingPost.media_file) {
           const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "").replace(/\/$/, "");
-          const fullUrl = editingPost.media_file.startsWith("http") 
-            ? editingPost.media_file 
+          const fullUrl = editingPost.media_file.startsWith("http")
+            ? editingPost.media_file
             : `${MEDIA_BASE}${editingPost.media_file}`;
           setSelectedImagePreview(fullUrl);
         } else {
@@ -77,7 +77,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
         setCategory("General");
         setSelectedImagePreview(null);
       }
-      
+
       setSelectedImageFile(null);
       setUploadedImageId(null);
       setIsUploading(false);
@@ -130,9 +130,9 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
   const handlePost = async () => {
     const isEdit = !!editingPost;
     const action = isEdit ? updatePost : createPost;
-    
+
     if (!title.trim() || !content.trim() || !action || isSubmitting || isUploading) return;
-    
+
     setIsSubmitting(true);
     setUploadError(null);
     let currentImageId = uploadedImageId;
@@ -158,13 +158,13 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
 
       // 2. Perform action (Create or Update)
       if (isEdit && editingPost) {
-        console.log("Updating post via WebSocket...", { id: editingPost.post_id, title, category });
+
         await updatePost?.(editingPost.post_id, title, content, category, currentImageId);
       } else {
-        console.log("Creating post via WebSocket...", { title, category, image_id: currentImageId });
+
         await createPost?.(title, content, category, currentImageId);
       }
-      
+
       onClose();
     } catch (err) {
       console.error(`Failed to ${isEdit ? 'update' : 'create'} post:`, err);
@@ -270,11 +270,10 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`flex-1 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all active:scale-95 ${
-                    category === cat
+                  className={`flex-1 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all active:scale-95 ${category === cat
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>

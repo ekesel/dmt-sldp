@@ -17,7 +17,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     useEffect(() => {
         if (isLoading) return;
         if (token) {
-            console.log('[DashboardLayout] Found auth token, initializing WebSocket...');
+
 
             // Using dynamic WebSocket URL based on environment
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -41,7 +41,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             const tenantSlug = user?.tenant_slug || localStorage.getItem('dmt-tenant') || 'default';
             const finalWsUrl = `${wsHost}/news/?token=${token}`;
 
-            console.log(`[DashboardLayout] Connecting to Newsfeed WS: ${finalWsUrl.split('?')[0]}?token=***${token.slice(-6)}`);
+
             setWsUrl(finalWsUrl);
         } else {
             console.warn('[DashboardLayout] No auth token available, skipping Newsfeed WebSocket initialization');
