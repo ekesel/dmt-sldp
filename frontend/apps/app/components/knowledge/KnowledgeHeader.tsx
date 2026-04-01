@@ -48,7 +48,7 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
 
         <button
           onClick={onNewRecord}
-          className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-foreground text-white rounded-xl hover:bg-foreground/90 transition-all active:scale-95 shadow-lg shadow-foreground/20 text-xs lg:text-sm font-bold"
+          className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-foreground text-white rounded-xl hover:opacity-90 transition-all active:scale-[0.98] shadow-md shadow-foreground/5 text-xs lg:text-sm font-bold"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">New Record</span>

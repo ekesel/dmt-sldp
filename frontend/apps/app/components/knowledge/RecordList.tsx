@@ -150,24 +150,27 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
     <div
       onClick={onClick}
       className={cn(
-        "group relative p-4 lg:p-6 bg-white/60 border border-border/40 rounded-2xl hover:bg-white hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer",
-        isSelected && "ring-2 ring-primary ring-offset-2 lg:ring-offset-4 ring-offset-background bg-white border-primary/20 shadow-xl shadow-primary/10"
+        "group relative p-4 lg:p-6 bg-white/60 border border-border/40 rounded-2xl hover:bg-white/80 hover:border-primary/20 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 cursor-pointer",
+        isSelected && "ring-2 ring-primary ring-offset-2 lg:ring-offset-4 ring-offset-background bg-white border-primary/20 shadow-lg shadow-primary/10"
       )}
     >
       <div className="flex items-center gap-4 lg:gap-6">
         <div className={cn(
-            "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center transition-colors shadow-sm shrink-0",
-            isSelected ? "bg-primary text-white" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white"
+            "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
+            isSelected ? "bg-primary text-white" : "bg-primary/10 text-primary group-hover:bg-primary/15"
         )}>
           <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2 sm:mb-1">
-            <h3 className="text-sm lg:text-lg font-bold text-foreground truncate group-hover:text-primary transition-colors">
+            <h3 className="text-sm lg:text-lg font-bold text-foreground truncate group-hover:text-foreground/80 transition-colors duration-300">
               {record.title}
             </h3>
             <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
               {record.version}
+            </span>
+            <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-secondary/80 text-muted-foreground rounded border border-border/40 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
+              {record.type}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">

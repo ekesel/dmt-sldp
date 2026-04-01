@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { FileText, X } from "lucide-react";
+import { FileText, X, Lock } from "lucide-react";
 import { Record } from "./RecordList";
 import { cn } from "@/lib/utils";
 
@@ -8,9 +8,10 @@ interface RecordDetailProps {
   record: Record | null;
   onClose?: () => void;
   onEdit?: (record: Record) => void;
+  currentUser: string;
 }
 
-export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit }) => {
+export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser }) => {
   if (!record) {
     return (
       <div className="hidden xl:flex w-[300px] flex-shrink-0 bg-white/40 backdrop-blur-sm border-l border-border/40 p-8 flex-col items-center justify-center text-center">
@@ -135,24 +136,42 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
         {/* Assets Section */}
         <div className="mt-10 pt-8 border-t border-border/40">
-          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Assets</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Assets</h3>
+            {!record.status.includes("Approved") && (
+              <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest bg-primary/5 px-2 py-0.5 rounded border border-primary/10">Private Draft</span>
+            )}
+          </div>
+          
           <div className="space-y-4">
-            {record.assets.length > 0 ? (
-              record.assets.map((asset, index) => (
-                <div key={asset.name} className={cn(
-                  "flex items-center justify-between py-1",
-                  index !== record.assets.length - 1 && "pb-4 border-b border-border/20"
-                )}>
-                  <span className="text-[15px] font-medium text-foreground truncate max-w-[280px]">
-                    {asset.name}
-                  </span>
-                  <span className="text-sm font-medium text-muted-foreground shrink-0 uppercase tracking-tight">
-                    {asset.size}
-                  </span>
-                </div>
-              ))
+            {record.status === "Approved" || record.owner === currentUser ? (
+              record.assets.length > 0 ? (
+                record.assets.map((asset, index) => (
+                  <div key={asset.name} className={cn(
+                    "flex items-center justify-between py-1",
+                    index !== record.assets.length - 1 && "pb-4 border-b border-border/20"
+                  )}>
+                    <span className="text-[15px] font-medium text-foreground truncate max-w-[280px]">
+                      {asset.name}
+                    </span>
+                    <span className="text-sm font-medium text-muted-foreground shrink-0 uppercase tracking-tight">
+                      {asset.size}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No assets available</p>
+              )
             ) : (
-              <p className="text-sm text-muted-foreground italic">No assets available</p>
+              <div className="p-5 bg-secondary/20 rounded-2xl border border-border/10 flex flex-col items-center text-center">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm border border-border/10">
+                  <Lock className="w-4 h-4 text-muted-foreground/40" />
+                </div>
+                <h4 className="text-[11px] font-black text-foreground uppercase tracking-widest mb-1.5">Restricted Access</h4>
+                <p className="text-[10px] font-medium text-muted-foreground/60 leading-relaxed max-w-[180px]">
+                  Assets are private during the review phase. Only the owner can approve them for public view.
+                </p>
+              </div>
             )}
           </div>
         </div>

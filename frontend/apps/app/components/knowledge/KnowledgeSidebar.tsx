@@ -50,11 +50,10 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ activeTeam, 
             </h3>
             <div className="grid grid-cols-3 gap-2">
               <button
-                title="Team"
                 onClick={() => onCategoryChange("TEAM")}
                 className={cn(
                   "relative flex flex-col items-center justify-center p-3 rounded-xl border border-border/40 transition-all group",
-                  activeCategory === "TEAM" ? "bg-white shadow-xl shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white hover:border-primary/30"
+                  activeCategory === "TEAM" ? "bg-white shadow-md shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white/80 hover:border-primary/20"
                 )}
               >
                 <User className={cn("w-5 h-5", activeCategory === "TEAM" ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
@@ -63,11 +62,10 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ activeTeam, 
                 </span>
               </button>
               <button
-                title="Project"
                 onClick={() => onCategoryChange("PROJECT")}
                 className={cn(
                   "relative flex flex-col items-center justify-center p-3 rounded-xl border border-border/40 transition-all group",
-                  activeCategory === "PROJECT" ? "bg-white shadow-xl shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white hover:border-primary/30"
+                  activeCategory === "PROJECT" ? "bg-white shadow-md shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white/80 hover:border-primary/20"
                 )}
               >
                 <Box className={cn("w-5 h-5", activeCategory === "PROJECT" ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
@@ -76,11 +74,10 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ activeTeam, 
                 </span>
               </button>
               <button
-                title="Type"
                 onClick={() => onCategoryChange("TYPE")}
                 className={cn(
                   "relative flex flex-col items-center justify-center p-3 rounded-xl border border-border/40 transition-all group",
-                  activeCategory === "TYPE" ? "bg-white shadow-xl shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white hover:border-primary/30"
+                  activeCategory === "TYPE" ? "bg-white shadow-md shadow-primary/5 border-primary/20" : "bg-white/50 hover:bg-white/80 hover:border-primary/20"
                 )}
               >
                 <Tag className={cn("w-5 h-5", activeCategory === "TYPE" ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
@@ -108,8 +105,8 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ activeTeam, 
                   className={cn(
                     "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group",
                     activeTeam === team.name
-                      ? "bg-primary text-white shadow-lg shadow-primary/20"
-                      : "text-muted-foreground hover:bg-white hover:text-foreground"
+                      ? "bg-primary text-white shadow-md shadow-primary/20"
+                      : "text-muted-foreground hover:bg-white/60 hover:text-foreground/80 hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3">
