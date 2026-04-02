@@ -45,10 +45,11 @@ export function useNewsfeedData() {
         if (!socket) return;
 
         const onOpen = () => {
-
             setError(null);
+            setPage(1); // Reset local page state on connection
             socket.emit('get_posts', { page: 1 });
-            // Loading will be set to false when posts arrive
+            setLoading(true);
+
         };
 
         const onError = (err: any) => {
@@ -70,24 +71,27 @@ export function useNewsfeedData() {
             if (payload.error) {
                 console.error('[Newsfeed WS Error]:', payload.error);
                 setError(payload.error);
+                setLoading(false);
                 return;
             }
 
-            const incoming = payload.data || [];
-            const isInitialPage = (payload.page || 1) === 1;
+            const incoming: Post[] = payload.data || [];
+            const responsePage = payload.page || 1;
+            const isInitialPage = responsePage === 1;
 
             setPosts(prev => {
+                // Page 1 → replace posts completely (handles refresh, reconnect, etc.)
+                if (isInitialPage) {
+                    return incoming;
+                }
+
+                // Page 2+ → append posts, preventing duplicates
                 const existingIds = new Set(prev.map(p => p.post_id));
                 const newPosts = incoming.filter((p: Post) => !existingIds.has(p.post_id));
-
-                if (isInitialPage) {
-                    return [...newPosts, ...prev];
-                } else {
-                    return [...prev, ...newPosts];
-                }
+                return [...prev, ...newPosts];
             });
 
-            if (payload.page) setPage(payload.page);
+            setPage(responsePage);
             setHasNextPage(!!payload.has_next);
             setLoading(false);
         };
@@ -170,7 +174,8 @@ export function useNewsfeedData() {
         formData.append('file', file); // Contract says "file": binary_img
 
         try {
-            const uploadUrl = process.env.NEXT_PUBLIC_NEWS_IMAGE_UPLOAD_URL || 'news/upload-image/';
+            // const uploadUrl = process.env.NEXT_PUBLIC_NEWS_IMAGE_UPLOAD_URL || 'news/upload-image/';
+            const uploadUrl = 'news/upload-image/';
             const response = await api.post<{ image_id: string; file_url: string }>(uploadUrl, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -255,7 +260,7 @@ export function useNewsfeedData() {
         if (socket && hasNextPage) {
             const nextPage = page + 1;
             socket.emit('get_posts', { page: nextPage });
-            setPage(nextPage);
+            // Page state updated when response arrives in onPosts
         }
     }, [page, hasNextPage, socket]);
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit3, Trash2, MessageCircle } from "lucide-react";
 import { Post } from "../../hooks/useNewsfeedData";
 import { useAuth } from "../../context/AuthContext";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
 import { formatDistanceToNow } from 'date-fns';
+import { getMediaUrl, getFallbackImage } from "@/lib/media";
 
 const formatTimestamp = (timestamp?: string) => {
   if (!timestamp) return "Recently";
@@ -156,14 +157,13 @@ const PostCard = ({
       {image && (
         <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50">
           <img
-            src={(() => {
-              const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "").replace(/\/$/, "");
-              const fullUrl = image.startsWith("http") ? image : `${MEDIA_BASE}${image}`;
-
-              return fullUrl;
-            })()}
+            src={getMediaUrl(image)}
             alt="post media"
             className="w-full max-h-125 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = getFallbackImage();
+            }}
           />
         </div>
       )}

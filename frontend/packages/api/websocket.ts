@@ -74,23 +74,24 @@ const DEFAULT_OPTIONS: Required<
       ? (
         (() => {
           const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          // Use explicit host if provided, otherwise current location
+
           let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
+          wsHost = 'api.elevate.samta.ai';
 
           const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
 
           if (isLocalhost) {
-            // Default local backend port
+
             wsHost = `${wsHost}:8000`;
           } else if (!wsHost.includes(':') && window.location.port) {
-            // Keep current port if on a custom non-localhost domain
+
             wsHost = `${wsHost}:${window.location.port}`;
           }
 
           return `${wsProtocol}//${wsHost}/ws/telemetry/{tenant_id}/`;
         })()
       )
-      : `wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/`
+      : `wss://{wsHost}/ws/telemetry/{tenant_id}/`
   ),
   tenantStorageKey: "dmt-tenant",
   tokenStorageKey: "dmt-access-token",

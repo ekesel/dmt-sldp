@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { WebSocketProvider } from '../context/WebSocketContext';
 
+
 interface DashboardLayoutProps {
     children: React.ReactNode;
 }
@@ -19,22 +20,21 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         if (token) {
 
 
-            // Using dynamic WebSocket URL based on environment
+
+
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // debugger;
+
             let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
 
 
             const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
 
-            // Special case for local development without local backend
-            // In most DMT setups, newsfeed might be on a central hub or we use a fallback
-            if (isLocalhost && !process.env.NEXT_PUBLIC_WS_HOST) {
-                wsHost = 'api.elevate.samta.ai';
-            } else if (isLocalhost) {
+            if (isLocalhost) {
+
                 wsHost = `${wsHost}:8000`;
             } else if (!wsHost.includes(':') && window.location.port) {
-                wsHost = `${wsHost}:${window.location.port}`;
+
+                wsHost = `${wsProtocol}//${wsHost}:${window.location.port}`;
             }
 
             // Path must include tenant slug for proper routing in Django Channels

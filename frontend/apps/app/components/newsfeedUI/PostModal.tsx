@@ -271,8 +271,8 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
                   key={cat}
                   onClick={() => setCategory(cat)}
                   className={`flex-1 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all active:scale-95 ${category === cat
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                     }`}
                 >
                   {cat}
