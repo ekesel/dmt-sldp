@@ -46,7 +46,9 @@ TENANT_APPS = [
     'django.contrib.messages',
     'data',
     'newsapp',
+    'knowledge_base'
 ]
+
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
