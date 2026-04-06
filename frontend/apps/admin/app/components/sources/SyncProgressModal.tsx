@@ -34,14 +34,20 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         }
 
         // Connect to WebSocket
-        const token = typeof window !== 'undefined' ? localStorage.getItem('dmt-access-token') : null;
+        const token = typeof window !== 'undefined'
+            ? (localStorage.getItem('dmt-access-token') || localStorage.getItem('access_token'))
+            : null;
 
         let wsHost = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname) : 'localhost';
         const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
         const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
-        const portSuffix = (portValue && !process.env.NEXT_PUBLIC_WS_HOST) ? `:${portValue}` : (isLocalhost ? ':8000' : '');
 
-        wsHost = `${wsHost}${portSuffix}`;
+        if (isLocalhost && !process.env.NEXT_PUBLIC_WS_HOST) {
+            wsHost = 'api.elevate.samta.ai';
+        } else {
+            const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
+            wsHost = `${wsHost}${portSuffix}`;
+        }
         const envWsUrl = process.env.NEXT_PUBLIC_WS_URL;
 
         if (envWsUrl) {
@@ -63,16 +69,18 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
         const dmtTenant = typeof window !== 'undefined' ? localStorage.getItem('dmt-tenant') : null;
         const resolvedTenantId = dmtTenant || tenantId;
 
+
         const urlWithToken = token ? `${WS_URL}/${resolvedTenantId}/?token=${token}` : `${WS_URL}/${resolvedTenantId}/`;
 
-        console.log(`[SyncProgressModal] Connecting to WS: ${urlWithToken}`);
+        if (!token) {
+            console.warn(`[SyncProgressModal] No auth token found, connecting to WS without token: ${WS_URL}/${resolvedTenantId}/`);
+        }
+
         const ws = new WebSocket(urlWithToken);
 
         let isIntentionallyClosed = false;
 
-        ws.onopen = () => {
-            console.log('Connected to Telemetry WS');
-        };
+
 
         ws.onmessage = (event) => {
             try {
@@ -102,9 +110,7 @@ const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, 
             }
         };
 
-        ws.onclose = () => {
-            console.log('Telemetry WS Closed');
-        };
+
 
         return () => {
             ws.close();

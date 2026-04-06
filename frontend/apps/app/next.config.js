@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
+    transpilePackages: ['@dmt/api', '@dmt/ui'],
     trailingSlash: true,
     transpilePackages: ['@dmt/api', '@dmt/ui'],
     async redirects() {
@@ -12,7 +13,7 @@ const nextConfig = {
             },
         ]
     },
-    // Removed rewrites(): Nginx handles /api/ and /ws/ on api.elevate.samta.ai directly.
+
 };
 
 module.exports = nextConfig;
