@@ -34,7 +34,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 wsHost = `${wsHost}:8000`;
             } else if (!wsHost.includes(':') && window.location.port) {
 
-                wsHost = `${wsProtocol}//${wsHost}:${window.location.port}`;
+                wsHost = `${wsHost}:${window.location.port}`;
+            }
+
+            if (!wsHost.startsWith('ws://') && !wsHost.startsWith('wss://')) {
+                wsHost = `${wsProtocol}//${wsHost}`;
             }
 
             // Path must include tenant slug for proper routing in Django Channels
