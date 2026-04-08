@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from "react";
-import { KnowledgeSidebar } from "@/components/knowledge/KnowledgeSidebar";
+import React, { useState, useEffect } from "react";
+import { KnowledgeSidebar, Team } from "@/components/knowledge/KnowledgeSidebar";
 import { KnowledgeHeader } from "@/components/knowledge/KnowledgeHeader";
 import { RecordList, Record, mockRecords } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
 import { RecordEditor } from "@/components/knowledge/RecordEditor";
+import { metadata as metadataAPI, MetadataCategory as Category, Metadata as MetadataResponse } from "@dmt/api";
 
 
 export default function KnowledgeBasePage() {
@@ -12,17 +13,86 @@ export default function KnowledgeBasePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [activeTeam, setActiveTeam] = useState<string>("Engineering");
-  const [activeCategory, setActiveCategory] = useState<string>("TEAM");
+  const [activeCategory, setActiveCategory] = useState<number>(1);
   const [headerTitle, setHeaderTitle] = useState<string>("Engineering");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [allMetadata, setAllMetadata] = useState<MetadataResponse[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
 
-  const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
+  const fetchData = async () => {
+    const rawCategories = await metadataAPI.getCategories();
+    setCategories(rawCategories);
+    
+    const metadata = await metadataAPI.list();
+    setAllMetadata(metadata);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Sync sidebar list with active category
+  useEffect(() => {
+    if (allMetadata.length === 0) return;
+
+    const currentMetadata = allMetadata.find(m => m.id === activeCategory);
+    
+    if (currentMetadata) {
+      setTeams(currentMetadata.values.map(val => ({
+        name: val,
+        count: 0 // Provide 0 as default count for all categories
+      })));
+    }
+  }, [activeCategory, allMetadata]);
+
+  const handleAddValueSubmit = async () => {
+    if (!newTeamName.trim()) return;
+    
+    const currentCategory = categories.find((cat) => cat.id === activeCategory);
+
+    if (!currentCategory) {
+      console.error(`Category with ID "${activeCategory}" not found in metadata.`);
+      return;
+    }
+    
+    try {
+      const newValue = await metadataAPI.addValue({
+        category_id: currentCategory.id,
+        value: newTeamName
+      });
+      
+      // Update local state instead of full data fetch for better UX
+      setAllMetadata(prev => prev.map(cat => {
+        if (cat.id === activeCategory) {
+          return {
+            ...cat,
+            values: [...cat.values, newValue.value]
+          };
+        }
+        return cat;
+      }));
+
+      setNewTeamName("");
+      setIsAddingTeam(false);
+    } catch (error: any) {
+      console.error("Failed to add value:", error.message);
+      // Optional: Show error to user
+    }
+  };
+
+  const handleCategoryChange = (categoryId: number) => {
+    setActiveCategory(categoryId);
     setSearchTerm(""); // Reset search on category change
-    const title = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    
+    const category = categories.find(c => c.id === categoryId);
+    const title = category?.name || "Records";
     setHeaderTitle(title);
-    if (category !== "TEAM") {
+    
+    if (category?.name.toUpperCase() !== "TEAM") {
       setActiveTeam("");
     }
   };
@@ -55,12 +125,23 @@ export default function KnowledgeBasePage() {
       )}
 
       <KnowledgeSidebar
+        categories={categories}
+        teams={teams}
         activeTeam={activeTeam}
         onTeamChange={handleTeamChange}
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        isAddingTeam={isAddingTeam}
+        newTeamName={newTeamName}
+        onAddTeamClick={() => setIsAddingTeam(true)}
+        onNewTeamChange={setNewTeamName}
+        onAddTeamSubmit={handleAddValueSubmit}
+        onAddTeamCancel={() => {
+          setIsAddingTeam(false);
+          setNewTeamName("");
+        }}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
@@ -85,7 +166,7 @@ export default function KnowledgeBasePage() {
                   // If we were searching, sync the UI to the selected record's team
                   setActiveTeam(record.team);
                   setHeaderTitle(record.team);
-                  setActiveCategory("TEAM");
+                  setActiveCategory(1);
                   setSearchTerm(""); // Clear search after selection
                 }
               }}

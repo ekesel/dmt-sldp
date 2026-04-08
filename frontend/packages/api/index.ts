@@ -501,6 +501,122 @@ export const users = {
   invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
 };
 
+/** ---------- metadata ---------- */
+
+export interface MetadataCategory {
+  id: number;
+  name: string;
+}
+
+export interface MetadataValue {
+  id: number;
+  category_id: number;
+  value: string;
+}
+
+export interface Metadata {
+  id: number;
+  name: string;
+  values: string[];
+}
+
+// Mock Data
+let metadataValueIdCounter = 100;
+let metadataCategoryIdCounter = 10;
+
+let mockMetadataCategories: MetadataCategory[] = [
+  { id: 1, name: "Team" },
+  { id: 2, name: "Project" },
+  { id: 3, name: "Type" }
+];
+
+let mockMetadataValues: MetadataValue[] = [
+  { id: 11, category_id: 1, value: "Engineering" },
+  { id: 12, category_id: 1, value: "Backend" },
+  { id: 13, category_id: 1, value: "Design" },
+
+  { id: 21, category_id: 2, value: "Knowledge Base" },
+  { id: 22, category_id: 2, value: "Infrastructure" },
+
+  { id: 31, category_id: 3, value: "PPT" },
+  { id: 32, category_id: 3, value: "DOC" }
+];
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/* =========================
+   Metadata Module
+========================= */
+export const metadata = {
+  // Replace with get('/metadata/categories/')
+  getCategories: async (): Promise<MetadataCategory[]> => {
+    await delay(200);
+    return [...mockMetadataCategories];
+  },
+
+  // Replace with get('/metadata/')
+  list: async (): Promise<Metadata[]> => {
+    await delay(300);
+    return mockMetadataCategories.map(category => ({
+      id: category.id,
+      name: category.name,
+      values: mockMetadataValues
+        .filter(v => v.category_id === category.id)
+        .map(v => v.value)
+    }));
+  },
+
+  // Replace with get(`/metadata/categories/${categoryId}/values/`)
+  getByCategory: async (categoryId: number): Promise<{ id: number, value: string }[]> => {
+    await delay(200);
+    return mockMetadataValues
+      .filter(v => v.category_id === categoryId)
+      .map(v => ({ id: v.id, value: v.value }));
+  },
+
+  // Replace with post('/metadata/categories/', body)
+  createCategory: async (body: { name: string }): Promise<MetadataCategory> => {
+    await delay(200);
+    if (!body.name || !body.name.trim()) {
+      throw new Error("Category name is required");
+    }
+    const newCategory: MetadataCategory = {
+      id: ++metadataCategoryIdCounter,
+      name: body.name.trim()
+    };
+    mockMetadataCategories.push(newCategory);
+    return newCategory;
+  },
+
+  // Replace with post('/metadata/values/', body)
+  addValue: async (body: { category_id: number; value: string }): Promise<{ id: number; value: string }> => {
+    await delay(200);
+    if (!body.value || !body.value.trim()) {
+      throw new Error("Value cannot be empty");
+    }
+    const categoryExists = mockMetadataCategories.some(cat => cat.id === body.category_id);
+    if (!categoryExists) {
+      throw new Error(`Category with ID ${body.category_id} does not exist`);
+    }
+    const isDuplicate = mockMetadataValues.some(
+      v => v.category_id === body.category_id && 
+           v.value.toLowerCase() === body.value.trim().toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new Error(`Value '${body.value}' already exists in this category`);
+    }
+
+    const newValue: MetadataValue = {
+      id: ++metadataValueIdCounter,
+      category_id: body.category_id,
+      value: body.value.trim()
+    };
+
+    mockMetadataValues.push(newValue);
+    return { id: newValue.id, value: newValue.value };
+  }
+};
+
 /** ---------- integrations ---------- */
 
 export interface Integration {

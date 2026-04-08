@@ -150,20 +150,22 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
     <div
       onClick={onClick}
       className={cn(
-        "group relative p-4 lg:p-6 bg-white/60 border border-border/40 rounded-2xl hover:bg-white/80 hover:border-primary/20 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 cursor-pointer",
-        isSelected && "ring-2 ring-primary ring-offset-2 lg:ring-offset-4 ring-offset-background bg-white border-primary/20 shadow-lg shadow-primary/10"
+        "group relative p-3 lg:p-4 border rounded-lg transition-all duration-300 cursor-pointer hover:shadow-md hover:shadow-primary/5",
+        isSelected 
+          ? "bg-primary/10 border-primary/40 shadow-sm" 
+          : "bg-background/60 border-border/40 hover:bg-background/80 hover:border-primary/20"
       )}
     >
-      <div className="flex items-center gap-4 lg:gap-6">
+      <div className="flex items-center gap-3 lg:gap-4">
         <div className={cn(
-            "w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
-            isSelected ? "bg-primary text-white" : "bg-primary/10 text-primary group-hover:bg-primary/15"
+            "w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
+            isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary/15"
         )}>
-          <FileText className="w-5 h-5 lg:w-6 lg:h-6" />
+          <FileText className="w-4 h-4 lg:w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2 sm:mb-1">
-            <h3 className="text-sm lg:text-lg font-bold text-foreground truncate group-hover:text-foreground/80 transition-colors duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1.5 sm:mb-0.5">
+            <h3 className="text-sm lg:text-base font-bold text-foreground truncate group-hover:text-foreground/80 transition-colors duration-300">
               {record.title}
             </h3>
             <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
@@ -222,8 +224,8 @@ export const RecordList: React.FC<RecordListProps> = ({
   });
 
   return (
-    <div className="p-4 lg:p-6 xl:p-8 space-y-4 max-w-5xl mx-auto">
-      <div className="space-y-4">
+    <div className="p-2 lg:p-4 xl:p-6 space-y-3 max-w-5xl mx-auto">
+      <div className="space-y-3">
         {filteredRecords.length > 0 ? (
           filteredRecords.map((record) => (
             <RecordCard
@@ -234,7 +236,7 @@ export const RecordList: React.FC<RecordListProps> = ({
             />
           ))
         ) : (
-          <div className="p-12 text-center bg-white/40 rounded-3xl border border-dashed border-border/60">
+          <div className="p-12 text-center bg-background/40 rounded-3xl border border-dashed border-border/60">
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
               {searchTerm ? "No records match your search" : "No records found for this team"}
             </p>

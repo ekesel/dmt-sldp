@@ -154,7 +154,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   return (
     <div className="relative w-full h-full flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-300 scroll-smooth">
       {/* Left Sidebar - Metadata (Stacked on Mobile, Fixed on Desktop) */}
-      <aside className="w-full xl:w-64 bg-white border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
+      <aside className="w-full xl:w-64 bg-background border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
         <div className="p-6">
           <button
             onClick={onBack}
@@ -176,7 +176,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     value={formData.title}
                     onChange={(e) => handleChange("title", e.target.value)}
                     placeholder="Enter document title..."
-                    className="w-full px-4 py-3 bg-white border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm"
+                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm"
                   />
                 </div>
 
@@ -189,7 +189,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     <select
                       value={formData.team_id}
                       onChange={(e) => handleChange("team_id", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-white border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
                     >
                       <option value="team-1">Engineering</option>
                       <option value="team-2">Product</option>
@@ -208,7 +208,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     <select
                       value={formData.project_id}
                       onChange={(e) => handleChange("project_id", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-white border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
                     >
                       <option value="proj-1">Knowledge Base</option>
                       <option value="proj-2">Infrastructure</option>
@@ -227,7 +227,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     <select
                       value={formData.document_type}
                       onChange={(e) => handleChange("document_type", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-white border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
                     >
                       <option value="type-1">Documentation</option>
                       <option value="type-2">Onboarding</option>
@@ -253,7 +253,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                       value={formData.owner_id}
                       onChange={(e) => handleChange("owner_id", e.target.value)}
                       className={cn(
-                        "w-full appearance-none px-4 py-3 bg-white border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10",
+                        "w-full appearance-none px-4 py-3 bg-background border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10",
                         formData.lifecycle_status === "In Review" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
                       )}
                     >
@@ -275,7 +275,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                       onClick={() => handleChange("lifecycle_status", status)}
                       className={cn(
                         "flex-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter",
-                        formData.lifecycle_status === status ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:bg-white/50"
+                        formData.lifecycle_status === status ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/50"
                       )}
                     >
                       {status}
@@ -289,8 +289,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-white xl:bg-transparent overflow-y-visible xl:overflow-y-auto overflow-x-hidden">
-        <header className="px-6 xl:px-10 py-4 sm:py-6 xl:py-8 flex flex-col sm:flex-row gap-4 sm:items-center justify-between bg-white border-b border-border/40 sticky top-0 z-10 transition-all">
+      <main className="flex-1 flex flex-col min-w-0 bg-background xl:bg-transparent overflow-y-visible xl:overflow-y-auto overflow-x-hidden">
+        <header className="px-6 xl:px-10 py-4 sm:py-6 xl:py-8 flex flex-col sm:flex-row gap-4 sm:items-center justify-between bg-background border-b border-border/40 sticky top-0 z-10 transition-all">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <button
@@ -314,13 +314,13 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
           <div className="flex items-center gap-2 lg:gap-3 xl:gap-4">
 
-            <button className="flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-3 bg-white border border-border/60 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold text-foreground hover:bg-secondary transition-all shadow-sm">
+            <button className="flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-3 bg-background border border-border/60 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold text-foreground hover:bg-secondary transition-all shadow-sm">
               <Eye className="w-4 h-4" />
               <span className="hidden md:inline">Preview</span>
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-white bg-primary hover:bg-primary/90"
+              className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90"
             >
               {mode === "create" ? <Globe className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {mode === "create" ? "Publish" : "Save"}
@@ -328,7 +328,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
           </div>
         </header>
 
-        <div className="flex-1 flex bg-white">
+        <div className="flex-1 flex bg-background">
           <div className="w-full flex flex-col min-h-[400px] xl:min-h-[600px] overflow-hidden">
             {/* Tab Switcher */}
             <div className="flex items-center justify-between px-6 xl:px-10 py-4 xl:py-6 border-b border-border/10">
@@ -370,7 +370,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                   <div
                     onClick={() => document.getElementById('file-upload')?.click()}
                     className={cn(
-                      "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-[#F8FAFC]/50 hover:border-primary/40 transition-all cursor-pointer",
+                      "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer",
                       formData.file ? "border-primary/60 bg-primary/5" : "border-border/40"
                     )}
                   >
@@ -382,7 +382,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     />
                     <div className={cn(
                       "w-12 h-12 lg:w-16 lg:h-16 rounded-2xl shadow-xl flex items-center justify-center mb-6 transition-colors",
-                      formData.file ? "bg-primary text-white" : "bg-white text-muted-foreground"
+                      formData.file ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
                     )}>
                       {formData.file ? <CheckCircle2 className="w-6 h-6 lg:w-8 lg:h-8" /> : <Upload className="w-6 h-6 lg:w-8 lg:h-8" />}
                     </div>
@@ -401,11 +401,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
                   {/* Existing Assets */}
                   {mode === "edit" && formData.assets.length > 0 && (
-                    <div className="bg-[#F8FAFC]/60 border border-border/40 rounded-[24px] lg:rounded-[40px] p-6 lg:p-10 space-y-6 lg:space-y-8">
+                    <div className="bg-secondary/60 border border-border/40 rounded-[24px] lg:rounded-[40px] p-6 lg:p-10 space-y-6 lg:space-y-8">
                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Existing Assets ({formData.assets.length})</h3>
                       <div className="space-y-4">
                         {formData.assets.map((asset) => (
-                          <div key={asset.fileName} className="flex items-center justify-between p-4 lg:p-6 bg-white border border-border/20 rounded-2xl lg:rounded-3xl shadow-sm transition-all group">
+                          <div key={asset.fileName} className="flex items-center justify-between p-4 lg:p-6 bg-background border border-border/20 rounded-2xl lg:rounded-3xl shadow-sm transition-all group">
                             <div className="flex items-center gap-4 lg:gap-6">
                               <FileText className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
                               <div className="flex flex-col">
@@ -434,7 +434,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       </main>
 
       {/* Right Sidebar - Review/Tags (Stacked on Mobile, Fixed on Desktop) */}
-      <aside className="w-full xl:w-60 bg-white border-t xl:border-t-0 xl:border-l border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
+      <aside className="w-full xl:w-60 bg-background border-t xl:border-t-0 xl:border-l border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
         <div className="p-6 space-y-12">
           {mode === "create" ? (
             <div>
@@ -488,12 +488,12 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
             <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Tags</h3>
             <div className="flex flex-wrap gap-2">
               {formData.tags.map(tag => (
-                <span key={tag} className="flex items-center gap-2 px-3 py-2 bg-white text-foreground border border-border/40 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                <span key={tag} className="flex items-center gap-2 px-3 py-2 bg-background text-foreground border border-border/40 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
                   #{tag.toUpperCase()}
                   <X className="w-3 h-3 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => removeTag(tag)} />
                 </span>
               ))}
-              <div className="flex items-center gap-2 px-3 py-2 bg-white text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
                 <input
                   type="text"
                   value={newTag}
@@ -512,7 +512,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
               <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Version History</h3>
               <div className="relative flex gap-4">
                 <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-                  <div className="w-2 h-2 rounded-full bg-white" />
+                  <div className="w-2 h-2 rounded-full bg-background" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
