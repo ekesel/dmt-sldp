@@ -88,6 +88,10 @@ const DEFAULT_OPTIONS: Required<
             wsHost = `${wsHost}:${window.location.port}`;
           }
 
+          if (!wsHost.startsWith('ws://') && !wsHost.startsWith('wss://')) {
+            wsHost = `${wsProtocol}//${wsHost}`;
+          }
+
           return `${wsProtocol}//${wsHost}/ws/telemetry/{tenant_id}/`;
         })()
       )
