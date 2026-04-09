@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   Gift,
+  Radio,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -68,6 +69,11 @@ const menuItems: MenuItem[] = [
     icon: Newspaper,
     label: "Newsfeed",
     href: "/static-ui/newsfeed",
+  },
+  {
+    icon: Radio,
+    label: "Latest News",
+    href: "/latest-news",
   },
 
   {
@@ -168,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-primary border-r border-border backdrop-blur-xl z-40 transition-transform duration-300 flex flex-col lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
           } lg:static lg:z-0`}
       >
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-none">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2 sidebar-scrollbar">
           {/* Collapsible Content Section */}
           <div className="space-y-1">
             <div
@@ -176,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               className="flex items-center justify-between w-full px-4 py-3 cursor-pointer group hover:bg-muted rounded-lg transition-colors border border-transparent hover:border-border"
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-primary-foreground uppercase tracking-widest group-hover:text-foreground transition-colors">
+                <span className="text-xl font-black text-primary-foreground uppercase tracking-widest group-hover:text-foreground transition-colors">
                   DMT
                 </span>
               </div>

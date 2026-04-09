@@ -3,6 +3,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { Menu, LogOut, User, ChevronDown } from "lucide-react";
+import Image from "next/image";
 import { NotificationBell } from "./NotificationBell";
 
 interface NavbarProps {
@@ -25,8 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
   };
 
   return (
-    <nav className="bg-muted/80 border-b border-border backdrop-blur-2xl sticky top-0 z-40 shadow-sm">
-      <div className="px-6 py-4 flex items-center justify-between">
+    <nav className="bg-muted/80 border-b border-border backdrop-blur-2xl sticky top-0 z-40 shadow-sm h-16">
+      <div className="px-6 h-full flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center gap-4">
           <button
@@ -36,12 +37,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
             <Menu className="w-5 h-5 text-muted-foreground" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground shadow-lg shadow-primary/20">
-              E
-            </div>
-            <h1 className="text-lg font-bold text-foreground hidden sm:inline tracking-tight">
-              {user?.tenant_name || "Company Portal"}
-            </h1>
+            {user?.tenant_name?.toLowerCase().includes("samta") ? (
+              <div className="flex items-center pl-2">
+                <Image
+                  src="/assets/image.png"
+                  alt="Samta Logo"
+                  width={250}
+                  height={56}
+                  className="h-14 w-[100px] object-cover object-left brightness-110"
+                  priority
+                />
+              </div>
+            ) : (
+              <h1 className="text-lg font-bold text-foreground hidden sm:inline tracking-tight">
+                {user?.tenant_name || "Company Portal"}
+              </h1>
+            )}
           </div>
         </div>
 
@@ -62,10 +73,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
           {/* User Avatar */}
           <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg shadow-primary/20">
             {user?.avatar_url ? (
-              <img
+              <Image
                 src={user.avatar_url}
                 alt="Profile"
+                width={40}
+                height={40}
                 className="w-full h-full object-cover"
+                unoptimized
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">

@@ -10,18 +10,18 @@ interface TodayBirthdaysProps {
 
 export default function TodayBirthdays({ birthdays }: TodayBirthdaysProps) {
     return (
-        <div className="relative overflow-hidden bg-vibrant-gradient text-accent-foreground p-8 min-h-80 rounded-lg">
+        <div className="relative overflow-hidden bg-accent text-accent-foreground p-8 min-h-80 rounded-lg">
             {/* Enhanced Background Gradient Overlay */}
-            <div className="absolute inset-0 z-0 bg-vibrant-glow pointer-events-none" />
+            <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--color-accent-foreground)_45%,transparent)_0%,transparent_60%)] pointer-events-none" />
 
             {/* Dotted Pattern Overlay */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-dots-pattern opacity-40" />
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-foreground)_45%,transparent)_1.2px,transparent_1.2px)] bg-[length:18px_18px] opacity-40" />
 
             {/* Moon-like Circular Shape (Top Left) */}
-            <div className="absolute -top-4 -left-3 h-18 w-18 rounded-full decorative-shape-1" />
+            <div className="absolute -top-4 -left-3 h-[4.5rem] w-[4.5rem] rounded-full bg-accent-foreground/20 shadow-[1.2rem_1rem_0_0_color-mix(in_srgb,var(--color-accent-foreground)_30%,transparent),2.2rem_2rem_0_-0.2rem_color-mix(in_srgb,var(--color-accent-foreground)_15%,transparent)]" />
 
             {/* Secondary Floating Shape (Top Right) */}
-            <div className="absolute top-2 -right-3 h-18 w-18 rounded-full decorative-shape-2" />
+            <div className="absolute top-2 -right-3 h-[4.5rem] w-[4.5rem] rounded-full bg-accent-foreground/20 shadow-[-1.5rem_1.2rem_0_0.1rem_color-mix(in_srgb,var(--color-accent-foreground)_30%,transparent),-2.8rem_0.5rem_0_-0.1rem_color-mix(in_srgb,var(--color-accent-foreground)_15%,transparent)]" />
 
             <div className="relative z-10">
                 <div className="flex justify-between items-center mb-10">
@@ -46,7 +46,7 @@ export default function TodayBirthdays({ birthdays }: TodayBirthdaysProps) {
 
                 <div className="grid grid-cols-2 gap-6">
                     {birthdays.map((p) => (
-                        <div key={p.id} className="glass-card p-4 rounded-3xl flex items-center gap-4 hover:bg-accent-foreground/20 transition-all duration-500 group cursor-pointer shadow-lg">
+                        <div key={p.id} className="bg-accent-foreground/10 backdrop-blur-md border border-accent-foreground/10 p-4 rounded-3xl flex items-center gap-4 hover:bg-accent-foreground/20 transition-all duration-500 group cursor-pointer shadow-lg hover:shadow-xl">
                             <div className="relative">
                                 <div className="h-16 w-16 rounded-full p-0.5 bg-gradient-to-tr from-accent-foreground/40 to-transparent">
                                     <img src={p.avatar} alt={p.name} className="h-full w-full rounded-full object-cover" />

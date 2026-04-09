@@ -9,9 +9,9 @@ interface UpcomingBirthdaysListProps {
 }
 
 const getStatusConfig = (days: number) => {
-    if (days <= 3) return { label: 'Very soon', indicator: 'bg-destructive', badge: 'bg-destructive/10 text-destructive' };
-    if (days <= 7) return { label: 'Coming up', indicator: 'bg-accent', badge: 'bg-accent/10 text-accent' };
-    return { label: 'Later this month', indicator: 'bg-primary', badge: 'bg-primary/10 text-primary' };
+    if (days <= 3) return { label: 'Very soon', indicator: 'bg-destructive', badge: 'bg-destructive text-destructive-foreground' };
+    if (days <= 7) return { label: 'Coming up', indicator: 'bg-accent', badge: 'bg-accent text-accent-foreground' };
+    return { label: 'Later this month', indicator: 'bg-primary', badge: 'bg-primary text-primary-foreground' };
 };
 
 export default function UpcomingBirthdaysList({ birthdays }: UpcomingBirthdaysListProps) {
@@ -24,8 +24,8 @@ export default function UpcomingBirthdaysList({ birthdays }: UpcomingBirthdaysLi
                         Theme colors mark the birthdays coming up fastest.
                     </p>
                 </div>
-                <div className="text-xs bg-accent/10 px-4 py-2 rounded-full flex items-center gap-2 font-bold text-accent shadow-sm border border-accent/20">
-                    <Star size={14} className="fill-accent text-accent" /> 
+                <div className="text-xs bg-accent px-4 py-2 rounded-full flex items-center gap-2 font-bold text-accent-foreground shadow-sm">
+                    <Star size={14} className="fill-accent-foreground text-accent-foreground" /> 
                     April lineup
                 </div>
             </div>
@@ -49,7 +49,7 @@ export default function UpcomingBirthdaysList({ birthdays }: UpcomingBirthdaysLi
 
                             <div className="text-right shrink-0">
                                 <p className="text-sm font-bold text-foreground mb-1">{p.date}</p>
-                                <div className={`flex items-center gap-1 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-tight ${config.badge} border border-current opacity-80 group-hover:opacity-100 transition-opacity`}>
+                                <div className={`flex items-center gap-1 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-tight ${config.badge} transition-opacity`}>
                                     <Sparkles size={10} className="shrink-0" />
                                     {config.label}
                                 </div>
