@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   ShieldCheck,
   BarChart2,
-  Settings,
   Shield,
   MessageSquare,
   LayoutDashboard,
@@ -14,9 +13,8 @@ import {
   Newspaper,
   BookOpen,
   ChevronDown,
-  ChevronUp,
-  Gift,
   Radio,
+  Home,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -35,6 +33,11 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
+  {
+    icon: Home,
+    label: "Home",
+    href: "/home",
+  },
   {
     icon: LayoutDashboard,
     label: "Dashboard",
@@ -86,11 +89,6 @@ const menuItems: MenuItem[] = [
     label: "Knowledge Base",
     href: "/knowledge-base",
   },
-  {
-    icon: Gift,
-    label: "Birthdays",
-    href: "/birthdays",
-  },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
@@ -124,6 +122,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const collapsibleItems = visibleMenuItems.filter(item => contentSectionLabels.includes(item.label));
   const alwaysVisibleItems = visibleMenuItems.filter(item => !contentSectionLabels.includes(item.label));
 
+  const homeItem = alwaysVisibleItems.find(item => item.label === "Home");
+  const otherAlwaysVisibleItems = alwaysVisibleItems.filter(item => item.label !== "Home");
+
   const renderMenuItem = (item: MenuItem, isNested = false) => {
     const Icon = item.icon;
     const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -152,10 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {item.section}
           </span>
         )}
-        {isActive && (
-          <div className={`ml-auto bg-accent-foreground rounded-full shadow-sm ${isNested ? "w-1.5 h-1.5" : "w-2 h-2"
-            }`} />
-        )}
+
       </Link>
     );
   };
@@ -171,18 +169,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       )}
 
       <aside
-        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-primary border-r border-border backdrop-blur-xl z-40 transition-transform duration-300 flex flex-col lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-primary border-r border-border backdrop-blur-xl z-40 transition-transform duration-300 flex flex-col flex-shrink-0 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
           } lg:static lg:z-0`}
       >
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2 sidebar-scrollbar">
+        <nav
+          className="flex-1 overflow-y-auto p-4 space-y-2 sidebar-scrollbar"
+          style={{ scrollbarGutter: "stable" }}
+        >
+          {/* Home Item */}
+          {homeItem && renderMenuItem(homeItem, false)}
+
           {/* Collapsible Content Section */}
           <div className="space-y-1">
             <div
               onClick={() => setIsContentExpanded(!isContentExpanded)}
               className="flex items-center justify-between w-full px-4 py-3 cursor-pointer group hover:bg-muted rounded-lg transition-colors border border-transparent hover:border-border"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-black text-primary-foreground uppercase tracking-widest group-hover:text-foreground transition-colors">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-primary-foreground group-hover:text-foreground transition-colors" />
+                <span className="text-[15px] font-medium text-primary-foreground group-hover:text-foreground transition-colors">
                   DMT
                 </span>
               </div>
@@ -202,9 +207,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Always Visible Items */}
-          <div className="pt-2 space-y-2">
-            {alwaysVisibleItems.map(item => renderMenuItem(item, false))}
+          {/* Other Always Visible Items */}
+          <div className="space-y-2">
+            {otherAlwaysVisibleItems.map(item => renderMenuItem(item, false))}
           </div>
         </nav>
 
