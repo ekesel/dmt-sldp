@@ -178,14 +178,14 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
 
                 {formData.source_type === 'github' && (
                     <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5 flex items-center justify-between">
                             Target Repositories
-                            <span className="text-xs text-slate-500 font-normal">Comma separated</span>
+                            <span className="text-xs text-muted-foreground/50 font-normal">Comma separated</span>
                         </label>
                         <input
                             value={formData.repos}
                             onChange={(e) => setFormData({ ...formData, repos: e.target.value })}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition font-mono text-sm"
+                            className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition font-mono text-sm"
                             placeholder="owner/repo-1, owner/repo-2"
                             required
                         />

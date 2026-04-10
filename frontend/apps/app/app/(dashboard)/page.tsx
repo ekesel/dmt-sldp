@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
         try {
             setIsExporting(true);
-            console.log('[PDF Export] Starting professional sliced export...');
+
 
             // Dynamically import client-side only libraries
             const html2canvas = (await import('html2canvas')).default;
@@ -84,7 +84,7 @@ export default function DashboardPage() {
             let currentY = 0;
             let pageNum = 1;
 
-            console.log(`[PDF Export] Slicing into pages. Total canvas height: ${mainCanvas.height}, Page height: ${canvasPageHeight}`);
+
 
             while (currentY < mainCanvas.height) {
                 if (pageNum > 1) pdf.addPage();
@@ -133,7 +133,7 @@ export default function DashboardPage() {
             document.body.removeChild(link);
             setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
 
-            console.log('[PDF Export] Sliced export triggered successfully');
+
         } catch (err) {
             console.error('[PDF Export] Error:', err);
             alert('Failed to export PDF.');
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             setIsSyncing(true);
             setIsSyncModalOpen(true);
             const response = await projects.triggerSync(selectedProjectId);
-            console.log('[Sync] Triggered:', response);
+
         } catch (err) {
             console.error('[Sync] Error:', err);
             toast.error('Failed to trigger synchronization');

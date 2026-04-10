@@ -32,7 +32,6 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
     const [restarting, setRestarting] = useState(false);
 
     useEffect(() => {
-        console.log('ServiceDetailsModal mounted with:', { isOpen, serviceName });
         if (isOpen && serviceName) {
             fetchDetails();
         }
@@ -163,7 +162,7 @@ export const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ isOpen
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center text-slate-500 py-8">
+                        <div className="text-center text-muted-foreground py-8">
                             Failed to load details.
                         </div>
                     )}

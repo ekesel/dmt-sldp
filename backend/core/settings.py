@@ -36,7 +36,7 @@ SHARED_APPS = [
     'rest_framework_simplejwt',
     'channels',
     'configuration',
-    'notifications',
+    'notifications.apps.NotificationsConfig',
 ]
 
 TENANT_APPS = [
@@ -45,6 +45,7 @@ TENANT_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'data',
+    'newsapp',
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -125,7 +126,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+# STATIC_URL is defined below in Static & Media Files section
 # MEDIA configuration is below in CORS & Security section for organization
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -147,14 +148,15 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.environ.get('REDIS_HOST', 'redis'), 6379)],
+            # Use REDIS_URL (same as Celery) — works in Docker and local dev
+            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/1')],
         },
     },
 }
 
 # Static & Media Files
-STATIC_URL = 'static/'
-MEDIA_URL = 'media/'
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Ensure media directory exists
@@ -168,7 +170,7 @@ def csv_env(name, default):
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOWED_ORIGINS = csv_env(
 #     "CORS_ALLOWED_ORIGINS",
-#     "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+#     "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,http://samta.localhost:3000"
 # )
 
 CSRF_TRUSTED_ORIGINS = csv_env(

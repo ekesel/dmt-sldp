@@ -155,12 +155,12 @@ export default function IdentityResolutionPage() {
         setIsProcessing(true);
         setError(null);
         try {
-            console.log('Deleting mapping:', mappingId);
+
             await identityApi.deleteMapping(mappingId, tenantId as string);
             setSuccessMessage('Mapping removed successfully.');
             fetchData();
         } catch (err: any) {
-            console.error('Delete failed:', err);
+
             setError(err.message || 'Failed to delete mapping.');
         } finally {
             setIsProcessing(false);

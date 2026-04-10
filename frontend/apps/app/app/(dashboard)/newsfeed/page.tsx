@@ -1,18 +1,37 @@
 "use client";
 
 import React, { useState } from 'react';
-import StaticPostCard from '../../../../components/StaticUI/StaticPostCard';
-import StaticPostModal from '../../../../components/StaticUI/StaticPostModal';
-import { useNewsfeedData } from '../../../../hooks/useNewsfeedData';
+import PostCard from '../../../components/newsfeedUI/PostCard';
+import PostModal from '../../../components/newsfeedUI/PostModal';
+import CreatePostButton from '../../../components/newsfeedUI/CreatePostButton';
+import { useNewsfeedData, Post } from '../../../hooks/useNewsfeedData';
+import { useAuth } from '../../../context/AuthContext';
 
 const NewsfeedPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { posts, loading, currentUser, createPost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
+    const [editingPost, setEditingPost] = useState<Post | null>(null);
+    const { user } = useAuth();
+    const { posts, loading, currentUser, createPost, updatePost, deletePost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
+
+    // Role-based access control check
+
+    const isManager = user?.is_manager || user?.role?.toLowerCase() === "manager";
+
+
+    const handleEdit = (post: Post) => {
+        setEditingPost(post);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingPost(null);
+    };
 
     if (loading && posts.length === 0) {
         return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading feed...</div>;
     }
-    
+
     return (
         <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
             <main className="flex justify-center max-w-screen-xl mx-auto py-10 px-4">
@@ -20,17 +39,16 @@ const NewsfeedPage = () => {
                 <div className="w-full max-w-[680px]">
                     <div className="flex items-center justify-between mb-10">
                         <h1 className="text-3xl font-bold tracking-tight">Newsfeed</h1>
-                        
-                        {/* Standalone Create Post Button */}
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary/20 group"
-                        >
-                            <svg className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-                            </svg>
-                            <span>Create Post</span>
-                        </button>
+
+                        {/* Standalone Create Post Button - Only for managers */}
+                        {isManager && (
+                            <CreatePostButton
+                                onClick={() => {
+                                    setEditingPost(null);
+                                    setIsModalOpen(true);
+                                }}
+                            />
+                        )}
                     </div>
 
                     {/* Posts List - Starts immediately after header now */}
@@ -40,7 +58,12 @@ const NewsfeedPage = () => {
                         ) : (
                             <>
                                 {posts.map((post, idx) => (
-                                    <StaticPostCard key={post.post_id || idx} post={post} />
+                                    <PostCard
+                                        key={post.post_id || idx}
+                                        post={post}
+                                        onEdit={handleEdit}
+                                        onDelete={deletePost}
+                                    />
                                 ))}
                                 {hasNextPage && (
                                     <div className="flex justify-center p-4 mb-8">
@@ -56,11 +79,13 @@ const NewsfeedPage = () => {
             </main>
 
             {/* Post Modal */}
-            <StaticPostModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <PostModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
                 userProfile={currentUser}
+                editingPost={editingPost}
                 createPost={createPost}
+                updatePost={updatePost}
                 uploadImage={uploadImage}
             />
         </div>

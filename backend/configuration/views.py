@@ -3,6 +3,7 @@ from .models import Project, SourceConfiguration
 from .serializers import ProjectSerializer, SourceConfigurationSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -37,12 +38,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        # Auto-assign tenant if not provided (and user belongs to one)
+        
+        request_tenant = serializer.validated_data.get('tenant')
         user_tenant = getattr(self.request.user, 'tenant', None)
-        if not serializer.validated_data.get('tenant') and user_tenant:
-             serializer.save(tenant=user_tenant)
-        else:
-             serializer.save()
+        is_platform_admin = getattr(self.request.user, 'is_platform_admin', False)
+
+        # Only platform admins can create projects in a different tenant
+        if request_tenant and request_tenant != user_tenant and not is_platform_admin:
+            raise ValidationError({'tenant': 'You do not have permission to create projects in this tenant.'})
+        
+        tenant_to_use = request_tenant or user_tenant
+        
+        if tenant_to_use and tenant_to_use.schema_name == 'public':
+            raise ValidationError({'tenant': 'Cannot create projects in the public tenant.'})
+            
+        if not tenant_to_use:
+            raise ValidationError({'tenant': 'A valid tenant is required to create a project.'})
+            
+        serializer.save(tenant=tenant_to_use)
 
     @action(detail=True, methods=['post'])
     def trigger_sync(self, request, pk=None):

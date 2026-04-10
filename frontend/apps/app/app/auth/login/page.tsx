@@ -53,10 +53,11 @@ export default function LoginPage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Email or Username</label>
+                            <label htmlFor="username" className="text-sm font-medium text-muted-foreground">Email or Username</label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="username"
                                     type="text"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
@@ -69,7 +70,7 @@ export default function LoginPage() {
 
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-muted-foreground">Password</label>
+                                <label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</label>
                                 <Link href="/auth/forgot-password" className="text-xs text-primary hover:text-primary/80 transition">
                                     Forgot password?
                                 </Link>
@@ -77,6 +78,7 @@ export default function LoginPage() {
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                 <input
+                                    id="password"
                                     type="password"
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"

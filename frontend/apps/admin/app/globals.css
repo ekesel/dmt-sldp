@@ -34,6 +34,9 @@
 
   --info: rgb(59, 130, 246);
   --info-foreground: rgb(255, 255, 255);
+
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
 }
 
 .dark {
@@ -70,6 +73,9 @@
 
   --info: rgb(30, 64, 175);
   --info-foreground: rgb(255, 255, 255);
+
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
 }
 
 @theme {
@@ -121,8 +127,8 @@
   --color-info-foreground: var(--info-foreground);
 
   /* Warning */
-  --color-warning: rgb(251, 191, 36);
-  --color-warning-foreground: rgb(17, 24, 39);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 
 
 
@@ -165,8 +171,8 @@ html {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--color-foreground);
+  background: var(--color-background);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;

@@ -71,7 +71,7 @@ const menuItems: MenuItem[] = [
   {
     icon: Newspaper,
     label: "Newsfeed",
-    href: "/static-ui/newsfeed",
+    href: "/newsfeed",
   },
   {
     icon: Radio,
@@ -169,6 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       )}
 
       <aside
+        id="navbar-menu"
         className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-primary border-r border-border backdrop-blur-xl z-40 transition-transform duration-300 flex flex-col flex-shrink-0 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
           } lg:static lg:z-0`}
       >
