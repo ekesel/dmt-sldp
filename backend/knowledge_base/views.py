@@ -29,7 +29,7 @@ class DocumentAPI(APIView):
             docs = visible_docs.filter(owner=request.user)
         else:
             # "Initial" view or normal user -> Only show APPROVED documents
-            docs = visible_docs.filter(status="APPROVED")
+            docs = visible_docs.filter(status=Document.Status.APPROVED)
 
 
         # Filter by status (optional overriding)
@@ -74,7 +74,11 @@ class DocumentDetailAPI(APIView):
 
     def get_object(self, request, id):
         # Allow viewing any non-deleted document if you have the ID
-        return get_object_or_404(Document, id=id, is_deleted=False)
+        return get_object_or_404(
+            Document.objects.prefetch_related('versions', 'tags', 'metadata_values__category'),
+            id=id,
+            is_deleted=False
+        )
 
 
     def get(self, request, id):
@@ -145,18 +149,22 @@ class UploadVersionAPI(APIView):
     def post(self, request, id):
         doc = get_object_or_404(Document, id=id, is_deleted=False)
 
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"error": "File is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         last = doc.versions.order_by("-version_number").first()
         next_version = (last.version_number + 1) if last else 1
 
         DocumentVersion.objects.create(
             document=doc,
-            file=request.FILES.get("file"),
+            file=file_obj,
             version_number=next_version,
             uploaded_by=request.user
         )
 
         # New upload resets document back to DRAFT
-        doc.status = "DRAFT"
+        doc.status = Document.Status.DRAFT
         doc.save()
 
         return Response({"msg": f"Version {next_version} uploaded"})
@@ -169,7 +177,7 @@ class VersionListAPI(APIView):
     def get(self, request, id):
         # Allow all users to see versions of any non-deleted document
         get_object_or_404(Document, id=id, is_deleted=False)
-        versions = DocumentVersion.objects.filter(document_id=id)
+        versions = DocumentVersion.objects.filter(document_id=id, is_deleted=False)
         return Response(VersionSerializer(versions, many=True).data)
 
 
@@ -179,7 +187,7 @@ class DownloadAPI(APIView):
 
 
     def get(self, request, vid):
-        version = get_object_or_404(DocumentVersion, id=vid)
+        version = get_object_or_404(DocumentVersion, id=vid, is_deleted=False)
         # Check if the parent document is deleted
         if version.document.is_deleted:
             return Response({"error": "This document has been deleted."}, status=status.HTTP_404_NOT_FOUND)

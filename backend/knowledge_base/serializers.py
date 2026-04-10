@@ -122,7 +122,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 class VersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentVersion
-        fields = "__all__"
+        fields = ["id", "document", "file", "version_number", "uploaded_by", "created_at"]
 
 
 

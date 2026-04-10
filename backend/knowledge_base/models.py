@@ -1,11 +1,11 @@
 from django.db import models
 from users.models import User
-from django.utils.text import slugify
 from django.db import connection
 
 def get_file_upload_path(instance, filename):
     schema = connection.schema_name
-    return f"{schema}/documents/{slugify(instance.document.title)}/v{instance.version_number or 1}/{filename}"
+    # Using instance.document.id instead of slugified title for stability
+    return f"{schema}/documents/{instance.document.id}/v{instance.version_number or 1}/{filename}"
 
 # BASE
 class BaseModel(models.Model):
@@ -16,11 +16,11 @@ class BaseModel(models.Model):
 
 
 # TAG
-class Tag(models.Model):
+class Tag(BaseModel):
     name = models.CharField(max_length=100, unique=True)
 
 # METADATA
-class MetadataCategory(models.Model):
+class MetadataCategory(BaseModel):
     name = models.CharField(max_length=100)
 
 # metadata values of that category, e.g. "type" -> "ppt", "functional document", etc.
@@ -35,17 +35,16 @@ class MetadataValue(models.Model):
 # DOCUMENT (WORKFLOW CORE)
 class Document(BaseModel):
 
-    STATUS = [
-        ("DRAFT", "DRAFT"),
-        ("APPROVED", "APPROVED"),
-        ("REJECTED", "REJECTED"),
-    ]
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "DRAFT"
+        APPROVED = "APPROVED", "APPROVED"
+        REJECTED = "REJECTED", "REJECTED"
 
 
     title = models.CharField(max_length=255)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_docs")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_docs")
-    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # M2M FIELDS

@@ -1,5 +1,10 @@
 from django.urls import path
-from .views import *
+from .views import (
+    DocumentAPI, DocumentDetailAPI, DocumentStatusAPI,
+    UploadVersionAPI, VersionListAPI, DownloadAPI,
+    TagAPI, MetadataCategoryAPI, MetadataValueAPI,
+    TenantUsersAPI
+)
 
 urlpatterns = [
 
