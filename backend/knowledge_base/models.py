@@ -7,12 +7,24 @@ def get_file_upload_path(instance, filename):
     # Using instance.document.id instead of slugified title for stability
     return f"{schema}/documents/{instance.document.id}/v{instance.version_number or 1}/{filename}"
 
+class NonDeletedManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 # BASE
 class BaseModel(models.Model):
     is_deleted = models.BooleanField(default=False)
 
+    objects = NonDeletedManager()
+    all_objects = models.Manager()
+
     class Meta:
         abstract = True
+
+    def delete(self, *args, **kwargs):
+        self.is_deleted = True
+        self.save()
 
 
 # TAG

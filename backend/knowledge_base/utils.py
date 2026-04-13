@@ -12,7 +12,7 @@ def get_visible_docs(user):
     if not user.is_authenticated:
         return Document.objects.none()
 
-    base_qs = Document.objects.filter(is_deleted=False)
+    base_qs = Document.objects.all()
     
     # Managers can see everything (DRAFT, APPROVED, REJECTED)
     if getattr(user, "is_manager", False):

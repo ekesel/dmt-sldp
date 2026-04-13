@@ -22,20 +22,22 @@ class DocumentAPI(APIView):
 
 
     def get(self, request):
-        visible_docs = get_visible_docs(request.user)
+        # Base visibility: Managers/Admins see all; Regular users see APPROVED or OWNED.
+        docs = get_visible_docs(request.user)
 
-        # "mine=true" -> Only show documents I own (Only allowed for Managers)
-        if request.GET.get("mine") == "true" and getattr(request.user, "is_manager", False):
-            docs = visible_docs.filter(owner=request.user)
-        else:
-            # "Initial" view or normal user -> Only show APPROVED documents
-            docs = visible_docs.filter(status=Document.Status.APPROVED)
-
+        # Filter by "mine" (available to everyone)
+        if request.GET.get("mine") == "true":
+            docs = docs.filter(owner=request.user)
 
         # Filter by status (optional overriding)
-        if request.GET.get("status"):
-            docs = docs.filter(status=request.GET["status"])
-
+        requested_status = request.GET.get("status")
+        if requested_status:
+            docs = docs.filter(status=requested_status)
+        else:
+            # Everyone (including managers) defaults to seeing ONLY APPROVED documents
+            # unless they specifically filter by status or are looking at their own documents.
+            if request.GET.get("mine") != "true":
+                docs = docs.filter(status=Document.Status.APPROVED)
 
         # Optional filters via query params
         if request.GET.get("tag"):
@@ -44,7 +46,7 @@ class DocumentAPI(APIView):
         if request.GET.get("meta"):
             docs = docs.filter(metadata_values__id=request.GET["meta"])
 
-        return Response(DocumentSerializer(docs, many=True).data)
+        return Response(DocumentSerializer(docs.distinct(), many=True).data)
 
     def post(self, request):
         ser = DocumentSerializer(data=request.data)
@@ -76,16 +78,17 @@ class DocumentDetailAPI(APIView):
         # Allow viewing any non-deleted document if you have the ID
         return get_object_or_404(
             Document.objects.prefetch_related('versions', 'tags', 'metadata_values__category'),
-            id=id,
-            is_deleted=False
+            id=id
         )
 
 
     def get(self, request, id):
         doc = self.get_object(request, id)
+        latest_version = doc.versions.order_by("-version_number").first()
+
         return Response({
             "data": DocumentSerializer(doc).data,
-            "versions": VersionSerializer(doc.versions.order_by("-version_number"), many=True).data,
+            "latest_version": VersionSerializer(latest_version).data if latest_version else None,
             "msg": "Document fetched"
         })
 
@@ -123,13 +126,14 @@ class DocumentStatusAPI(APIView):
 
 
     def post(self, request, id):
-        doc = get_object_or_404(Document, id=id, is_deleted=False)
-        target_status = request.data.get("status")
+        doc = get_object_or_404(Document, id=id)
+        # Check for 'status' or 'Status' to be user-friendly
+        target_status = request.data.get("status") or request.data.get("Status")
 
         if not target_status:
             return Response({"error": "Status is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        valid_statuses = [s[0] for s in Document.STATUS]
+        valid_statuses = Document.Status.values
         if target_status not in valid_statuses:
             return Response({"error": f"Invalid status. Choose from: {valid_statuses}"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -147,7 +151,7 @@ class UploadVersionAPI(APIView):
 
 
     def post(self, request, id):
-        doc = get_object_or_404(Document, id=id, is_deleted=False)
+        doc = get_object_or_404(Document, id=id)
 
         file_obj = request.FILES.get("file")
         if not file_obj:
@@ -176,8 +180,8 @@ class VersionListAPI(APIView):
 
     def get(self, request, id):
         # Allow all users to see versions of any non-deleted document
-        get_object_or_404(Document, id=id, is_deleted=False)
-        versions = DocumentVersion.objects.filter(document_id=id, is_deleted=False)
+        get_object_or_404(Document, id=id)
+        versions = DocumentVersion.objects.filter(document_id=id)
         return Response(VersionSerializer(versions, many=True).data)
 
 
@@ -187,7 +191,7 @@ class DownloadAPI(APIView):
 
 
     def get(self, request, vid):
-        version = get_object_or_404(DocumentVersion, id=vid, is_deleted=False)
+        version = get_object_or_404(DocumentVersion, id=vid)
         # Check if the parent document is deleted
         if version.document.is_deleted:
             return Response({"error": "This document has been deleted."}, status=status.HTTP_404_NOT_FOUND)
@@ -237,7 +241,7 @@ class MetadataValueAPI(APIView):
 
 
     def get(self, request):
-        qs = MetadataValue.objects.all()
+        qs = MetadataValue.objects.filter(category__is_deleted=False)
         if request.GET.get("category"):
             qs = qs.filter(category_id=request.GET["category"])
         return Response(MetadataValueSerializer(qs, many=True).data)
