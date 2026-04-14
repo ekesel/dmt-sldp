@@ -11,21 +11,26 @@
     "dependencies": {
         "@dmt/ui": "*",
         "@tailwindcss/postcss": "^4.2.1",
+        "@tanstack/react-query": "^5.62.0",
+        "@tanstack/react-query-devtools": "^5.62.0",
         "framer-motion": "^12.34.3",
         "html2canvas": "^1.4.1",
         "jspdf": "^4.2.0",
+        "lucide-react": "^0.330.0",
         "next": "^16.1.6",
         "react": "^18",
         "react-dom": "^18",
-        "recharts": "^2.12.0"
+        "react-hot-toast": "^2.4.1",
+        "recharts": "^2.15.4"
     },
     "devDependencies": {
         "@types/jspdf": "^1.3.3",
-        "@types/node": "25.2.3",
-        "@types/react": "19.2.14",
+        "@types/node": "^20",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
         "autoprefixer": "^10.4.27",
         "postcss": "^8.5.8",
         "tailwindcss": "^4.0.0",
-        "typescript": "5.9.3"
+        "typescript": "^5"
     }
 }

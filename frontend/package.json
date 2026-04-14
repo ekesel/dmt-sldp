@@ -7,18 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "npm run dev --workspace company-portal",
+    "dev:admin": "npm run dev --workspace admin-portal",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces"
   },
-  "dependencies": {
-    "lucide-react": "^0.330.0",
-    "next": "16.1.6",
-    "react": "^18",
-    "react-dom": "^18",
-    "recharts": "^2.15.4"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
