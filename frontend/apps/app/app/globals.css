@@ -1,10 +1,86 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --background: #0f172a;
-  --foreground: #ffffff;
+  --warning: rgb(251, 191, 36);
+  --warning-foreground: rgb(17, 24, 39);
+}
+
+@theme {
+  /* Radii */
+  --radius-lg: 0.625rem;
+  --radius-md: calc(0.625rem - 2px);
+  --radius-sm: calc(0.625rem - 4px);
+
+  /* Core */
+  --color-background: rgb(249, 250, 251);
+  --color-foreground: rgb(17, 24, 39);
+
+  --color-card: rgb(255, 255, 255);
+  --color-card-foreground: rgb(17, 24, 39);
+
+  --color-popover: rgb(255, 255, 255);
+  --color-popover-foreground: rgb(17, 24, 39);
+
+  --color-border: rgb(229, 231, 235);
+
+  /* Primary */
+  --color-primary: rgb(31, 133, 189);
+  --color-primary-foreground: rgb(255, 255, 255);
+
+  /* Secondary */
+  --color-secondary: rgb(243, 244, 246);
+  --color-secondary-foreground: rgb(17, 24, 39);
+
+  /* Muted */
+  --color-muted: rgb(243, 244, 246);
+  --color-muted-foreground: rgb(107, 114, 128);
+
+  /* Accent */
+  --color-accent: rgb(245, 158, 11);
+  --color-accent-foreground: rgb(255, 255, 255);
+
+  /* Destructive */
+  --color-destructive: rgb(220, 38, 38);
+  --color-destructive-foreground: rgb(255, 255, 255);
+
+  /* Warning */
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+
+
+  /* ================= BADGE INTENSITY ================= */
+
+  /* General (Blue tone) */
+  --badge-general-bg-strong: rgb(203, 213, 225);
+  --badge-general-border-strong: rgb(148, 163, 184);
+
+  /* Alert (Red tone) */
+  --badge-alert-bg-strong: rgb(252, 165, 165);
+  --badge-alert-border-strong: rgb(239, 68, 68);
+
+  /* Announcement (Neutral stronger) */
+  --badge-announcement-bg-strong: rgb(229, 231, 235);
+  --badge-announcement-border-strong: rgb(156, 163, 175);
+
+  /* Background Images */
+  --background-image-glass-gradient: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05));
+
+  /* Shadows */
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
+  /* Animations */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+
+    100% {
+      background-position: 1000px 0;
+    }
+  }
 }
 
 html {
@@ -12,11 +88,11 @@ html {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  color: var(--color-foreground);
+  background-color: var(--color-background);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 }
 
 /* Scrollbar Styling */
@@ -26,22 +102,24 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgb(225, 225, 225);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+  background-color: var(--color-primary);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background-color: var(--color-primary);
 }
 
 /* Selection Styling */
 ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
 }
 
 /* Focus Styling */
@@ -56,6 +134,7 @@ textarea:focus {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -63,18 +142,149 @@ textarea:focus {
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background: linear-gradient(to right,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent);
   background-size: 1000px 100%;
 }
 
-
 /* Hide number input arrows/spinners */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
 }
 
-input[type=number] {
+input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Glass Morphism Utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Vibrant Semantic Utilities */
+.bg-vibrant-gradient {
+  background: var(--color-accent);
+  background-image: linear-gradient(135deg, #ffae42, #ff6a00);
+}
+
+.bg-vibrant-glow {
+  background-image: radial-gradient(circle at top left, rgba(255, 255, 255, 0.45) 0%, transparent 60%);
+}
+
+.bg-dots-pattern {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.45) 1.2px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+.decorative-shape-1 {
+  background-color: rgba(244, 114, 182, 0.85);
+  box-shadow: 1.2rem 1.0rem 0 0 rgba(251, 191, 36, 0.8), 2.2rem 2.0rem 0 -0.2rem rgba(255, 255, 255, 0.4);
+}
+
+.decorative-shape-2 {
+  background-color: rgba(125, 211, 252, 0.85);
+  box-shadow: -1.5rem 1.2rem 0 0.1rem rgba(251, 191, 36, 0.8), -2.8rem 0.5rem 0 -0.1rem rgba(244, 114, 182, 0.7);
+}
+
+/* Banner Animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-delayed {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes draw-path {
+  from {
+    stroke-dashoffset: 200;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes grow-up {
+  from {
+    height: 0;
+  }
+
+  to {
+    height: var(--final-height);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 5s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 6s ease-in-out infinite;
+}
+
+.animate-draw-path {
+  stroke-dasharray: 200;
+  animation: draw-path 2s ease-out forwards;
+}
+
+/* Sidebar Custom Scrollbar */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }

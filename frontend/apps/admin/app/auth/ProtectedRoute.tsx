@@ -15,8 +15,9 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-                <div className="text-white">Loading...</div>
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <div className="text-foreground font-medium">Loading...</div>
             </div>
         );
     }

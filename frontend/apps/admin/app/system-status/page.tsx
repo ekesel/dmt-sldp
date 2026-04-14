@@ -96,11 +96,11 @@ export default function SystemStatusPage() {
         const wsOrigin = getWsOrigin();
         const wsUrl = `${wsOrigin}/ws/admin/health/?token=${token}`;
 
-        console.log("Connecting to System Health WS:", wsUrl);
+
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            console.log('Connected to Health WebSocket');
+
             setWsConnected(true);
         };
 
@@ -126,7 +126,7 @@ export default function SystemStatusPage() {
         };
 
         ws.onclose = () => {
-            console.log('Health WebSocket disconnected');
+
             setWsConnected(false);
             // Attempt reconnect after 5s
             setTimeout(() => {
@@ -152,8 +152,7 @@ export default function SystemStatusPage() {
                 setLastUpdated(new Date());
             }
         } catch (error) {
-            console.error('Failed to fetch health data:', error);
-            // Don't show toast on every poll failure, maybe only manual?
+
         } finally {
             setLoading(false);
         }
@@ -163,14 +162,14 @@ export default function SystemStatusPage() {
         switch (status) {
             case 'healthy':
             case 'up':
-                return 'text-green-500 dark:text-green-400';
+                return 'text-success';
             case 'degraded':
-                return 'text-yellow-500 dark:text-yellow-400';
+                return 'text-warning';
             case 'down':
             case 'unhealthy':
-                return 'text-red-500 dark:text-red-400';
+                return 'text-destructive';
             default:
-                return 'text-slate-500 dark:text-slate-400';
+                return 'text-muted-foreground';
         }
     };
 
@@ -183,7 +182,7 @@ export default function SystemStatusPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <RefreshCcw className="w-8 h-8 text-blue-500 animate-spin" />
+                    <RefreshCcw className="w-8 h-8 text-primary animate-spin" />
                 </div>
             </DashboardLayout>
         );
@@ -195,33 +194,33 @@ export default function SystemStatusPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">System Status</h1>
-                        <p className="text-slate-500 dark:text-slate-400">Monitor all system services and performance.</p>
+                        <h1 className="text-3xl font-bold text-foreground mb-2">System Status</h1>
+                        <p className="text-muted-foreground">Monitor all system services and performance.</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             {wsConnected ? (
-                                <span className="flex items-center gap-1 text-green-500 text-xs bg-green-500/10 px-2 py-1 rounded-full">
+                                <span className="flex items-center gap-1 text-success text-xs bg-success/10 px-2 py-1 rounded-full border border-success/20">
                                     <Wifi size={14} /> Live Updates
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1 text-amber-500 text-xs bg-amber-500/10 px-2 py-1 rounded-full">
+                                <span className="flex items-center gap-1 text-warning text-xs bg-warning/10 px-2 py-1 rounded-full border border-warning/20">
                                     <WifiOff size={14} /> Reconnecting...
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
-                            <span className="text-xs px-2 text-slate-500 dark:text-slate-400">Auto-refresh</span>
+                        <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1 border border-border">
+                            <span className="text-xs px-2 text-muted-foreground">Auto-refresh</span>
                             <button
                                 onClick={() => setAutoRefresh(!autoRefresh)}
-                                className={`w-10 h-5 rounded-full relative transition-colors ${autoRefresh ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                className={`w-10 h-5 rounded-full relative transition-colors ${autoRefresh ? 'bg-primary' : 'bg-muted'}`}
                             >
                                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${autoRefresh ? 'left-5.5' : 'left-0.5'}`} />
                             </button>
                         </div>
                         <button
                             onClick={fetchHealth}
-                            className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition"
+                            className="p-2 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-secondary-foreground transition"
                             title="Refresh Now"
                         >
                             <RefreshCcw size={18} />
@@ -233,65 +232,65 @@ export default function SystemStatusPage() {
                     <>
                         {/* System Overview */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-slate-700 dark:text-white font-semibold">Overall Status</h3>
+                                    <h3 className="text-foreground font-semibold">Overall Status</h3>
                                     <Activity className={`w-5 h-5 ${getStatusColor(healthData.status)}`} />
                                 </div>
                                 <p className={`text-3xl font-bold ${getStatusColor(healthData.status)}`}>
                                     {healthData.status === 'healthy' ? 'Healthy' : healthData.status === 'degraded' ? 'Degraded' : 'Unhealthy'}
                                 </p>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
+                                <p className="text-muted-foreground text-sm mt-2">
                                     {healthData.status === 'healthy' ? 'All systems operational' : 'Some services are down'}
                                 </p>
                             </div>
 
-                            <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-slate-700 dark:text-white font-semibold">Uptime</h3>
-                                    <BarChart3 className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                                    <h3 className="text-foreground font-semibold">Uptime</h3>
+                                    <BarChart3 className="w-5 h-5 text-primary" />
                                 </div>
-                                <p className="text-3xl font-bold text-blue-500 dark:text-blue-400">{healthData.uptime}</p>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Since last restart</p>
+                                <p className="text-3xl font-bold text-primary">{healthData.uptime}</p>
+                                <p className="text-muted-foreground text-sm mt-2">Since last restart</p>
                             </div>
 
-                            <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm dark:shadow-none">
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-slate-700 dark:text-white font-semibold">System Load</h3>
-                                    <AlertTriangle className={`w-5 h-5 ${healthData.system_load > 80 ? 'text-red-500' : healthData.system_load > 50 ? 'text-yellow-500' : 'text-green-500'}`} />
+                                    <h3 className="text-foreground font-semibold">System Load</h3>
+                                    <AlertTriangle className={`w-5 h-5 ${healthData.system_load > 80 ? 'text-destructive' : healthData.system_load > 50 ? 'text-warning' : 'text-success'}`} />
                                 </div>
-                                <p className={`text-3xl font-bold ${healthData.system_load > 80 ? 'text-red-500' : healthData.system_load > 50 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <p className={`text-3xl font-bold ${healthData.system_load > 80 ? 'text-destructive' : healthData.system_load > 50 ? 'text-warning' : 'text-success'}`}>
                                     {healthData.system_load}%
                                 </p>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Average CPU usage</p>
+                                <p className="text-muted-foreground text-sm mt-2">Average CPU usage</p>
                             </div>
                         </div>
 
                         {/* Service Status Table */}
-                        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                                <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Service Status</h2>
-                                <span className="text-xs text-slate-400">
+                        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-border flex justify-between items-center">
+                                <h2 className="text-lg font-semibold text-foreground">Service Status</h2>
+                                <span className="text-xs text-muted-foreground">
                                     Last updated: {lastUpdated?.toLocaleTimeString()}
                                 </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                                    <thead className="bg-muted/50 border-b border-border">
                                         <tr>
-                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Service</th>
-                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Status</th>
-                                            <th className="px-6 py-4 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Metric</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Service</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Status</th>
+                                            <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">Metric</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                                    <tbody className="divide-y divide-border">
                                         {Object.entries(healthData.services || {}).map(([name, status]) => (
                                             <tr
                                                 key={name}
                                                 onClick={() => setSelectedService(name)}
-                                                className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer"
+                                                className="hover:bg-muted/50 transition cursor-pointer"
                                             >
-                                                <td className="px-6 py-4 font-medium text-slate-800 dark:text-white capitalize">
+                                                <td className="px-6 py-4 font-medium text-foreground capitalize">
                                                     {formatServiceName(name)}
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -300,7 +299,7 @@ export default function SystemStatusPage() {
                                                         variant={status === 'up' ? 'success' : 'error'}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">
+                                                <td className="px-6 py-4 text-muted-foreground text-sm">
                                                     {status === 'up' ? 'OK' : 'Check Logs'}
                                                 </td>
                                             </tr>

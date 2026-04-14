@@ -143,15 +143,15 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="bg-popover w-full max-w-lg rounded-xl shadow-2xl border border-border flex flex-col max-h-[90vh]">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                <div className="flex items-center justify-between p-6 border-b border-border">
+                    <h2 className="text-xl font-semibold text-foreground">
                         {mode === 'create' ? 'New Integration' : 'Edit Integration'}
                     </h2>
-                    <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition">
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">
                         <X size={20} />
                     </button>
                 </div>
@@ -160,14 +160,14 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                 <div className="p-6 overflow-y-auto flex-1">
                     {fetching ? (
                         <div className="flex justify-center py-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : (
                         <form id="integration-form" onSubmit={handleSubmit} className="space-y-4">
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Integration Name <span className="text-red-500">*</span>
+                                <label className="block text-sm font-medium text-foreground mb-1">
+                                    Integration Name <span className="text-destructive">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -175,22 +175,22 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                     required
                                     value={formData.name}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                     placeholder="e.g. Corporate Jira"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Type <span className="text-red-500">*</span>
+                                    <label className="block text-sm font-medium text-foreground mb-1">
+                                        Type <span className="text-destructive">*</span>
                                     </label>
                                     <select
                                         name="source_type"
                                         value={formData.source_type}
                                         onChange={handleChange}
                                         disabled={mode === 'edit'}
-                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition disabled:opacity-60"
+                                        className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition disabled:opacity-60"
                                     >
                                         <option value="jira">Jira</option>
                                         <option value="clickup">ClickUp</option>
@@ -206,16 +206,16 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                             name="is_active"
                                             checked={formData.is_active}
                                             onChange={handleChange}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                                            className="w-4 h-4 text-primary rounded focus:ring-primary border-border"
                                         />
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Active</span>
+                                        <span className="text-sm font-medium text-foreground">Active</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Base URL <span className="text-red-500">*</span>
+                                <label className="block text-sm font-medium text-foreground mb-1">
+                                    Base URL <span className="text-destructive">*</span>
                                 </label>
                                 <input
                                     type="url"
@@ -223,14 +223,14 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                     required
                                     value={formData.base_url}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                     placeholder="https://"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    API Key / Token {mode === 'create' && <span className="text-red-500">*</span>}
+                                <label className="block text-sm font-medium text-foreground mb-1">
+                                    API Key / Token {mode === 'create' && <span className="text-destructive">*</span>}
                                 </label>
                                 <input
                                     type="password"
@@ -238,13 +238,13 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                     required={mode === 'create'} // Required only on create
                                     value={formData.api_key}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                     placeholder={mode === 'edit' ? 'Leave blank to keep current' : 'Enter API Key'}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-1">
                                     Workspace / Organization ID
                                 </label>
                                 <input
@@ -252,14 +252,14 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                     name="workspace_id"
                                     value={formData.workspace_id}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                     placeholder="Optional"
                                 />
                             </div>
 
                             {/* Test Result Feedback */}
                             {testResult && (
-                                <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${testResult.success ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${testResult.success ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                                     {testResult.success ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
                                     <span>{testResult.message}</span>
                                 </div>
@@ -270,12 +270,12 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex justify-between bg-slate-50 dark:bg-slate-800/30 rounded-b-xl">
+                <div className="p-6 border-t border-border flex justify-between bg-muted/30 rounded-b-xl">
                     <button
                         type="button"
                         onClick={handleTestConnection}
                         disabled={loading || fetching || testing}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground border border-border rounded-lg hover:bg-secondary/80 transition disabled:opacity-50"
                     >
                         {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test Connection'}
                     </button>
@@ -284,7 +284,7 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition"
+                            className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition"
                         >
                             Cancel
                         </button>
@@ -292,7 +292,7 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                             type="submit"
                             form="integration-form"
                             disabled={loading || fetching}
-                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm shadow-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
+                            className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg shadow-sm shadow-primary/20 transition flex items-center gap-2 disabled:opacity-50"
                         >
                             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                             {mode === 'create' ? 'Create Integration' : 'Save Changes'}

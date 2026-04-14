@@ -128,6 +128,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
 
+    def post(self, request, *args, **kwargs):
+        print(f"DEBUG: Login request received for portal: {request.data.get('portal')}")
+        return super().post(request, *args, **kwargs)
+
 
 class UserProfileView(APIView):
     """

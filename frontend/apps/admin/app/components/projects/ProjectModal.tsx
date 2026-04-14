@@ -65,32 +65,32 @@ export function ProjectModal({ isOpen, onClose, tenantId, project, onSuccess }: 
         >
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Name</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Name</label>
                     <input
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="e.g. Mobile App"
                         required
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Key</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Key</label>
                     <input
                         value={formData.key}
                         onChange={(e) => setFormData({ ...formData, key: e.target.value.toUpperCase() })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="e.g. MOB"
                         required
                         maxLength={10}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Description</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">Description</label>
                     <textarea
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition h-24"
+                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition h-24"
                         placeholder="Optional description..."
                     />
                 </div>
@@ -99,14 +99,14 @@ export function ProjectModal({ isOpen, onClose, tenantId, project, onSuccess }: 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition"
+                        className="flex-1 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium rounded-lg border border-border transition"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
                     >
                         {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                         {project ? 'Save Changes' : 'Create Project'}

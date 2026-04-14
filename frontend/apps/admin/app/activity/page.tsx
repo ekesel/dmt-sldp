@@ -15,26 +15,26 @@ export default function ActivityLogPage() {
                 <div>
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center gap-2 text-slate-500 hover:text-white mb-4 transition-colors"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
                     >
                         <ArrowLeft size={16} />
                         <span className="text-sm">Back</span>
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                            <History className="w-6 h-6 text-blue-400" />
+                        <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                            <History className="w-6 h-6 text-primary" />
                         </div>
-                        <h1 className="text-3xl font-bold text-white">System Audit Trail</h1>
+                        <h1 className="text-3xl font-bold text-foreground">System Audit Trail</h1>
                     </div>
-                    <p className="text-slate-400 mt-2">Comprehensive log of all administrative actions and system events across the platform.</p>
+                    <p className="text-muted-foreground mt-2">Comprehensive log of all administrative actions and system events across the platform.</p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 transition">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-secondary-foreground transition">
                         <Filter size={16} />
                         <span className="text-sm font-medium">Filter Logs</span>
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 transition cursor-not-allowed" title="Coming soon">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-primary transition cursor-not-allowed" title="Coming soon">
                         <span className="text-sm font-medium">Export CSV</span>
                     </button>
                 </div>
@@ -43,13 +43,13 @@ export default function ActivityLogPage() {
             <ActivityLog limit={20} className="mt-8" />
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-xl">
-                    <h3 className="text-white font-bold mb-2">Audit Compliance</h3>
-                    <p className="text-slate-400 text-sm">All entries are immutable and timestamped with the originating IP address for SOC2/ISO compliance.</p>
+                <div className="p-6 bg-card/50 border border-border rounded-xl">
+                    <h3 className="text-foreground font-bold mb-2">Audit Compliance</h3>
+                    <p className="text-muted-foreground text-sm">All entries are immutable and timestamped with the originating IP address for SOC2/ISO compliance.</p>
                 </div>
-                <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-xl">
-                    <h3 className="text-white font-bold mb-2">Retention Policy</h3>
-                    <p className="text-slate-400 text-sm">Logs are currently retained for 12 months as per the global system retention policy.</p>
+                <div className="p-6 bg-card/50 border border-border rounded-xl">
+                    <h3 className="text-foreground font-bold mb-2">Retention Policy</h3>
+                    <p className="text-muted-foreground text-sm">Logs are currently retained for 12 months as per the global system retention policy.</p>
                 </div>
             </div>
         </DashboardLayout>

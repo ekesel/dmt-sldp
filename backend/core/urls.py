@@ -108,7 +108,6 @@ urlpatterns = [
 
     # Centralize Knowledge Base 
     path('api/kb/', include('knowledge_base.urls')),
-    path('api/knowledge-base/', include('knowledge_base.urls')),
 ]
 
 if settings.DEBUG:

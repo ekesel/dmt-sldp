@@ -9,8 +9,8 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Analytics</h1>
-                    <p className="text-slate-400">View platform analytics and metrics.</p>
+                    <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+                    <p className="text-muted-foreground">View platform analytics and metrics.</p>
                 </div>
 
                 {/* Time Range Selector */}
@@ -18,7 +18,7 @@ export default function AnalyticsPage() {
                     {['Today', 'This Week', 'This Month', 'This Year'].map((range) => (
                         <button 
                             key={range}
-                            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition text-sm"
+                            className="px-4 py-2 rounded-lg bg-muted hover:bg-accent text-muted-foreground hover:text-foreground font-medium transition text-sm"
                         >
                             {range}
                         </button>
@@ -28,58 +28,58 @@ export default function AnalyticsPage() {
                 {/* Analytics Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* API Requests Chart */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <div className="bg-card/50 border border-border rounded-xl p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-white">API Requests</h2>
-                                <p className="text-slate-400 text-sm mt-1">Total requests over time</p>
+                                <h2 className="text-lg font-semibold text-foreground">API Requests</h2>
+                                <p className="text-muted-foreground text-sm mt-1">Total requests over time</p>
                             </div>
-                            <BarChart3 className="w-5 h-5 text-blue-400" />
+                            <BarChart3 className="w-5 h-5 text-primary" />
                         </div>
-                        <div className="h-64 flex items-center justify-center bg-slate-800/30 rounded-lg">
-                            <p className="text-slate-500">Chart Coming Soon</p>
+                        <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
+                            <p className="text-muted-foreground">Chart Coming Soon</p>
                         </div>
                     </div>
 
                     {/* User Growth Chart */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <div className="bg-card/50 border border-border rounded-xl p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-white">User Growth</h2>
-                                <p className="text-slate-400 text-sm mt-1">New users per month</p>
+                                <h2 className="text-lg font-semibold text-foreground">User Growth</h2>
+                                <p className="text-muted-foreground text-sm mt-1">New users per month</p>
                             </div>
-                            <TrendingUp className="w-5 h-5 text-green-400" />
+                            <TrendingUp className="w-5 h-5 text-success" />
                         </div>
-                        <div className="h-64 flex items-center justify-center bg-slate-800/30 rounded-lg">
-                            <p className="text-slate-500">Chart Coming Soon</p>
+                        <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
+                            <p className="text-muted-foreground">Chart Coming Soon</p>
                         </div>
                     </div>
 
                     {/* Error Rate */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <div className="bg-card/50 border border-border rounded-xl p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-white">Error Rate</h2>
-                                <p className="text-slate-400 text-sm mt-1">System errors and failures</p>
+                                <h2 className="text-lg font-semibold text-foreground">Error Rate</h2>
+                                <p className="text-muted-foreground text-sm mt-1">System errors and failures</p>
                             </div>
-                            <Calendar className="w-5 h-5 text-orange-400" />
+                            <Calendar className="w-5 h-5 text-warning" />
                         </div>
-                        <div className="h-64 flex items-center justify-center bg-slate-800/30 rounded-lg">
-                            <p className="text-slate-500">Chart Coming Soon</p>
+                        <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
+                            <p className="text-muted-foreground">Chart Coming Soon</p>
                         </div>
                     </div>
 
                     {/* Database Performance */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                    <div className="bg-card/50 border border-border rounded-xl p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-white">DB Performance</h2>
-                                <p className="text-slate-400 text-sm mt-1">Query performance metrics</p>
+                                <h2 className="text-lg font-semibold text-foreground">DB Performance</h2>
+                                <p className="text-muted-foreground text-sm mt-1">Query performance metrics</p>
                             </div>
-                            <BarChart3 className="w-5 h-5 text-purple-400" />
+                            <BarChart3 className="w-5 h-5 text-info" />
                         </div>
-                        <div className="h-64 flex items-center justify-center bg-slate-800/30 rounded-lg">
-                            <p className="text-slate-500">Chart Coming Soon</p>
+                        <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
+                            <p className="text-muted-foreground">Chart Coming Soon</p>
                         </div>
                     </div>
                 </div>
