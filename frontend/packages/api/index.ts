@@ -14,7 +14,7 @@ const getBaseURL = () => {
   // 2. Only if no env is found, attempt to construct a local fallback (useful for dev without env)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
     
     // If not localhost, use a relative path to inherit the current protocol and domain
     if (!isLocalhost) {
@@ -66,13 +66,13 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest?._retry && originalRequest.url !== '/auth/token/refresh/') {
+    if (error.response?.status === 401 && !originalRequest?._retry && originalRequest.url !== 'auth/token/refresh/') {
       originalRequest._retry = true;
       try {
         const refreshToken =
           typeof window !== 'undefined' ? localStorage.getItem('dmt-refresh-token') : null;
         if (refreshToken) {
-          const response = await api.post('/auth/token/refresh/', { refresh: refreshToken });
+          const response = await api.post('auth/token/refresh/', { refresh: refreshToken });
           const { access } = response.data;
           if (typeof window !== 'undefined') {
             localStorage.setItem('dmt-access-token', access);
@@ -293,25 +293,25 @@ export interface UserProfile {
 }
 
 export const auth = {
-  register: (data: AuthRegisterPayload) => post<UserProfile, AuthRegisterPayload>('/auth/register/', data),
+  register: (data: AuthRegisterPayload) => post<UserProfile, AuthRegisterPayload>('auth/register/', data),
   login: (username: string, password: string, portal?: string) =>
-    post<AuthTokenResponse, { username: string; password: string; portal?: string }>('/auth/token/', { username, password, portal }),
+    post<AuthTokenResponse, { username: string; password: string; portal?: string }>('auth/token/', { username, password, portal }),
   refreshToken: (refresh: string) =>
-    post<AuthRefreshResponse, { refresh: string }>('/auth/token/refresh/', { refresh }),
-  getProfile: () => get<UserProfile>('/auth/profile/'),
+    post<AuthRefreshResponse, { refresh: string }>('auth/token/refresh/', { refresh }),
+  getProfile: () => get<UserProfile>('auth/profile/'),
   updateProfile: (data: FormData | Partial<UserProfile>) => {
     if (data instanceof FormData) {
-      return api.patch<UserProfile>('/auth/profile/', data, {
+      return api.patch<UserProfile>('auth/profile/', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }).then(res => res.data);
     }
-    return patch<UserProfile, Partial<UserProfile>>('/auth/profile/', data);
+    return patch<UserProfile, Partial<UserProfile>>('auth/profile/', data);
   },
-  logout: () => post<{ success?: boolean; detail?: string }>('/auth/logout/'),
+  logout: () => post<{ success?: boolean; detail?: string }>('auth/logout/'),
   passwordResetRequest: (email: string) =>
-    post<{ message: string }, { email: string }>('/auth/password-reset-request/', { email }),
+    post<{ message: string }, { email: string }>('auth/password-reset-request/', { email }),
   resetPasswordConfirm: (data: { uid: string; token: string; new_password: string }) =>
-    post<{ message: string }, { uid: string; token: string; new_password: string }>('/auth/password-reset/confirm/', data),
+    post<{ message: string }, { uid: string; token: string; new_password: string }>('auth/password-reset/confirm/', data),
 };
 
 export interface Tenant {
@@ -322,14 +322,14 @@ export interface Tenant {
 }
 
 export const tenants = {
-  list: () => get<Tenant[]>('/admin/tenants/', {}, { cache: true, ttl: 60000 }), // Cache 1 min
-  get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`, {}, { cache: true, ttl: 60000 }),
-  create: (data: Partial<Tenant>) => post<Tenant, Partial<Tenant>>('/admin/tenants/', data),
-  update: (id: string | number, data: Partial<Tenant>) => patch<Tenant, Partial<Tenant>>(`/admin/tenants/${id}/`, data),
-  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`),
-  activate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/activate/`),
-  deactivate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/deactivate/`),
-  archiveData: (id: string | number) => post<{ status: string }>(`/admin/tenants/${id}/archive-data/`),
+  list: () => get<Tenant[]>('admin/tenants/', {}, { cache: true, ttl: 60000 }), // Cache 1 min
+  get: (id: string | number) => get<Tenant>(`admin/tenants/${id}/`, {}, { cache: true, ttl: 60000 }),
+  create: (data: Partial<Tenant>) => post<Tenant, Partial<Tenant>>('admin/tenants/', data),
+  update: (id: string | number, data: Partial<Tenant>) => patch<Tenant, Partial<Tenant>>(`admin/tenants/${id}/`, data),
+  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`admin/tenants/${id}/`),
+  activate: (id: string | number) => post<{ success?: boolean }>(`admin/tenants/${id}/activate/`),
+  deactivate: (id: string | number) => post<{ success?: boolean }>(`admin/tenants/${id}/deactivate/`),
+  archiveData: (id: string | number) => post<{ status: string }>(`admin/tenants/${id}/archive-data/`),
 };
 
 export interface Project {
@@ -340,9 +340,9 @@ export interface Project {
 }
 
 export const projects = {
-  list: () => get<Project[]>('/admin/projects/', {}, { cache: true, ttl: 30000 }), // Cache 30s
-  get: (id: string) => get<Project>(`/admin/projects/${id}/`, {}, { cache: true }),
-  triggerSync: (id: string | number) => post<{ status: string; message: string; task_ids?: string[] }>(`/admin/projects/${id}/trigger_sync/`),
+  list: () => get<Project[]>('admin/projects/', {}, { cache: true, ttl: 30000 }), // Cache 30s
+  get: (id: string) => get<Project>(`admin/projects/${id}/`, {}, { cache: true }),
+  triggerSync: (id: string | number) => post<{ status: string; message: string; task_ids?: string[] }>(`admin/projects/${id}/trigger_sync/`),
 };
 
 export interface Source {
@@ -354,17 +354,17 @@ export interface Source {
 }
 
 export const sources = {
-  list: (projectId: string | number) => get<Source[]>('/admin/sources/', { project_id: projectId }),
-  discover: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/discover/`),
-  sync: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/sync/`),
-  testConnection: (sourceId: string | number) => post<{ status: string; message: string }>(`/admin/sources/${sourceId}/test_connection/`),
-  triggerSync: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_sync/`),
-  triggerPrAnalysis: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_pr_analysis/`),
-  prAnalysisStatus: (sourceId: string | number) => get<{ status: string; message: string; error_message?: string; created_at?: string; finished_at?: string }>(`/admin/sources/${sourceId}/pr_analysis_status/`),
-  remoteFolders: (sourceId: string | number) => get<{ status: string; folders?: { id: string; name: string }[] }>(`/admin/sources/${sourceId}/remote_folders/`),
-  delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/sources/${sourceId}/`),
-  create: (data: any) => post<Source, any>('/admin/sources/', data),
-  update: (sourceId: string | number, data: any) => patch<Source, any>(`/admin/sources/${sourceId}/`, data),
+  list: (projectId: string | number) => get<Source[]>('admin/sources/', { project_id: projectId }),
+  discover: (sourceId: string | number) => post<{ detail?: string }>(`admin/sources/${sourceId}/discover/`),
+  sync: (sourceId: string | number) => post<{ detail?: string }>(`admin/sources/${sourceId}/sync/`),
+  testConnection: (sourceId: string | number) => post<{ status: string; message: string }>(`admin/sources/${sourceId}/test_connection/`),
+  triggerSync: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`admin/sources/${sourceId}/trigger_sync/`),
+  triggerPrAnalysis: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`admin/sources/${sourceId}/trigger_pr_analysis/`),
+  prAnalysisStatus: (sourceId: string | number) => get<{ status: string; message: string; error_message?: string; created_at?: string; finished_at?: string }>(`admin/sources/${sourceId}/pr_analysis_status/`),
+  remoteFolders: (sourceId: string | number) => get<{ status: string; folders?: { id: string; name: string }[] }>(`admin/sources/${sourceId}/remote_folders/`),
+  delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`admin/sources/${sourceId}/`),
+  create: (data: any) => post<Source, any>('admin/sources/', data),
+  update: (sourceId: string | number, data: any) => patch<Source, any>(`admin/sources/${sourceId}/`, data),
 };
 
 export interface HealthResponse {
@@ -373,7 +373,7 @@ export interface HealthResponse {
 }
 
 export const health = {
-  get: () => get<HealthResponse>('/admin/health/'),
+  get: () => get<HealthResponse>('admin/health/'),
 };
 
 export interface DashboardMetrics {
@@ -387,21 +387,21 @@ export interface DashboardForecast {
 export type InsightFeedbackStatus = 'accepted' | 'rejected';
 
 export const dashboard = {
-  getMetrics: () => get<DashboardMetrics>('/analytics/metrics/'),
+  getMetrics: () => get<DashboardMetrics>('analytics/metrics/'),
   getForecast: (integrationId: string, remainingItems = 10) =>
-    get<DashboardForecast>('/analytics/forecast/', {
+    get<DashboardForecast>('analytics/forecast/', {
       integration_id: integrationId,
       remaining_items: remainingItems,
     }),
   updateInsightFeedback: (insightId: number, suggestionId: string, status: InsightFeedbackStatus) =>
     patch<{ success?: boolean; detail?: string }, { insight_id: number; suggestion_id: string; status: InsightFeedbackStatus }>(
-      '/analytics/insights/feedback/',
+      'analytics/insights/feedback/',
       { insight_id: insightId, suggestion_id: suggestionId, status }
     ),
   getLeaderboard: (projectId?: string | number) =>
-    get<LeaderboardResponse>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
+    get<LeaderboardResponse>(`dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
   getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
-    get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
+    get<any>(`dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 };
 
 export interface LeaderboardWinner {
@@ -441,25 +441,25 @@ export interface Developer {
 }
 
 export const developers = {
-  list: (projectId?: string | number | null) => get<Developer[]>(`/developers/${buildQuery({ project_id: projectId })}`),
+  list: (projectId?: string | number | null) => get<Developer[]>(`developers/${buildQuery({ project_id: projectId })}`),
   getMetrics: (id: string, projectId?: string, sprintId?: number | null) =>
-    get<any>(`/developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<any>(`developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
   getComparison: (id: string, projectId?: string, sprintId?: number | null) =>
-    get<any>(`/developers/${id}/comparison/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<any>(`developers/${id}/comparison/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
 export const compliance = {
   listFlags: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<any[]>(`compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
   resolveFlag: (flagId: string) =>
-    post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
+    post<any>(`compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any>(`/compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<any>(`compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
 export const sprints = {
   list: (projectId?: string | number | null) =>
-    get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+    get<any[]>(`sprints/${buildQuery({ project_id: projectId })}`),
 };
 
 /** ---------- users ---------- */
@@ -490,15 +490,15 @@ export type CreateUserPayload = Record<string, unknown>;
 export type UpdateUserPayload = Record<string, unknown>;
 
 export const users = {
-  list: (filters?: UserListFilters) => get<User[]>('/admin/users/', filters),
-  create: (data: CreateUserPayload) => post<User, CreateUserPayload>('/admin/users/', data),
-  get: (id: string | number) => get<User>(`/admin/users/${id}/`),
+  list: (filters?: UserListFilters) => get<User[]>('admin/users/', filters),
+  create: (data: CreateUserPayload) => post<User, CreateUserPayload>('admin/users/', data),
+  get: (id: string | number) => get<User>(`admin/users/${id}/`),
   update: (id: string | number, data: UpdateUserPayload) =>
-    patch<User, UpdateUserPayload>(`/admin/users/${id}/`, data),
-  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/users/${id}/`),
+    patch<User, UpdateUserPayload>(`admin/users/${id}/`, data),
+  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`admin/users/${id}/`),
   updateRole: (id: string | number, role: string) =>
-    patch<User, { role: string }>(`/admin/users/${id}/role/`, { role }),
-  invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
+    patch<User, { role: string }>(`admin/users/${id}/role/`, { role }),
+  invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`users/${id}/invite/`, {}),
 };
 
 /** ---------- integrations ---------- */
@@ -517,18 +517,18 @@ export type UpdateIntegrationPayload = Record<string, unknown>;
 
 // Mapped to 'sources' in backend
 export const integrations = {
-  list: () => get<Integration[]>('/admin/sources/'),
+  list: () => get<Integration[]>('admin/sources/'),
   create: (data: CreateIntegrationPayload) =>
-    post<Integration, CreateIntegrationPayload>('/admin/sources/', data),
-  get: (id: string | number) => get<Integration>(`/admin/sources/${id}/`),
+    post<Integration, CreateIntegrationPayload>('admin/sources/', data),
+  get: (id: string | number) => get<Integration>(`admin/sources/${id}/`),
   update: (id: string | number, data: UpdateIntegrationPayload) =>
-    patch<Integration, UpdateIntegrationPayload>(`/admin/sources/${id}/`, data),
+    patch<Integration, UpdateIntegrationPayload>(`admin/sources/${id}/`, data),
   delete: (id: string | number) =>
-    del<{ success?: boolean; detail?: string }>(`/admin/sources/${id}/`),
+    del<{ success?: boolean; detail?: string }>(`admin/sources/${id}/`),
   sync: (id: string | number) =>
-    post<{ success?: boolean; detail?: string }>(`/admin/sources/${id}/sync/`),
+    post<{ success?: boolean; detail?: string }>(`admin/sources/${id}/sync/`),
   testConnection: (id: string | number) =>
-    post<{ success?: boolean; detail?: string; result?: unknown }>(`/admin/sources/${id}/test_connection/`),
+    post<{ success?: boolean; detail?: string; result?: unknown }>(`admin/sources/${id}/test_connection/`),
 };
 
 /** ---------- workItems ---------- */
@@ -548,10 +548,10 @@ export interface WorkItemFilters {
 export type UpdateWorkItemPayload = Record<string, unknown>;
 
 export const workItems = {
-  list: (filters?: WorkItemFilters) => get<WorkItem[]>('/work-items/', filters),
-  get: (id: string | number) => get<WorkItem>(`/work-items/${id}/`),
+  list: (filters?: WorkItemFilters) => get<WorkItem[]>('work-items/', filters),
+  get: (id: string | number) => get<WorkItem>(`work-items/${id}/`),
   update: (id: string | number, data: UpdateWorkItemPayload) =>
-    patch<WorkItem, UpdateWorkItemPayload>(`/work-items/${id}/`, data),
+    patch<WorkItem, UpdateWorkItemPayload>(`work-items/${id}/`, data),
 };
 
 /** ---------- pullRequests ---------- */
@@ -570,8 +570,8 @@ export interface PullRequestFilters {
 }
 
 export const pullRequests = {
-  list: (filters?: PullRequestFilters) => get<PullRequest[]>('/pull-requests/', filters),
-  get: (id: string | number) => get<PullRequest>(`/pull-requests/${id}/`),
+  list: (filters?: PullRequestFilters) => get<PullRequest[]>('pull-requests/', filters),
+  get: (id: string | number) => get<PullRequest>(`pull-requests/${id}/`),
 };
 
 /** ---------- aiInsights ---------- */
@@ -598,19 +598,19 @@ export interface AiInsightFeedbackPayload {
 }
 
 export const aiInsights = {
-  list: (filters?: AiInsightFilters) => get<AiInsight[]>('/ai-insights/', filters),
-  get: (id: string | number) => get<AiInsight>(`/ai-insights/${id}/`),
+  list: (filters?: AiInsightFilters) => get<AiInsight[]>('ai-insights/', filters),
+  get: (id: string | number) => get<AiInsight>(`ai-insights/${id}/`),
   updateFeedback: (
     insightId: string | number,
     suggestionId: string,
     status: AiSuggestionFeedbackStatus
   ) =>
     patch<{ success?: boolean; detail?: string }, AiInsightFeedbackPayload>(
-      `/ai-insights/${insightId}/feedback/`,
+      `ai-insights/${insightId}/feedback/`,
       { suggestion_id: suggestionId, status }
     ),
   refresh: (projectId?: number | null, insightType: string = 'general', sprintId?: number | null) =>
-    post<{ status: string; message: string }>('/ai-insights/refresh/', {
+    post<{ status: string; message: string }>('ai-insights/refresh/', {
       project_id: projectId,
       insight_type: insightType,
       sprint_id: sprintId
@@ -640,14 +640,14 @@ export interface UpdateRetentionPolicyPayload {
 }
 
 export const settings = {
-  getSystemSettings: () => get<SystemSettings>('/admin/settings/', {}, { cache: true }),
+  getSystemSettings: () => get<SystemSettings>('admin/settings/', {}, { cache: true }),
   updateSystemSettings: (data: UpdateSystemSettingsPayload) =>
-    patch<SystemSettings, UpdateSystemSettingsPayload>('/admin/settings/', data),
+    patch<SystemSettings, UpdateSystemSettingsPayload>('admin/settings/', data),
   getRetentionPolicy: (tenantId: string | number) =>
-    get<RetentionPolicy>(`/admin/tenants/${tenantId}/retention-policy/`),
+    get<RetentionPolicy>(`admin/tenants/${tenantId}/retention-policy/`),
   updateRetentionPolicy: (tenantId: string | number, data: UpdateRetentionPolicyPayload) =>
     patch<RetentionPolicy, UpdateRetentionPolicyPayload>(
-      `/admin/tenants/${tenantId}/retention-policy/`,
+      `admin/tenants/${tenantId}/retention-policy/`,
       data
     ),
 };
@@ -672,7 +672,7 @@ export interface PaginatedResponse<T> {
 
 export const activityLog = {
   list: (params?: { tenant?: string | number; action?: string; limit?: number; page?: number }) =>
-    get<PaginatedResponse<AuditLogEntry>>('/admin/activity-log/', params),
+    get<PaginatedResponse<AuditLogEntry>>('admin/activity-log/', params),
 };
 
 /** ---------- notifications ---------- */
@@ -690,27 +690,27 @@ export interface DMTNotification {
 export type Notification = DMTNotification;
 
 export const notifications = {
-  list: () => get<DMTNotification[]>('/notifications/'),
-  markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
-  markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
-  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
+  list: () => get<DMTNotification[]>('notifications/'),
+  markAsRead: (id: string | number) => post<{ status: string }>(`notifications/${id}/mark-as-read/`),
+  markAllAsRead: () => post<{ status: string }>('notifications/mark-all-as-read/'),
+  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`notifications/${id}/`),
   send: (data: { recipient_id: string | number; title: string; message: string; notification_type?: string }) =>
-    post<DMTNotification, any>('/notifications/send/', data),
+    post<DMTNotification, any>('notifications/send/', data),
   sendBulk: (data: {
     recipient_ids: (string | number)[];
     title: string;
     message: string;
     notification_type?: string;
-  }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, any>('/notifications/send-bulk/', data),
+  }) => post<{ sent: number; failed: { id: string | number; reason: string } [] }, any>('notifications/send-bulk/', data),
 };
 
 export const identity = {
-  getMappings: (tenantId: string) => get<IdentityMapping[]>('/admin/identity-mappings/', {}, { headers: { 'X-Tenant': tenantId } }),
-  getSuggestions: (tenantId: string) => get<IdentitySuggestion[]>('/admin/identity-mappings/suggestions/', {}, { headers: { 'X-Tenant': tenantId } }),
-  search: (query: string, tenantId: string) => get<{ email: string; name: string }[]>(`/admin/identity-mappings/search/?q=${encodeURIComponent(query)}`, {}, { headers: { 'X-Tenant': tenantId } }),
-  createMapping: (data: Partial<IdentityMapping>, tenantId: string) => post<IdentityMapping>('/admin/identity-mappings/', data, { 'X-Tenant': tenantId }),
-  updateMapping: (id: number, data: Partial<IdentityMapping>, tenantId: string) => patch<IdentityMapping>(`/admin/identity-mappings/${id}/`, data, { 'X-Tenant': tenantId }),
-  deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`/admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
+  getMappings: (tenantId: string) => get<IdentityMapping[]>('admin/identity-mappings/', {}, { headers: { 'X-Tenant': tenantId } }),
+  getSuggestions: (tenantId: string) => get<IdentitySuggestion[]>('admin/identity-mappings/suggestions/', {}, { headers: { 'X-Tenant': tenantId } }),
+  search: (query: string, tenantId: string) => get<{ email: string; name: string }[]>(`admin/identity-mappings/search/?q=${encodeURIComponent(query)}`, {}, { headers: { 'X-Tenant': tenantId } }),
+  createMapping: (data: Partial<IdentityMapping>, tenantId: string) => post<IdentityMapping>('admin/identity-mappings/', data, { 'X-Tenant': tenantId }),
+  updateMapping: (id: number, data: Partial<IdentityMapping>, tenantId: string) => patch<IdentityMapping>(`admin/identity-mappings/${id}/`, data, { 'X-Tenant': tenantId }),
+  deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
 };
 
 export { getWebSocketManager } from './websocket';

@@ -11,7 +11,18 @@ const nextConfig = {
             },
         ]
     },
-    // Removed rewrites(): Nginx handles /api/ and /ws/ on api.elevate.samta.ai directly.
+    async rewrites() {
+        return [
+            {
+                source: '/api/:path*/',
+                destination: 'http://backend:8000/api/:path*/',
+            },
+            {
+                source: '/ws/:path*/',
+                destination: 'http://backend:8000/ws/:path*/',
+            },
+        ];
+    },
 };
 
 module.exports = nextConfig;

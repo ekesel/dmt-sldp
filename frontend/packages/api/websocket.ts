@@ -74,7 +74,7 @@ const DEFAULT_OPTIONS: Required<
       ? (
         process.env.NEXT_PUBLIC_WS_HOST
           ? `wss://${process.env.NEXT_PUBLIC_WS_HOST}/ws/telemetry/{tenant_id}/`
-          : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.endsWith('.localhost')
             ? `ws://localhost:8000/ws/telemetry/{tenant_id}/`
             : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
       )

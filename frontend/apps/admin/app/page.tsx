@@ -70,7 +70,7 @@ export default function AdminHome() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
             const portValue = process.env.NEXT_PUBLIC_BACKEND_PORT;
-            const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+            const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
             const portSuffix = portValue ? `:${portValue}` : (isLocalhost ? ':8000' : '');
 
             return `${protocol}//${hostname}${portSuffix}`;
