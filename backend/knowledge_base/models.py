@@ -5,7 +5,7 @@ from django.db import connection
 def get_file_upload_path(instance, filename):
     schema = connection.schema_name
     # Using instance.document.id instead of slugified title for stability
-    return f"{schema}/documents/{instance.document.id}/v{instance.version_number or 1}/{filename}"
+    return f"{schema}/documents/{instance.document.title}/v{instance.version_number or 1}/{filename}"
 
 class NonDeletedManager(models.Manager):
     def get_queryset(self):
