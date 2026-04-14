@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { Record } from "./RecordList";
 
 
+import { tags as tagsApi } from "@dmt/api";
+
 interface RecordEditorProps {
   mode: "create" | "edit";
   record?: Record | null;
@@ -78,6 +80,22 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
   const [activeTab, setActiveTab] = useState<"Write" | "Upload">("Write");
   const [newTag, setNewTag] = useState("");
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await tagsApi.getAll();
+        if (response && response.data) {
+          // Convert to uppercase for consistency with current UI logic
+          setAvailableTags(response.data.map((t: any) => t.name.toUpperCase()));
+        }
+      } catch (error) {
+        console.error("Error fetching tags:", error);
+      }
+    };
+    fetchTags();
+  }, []);
 
   const handleChange = (field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -86,11 +104,29 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     }));
   };
 
-  const addTag = () => {
-    const tag = newTag.trim().toUpperCase();
-    if (tag && !formData.tags.includes(tag)) {
-      handleChange("tags", [...formData.tags, tag]);
-      setNewTag("");
+  const addTag = async (tagToMaybeAdd?: string) => {
+    const isCustom = !tagToMaybeAdd;
+    const tagName = (tagToMaybeAdd || newTag).trim();
+    if (!tagName) return;
+
+    const tagToDisplay = tagName.toUpperCase();
+    
+    if (!formData.tags.includes(tagToDisplay)) {
+      if (isCustom) {
+        try {
+          const response = await tagsApi.create(tagName);
+          if (response && response.data) {
+            const createdTagName = response.data.name.toUpperCase();
+            if (!availableTags.includes(createdTagName)) {
+              setAvailableTags(prev => [...prev, createdTagName]);
+            }
+          }
+        } catch (error) {
+          console.error("Error creating tag:", error);
+        }
+      }
+      handleChange("tags", [...formData.tags, tagToDisplay]);
+      if (isCustom) setNewTag("");
     }
   };
 
@@ -485,24 +521,58 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
           )}
 
           <div>
-            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {formData.tags.map(tag => (
-                <span key={tag} className="flex items-center gap-2 px-3 py-2 bg-background text-foreground border border-border/40 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
-                  #{tag.toUpperCase()}
-                  <X className="w-3 h-3 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => removeTag(tag)} />
-                </span>
-              ))}
-              <div className="flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                  placeholder="ADD TAG"
-                  className="bg-transparent border-none outline-none w-16 placeholder:text-muted-foreground"
-                />
-                <Plus className="w-3 h-3 cursor-pointer hover:text-primary" onClick={addTag} />
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Tags</h3>
+              <Tag className="w-3 h-3 text-muted-foreground" />
+            </div>
+
+            <div className="space-y-6">
+              {/* Current Tags */}
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.tags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm">
+                      #{tag}
+                      <X className="w-2.5 h-2.5 cursor-pointer hover:text-foreground transition-colors" onClick={() => removeTag(tag)} />
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Available Tags Dropdown */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Available Tags</label>
+                <div className="relative">
+                  <select
+                    value=""
+                    onChange={(e) => addTag(e.target.value)}
+                    className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                  >
+                    <option value="" disabled>Select a tag...</option>
+                    {availableTags
+                      .filter(tag => !formData.tags.includes(tag))
+                      .map(tag => (
+                        <option key={tag} value={tag}>#{tag}</option>
+                      ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Custom Tag Input */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Custom Tag</label>
+                <div className="flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-primary/40 transition-colors group">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                    placeholder="TYPE TAG..."
+                    className="bg-transparent border-none outline-none w-full placeholder:text-muted-foreground/40"
+                  />
+                  <Plus className="w-3 h-3 cursor-pointer hover:text-primary transition-colors shrink-0" onClick={() => addTag()} />
+                </div>
               </div>
             </div>
           </div>

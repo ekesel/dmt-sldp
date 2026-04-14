@@ -599,8 +599,8 @@ export const metadata = {
       throw new Error(`Category with ID ${body.category_id} does not exist`);
     }
     const isDuplicate = mockMetadataValues.some(
-      v => v.category_id === body.category_id && 
-           v.value.toLowerCase() === body.value.trim().toLowerCase()
+      v => v.category_id === body.category_id &&
+        v.value.toLowerCase() === body.value.trim().toLowerCase()
     );
     if (isDuplicate) {
       throw new Error(`Value '${body.value}' already exists in this category`);
@@ -828,6 +828,8 @@ export const identity = {
   updateMapping: (id: number, data: Partial<IdentityMapping>, tenantId: string) => patch<IdentityMapping>(`/admin/identity-mappings/${id}/`, data, { 'X-Tenant': tenantId }),
   deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`/admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
 };
+
+export { tags } from './knowledge-base-apis/tags-api'
 
 export { getWebSocketManager } from './websocket';
 export type { TelemetryMessage } from './websocket';
