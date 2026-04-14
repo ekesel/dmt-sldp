@@ -1,0 +1,25 @@
+AGENTS.md
+  c3e6517377be3fb2 1-13
+frontend/AGENTS.md
+  c3e6517377be3fb2 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "0747786879196651f47b70b1ea5b5c724f0b2f67",
+  "prompts": {
+    "c3e6517377be3fb2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d8a5b-8bc1-7252-ad79-968ccedd98d3",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Himanshu Singh Negi",
+      "messages": [],
+      "total_additions": 162,
+      "total_deletions": 0,
+      "accepted_lines": 149,
+      "overriden_lines": 0
+    }
+  }
+}
