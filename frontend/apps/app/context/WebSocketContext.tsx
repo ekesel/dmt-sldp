@@ -3,27 +3,62 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import WSClient from '../lib/socket';
 
+/**
+ * Represents a standard message received over the WebSocket.
+ */
+export interface WebSocketMessage {
+  type: string;
+  message?: {
+    progress?: number;
+    status?: string;
+    [key: string]: unknown;
+  };
+  progress?: number;
+  status?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Type guard to check if an unknown message adheres to the WebSocketMessage interface.
+ */
+export function isWebSocketMessage(msg: unknown): msg is WebSocketMessage {
+  return typeof msg === 'object' && msg !== null && 'type' in msg;
+}
+
 interface WebSocketContextType {
   client: WSClient | null;
-  lastMessage: any | null;
+  /**
+   * The most recently received message from any WebSocket channel.
+   */
+  lastMessage: WebSocketMessage | null;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
+/**
+ * Provides WebSocket connectivity and message state to the application.
+ * @param url The WebSocket server URL. If null, no connection is established.
+ */
 export const WebSocketProvider: React.FC<{ url: string | null; children: React.ReactNode }> = ({ url, children }) => {
-  const [lastMessage, setLastMessage] = React.useState<any | null>(null);
-  const client = useMemo(() => (url ? new WSClient(url) : null), [url]);
+  const [lastMessage, setLastMessage] = React.useState<WebSocketMessage | null>(null);
+  
+  const client = useMemo(() => {
+    if (url) {
+      return new WSClient(url);
+    }
+    return null;
+  }, [url]);
 
   useEffect(() => {
     if (client) {
-      const handleAllMessages = (msg: any) => setLastMessage(msg);
+      const handleAllMessages = (msg: unknown) => {
+        if (isWebSocketMessage(msg)) {
+          setLastMessage(msg);
+        }
+      };
       
       // WSClient dispatches 'message' for JSON messages or specific types
-      // We'll listen to a generic 'message' event if we implement it, 
-      // or we can modify WSClient to dispatch a 'message' event for every incoming message.
       client.on('message', handleAllMessages);
-      // Also listen to specific types just in case they don't have 'type' property
-      // and are dispatched as 'message' by default in WSClient
       
       client.connect();
       return () => {
@@ -40,6 +75,10 @@ export const WebSocketProvider: React.FC<{ url: string | null; children: React.R
   );
 };
 
+/**
+ * Hook to access the WebSocket client and last message from the nearest provider.
+ * @throws Error if used outside of a WebSocketProvider.
+ */
 export const useWebSocketInternal = () => {
   const context = useContext(WebSocketContext);
   if (context === undefined) {

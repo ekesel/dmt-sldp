@@ -1,7 +1,10 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth } from '@dmt/api';
+import { auth, AuthRegisterPayload } from '@dmt/api';
 
+/**
+ * Interface representing a user within the authentication context.
+ */
 interface User {
     id: number;
     username: string;
@@ -25,7 +28,7 @@ interface AuthContextType {
     isLoading: boolean;
     error: string | null;
     login: (username: string, password: string, portal?: string) => Promise<void>;
-    register: (data: any) => Promise<void>;
+    register: (data: AuthRegisterPayload) => Promise<void>;
     logout: () => Promise<void>;
     clearError: () => void;
     token: string | null;
@@ -33,6 +36,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/**
+ * Authentication provider component to wrap the application and provide auth state.
+ */
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -45,7 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (storedToken) {
                 setToken(storedToken);
                 try {
-                    const userData = await auth.getProfile() as any;
+                    const userData = await auth.getProfile() as unknown as User;
                     setUser(userData);
                     if (userData?.tenant_slug) {
                         localStorage.setItem('dmt-tenant', userData.tenant_slug);
@@ -76,9 +82,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (response.user?.tenant_slug) {
                 localStorage.setItem('dmt-tenant', response.user.tenant_slug);
             }
-            setUser(response.user);
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials.';
+            setUser(response.user as unknown as User);
+        } catch (err) {
+            let errorMessage = 'Login failed. Please check your credentials.';
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosErr = err as { response?: { data?: { detail?: string } } };
+                errorMessage = axiosErr.response?.data?.detail || errorMessage;
+            }
             setError(errorMessage);
             throw err;
         } finally {
@@ -86,14 +96,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const register = async (data: any) => {
+    const register = async (data: AuthRegisterPayload) => {
         setError(null);
         setIsLoading(true);
         try {
             await auth.register(data);
             setError(null);
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.username?.[0] || 'Registration failed';
+        } catch (err) {
+            let errorMessage = 'Registration failed';
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosErr = err as { response?: { data?: { username?: string[] } } };
+                errorMessage = axiosErr.response?.data?.username?.[0] || errorMessage;
+            }
             setError(errorMessage);
             throw err;
         } finally {
@@ -138,6 +152,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 };
 
+/**
+ * Hook to access the current authentication state and actions.
+ * @throws Error if used outside of an AuthProvider.
+ */
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {

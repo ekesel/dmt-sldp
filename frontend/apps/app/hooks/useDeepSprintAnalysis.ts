@@ -5,10 +5,17 @@ import { useWebSocket } from './useWebSocket';
 import api, { aiInsights } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
+export interface AssigneeInsight {
+    assignee_name: string;
+    load_assessment: string;
+    insight: string;
+    action_item: string;
+}
+
 interface DeepSprintInsight {
     id: number;
     summary: string;
-    suggestions: any[]; // Assignee insights
+    suggestions: AssigneeInsight[]; // Assignee insights
     forecast: string;    // Used to store Risk Factors JSON
     project_id?: number | null;
     created_at: string;
@@ -55,9 +62,10 @@ export function useDeepSprintAnalysis(projectId: number | null, sprintId: number
             }
 
             setError(null);
-        } catch (err: any) {
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load analysis';
             console.error('Deep Sprint Insight load error:', err);
-            setError(err.message || 'Failed to load analysis');
+            setError(errorMessage);
         } finally {
             fetchingRef.current = false;
             setLoading(false);
@@ -100,11 +108,12 @@ export function useDeepSprintAnalysis(projectId: number | null, sprintId: number
             setIsRefreshing(true);
             setProgress(10);
             setStatus('Triggering analysis...');
-            await aiInsights.refresh(projectId as any, 'deep_sprint', sprintId);
+            await aiInsights.refresh(projectId as number, 'deep_sprint', sprintId);
             toast.success("Deep Sprint Analysis triggered");
-        } catch (err: any) {
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Failed to trigger analysis";
             console.error('[RunAnalysis] Error:', err);
-            toast.error(err.message || "Failed to trigger analysis");
+            toast.error(errorMessage);
             setIsRefreshing(false);
             setProgress(0);
             setStatus('');

@@ -10,6 +10,10 @@ interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
+/**
+ * Root layout component for the dashboard.
+ * Handles authentication checks, sidebar state, and initializes the WebSocket connection for real-time updates.
+ */
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const { token, user, isLoading } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,11 +22,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     useEffect(() => {
         if (isLoading) return;
         if (token) {
-
-
-
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            let wsProtocol = 'ws:';
+            if (window.location.protocol === 'https:') {
+                wsProtocol = 'wss:';
+            }
 
             let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
 

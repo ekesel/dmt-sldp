@@ -274,7 +274,7 @@ export class WebSocketConnectionManager {
       return;
     }
 
-    const eventType = parsed.eventType || (parsed as any).type;
+    const eventType = (parsed as TelemetryMessage).eventType || (parsed as { type?: string }).type;
     if (!eventType) {
       this.warn("Incoming message missing eventType or type:", parsed);
       return;
@@ -304,7 +304,11 @@ export class WebSocketConnectionManager {
     if (!cfg || !cfg.enabled || this.manuallyDisconnected) return;
 
     const attempts = this.reconnectAttempts;
-    const maxAttempts = cfg.maxAttempts ?? Infinity;
+    let maxAttempts = Infinity;
+    if (cfg.maxAttempts !== undefined) {
+        maxAttempts = cfg.maxAttempts;
+    }
+
     if (attempts >= maxAttempts) {
       this.warn("Max reconnect attempts reached. Giving up.");
       return;
@@ -393,6 +397,8 @@ export class WebSocketConnectionManager {
 
   /**
    * Intentional disconnect: stops reconnect loop.
+   * @param code The numeric close code.
+   * @param reason The reason for disconnection.
    */
   public disconnect(code = 1000, reason = "Client disconnect"): void {
     this.manuallyDisconnected = true;
@@ -427,7 +433,11 @@ export class WebSocketConnectionManager {
       throw new Error("subscribe(eventType, callback) requires valid arguments.");
     }
 
-    const existing = this.subscribers.get(eventType) ?? new Set<EventCallback>();
+    let existing = this.subscribers.get(eventType);
+    if (!existing) {
+        existing = new Set<EventCallback>();
+    }
+    
     existing.add(callback as EventCallback);
     this.subscribers.set(eventType, existing);
 
@@ -484,18 +494,35 @@ export class WebSocketConnectionManager {
     this.flushPendingMessages();
   }
 
+  /**
+   * Returns true if the WebSocket is currently open.
+   */
   public isConnected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN;
+    if (this.socket) {
+        return this.socket.readyState === WebSocket.OPEN;
+    }
+    return false;
   }
 
+  /**
+   * Returns the current readyState of the underlying socket.
+   */
   public getReadyState(): number | null {
-    return this.socket?.readyState ?? null;
+    if (this.socket) {
+        return this.socket.readyState;
+    }
+    return null;
   }
 }
 
 // Singleton helper (optional, convenient for app-wide use)
 let wsManagerSingleton: WebSocketConnectionManager | null = null;
 
+/**
+ * Retrieves the global instance of the WebSocketConnectionManager.
+ * Creates it if it does not yet exist.
+ * @param options Initialization options for the manager.
+ */
 export function getWebSocketManager(
   options?: WebSocketManagerOptions
 ): WebSocketConnectionManager {

@@ -27,7 +27,30 @@ export interface Post {
     shares?: number; // UI placeholder
 }
 
+export interface NewsfeedPayload {
+    data: Post[];
+    page: number;
+    has_next: boolean;
+    error?: string;
+}
 
+export interface PostEventPayload {
+    data: Post;
+}
+
+export interface PostDeletePayload {
+    data?: { id: number };
+    id?: number;
+}
+
+export interface NewsActionErrorPayload {
+    message?: string;
+    error?: string;
+}
+
+/**
+ * Hook to manage newsfeed data, providing real-time updates via WebSockets.
+ */
 export function useNewsfeedData() {
     const { token, user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
@@ -52,7 +75,7 @@ export function useNewsfeedData() {
 
         };
 
-        const onError = (err: any) => {
+        const onError = (err: unknown) => {
             // Determine if we should be noisy based on environment
             const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
             if (!isLocal) {
@@ -67,7 +90,7 @@ export function useNewsfeedData() {
             console.log('[Newsfeed] WebSocket disconnected');
         };
 
-        const onPosts = (payload: any) => {
+        const onPosts = (payload: NewsfeedPayload) => {
             if (payload.error) {
                 console.error('[Newsfeed WS Error]:', payload.error);
                 setError(payload.error);
@@ -96,10 +119,8 @@ export function useNewsfeedData() {
             setLoading(false);
         };
 
-        const onPostCreated = (payload: any) => {
-
-
-            const newPost = payload.data || payload;
+        const onPostCreated = (payload: PostEventPayload | Post) => {
+            const newPost = 'data' in payload ? payload.data : payload;
 
             if (!newPost || !newPost.post_id) {
                 console.error("Invalid post data:", payload);
@@ -118,16 +139,15 @@ export function useNewsfeedData() {
             });
         };
 
-        const onPostUpdated = (payload: any) => {
-            const updated = payload.data || payload;
+        const onPostUpdated = (payload: PostEventPayload | Post) => {
+            const updated = 'data' in payload ? payload.data : payload;
 
             setPosts(prev =>
                 prev.map(p => p.post_id === updated.post_id ? updated : p)
             );
         };
 
-        const onPostDeleted = (payload: any) => {
-
+        const onPostDeleted = (payload: PostDeletePayload) => {
             const deletedId = payload.data?.id || payload.id;
 
             if (deletedId) {
@@ -137,7 +157,7 @@ export function useNewsfeedData() {
             }
         };
 
-        const onActionError = (payload: any) => {
+        const onActionError = (payload: NewsActionErrorPayload) => {
             const msg = payload.message || payload.error || 'Action failed';
             import('react-hot-toast').then(({ toast }) => toast.error(msg));
         };
@@ -210,7 +230,7 @@ export function useNewsfeedData() {
             author: {
                 id: user.id,
                 username: user.username,
-                avatar_url: (user as any).avatar_url || null
+                avatar_url: user.avatar_url || null
             },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

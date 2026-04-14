@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { reactions as reactionsApi, ReactionSummary, ReactionType } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
+/**
+ * Hook to manage post reactions with optimistic UI updates and server synchronization.
+ * @param postId The ID of the post to manage reactions for.
+ */
 export function useReactions(postId: number) {
   const [reactions, setReactions] = useState<Record<number, ReactionSummary>>({});
   const [loading, setLoading] = useState(false);
@@ -43,7 +47,7 @@ export function useReactions(postId: number) {
           }
         };
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error(`[useReactions] Failed to fetch reactions for ID: ${id}`, err);
     } finally {
       pendingFetches.current.delete(id);
@@ -104,9 +108,10 @@ export function useReactions(postId: number) {
       await reactionsApi.create({ post: postId, reaction_type: type });
       // Call fetchReactions(post_id) after mutation
       await fetchReactions(postId, true); // Force fetch after mutation
-    } catch (err: any) {
+    } catch (err) {
       setReactions(previousReactions);
-      toast.error(err.message || 'Failed to add reaction');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add reaction';
+      toast.error(errorMessage);
     }
   };
 
@@ -138,9 +143,10 @@ export function useReactions(postId: number) {
       await reactionsApi.delete(postId);
       // Call fetchReactions(post_id) after mutation
       await fetchReactions(postId, true);
-    } catch (err: any) {
+    } catch (err) {
       setReactions(previousReactions);
-      toast.error(err.message || 'Failed to remove reaction');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove reaction';
+      toast.error(errorMessage);
     }
   };
 

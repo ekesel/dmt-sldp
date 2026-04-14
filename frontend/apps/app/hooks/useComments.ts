@@ -41,6 +41,11 @@ const updateCache = (postId: number, newState: PostCommentsState) => {
   }
 };
 
+/**
+ * Hook to manage comments for a specific post with real-time shared state caching.
+ * @param postId The ID of the post to manage comments for.
+ * @param options Configuration options for fetching.
+ */
 export function useComments(postId: number, options: { enabled?: boolean } = { enabled: true }) {
   const { user: currentUser } = useAuth();
   const [localState, setLocalState] = useState<PostCommentsState>(
@@ -67,8 +72,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
 
       updateCache(postId, newState);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch comments');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch comments';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -83,18 +89,33 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       // Handle potential nesting in response (e.g., { data: comment } or { comment: comment })
-      const newCommentRaw: any = (response as any).data || (response as any).comment || response;
+      const newCommentData = response as unknown as { 
+        data?: Comment; 
+        comment?: Comment; 
+        comment_id?: number;
+        comment_text?: string;
+        text?: string;
+        user?: Comment['user'];
+        created_at?: string;
+        updated_at?: string;
+      };
+      
+      const newCommentRaw = newCommentData.data || newCommentData.comment || newCommentData;
 
       // Ensure the comment has the text and user info for immediate display
       const newComment: Comment = {
         ...newCommentRaw,
-        comment_text: newCommentRaw.comment_text || newCommentRaw.text || text,
-        user: newCommentRaw.user || (currentUser ? {
+        comment_id: (newCommentRaw as any).comment_id || Date.now(),
+        comment_text: (newCommentRaw as any).comment_text || (newCommentRaw as any).text || text,
+        user: (newCommentRaw as any).user || (currentUser ? {
           id: currentUser.id,
           username: currentUser.username,
           avatar_url: currentUser.avatar_url
-        } : 0),
-        replies: []
+        } : { id: 0, username: 'Anonymous' }),
+        replies: [],
+        created_at: (newCommentRaw as any).created_at || new Date().toISOString(),
+        updated_at: (newCommentRaw as any).updated_at || new Date().toISOString(),
+        post: postId
       };
 
       const current = commentsCache[postId] || { list: [], total: 0 };
@@ -126,8 +147,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment added!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add comment');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add comment';
+      toast.error(errorMessage);
     }
   };
 
@@ -155,8 +177,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment updated!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update comment');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update comment';
+      toast.error(errorMessage);
     }
   };
 
@@ -181,8 +204,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment deleted!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete comment');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete comment';
+      toast.error(errorMessage);
     }
   };
 

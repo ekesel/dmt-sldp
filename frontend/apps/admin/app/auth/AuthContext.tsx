@@ -1,5 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import axios from 'axios';
 import { auth } from '@dmt/api';
 
 interface User {
@@ -80,9 +81,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (response.user?.tenant_slug) {
                 localStorage.setItem('dmt-tenant', response.user.tenant_slug);
             }
-            setUser(response.user);
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials.';
+            setUser(response.user as any);
+        } catch (err) {
+            let errorMessage = 'Login failed. Please check your credentials.';
+            if (axios.isAxiosError(err)) {
+                errorMessage = err.response?.data?.detail || errorMessage;
+            }
             setError(errorMessage);
             throw err;
         } finally {
@@ -97,8 +101,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const response = await auth.register(data);
             // After registration, user needs to login
             setError(null);
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.username?.[0] || err.response?.data?.email?.[0] || 'Registration failed';
+        } catch (err) {
+            let errorMessage = 'Registration failed';
+            if (axios.isAxiosError(err)) {
+                errorMessage = err.response?.data?.username?.[0] || err.response?.data?.email?.[0] || errorMessage;
+            }
             setError(errorMessage);
             throw err;
         } finally {

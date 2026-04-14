@@ -3,16 +3,24 @@
 import { useEffect } from 'react';
 import { setGlobalErrorHandler } from '@dmt/api';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 export default function APIConfig() {
     useEffect(() => {
         setGlobalErrorHandler((error) => {
-            const status = error.response?.status;
-            let message = error.response?.data?.detail || error.message || 'An unexpected error occurred';
+            let message = 'An unexpected error occurred';
+            let status: number | undefined;
+
+            if (axios.isAxiosError(error)) {
+                status = error.response?.status;
+                message = error.response?.data?.detail || error.message || message;
+            } else if (error instanceof Error) {
+                message = error.message;
+            }
 
             if (status === 403) {
                 message = `Permission Denied: ${message}`;
-            } else if (status >= 500) {
+            } else if (status && status >= 500) {
                 message = `Server Error: ${message}`;
             }
 

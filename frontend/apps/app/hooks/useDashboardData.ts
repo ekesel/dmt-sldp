@@ -25,10 +25,18 @@ interface ComplianceData {
   compliance_rate_percent: number;
 }
 
+export interface Suggestion {
+  id: string;
+  title: string;
+  impact: 'High' | 'Medium' | 'Low';
+  description: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
 interface Insight {
   id: number;
   summary: string;
-  suggestions: any[];
+  suggestions: Suggestion[];
   project_name?: string | null;
   created_at: string;
 }
@@ -93,9 +101,10 @@ export function useDashboardData(projectId?: number | null) {
       setAssigneeDistribution(assigneeData);
 
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load dashboard data';
       console.error('Dashboard load error:', err);
-      setError(err.message || 'Failed to load dashboard data');
+      setError(errorMessage);
     } finally {
       fetchingRef.current = false;
       setIsFetching(false);
@@ -146,9 +155,10 @@ export function useDashboardData(projectId?: number | null) {
       setIsRefreshingInsights(true);
       await aiInsights.refresh(projectId);
       toast.success("AI Insights refresh triggered");
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to trigger AI insights refresh";
       console.error('[RefreshInsights] Error:', err);
-      toast.error(err.message || "Failed to trigger AI insights refresh");
+      toast.error(errorMessage);
     } finally {
       // Don't set to false here, wait for WebSocket 'ai_insight_update' or 'ai_insight_progress'
       // to manage the state after the trigger call succeeds.

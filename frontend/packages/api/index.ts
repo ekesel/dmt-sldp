@@ -102,9 +102,13 @@ api.interceptors.response.use(
   }
 );
 
-let globalErrorHandler: ((error: any) => void) | null = null;
+let globalErrorHandler: ((error: unknown) => void) | null = null;
 
-export const setGlobalErrorHandler = (handler: (error: any) => void) => {
+/**
+ * Sets a global error handler for all API requests.
+ * @param handler Function to call when a critical API error occurs.
+ */
+export const setGlobalErrorHandler = (handler: (error: unknown) => void) => {
   globalErrorHandler = handler;
 };
 
@@ -274,7 +278,7 @@ export interface AuthRegisterPayload {
 export interface AuthTokenResponse {
   access: string;
   refresh: string;
-  user: any;
+  user: UserProfile;
 }
 
 export interface AuthRefreshResponse {
@@ -290,9 +294,16 @@ export interface UserProfile {
   profile_picture?: string;
   custom_title?: string;
   avatar_url?: string;
+  tenant_slug?: string;
+  is_platform_admin?: boolean;
+  is_staff?: boolean;
+  is_superuser?: boolean;
   [key: string]: unknown;
 }
 
+/**
+ * Authentication management API.
+ */
 export const auth = {
   register: (data: AuthRegisterPayload) => post<UserProfile, AuthRegisterPayload>('/auth/register/', data),
   login: (username: string, password: string, portal?: string) =>
@@ -322,6 +333,9 @@ export interface Tenant {
   [key: string]: unknown;
 }
 
+/**
+ * Tenant management API for Admin portal.
+ */
 export const tenants = {
   list: () => get<Tenant[]>('/admin/tenants/', {}, { cache: true, ttl: 60000 }), // Cache 1 min
   get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`, {}, { cache: true, ttl: 60000 }),
@@ -354,6 +368,9 @@ export interface Source {
   [key: string]: unknown;
 }
 
+/**
+ * Integration sources management API.
+ */
 export const sources = {
   list: (projectId: string | number) => get<Source[]>('/admin/sources/', { project_id: projectId }),
   discover: (sourceId: string | number) => post<{ detail?: string }>(`/admin/sources/${sourceId}/discover/`),
@@ -364,8 +381,8 @@ export const sources = {
   prAnalysisStatus: (sourceId: string | number) => get<{ status: string; message: string; error_message?: string; created_at?: string; finished_at?: string }>(`/admin/sources/${sourceId}/pr_analysis_status/`),
   remoteFolders: (sourceId: string | number) => get<{ status: string; folders?: { id: string; name: string }[] }>(`/admin/sources/${sourceId}/remote_folders/`),
   delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/sources/${sourceId}/`),
-  create: (data: any) => post<Source, any>('/admin/sources/', data),
-  update: (sourceId: string | number, data: any) => patch<Source, any>(`/admin/sources/${sourceId}/`, data),
+  create: (data: Partial<Source>) => post<Source, Partial<Source>>('/admin/sources/', data),
+  update: (sourceId: string | number, data: Partial<Source>) => patch<Source, Partial<Source>>(`/admin/sources/${sourceId}/`, data),
 };
 
 export interface HealthResponse {
@@ -387,6 +404,9 @@ export interface DashboardForecast {
 
 export type InsightFeedbackStatus = 'accepted' | 'rejected';
 
+/**
+ * Main analytics dashboard API.
+ */
 export const dashboard = {
   getMetrics: () => get<DashboardMetrics>('/analytics/metrics/'),
   getForecast: (integrationId: string, remainingItems = 10) =>
@@ -402,7 +422,7 @@ export const dashboard = {
   getLeaderboard: (projectId?: string | number) =>
     get<LeaderboardResponse>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
   getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
-    get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
+    get<unknown>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 };
 
 export interface LeaderboardWinner {
@@ -441,26 +461,91 @@ export interface Developer {
   [key: string]: unknown;
 }
 
+export interface DeveloperMetrics {
+  sprint_name: string;
+  story_points_completed: number;
+  ai_usage_percent: number;
+  code_ai_usage_percent?: number;
+  dmt_compliance_rate: number;
+  prs_merged: number;
+  prs_reviewed?: number;
+  items_completed?: number;
+  defects_attributed?: number;
+  commits_count?: number;
+  is_selected?: boolean;
+  [key: string]: unknown;
+}
+
+export interface DeveloperComparison {
+  sprint_name: string;
+  velocity: {
+    you: number;
+    team_avg: number;
+  };
+  compliance: {
+    you: number;
+    team_avg: number;
+  };
+}
+
+/**
+ * Developer-specific metrics and comparison API.
+ */
 export const developers = {
   list: (projectId?: string | number | null) => get<Developer[]>(`/developers/${buildQuery({ project_id: projectId })}`),
-  getMetrics: (id: string, projectId?: string, sprintId?: number | null) =>
-    get<any>(`/developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
-  getComparison: (id: string, projectId?: string, sprintId?: number | null) =>
-    get<any>(`/developers/${id}/comparison/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  getMetrics: (id: string, projectId?: string | null, sprintId?: number | null) =>
+    get<DeveloperMetrics[]>(`/developers/${id}/metrics/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  getComparison: (id: string, projectId?: string | null, sprintId?: number | null) =>
+    get<DeveloperComparison>(`/developers/${id}/comparison/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
+export interface ComplianceFlag {
+  id: number;
+  work_item_id: string;
+  work_item_title: string;
+  flag_type: string;
+  severity: 'critical' | 'warning' | string;
+  created_at: string;
+  project_name: string;
+  assignee_name: string;
+  [key: string]: unknown;
+}
+
+export interface ComplianceSummary {
+  overall_health: number;
+  critical_count: number;
+  warning_count: number;
+  total_items: number;
+  compliant_items: number;
+}
+
+/**
+ * Compliance flags and summaries.
+ */
 export const compliance = {
   listFlags: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<ComplianceFlag[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
   resolveFlag: (flagId: string) =>
-    post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
+    post<unknown>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any>(`/compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+    get<ComplianceSummary>(`/compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
+export interface Sprint {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'completed' | 'planned';
+  [key: string]: unknown;
+}
+
+/**
+ * Sprint lifecycle API.
+ */
 export const sprints = {
   list: (projectId?: string | number | null) =>
-    get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+    get<Sprint[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
 };
 
 /** ---------- users ---------- */
@@ -490,6 +575,9 @@ export interface UserListFilters {
 export type CreateUserPayload = Record<string, unknown>;
 export type UpdateUserPayload = Record<string, unknown>;
 
+/**
+ * User management API.
+ */
 export const users = {
   list: (filters?: UserListFilters) => get<User[]>('/admin/users/', filters),
   create: (data: CreateUserPayload) => post<User, CreateUserPayload>('/admin/users/', data),
@@ -499,7 +587,7 @@ export const users = {
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/users/${id}/`),
   updateRole: (id: string | number, role: string) =>
     patch<User, { role: string }>(`/admin/users/${id}/role/`, { role }),
-  invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
+  invite: (id: string | number) => post<{ message: string; invite_link: string; user: User }, Record<string, unknown>>(`/users/${id}/invite/`, {}),
 };
 
 /** ---------- integrations ---------- */
@@ -661,7 +749,7 @@ export interface AuditLogEntry {
   actor_name: string;
   tenant_name: string;
   timestamp: string;
-  new_values?: any;
+  new_values?: unknown;
 }
 
 export interface PaginatedResponse<T> {
@@ -690,19 +778,22 @@ export interface DMTNotification {
 /** @deprecated Use DMTNotification instead */
 export type Notification = DMTNotification;
 
+/**
+ * Notification system API.
+ */
 export const notifications = {
   list: () => get<DMTNotification[]>('/notifications/'),
   markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
   markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
   send: (data: { recipient_id: string | number; title: string; message: string; notification_type?: string }) =>
-    post<DMTNotification, any>('/notifications/send/', data),
+    post<DMTNotification, { recipient_id: string | number; title: string; message: string; notification_type?: string }>('/notifications/send/', data),
   sendBulk: (data: {
     recipient_ids: (string | number)[];
     title: string;
     message: string;
     notification_type?: string;
-  }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, any>('/notifications/send-bulk/', data),
+  }) => post<{ sent: number; failed: { id: string | number; reason: string }[] }, { recipient_ids: (string | number)[]; title: string; message: string; notification_type?: string }>('/notifications/send-bulk/', data),
 };
 
 export const identity = {
@@ -761,11 +852,14 @@ export type ReactionType = 'like' | 'love' | 'haha' | 'sad';
 
 export interface ReactionSummary {
   total_reactions: number;
-  reactions: any[];
+  reactions: unknown[];
   types: Record<ReactionType, number>;
   user_reaction?: ReactionType;
 }
 
+/**
+ * Newsfeed reactions API.
+ */
 export const reactions = {
   getSummary: (postId: number) => {
     const url = `/news/reactions/post/${postId}/`;
@@ -778,7 +872,7 @@ export const reactions = {
   create: (data: { post: number; reaction_type: ReactionType }) => {
     const url = '/news/reactions/create/';
 
-    return post<{ success: boolean; reaction: any }, typeof data>(url, data).then(res => {
+    return post<{ success: boolean; reaction: unknown }, typeof data>(url, data).then(res => {
 
       return res;
     });

@@ -8,11 +8,11 @@ import { SprintSelector } from "../../../components/SprintSelector";
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 
 interface ComplianceFlag {
-    id: string;
+    id: number;
     work_item_id: string;
     work_item_title: string;
     flag_type: string;
-    severity: 'critical' | 'warning';
+    severity: 'critical' | 'warning' | string;
     created_at: string;
     project_name: string;
     assignee_name: string;
