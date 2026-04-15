@@ -134,4 +134,32 @@ If the change affects auth, websocket flows, or routing, verify in the browser a
 - Both apps use `strict: false` in TypeScript, so be extra careful with unsafe assumptions.
 - Shared package changes can affect both `apps/app` and `apps/admin`.
 - Tenant-aware requests may depend on hostname-derived `X-Tenant` behavior.
+
+## React Query Guidelines (Feature-Level Usage)
+
+- Use `@tanstack/react-query` for API data handling in feature-specific implementations .
+- Prefer React Query over manual `useEffect` + `useState` for async server state.
+
+### Data Fetching
+
+- Use `useQuery` for GET requests
+- Use `useMutation` for POST, PUT, DELETE
+- Keep API calls inside shared API layer (`@dmt/api`) or feature-specific hooks
+
+### State Handling (Required)
+
+Every data-fetching component must handle:
+
+1. Loading State:
+   - Use `isLoading` to render a loader or skeleton UI
+   - Do not render incomplete or empty UI while loading
+
+2. Error State:
+   - Use `isError` or `error` to show a user-friendly message
+   - Do not expose raw error objects to UI
+   - Optionally provide retry mechanism
+
+3. Success State:
+   - Render data using `data`
+   - Handle empty responses gracefully (e.g., "No data available")
  

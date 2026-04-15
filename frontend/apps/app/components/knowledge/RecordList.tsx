@@ -1,146 +1,18 @@
 "use client";
 import React from "react";
-import { FileText, ArrowUpRight } from "lucide-react";
+import { FileText, ArrowUpRight, Loader2, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRecords } from "@/features/knowledge-base/hooks/useRecords";
+import type { KnowledgeRecord, RecordSearchParams } from "@dmt/api";
 
-export interface Record {
-  id: string;
-  title: string;
-  version: string;
-  versionCount: number;
-  author: string;
-  owner: string;
-  audience: string;
-  type: string;
-  date: string;
-  status: "Approved" | "Pending" | "Draft";
-  description: string;
-  project: string;
-  team: string;
-  uid: string;
-  tags: string[];
-  assets: { name: string; size: string }[];
-  history: {
-    version: string;
-    date: string;
-    comment: string;
-    author: string;
-  }[];
-}
+// Re-export KnowledgeRecord as Record so the rest of the app keeps compiling
+export type { KnowledgeRecord as Record } from "@dmt/api";
+// Re-export mock data for any consumers that still need it directly
+export { MOCK_RECORDS as mockRecords } from "@dmt/api";
 
-export const mockRecords: Record[] = [
-  {
-    id: "1",
-    title: "Frontend onboarding playbook",
-    version: "v1.4",
-    versionCount: 3,
-    author: "HIMANSHU RATHORE",
-    owner: "Himanshu Rathore",
-    audience: "New joiners",
-    type: "Onboarding",
-    date: "MAR 20, 2026",
-    status: "Approved",
-    description: "Setup steps, conventions, and the first-week checklist for frontend engineers.",
-    project: "Knowledge Base",
-    team: "Engineering",
-    uid: "KB-201",
-    tags: ["frontend", "onboarding", "setup"],
-    assets: [
-      { name: "frontend-onboarding-checklist.pdf", size: "1.20 MB" },
-      { name: "engineering-setup-template.docx", size: "0.48 MB" },
-    ],
-    history: [
-      { version: "Version 3", date: "Mar 20", comment: "Updated setup steps for the new local environment and added first-week tasks.", author: "Himanshu Rathore" },
-      { version: "Version 2", date: "Feb 28", comment: "Refined the contribution checklist and ownership notes.", author: "Sara Kim" },
-      { version: "Version 1", date: "Feb 15", comment: "Initial playbook structure and core architecture overview.", author: "Himanshu Rathore" },
-    ],
-  },
-  {
-    id: "2",
-    title: "Security Best Practices",
-    version: "v2.1",
-    versionCount: 5,
-    author: "SARAH CHEN",
-    owner: "Sarah Chen",
-    audience: "Developers",
-    type: "Guideline",
-    date: "Mar 18, 2026",
-    status: "Approved",
-    description: "Comprehensive guide to secure coding standards and common vulnerability mitigation.",
-    project: "Security",
-    team: "Engineering",
-    uid: "KB-105",
-    tags: ["security", "best-practices"],
-    assets: [
-      { name: "security-audit-v2.pdf", size: "2.4 MB" },
-    ],
-    history: [
-      { version: "Version 5", date: "Mar 18", comment: "Updated OWASP Top 10 references.", author: "Sarah Chen" },
-    ],
-  },
-  {
-    id: "3",
-    title: "API Documentation V3",
-    version: "v0.9",
-    versionCount: 1,
-    author: "MIKE ROSS",
-    owner: "Mike Ross",
-    audience: "API Consumers",
-    type: "Documentation",
-    date: "Mar 15, 2026",
-    status: "Pending",
-    description: "Internal documentation for the new microservices API endpoints.",
-    project: "Infrastructure",
-    team: "Backend",
-    uid: "KB-302",
-    tags: ["api", "backend"],
-    assets: [],
-    history: [
-      { version: "Version 1", date: "Mar 15", comment: "Initial draft.", author: "Mike Ross" },
-    ],
-  },
-  {
-    id: "4",
-    title: "Microservices Architecture",
-    version: "v1.2",
-    versionCount: 2,
-    author: "ALEX RIVERA",
-    owner: "Alex Rivera",
-    audience: "Backend Engineers",
-    type: "Technical Doc",
-    date: "Mar 10, 2026",
-    status: "Approved",
-    description: "Overview of our distributed systems architecture and communication protocols.",
-    project: "Infrastructure",
-    team: "Backend",
-    uid: "KB-401",
-    tags: ["microservices", "architecture"],
-    assets: [],
-    history: [],
-  },
-  {
-    id: "5",
-    title: "Platform Scaling Guide",
-    version: "v3.0",
-    versionCount: 8,
-    author: "JORDAN SMITH",
-    owner: "Jordan Smith",
-    audience: "Platform Ops",
-    type: "Technical Doc",
-    date: "Mar 05, 2026",
-    status: "Approved",
-    description: "How to scale our k8s clusters and optimize resource allocation.",
-    project: "Infrastructure",
-    team: "Platform",
-    uid: "KB-501",
-    tags: ["platform", "scaling", "k8s"],
-    assets: [],
-    history: [],
-  },
-];
 
 interface RecordCardProps {
-  record: Record;
+  record: KnowledgeRecord;
   isSelected: boolean;
   onClick: () => void;
 }
@@ -183,6 +55,16 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
             <span className="flex items-center gap-1">
               <span className="text-foreground/40 font-bold">Updated</span> {record.date}
             </span>
+            <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
+            <span className="flex items-center gap-1 min-w-0">
+              <Paperclip className="w-3 h-3 shrink-0" />
+              <span className="text-foreground/40 font-bold">Files</span>
+              <span className="truncate normal-case tracking-normal">
+                {record.filesPreview.total > 0
+                  ? `${record.filesPreview.total} • ${record.filesPreview.firstFileName ?? "Attached"} • ${record.filesPreview.totalSize}`
+                  : "No files"}
+              </span>
+            </span>
           </div>
         </div>
         <div className={cn(
@@ -198,36 +80,65 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
 
 interface RecordListProps {
   selectedId: string | null;
+  /** Sidebar-selected team value — used when no search is active */
   activeTeam?: string;
-  searchTerm?: string;
-  onSelect: (record: Record) => void;
+  /** Forwarded directly to GET /records/?search= */
+  search?: string;
+  /** Forwarded directly to GET /records/?category= */
+  category?: number;
+  /** Forwarded directly to GET /documents/?tag= */
+  tag?: number | string;
+  onSelect: (record: KnowledgeRecord) => void;
 }
 
-export const RecordList: React.FC<RecordListProps> = ({ 
-  selectedId, 
-  activeTeam, 
-  searchTerm = "",
-  onSelect 
+export const RecordList: React.FC<RecordListProps> = ({
+  selectedId,
+  activeTeam,
+  search,
+  category,
+  tag,
+  onSelect,
 }) => {
-  const filteredRecords = mockRecords.filter(r => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || 
-      r.title.toLowerCase().includes(searchLower) ||
-      r.description.toLowerCase().includes(searchLower) ||
-      r.tags.some(tag => tag.toLowerCase().includes(searchLower));
-    
-    // Global search: if searching, ignore team filter. Otherwise filter by team.
-    if (searchTerm) return matchesSearch;
-    
-    const matchesTeam = !activeTeam || r.team === activeTeam;
-    return matchesTeam;
-  });
+  const searchParams: RecordSearchParams = {};
+  if (search)   searchParams.search   = search;
+  if (category) searchParams.category = category;
+  if (tag)      searchParams.tag      = tag;
+
+  const { records, isLoading, isFetching, isError } = useRecords(searchParams);
+
+  // When no API search is active, further filter by the sidebar-selected team
+  const isSearching = !!(search || category || tag);
+  const displayRecords = isSearching
+    ? records
+    : records.filter((r) => !activeTeam || r.team === activeTeam);
+
+  if (isLoading) {
+    return (
+      <div className="p-12 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-12 text-center">
+        <p className="text-sm font-bold text-destructive uppercase tracking-widest">Failed to load records</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-2 lg:p-4 xl:p-6 space-y-3 max-w-5xl mx-auto">
+      {isFetching && !isLoading && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pb-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Updating…</span>
+        </div>
+      )}
       <div className="space-y-3">
-        {filteredRecords.length > 0 ? (
-          filteredRecords.map((record) => (
+        {displayRecords.length > 0 ? (
+          displayRecords.map((record) => (
             <RecordCard
               key={record.id}
               record={record}
@@ -238,7 +149,7 @@ export const RecordList: React.FC<RecordListProps> = ({
         ) : (
           <div className="p-12 text-center bg-background/40 rounded-3xl border border-dashed border-border/60">
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
-              {searchTerm ? "No records match your search" : "No records found for this team"}
+              {isSearching ? "No records match your search" : "No records found for this team"}
             </p>
           </div>
         )}

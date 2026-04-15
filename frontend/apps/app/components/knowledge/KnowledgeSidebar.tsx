@@ -25,6 +25,15 @@ interface KnowledgeSidebarProps {
   onNewTeamChange: (name: string) => void;
   onAddTeamSubmit: () => void;
   onAddTeamCancel: () => void;
+  isAddingCategory: boolean;
+  newCategoryName: string;
+  onAddCategoryClick: () => void;
+  onNewCategoryChange: (name: string) => void;
+  onAddCategorySubmit: () => void;
+  onAddCategoryCancel: () => void;
+  isSubmittingCategory?: boolean;
+  isAddingValue?: boolean;
+  isManager?: boolean;
 }
 
 export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
@@ -41,7 +50,16 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
   onAddTeamClick,
   onNewTeamChange,
   onAddTeamSubmit,
-  onAddTeamCancel
+  onAddTeamCancel,
+  isAddingCategory,
+  newCategoryName,
+  onAddCategoryClick,
+  onNewCategoryChange,
+  onAddCategorySubmit,
+  onAddCategoryCancel,
+  isSubmittingCategory,
+  isAddingValue,
+  isManager
 }) => {
   const currentCategoryObj = categories.find(c => c.id === activeCategory);
   const activeCategoryName = currentCategoryObj?.name || "";
@@ -63,9 +81,53 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
 
         <div className="space-y-12">
           <div>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Browse By
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Browse By
+              </h3>
+              {isManager && (
+                <button
+                  onClick={onAddCategoryClick}
+                  className="p-1 hover:bg-secondary rounded-md text-muted-foreground transition-colors"
+                  title="Add Category"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {isManager && isAddingCategory && (
+              <div className="mb-4 p-3 bg-secondary/30 rounded-lg border border-dashed border-border/50 animate-in fade-in slide-in-from-top-1 duration-200">
+                <input
+                  autoFocus
+                  value={newCategoryName}
+                  onChange={(e) => onNewCategoryChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onAddCategorySubmit();
+                    if (e.key === "Escape") onAddCategoryCancel();
+                  }}
+                  className="w-full bg-background/50 border border-border/40 px-3 py-1.5 rounded-lg text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="New Category Name..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={onAddCategorySubmit}
+                    disabled={isSubmittingCategory}
+                    className="flex-1 bg-primary text-xs font-bold text-primary-foreground py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingCategory ? "Adding..." : "Add"}
+                  </button>
+                  <button
+                    onClick={onAddCategoryCancel}
+                    disabled={isSubmittingCategory}
+                    className="flex-1 bg-secondary text-xs font-bold text-foreground/70 py-1.5 rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1">
               {categories.map((category) => {
                 const isSelected = activeCategory === category.id;
@@ -81,7 +143,7 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                         : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                     )}
                   >
-                    <span className="text-sm font-medium">{category.name}</span>
+                    <span className="text-sm font-medium capitalize">{category.name}</span>
                   </button>
                 );
               })}
@@ -93,16 +155,18 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Active {activeCategoryName}s
               </h3>
-              <button
-                onClick={onAddTeamClick}
-                className="p-1 hover:bg-secondary rounded-md text-muted-foreground transition-colors"
-                title={`Add ${activeCategoryName}`}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              {isManager && (
+                <button
+                  onClick={onAddTeamClick}
+                  className="p-1 hover:bg-secondary rounded-md text-muted-foreground transition-colors"
+                  title={`Add ${activeCategoryName}`}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            {isAddingTeam && (
+            {isManager && isAddingTeam && (
               <div className="mb-4 p-3 bg-secondary/30 rounded-lg border border-dashed border-border/50 animate-in fade-in slide-in-from-top-1 duration-200">
                 <input
                   autoFocus
@@ -118,13 +182,15 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                 <div className="flex gap-2">
                   <button
                     onClick={onAddTeamSubmit}
-                    className="flex-1 bg-primary text-xs font-bold text-primary-foreground py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+                    disabled={isAddingValue}
+                    className="flex-1 bg-primary text-xs font-bold text-primary-foreground py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Add {activeCategoryName}
+                    {isAddingValue ? "Adding..." : `Add ${activeCategoryName}`}
                   </button>
                   <button
                     onClick={onAddTeamCancel}
-                    className="flex-1 bg-secondary text-xs font-bold text-foreground/70 py-1.5 rounded-lg hover:bg-secondary/80 transition-colors"
+                    disabled={isAddingValue}
+                    className="flex-1 bg-secondary text-xs font-bold text-foreground/70 py-1.5 rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>

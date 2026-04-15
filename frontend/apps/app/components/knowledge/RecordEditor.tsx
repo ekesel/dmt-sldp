@@ -24,22 +24,21 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Record } from "./RecordList";
+import { Record as KBRecord } from "./RecordList";
 
 
-import { tags as tagsApi } from "@dmt/api";
+import { useTags } from "@/features/knowledge-base/hooks/useTags";
+import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
+import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
 
 interface RecordEditorProps {
   mode: "create" | "edit";
-  record?: Record | null;
+  record?: KBRecord | null;
   onBack: () => void;
 }
 
 interface FormData {
   title: string;
-  team_id: string;
-  project_id: string;
-  document_type: string;
   lifecycle_status: "Draft" | "In Review" | "Approved";
   tags: string[];
   content: string;
@@ -50,16 +49,12 @@ interface FormData {
   }[];
   version: number;
   file: File | null;
-  metadata_ids: string[];
-  owner_id: string;
+  owner_id: string | number;
 }
 
 export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack }) => {
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    team_id: record?.team === "Engineering" ? "team-1" : record?.team === "Product" ? "team-2" : "team-1",
-    project_id: record?.project === "Knowledge Base" ? "proj-1" : record?.project === "Infrastructure" ? "proj-2" : "proj-1",
-    document_type: record?.type === "Documentation" ? "type-1" : record?.type === "Onboarding" ? "type-2" : "type-1",
     lifecycle_status: record?.status === "Approved" ? "Approved" : record?.status === "Pending" ? "In Review" : "Draft",
     tags: record?.tags || [],
     content: record?.description || "",
@@ -70,32 +65,37 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     })) || [],
     version: mode === "create" ? 1 : (record?.versionCount || 0) + 1,
     file: null,
-    metadata_ids: [
-      record?.team === "Engineering" ? "team-1" : record?.team === "Product" ? "team-2" : "team-1",
-      record?.project === "Knowledge Base" ? "proj-1" : record?.project === "Infrastructure" ? "proj-2" : "proj-1",
-      record?.type === "Documentation" ? "type-1" : record?.type === "Onboarding" ? "type-2" : "type-1"
-    ],
     owner_id: "current-user-id",
   });
 
   const [activeTab, setActiveTab] = useState<"Write" | "Upload">("Write");
   const [newTag, setNewTag] = useState("");
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const { tags, createTag, isLoading: isTagsLoading, isError: isTagsError, isCreating: isTagsCreating } = useTags();
+  const { managers, isLoading: isUsersLoading } = useUsers();
+  const { categories, allValues, isLoading: isMetadataLoading } = useMetadata();
+  
+  const availableTags = tags.map(t => t.name.toUpperCase());
 
-  React.useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await tagsApi.getAll();
-        if (response && response.data) {
-          // Convert to uppercase for consistency with current UI logic
-          setAvailableTags(response.data.map((t: any) => t.name.toUpperCase()));
-        }
-      } catch (error) {
-        console.error("Error fetching tags:", error);
-      }
-    };
-    fetchTags();
-  }, []);
+  // Build a dynamic map of categoryId → values, covering ALL categories
+  // (not just hardcoded team/project/type). New categories added by a manager
+  // in the KnowledgeSidebar will automatically appear here via shared React Query cache.
+  const valuesByCategory = categories.reduce<Record<number, typeof allValues>>((acc, cat) => {
+    acc[cat.id] = allValues.filter(v => v.category === cat.id);
+    return acc;
+  }, {});
+
+  // Dynamic formData metadata map: categoryId → selected value id
+  // Initialise from the record's existing data where possible.
+  const [metadataSelections, setMetadataSelections] = React.useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    // Seed legacy fields into the dynamic map using whatever categories exist
+    // at the time the editor first opens.
+    return init;
+  });
+
+  const handleMetadataChange = (categoryId: number, valueId: string) => {
+    setMetadataSelections(prev => ({ ...prev, [categoryId]: valueId }));
+  };
 
   const handleChange = (field: keyof FormData, value: any) => {
     setFormData((prev) => ({
@@ -110,17 +110,12 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     if (!tagName) return;
 
     const tagToDisplay = tagName.toUpperCase();
-    
+
     if (!formData.tags.includes(tagToDisplay)) {
       if (isCustom) {
         try {
-          const response = await tagsApi.create(tagName);
-          if (response && response.data) {
-            const createdTagName = response.data.name.toUpperCase();
-            if (!availableTags.includes(createdTagName)) {
-              setAvailableTags(prev => [...prev, createdTagName]);
-            }
-          }
+          const createdTag = await createTag(tagName);
+          // React Query handles availableTags update via cache invalidation
         } catch (error) {
           console.error("Error creating tag:", error);
         }
@@ -152,12 +147,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     formDataToSend.append("lifecycle_status", formData.lifecycle_status);
     formDataToSend.append("content", formData.content);
     formDataToSend.append("version", formData.version.toString());
-    formDataToSend.append("owner_id", formData.owner_id);
+    formDataToSend.append("owner_id", String(formData.owner_id));
 
-    // Collect all metadata IDs from the state to ensure they are up to date
-    const metadata_ids = [formData.team_id, formData.project_id, formData.document_type];
-    metadata_ids.forEach((id) => {
-      formDataToSend.append("metadata_ids", id);
+    // Collect selected metadata value IDs from the dynamic metadataSelections map
+    Object.values(metadataSelections).forEach((valueId) => {
+      if (valueId) formDataToSend.append("metadata_ids", String(valueId));
     });
 
     formData.tags.forEach((tag) => {
@@ -216,63 +210,43 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Team</label>
-                    <button className="text-[10px] font-bold text-primary hover:underline">Create</button>
+                {/* Dynamic category dropdowns — driven by whatever categories exist
+                    in the store. New categories added by a manager in the sidebar
+                    automatically appear here via shared React Query cache. */}
+                {isMetadataLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-12 bg-secondary/40 rounded-xl animate-pulse" />
+                    ))}
                   </div>
-                  <div className="relative">
-                    <select
-                      value={formData.team_id}
-                      onChange={(e) => handleChange("team_id", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
-                    >
-                      <option value="team-1">Engineering</option>
-                      <option value="team-2">Product</option>
-                      <option value="team-3">Design</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Project</label>
-                    <button className="text-[10px] font-bold text-primary hover:underline">Create</button>
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={formData.project_id}
-                      onChange={(e) => handleChange("project_id", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
-                    >
-                      <option value="proj-1">Knowledge Base</option>
-                      <option value="proj-2">Infrastructure</option>
-                      <option value="proj-3">Security</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Type</label>
-                    <button className="text-[10px] font-bold text-primary hover:underline">Create</button>
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={formData.document_type}
-                      onChange={(e) => handleChange("document_type", e.target.value)}
-                      className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
-                    >
-                      <option value="type-1">Documentation</option>
-                      <option value="type-2">Onboarding</option>
-                      <option value="type-3">Guideline</option>
-                      <option value="type-4">Technical Doc</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
+                ) : (
+                  categories.map((category) => {
+                    const values = valuesByCategory[category.id] ?? [];
+                    const selectedVal = metadataSelections[category.id] ?? "";
+                    return (
+                      <div key={category.id} className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] capitalize">
+                          {category.name}
+                        </label>
+                        <div className="relative">
+                          <select
+                            value={selectedVal}
+                            onChange={(e) => handleMetadataChange(category.id, e.target.value)}
+                            className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                          >
+                            <option value="" disabled>
+                              Select {category.name}...
+                            </option>
+                            {values.map(v => (
+                              <option key={v.id} value={String(v.id)}>{v.value}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
 
                 <div className={cn(
                   "space-y-2 p-3 -m-3 rounded-2xl transition-all duration-500",
@@ -288,12 +262,16 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     <select
                       value={formData.owner_id}
                       onChange={(e) => handleChange("owner_id", e.target.value)}
+                      disabled={isUsersLoading}
                       className={cn(
-                        "w-full appearance-none px-4 py-3 bg-background border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10",
+                        "w-full appearance-none px-4 py-3 bg-background border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10 disabled:opacity-50",
                         formData.lifecycle_status === "In Review" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
                       )}
                     >
                       <option value="current-user-id">You</option>
+                      {managers.map(user => (
+                        <option key={user.id} value={user.id}>{user.username}</option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   </div>
@@ -532,7 +510,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                 <div className="flex flex-wrap gap-2">
                   {formData.tags.map(tag => (
                     <span key={tag} className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm">
-                      #{tag}
+                      {tag}
                       <X className="w-2.5 h-2.5 cursor-pointer hover:text-foreground transition-colors" onClick={() => removeTag(tag)} />
                     </span>
                   ))}
@@ -545,11 +523,12 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                 <div className="relative">
                   <select
                     value=""
+                    disabled={isTagsLoading || isTagsError}
                     onChange={(e) => addTag(e.target.value)}
-                    className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                    className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10 disabled:opacity-50"
                   >
-                    <option value="" disabled>Select a tag...</option>
-                    {availableTags
+                    <option value="" disabled>{isTagsLoading ? "Loading tags..." : isTagsError ? "Error loading tags" : "Select a tag..."}</option>
+                    {!isTagsLoading && !isTagsError && availableTags
                       .filter(tag => !formData.tags.includes(tag))
                       .map(tag => (
                         <option key={tag} value={tag}>#{tag}</option>
@@ -562,16 +541,24 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
               {/* Custom Tag Input */}
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Custom Tag</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-primary/40 transition-colors group">
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-primary/40 transition-colors group",
+                  isTagsCreating ? "opacity-70 cursor-not-allowed" : ""
+                )}>
                   <input
                     type="text"
                     value={newTag}
+                    disabled={isTagsCreating}
                     onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                    placeholder="TYPE TAG..."
+                    onKeyDown={(e) => e.key === 'Enter' && !isTagsCreating && addTag()}
+                    placeholder={isTagsCreating ? "CREATING..." : "TYPE TAG..."}
                     className="bg-transparent border-none outline-none w-full placeholder:text-muted-foreground/40"
                   />
-                  <Plus className="w-3 h-3 cursor-pointer hover:text-primary transition-colors shrink-0" onClick={() => addTag()} />
+                  {isTagsCreating ? (
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+                  ) : (
+                    <Plus className="w-3 h-3 cursor-pointer hover:text-primary transition-colors shrink-0" onClick={() => addTag()} />
+                  )}
                 </div>
               </div>
             </div>

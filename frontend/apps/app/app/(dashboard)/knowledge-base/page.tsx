@@ -5,82 +5,83 @@ import { KnowledgeHeader } from "@/components/knowledge/KnowledgeHeader";
 import { RecordList, Record, mockRecords } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
 import { RecordEditor } from "@/components/knowledge/RecordEditor";
-import { metadata as metadataAPI, MetadataCategory as Category, Metadata as MetadataResponse } from "@dmt/api";
-
+import { MetadataCategory as Category } from "@dmt/api";
+import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/context/AuthContext";
 
 export default function KnowledgeBasePage() {
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(mockRecords[0]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
-  const [activeTeam, setActiveTeam] = useState<string>("Engineering");
+  const [activeTeam, setActiveTeam] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<number>(1);
-  const [headerTitle, setHeaderTitle] = useState<string>("Engineering");
+  const [headerTitle, setHeaderTitle] = useState<string>("Loading...");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allMetadata, setAllMetadata] = useState<MetadataResponse[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
-  const fetchData = async () => {
-    const rawCategories = await metadataAPI.getCategories();
-    setCategories(rawCategories);
-    
-    const metadata = await metadataAPI.list();
-    setAllMetadata(metadata);
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { 
+    categories, 
+    allMetadata, 
+    allValues,
+    addValue, 
+    addCategory, 
+    isAdding: isSubmittingValue,
+    isAddingCategory: isSubmittingCategory 
+  } = useMetadata(activeCategory);
+  const { isManager } = usePermissions();
+  const { user } = useAuth();
 
   // Sync sidebar list with active category
   useEffect(() => {
-    if (allMetadata.length === 0) return;
+    if (allValues.length === 0) return;
 
-    const currentMetadata = allMetadata.find(m => m.id === activeCategory);
+    const filteredValues = allValues.filter(v => v.category === activeCategory);
     
-    if (currentMetadata) {
-      setTeams(currentMetadata.values.map(val => ({
-        name: val,
-        count: 0 // Provide 0 as default count for all categories
-      })));
+    setTeams(filteredValues.map(v => ({
+      name: v.value,
+      count: 0 // Default count
+    })));
+
+    // Set initial active team once data loads if none selected
+    if (!activeTeam && filteredValues.length > 0 && headerTitle === "Loading...") {
+      const firstVal = filteredValues[0].value;
+      setActiveTeam(firstVal);
+      setHeaderTitle(firstVal);
     }
-  }, [activeCategory, allMetadata]);
+  }, [activeCategory, allValues, activeTeam, headerTitle]);
 
   const handleAddValueSubmit = async () => {
-    if (!newTeamName.trim()) return;
-    
-    const currentCategory = categories.find((cat) => cat.id === activeCategory);
-
-    if (!currentCategory) {
-      console.error(`Category with ID "${activeCategory}" not found in metadata.`);
-      return;
-    }
+    if (!newTeamName.trim() || !isManager) return;
     
     try {
-      const newValue = await metadataAPI.addValue({
-        category_id: currentCategory.id,
+      await addValue({
+        category: activeCategory,
         value: newTeamName
       });
-      
-      // Update local state instead of full data fetch for better UX
-      setAllMetadata(prev => prev.map(cat => {
-        if (cat.id === activeCategory) {
-          return {
-            ...cat,
-            values: [...cat.values, newValue.value]
-          };
-        }
-        return cat;
-      }));
-
       setNewTeamName("");
-      setIsAddingTeam(false);
-    } catch (error: any) {
-      console.error("Failed to add value:", error.message);
-      // Optional: Show error to user
+      setShowAddTeam(false);
+    } catch (error) {
+      console.error("Failed to add value:", error);
+    }
+  };
+
+  const handleAddCategorySubmit = async () => {
+    if (!newCategoryName.trim() || !isManager) return;
+
+    try {
+      await addCategory({
+        name: newCategoryName
+      });
+      setNewCategoryName("");
+      setShowAddCategory(false);
+    } catch (error) {
+      console.error("Failed to add category:", error);
     }
   };
 
@@ -112,7 +113,7 @@ export default function KnowledgeBasePage() {
     return <RecordEditor mode="edit" record={editingRecord} onBack={() => setEditingRecord(null)} />;
   }
 
-  const currentUser = "Himanshu Rathore";
+  const currentUser = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Unknown User";
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden animate-in fade-in duration-700 relative">
@@ -133,21 +134,36 @@ export default function KnowledgeBasePage() {
         onCategoryChange={handleCategoryChange}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        isAddingTeam={isAddingTeam}
+        isAddingTeam={showAddTeam}
         newTeamName={newTeamName}
-        onAddTeamClick={() => setIsAddingTeam(true)}
+        onAddTeamClick={() => {
+          if (isManager) setShowAddTeam(true);
+        }}
         onNewTeamChange={setNewTeamName}
         onAddTeamSubmit={handleAddValueSubmit}
         onAddTeamCancel={() => {
-          setIsAddingTeam(false);
+          setShowAddTeam(false);
           setNewTeamName("");
         }}
+        isAddingCategory={showAddCategory}
+        newCategoryName={newCategoryName}
+        onAddCategoryClick={() => {
+          if (isManager) setShowAddCategory(true);
+        }}
+        onNewCategoryChange={setNewCategoryName}
+        onAddCategorySubmit={handleAddCategorySubmit}
+        onAddCategoryCancel={() => {
+          setShowAddCategory(false);
+          setNewCategoryName("");
+        }}
+        isSubmittingCategory={isSubmittingCategory}
+        isAddingValue={isSubmittingValue}
+        isManager={isManager}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         <KnowledgeHeader
           activeItem={headerTitle}
-          activeCategory={activeCategory}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onNewRecord={() => setIsCreating(true)}
@@ -159,7 +175,8 @@ export default function KnowledgeBasePage() {
             <RecordList
               selectedId={selectedRecord?.id || null}
               activeTeam={activeTeam}
-              searchTerm={searchTerm}
+              search={searchTerm}
+              category={activeCategory}
               onSelect={(record) => {
                 setSelectedRecord(record);
                 if (searchTerm) {
