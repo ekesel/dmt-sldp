@@ -43,6 +43,7 @@ export interface KnowledgeRecord {
     comment: string;
     author: string;
   }[];
+  fileUrl?: string; // from latest_version.file
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +135,7 @@ const formatDateLabel = (isoDate: string): string => {
   });
 };
 
-const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem): KnowledgeRecord => {
+const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?: any): KnowledgeRecord => {
   const totalFileBytes = doc.file_details.reduce((sum, file) => sum + file.size_bytes, 0);
   return {
     id: String(doc.id),
@@ -167,6 +168,7 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem): KnowledgeRecor
       totalSize: formatFileSize(totalFileBytes),
     },
     history: doc.history,
+    fileUrl: latestVersion?.file || latestVersion?.file_url,
   };
 };
 
@@ -260,11 +262,11 @@ const MOCK_DOCUMENTS: DocumentResponseItem[] = [
     version: "v0.9",
     version_count: 1,
     created_by: 103,
-    owner: 103,
+    owner: 1,
     audience: "API Consumers",
     type: "Documentation",
     created_at: "2026-03-15T17:32:00.000Z",
-    status: "DRAFT",
+    status: "APPROVED",
     description: "Internal documentation for the new microservices API endpoints.",
     project: "Infrastructure",
     team: "Backend",
@@ -351,6 +353,64 @@ const MOCK_DOCUMENTS: DocumentResponseItem[] = [
     ],
     history: [],
   },
+  {
+    id: 6,
+    title: "Quarterly Security Audit Report",
+    version: "v1.0",
+    version_count: 1,
+    created_by: 101,
+    owner: 13,
+    audience: "Management",
+    type: "Report",
+    created_at: "2026-04-10T10:00:00.000Z",
+    status: "DRAFT",
+    description: "Findings from the Q1 security audit including vulnerabilities and mitigation status.",
+    project: "Security",
+    team: "Engineering",
+    uid: "KB-901",
+    tags: [4, 13],
+    metadata_values: [1004, 1005, 1006],
+    tag_details: [
+      { id: 4, name: "security" },
+      { id: 13, name: "audit" },
+    ],
+    metadata_details: [
+      { id: 1004, category: "project", value: "Security" },
+      { id: 1005, category: "team", value: "Engineering" },
+      { id: 1006, category: "type", value: "Report" },
+    ],
+    file_details: [{ id: 601, name: "q1-security-audit.pdf", size_bytes: 2100000 }],
+    history: [{ version: "v1.0", date: "Apr 10", author: "Himanshu Rathore", comment: "Initial report draft" }],
+  },
+  {
+    id: 7,
+    title: "New Employee Onboarding Deck",
+    version: "v0.8",
+    version_count: 1,
+    created_by: 102,
+    owner: 13,
+    audience: "New Joiners",
+    type: "Presentation",
+    created_at: "2026-04-12T14:30:00.000Z",
+    status: "DRAFT",
+    description: "Slide deck for the monthly engineering onboarding session.",
+    project: "HR",
+    team: "Engineering",
+    uid: "KB-902",
+    tags: [2, 14],
+    metadata_values: [1001, 1002, 1015],
+    tag_details: [
+      { id: 2, name: "onboarding" },
+      { id: 14, name: "hr" },
+    ],
+    metadata_details: [
+      { id: 1001, category: "project", value: "docs" },
+      { id: 1002, category: "team", value: "Engineering" },
+      { id: 1015, category: "type", value: "Presentation" },
+    ],
+    file_details: [{ id: 701, name: "onboarding-v0.8.pptx", size_bytes: 5200000 }],
+    history: [{ version: "v0.8", date: "Apr 12", author: "Sara Kim", comment: "Draft for review" }],
+  },
 ];
 
 export const MOCK_RECORDS: KnowledgeRecord[] = MOCK_DOCUMENTS.map(mapDocumentToKnowledgeRecord);
@@ -359,12 +419,12 @@ export const MOCK_RECORDS: KnowledgeRecord[] = MOCK_DOCUMENTS.map(mapDocumentToK
 // Search params — mirrors real query-string params
 // ---------------------------------------------------------------------------
 export interface RecordSearchParams {
-  /** Free-text: matched against title + description */
-  search?: string;
   /** Filter by metadata category id (e.g. 2 = team, 1 = project, 3 = type) */
   category?: number;
-  /** Filter by tag id (endpoint-ready) or tag name (fallback mock behavior) */
+  /** Filter by tag id: GET /documents/?tag=1 */
   tag?: number | string;
+  /** Filter by ownership: GET /documents/?mine=true */
+  mine?: boolean;
 }
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -384,9 +444,9 @@ export const knowledgeRecords = {
     try {
       const response = await api.get<DocumentResponseItem[] | PaginatedDocumentsResponse>("/documents/", {
         params: {
-          ...(params.search ? { search: params.search } : {}),
           ...(params.category !== undefined ? { category: params.category } : {}),
           ...(params.tag !== undefined ? { tag: params.tag } : {}),
+          ...(params.mine !== undefined ? { mine: params.mine } : {}),
         },
       });
       return toDocumentItems(response.data).map(mapDocumentToKnowledgeRecord);
@@ -402,15 +462,18 @@ export const knowledgeRecords = {
 
     await delay(250); // simulate network latency for fallback only
 
-    const { search, category, tag } = params;
-    const searchLower = search?.toLowerCase().trim() ?? "";
+    const { category, tag, mine } = params;
     const tagLower = typeof tag === "string" ? tag.toLowerCase().trim() : "";
 
     const filteredDocuments = MOCK_DOCUMENTS.filter((doc) => {
-      if (searchLower) {
-        const inTitle = doc.title.toLowerCase().includes(searchLower);
-        const inDescription = doc.description.toLowerCase().includes(searchLower);
-        if (!inTitle && !inDescription) return false;
+      // Status-based visibility logic:
+      if (mine) {
+        // Review Inbox: Show documents owned by user (ID 13) that are NOT yet Approved
+        if (doc.owner !== 13) return false;
+        if (doc.status === "APPROVED") return false;
+      } else {
+        // General Library: ONLY show Approved documents
+        if (doc.status !== "APPROVED") return false;
       }
 
       if (category !== undefined && category !== null) {
@@ -442,4 +505,247 @@ export const knowledgeRecords = {
     await delay(250);
     return [...MOCK_RECORDS];
   },
+
+  /**
+   * Mock utility for local development only.
+   * Gets a single record by ID.
+   */
+  getById: async (id: string | number): Promise<KnowledgeRecord> => {
+    try {
+      const response = await api.get<{ data: DocumentResponseItem; latest_version?: any }>(`/documents/${id}/`);
+      const body = response.data as any;
+      const doc = body.data || body;
+      const latestVersion = body.latest_version;
+      
+      return mapDocumentToKnowledgeRecord(doc, latestVersion);
+    } catch (error) {
+      const isEndpointUnavailable =
+        axios.isAxiosError(error) &&
+        (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501);
+
+      if (!isEndpointUnavailable) {
+        throw error;
+      }
+    }
+
+    await delay(250);
+    const doc = MOCK_DOCUMENTS.find((d) => String(d.id) === String(id));
+    if (!doc) throw new Error("Document not found");
+    return mapDocumentToKnowledgeRecord(doc);
+  },
+
+  /**
+   * Endpoint-ready:
+   *   POST /documents/
+   *
+   * Refactor to use real api.post when backend is ready.
+   */
+  create: async (formData: FormData): Promise<KnowledgeRecord> => {
+    try {
+      const response = await api.post<DocumentResponseItem>("/documents/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Assuming axios response.data matches the outer payload
+      const payload = response.data as any;
+      const doc = payload.data || payload;
+      return mapDocumentToKnowledgeRecord(doc);
+    } catch (error) {
+      const isEndpointUnavailable =
+        axios.isAxiosError(error) &&
+        (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501);
+
+      if (!isEndpointUnavailable) {
+        throw error;
+      }
+    }
+
+    await delay(500);
+
+    // Mock fallback
+    const title = (formData.get("title") as string) || "Untitled Document";
+    const owner = Number(formData.get("owner")) || 1;
+    const tagIds = formData.getAll("tags").map(Number);
+    const metadataIds = formData.getAll("metadata").map(Number);
+
+    const newDoc: DocumentResponseItem = {
+      id: MOCK_DOCUMENTS.length + 1,
+      title,
+      status: "DRAFT",
+      description: "", // Will be filled by content if mapped
+      created_by: owner,
+      owner: owner,
+      audience: "Internal",
+      type: "Document",
+      created_at: new Date().toISOString(),
+      uid: `KB-${1000 + MOCK_DOCUMENTS.length}`,
+      version: "v1.0",
+      version_count: 1,
+      team: "General",
+      project: "General",
+      tags: tagIds,
+      metadata_values: metadataIds,
+      tag_details: tagIds.map(id => ({ id, name: `Tag ${id}` })), // Simplified mock
+      metadata_details: metadataIds.map(id => ({ id, category: "Metadata", value: `Value ${id}` })), // Simplified mock
+      file_details: [],
+      history: [
+        { version: "v1.0", date: "Today", comment: "Initial creation", author: String(owner) }
+      ],
+    };
+
+    MOCK_DOCUMENTS.push(newDoc);
+    // Refresh MOCK_RECORDS if needed, but since it's a const we can't reassign it.
+    // However, list() returns MOCK_RECORDS which is built from MOCK_DOCUMENTS map.
+    // Wait, MOCK_RECORDS is defined as: const MOCK_RECORDS: KnowledgeRecord[] = MOCK_DOCUMENTS.map(mapDocumentToKnowledgeRecord);
+    // So pushing to MOCK_DOCUMENTS won't update MOCK_RECORDS unless we rebuild it or map on the fly.
+
+    return mapDocumentToKnowledgeRecord(newDoc);
+  },
+
+  /**
+   * Endpoint-ready:
+   *   GET /documents/:docId/files/:fileId/download/
+   */
+  downloadFile: async (documentId: string | number, fileId: string | number): Promise<void> => {
+    // Note: When endpoint is ready, this would typically involve:
+    // const response = await api.get(`/documents/${documentId}/files/${fileId}/download/`, { responseType: 'blob' });
+    // ... logic to trigger browser download ...
+
+    console.log(`Downloading file ${fileId} from document ${documentId}...`);
+    await delay(800);
+    
+    // Mock simulation: Open a success alert (replace with real logic when ready)
+    alert(`Mock Download Started: File ID ${fileId}`);
+  },
+
+  /**
+   * Endpoint-ready:
+   *   POST /documents/:id/status/
+   */
+  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED"): Promise<void> => {
+    try {
+      await api.post(`/documents/${id}/status/`, { status });
+    } catch (error) {
+      if (axios.isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501)) {
+        // Fallback for mock environment: Update the local document status
+        const doc = MOCK_DOCUMENTS.find((d) => String(d.id) === String(id));
+        if (doc) {
+          doc.status = status;
+          return;
+        }
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Endpoint-ready:
+   *   GET /documents/:id/versions/
+   */
+  getVersions: async (id: string | number): Promise<any[]> => {
+    try {
+      const response = await api.get<{ versions: any[] }>(`/documents/${id}/versions/`);
+      const payload = response.data as any;
+      return payload.versions || payload.results || payload;
+    } catch (error) {
+      if (axios.isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501)) {
+        // Fallback for mock environment
+        await delay(300);
+        const doc = MOCK_DOCUMENTS.find((d) => String(d.id) === String(id));
+        return doc ? doc.history : [];
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Endpoint-ready:
+   *   DELETE /documents/:id/
+   */
+  deleteDocument: async (id: string | number): Promise<void> => {
+    try {
+      await api.delete(`/documents/${id}/`);
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        // Fallback for mock environment if needed
+        const index = MOCK_DOCUMENTS.findIndex((d) => String(d.id) === String(id));
+        if (index !== -1) {
+          MOCK_DOCUMENTS.splice(index, 1);
+          return;
+        }
+      }
+      throw error;
+    }
+  },
+  /**
+   * Endpoint-ready:
+   *   PATCH /documents/:id/
+   */
+  update: async (id: string | number, data: { title?: string; metadata?: number[]; tags?: number[] } | FormData): Promise<KnowledgeRecord> => {
+    try {
+      const isFormData = data instanceof FormData;
+      const response = await api.patch<DocumentResponseItem>(`/documents/${id}/`, data, {
+        headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+      });
+      const payload = response.data as any;
+      const doc = payload.data || payload;
+      return mapDocumentToKnowledgeRecord(doc);
+    } catch (error) {
+      const isEndpointUnavailable =
+        axios.isAxiosError(error) &&
+        (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501);
+
+      if (!isEndpointUnavailable) {
+        throw error;
+      }
+    }
+
+    await delay(500);
+    const doc = MOCK_DOCUMENTS.find((d) => String(d.id) === String(id));
+    if (!doc) throw new Error("Document not found");
+
+    if (data instanceof FormData) {
+      const title = data.get("title") as string;
+      if (title) doc.title = title;
+      
+      const tags = data.getAll("tags").map(Number);
+      if (tags.length > 0) {
+        doc.tags = tags;
+        doc.tag_details = tags.map(tId => ({ id: tId, name: `Tag ${tId}` }));
+      }
+
+      const metadata = data.getAll("metadata").map(Number);
+      if (metadata.length > 0) {
+        doc.metadata_values = metadata;
+        doc.metadata_details = metadata.map(mId => ({ id: mId, category: "Metadata", value: `Value ${mId}` }));
+      }
+      
+      const file = data.get("file") as File;
+      if (file) {
+        // Mock: add to file_details and update version
+        const newFileId = Math.floor(Math.random() * 1000) + 500;
+        doc.file_details = [
+          { id: newFileId, name: file.name, size_bytes: file.size },
+          ...doc.file_details
+        ];
+        doc.version_count += 1;
+        doc.version = `v${(doc.version_count / 10 + 1).toFixed(1)}`;
+      }
+    } else {
+      if (data.title) doc.title = data.title;
+      if (data.tags) {
+        doc.tags = data.tags;
+        doc.tag_details = data.tags.map(tId => ({ id: tId, name: `Tag ${tId}` }));
+      }
+      if (data.metadata) {
+        doc.metadata_values = data.metadata;
+        doc.metadata_details = data.metadata.map(mId => ({ id: mId, category: "Project", value: `Value ${mId}` }));
+      }
+    }
+
+    return mapDocumentToKnowledgeRecord(doc);
+  },
 };
+

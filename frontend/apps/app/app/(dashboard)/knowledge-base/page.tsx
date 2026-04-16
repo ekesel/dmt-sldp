@@ -2,16 +2,18 @@
 import React, { useState, useEffect } from "react";
 import { KnowledgeSidebar, Team } from "@/components/knowledge/KnowledgeSidebar";
 import { KnowledgeHeader } from "@/components/knowledge/KnowledgeHeader";
-import { RecordList, Record, mockRecords } from "@/components/knowledge/RecordList";
+import { RecordList, Record } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
 import { RecordEditor } from "@/components/knowledge/RecordEditor";
 import { MetadataCategory as Category } from "@dmt/api";
 import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
+import { useRecord, useReviewCount } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 export default function KnowledgeBasePage() {
-  const [selectedRecord, setSelectedRecord] = useState<Record | null>(mockRecords[0]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [activeTeam, setActiveTeam] = useState<string>("");
@@ -24,6 +26,7 @@ export default function KnowledgeBasePage() {
   const [newTeamName, setNewTeamName] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [isReviewActive, setIsReviewActive] = useState(false);
 
   const { 
     categories, 
@@ -34,6 +37,8 @@ export default function KnowledgeBasePage() {
     isAdding: isSubmittingValue,
     isAddingCategory: isSubmittingCategory 
   } = useMetadata(activeCategory);
+  const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
+  const { count: reviewCount } = useReviewCount();
   const { isManager } = usePermissions();
   const { user } = useAuth();
 
@@ -55,6 +60,17 @@ export default function KnowledgeBasePage() {
       setHeaderTitle(firstVal);
     }
   }, [activeCategory, allValues, activeTeam, headerTitle]);
+
+  // Show a "Welcome" toast if there are pending reviews on initial land
+  useEffect(() => {
+    if (isManager && reviewCount > 0) {
+      toast(`You have ${reviewCount} documents pending review.`, {
+        icon: '✉️',
+        duration: 5000,
+        id: 'review-notification', // Prevent duplicate toasts
+      });
+    }
+  }, [isManager, reviewCount > 0]); // Triggers when count or role changes and count is positive
 
   const handleAddValueSubmit = async () => {
     if (!newTeamName.trim() || !isManager) return;
@@ -88,6 +104,7 @@ export default function KnowledgeBasePage() {
   const handleCategoryChange = (categoryId: number) => {
     setActiveCategory(categoryId);
     setSearchTerm(""); // Reset search on category change
+    setSelectedId(null); // Clear detail view on context switch
     
     const category = categories.find(c => c.id === categoryId);
     const title = category?.name || "Records";
@@ -96,13 +113,25 @@ export default function KnowledgeBasePage() {
     if (category?.name.toUpperCase() !== "TEAM") {
       setActiveTeam("");
     }
+    setIsReviewActive(false);
   };
 
   const handleTeamChange = (team: string) => {
     setActiveTeam(team);
     setHeaderTitle(team);
     setSearchTerm(""); // Reset search on team change
+    setSelectedId(null); // Clear detail view on selection change
     setIsSidebarOpen(false); // Close sidebar on selection (mobile)
+    setIsReviewActive(false);
+  };
+
+  const handleReviewClick = () => {
+    setIsReviewActive(true);
+    setHeaderTitle("Review Inbox");
+    setActiveTeam("");
+    setSearchTerm("");
+    setSelectedId(null); // Clear detail view when switching to review
+    setIsSidebarOpen(false);
   };
 
   if (isCreating) {
@@ -159,6 +188,9 @@ export default function KnowledgeBasePage() {
         isSubmittingCategory={isSubmittingCategory}
         isAddingValue={isSubmittingValue}
         isManager={isManager}
+        isReviewActive={isReviewActive}
+        onReviewClick={handleReviewClick}
+        reviewCount={reviewCount}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
@@ -177,8 +209,9 @@ export default function KnowledgeBasePage() {
               activeTeam={activeTeam}
               search={searchTerm}
               category={activeCategory}
+              mine={isReviewActive}
               onSelect={(record) => {
-                setSelectedRecord(record);
+                setSelectedId(record.id);
                 if (searchTerm) {
                   // If we were searching, sync the UI to the selected record's team
                   setActiveTeam(record.team);
@@ -192,8 +225,9 @@ export default function KnowledgeBasePage() {
 
           <RecordDetail
             record={selectedRecord}
+            isLoading={isRecordLoading}
             currentUser={currentUser}
-            onClose={() => setSelectedRecord(null)}
+            onClose={() => setSelectedId(null)}
             onEdit={(record) => setEditingRecord(record)}
           />
         </div>

@@ -34,6 +34,9 @@ interface KnowledgeSidebarProps {
   isSubmittingCategory?: boolean;
   isAddingValue?: boolean;
   isManager?: boolean;
+  isReviewActive?: boolean;
+  onReviewClick?: () => void;
+  reviewCount?: number;
 }
 
 export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
@@ -59,7 +62,10 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
   onAddCategoryCancel,
   isSubmittingCategory,
   isAddingValue,
-  isManager
+  isManager,
+  isReviewActive,
+  onReviewClick,
+  reviewCount
 }) => {
   const currentCategoryObj = categories.find(c => c.id === activeCategory);
   const activeCategoryName = currentCategoryObj?.name || "";
@@ -138,8 +144,8 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                     onClick={() => onCategoryChange(category.id)}
                     className={cn(
                       "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 group",
-                      isSelected 
-                        ? "bg-primary/20 text-primary border-primary/30 font-bold" 
+                      isSelected
+                        ? "bg-primary/20 text-primary border-primary/30 font-bold"
                         : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                     )}
                   >
@@ -225,6 +231,38 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Workspace / Personal section - Managers Only */}
+          {isManager && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                Workspace
+              </h3>
+              <div className="space-y-1">
+                <button
+                  onClick={onReviewClick}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 group",
+                    isReviewActive
+                      ? "bg-primary text-primary-foreground border-primary font-bold shadow-lg shadow-primary/20 scale-[1.02]"
+                      : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40 hover:bg-secondary/50"
+                  )}
+                >
+                  <span className="text-sm font-medium">Review Documents</span>
+                  {reviewCount !== undefined && reviewCount > 0 && (
+                    <span className={cn(
+                      "ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-md transition-all animate-in zoom-in-50 duration-300",
+                      isReviewActive 
+                        ? "bg-white text-primary" 
+                        : "bg-primary text-white shadow-lg shadow-primary/20"
+                    )}>
+                      {reviewCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

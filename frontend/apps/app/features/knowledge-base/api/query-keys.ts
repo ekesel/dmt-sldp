@@ -15,4 +15,5 @@ export const USER_QUERY_KEYS = {
 export const RECORD_QUERY_KEYS = {
   all:    ["records"] as const,
   search: (params: Record<string, unknown>) => ["records", "search", params] as const,
+  detail: (id: string | number) => ["records", "detail", id] as const,
 };

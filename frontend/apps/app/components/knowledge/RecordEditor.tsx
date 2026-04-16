@@ -14,10 +14,10 @@ import {
   Image as ImageIcon,
   Paperclip,
   CheckCircle2,
-  Circle,
   Tag,
   X,
   Plus,
+  Search,
   Upload,
   FileText,
   MoreHorizontal,
@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Record as KBRecord } from "./RecordList";
+import { knowledgeRecords } from "@dmt/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 
 
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
@@ -41,7 +44,6 @@ interface FormData {
   title: string;
   lifecycle_status: "Draft" | "In Review" | "Approved";
   tags: string[];
-  content: string;
   assets: {
     fileName: string;
     fileUrl: string;
@@ -53,11 +55,11 @@ interface FormData {
 }
 
 export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack }) => {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    lifecycle_status: record?.status === "Approved" ? "Approved" : record?.status === "Pending" ? "In Review" : "Draft",
+    lifecycle_status: record?.status === "Approved" ? "Approved" : "Draft",
     tags: record?.tags || [],
-    content: record?.description || "",
     assets: record?.assets?.map(a => ({
       fileName: a.name,
       fileUrl: "",
@@ -65,16 +67,28 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     })) || [],
     version: mode === "create" ? 1 : (record?.versionCount || 0) + 1,
     file: null,
-    owner_id: "current-user-id",
+    owner_id: mode === "edit" ? record?.owner || "" : "",
   });
 
-  const [activeTab, setActiveTab] = useState<"Write" | "Upload">("Write");
   const [newTag, setNewTag] = useState("");
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const tagDropdownRef = React.useRef<HTMLDivElement>(null);
   const { tags, createTag, isLoading: isTagsLoading, isError: isTagsError, isCreating: isTagsCreating } = useTags();
   const { managers, isLoading: isUsersLoading } = useUsers();
   const { categories, allValues, isLoading: isMetadataLoading } = useMetadata();
   
   const availableTags = tags.map(t => t.name.toUpperCase());
+
+  // Handle clicking outside of tag dropdown to close it
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target as Node)) {
+        setIsTagDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Build a dynamic map of categoryId → values, covering ALL categories
   // (not just hardcoded team/project/type). New categories added by a manager
@@ -86,12 +100,25 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
   // Dynamic formData metadata map: categoryId → selected value id
   // Initialise from the record's existing data where possible.
-  const [metadataSelections, setMetadataSelections] = React.useState<Record<number, string>>(() => {
-    const init: Record<number, string> = {};
-    // Seed legacy fields into the dynamic map using whatever categories exist
-    // at the time the editor first opens.
-    return init;
-  });
+  const [metadataSelections, setMetadataSelections] = React.useState<Record<number, string>>({});
+
+  // Pre-fill metadata selections when in edit mode and values are loaded
+  React.useEffect(() => {
+    if (mode === "edit" && record?.metadata && allValues.length > 0) {
+      const initialSelections: Record<number, string> = {};
+      record.metadata.forEach(item => {
+        // Find the value object that matches this category and string value
+        const valObj = allValues.find(v => 
+          Number(v.category) === item.category && 
+          v.value.toLowerCase() === item.value.toLowerCase()
+        );
+        if (valObj) {
+          initialSelections[item.category] = String(valObj.id);
+        }
+      });
+      setMetadataSelections(prev => ({ ...prev, ...initialSelections }));
+    }
+  }, [mode, record, allValues]);
 
   const handleMetadataChange = (categoryId: number, valueId: string) => {
     setMetadataSelections(prev => ({ ...prev, [categoryId]: valueId }));
@@ -114,8 +141,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     if (!formData.tags.includes(tagToDisplay)) {
       if (isCustom) {
         try {
-          const createdTag = await createTag(tagName);
-          // React Query handles availableTags update via cache invalidation
+          await createTag(tagName);
         } catch (error) {
           console.error("Error creating tag:", error);
         }
@@ -123,6 +149,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       handleChange("tags", [...formData.tags, tagToDisplay]);
       if (isCustom) setNewTag("");
     }
+    setIsTagDropdownOpen(false);
   };
 
   const removeTag = (tagToRemove: string) => {
@@ -144,40 +171,53 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
     const formDataToSend = new FormData();
     formDataToSend.append("title", formData.title);
+    
+    // Default to first manager if none selected for now, to ensure numeric owner
+    const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
+    formDataToSend.append("owner", String(selectedOwnerId));
+    
     formDataToSend.append("lifecycle_status", formData.lifecycle_status);
-    formDataToSend.append("content", formData.content);
+    formDataToSend.append("content", ""); // No longer using write content section
     formDataToSend.append("version", formData.version.toString());
-    formDataToSend.append("owner_id", String(formData.owner_id));
 
-    // Collect selected metadata value IDs from the dynamic metadataSelections map
+    // Map metadata: send all selected value IDs as individual 'metadata' fields
     Object.values(metadataSelections).forEach((valueId) => {
-      if (valueId) formDataToSend.append("metadata_ids", String(valueId));
+      if (valueId) formDataToSend.append("metadata", valueId);
     });
 
-    formData.tags.forEach((tag) => {
-      formDataToSend.append("tags", tag);
+    // Map tags: formData.tags contains NAMES (UPPERCASE). We need IDs.
+    formData.tags.forEach((tagName) => {
+      const tagObj = tags.find(t => t.name.toUpperCase() === tagName);
+      if (tagObj) {
+        formDataToSend.append("tags", String(tagObj.id));
+      }
     });
 
     if (formData.file) {
       formDataToSend.append("file", formData.file);
     }
 
-    console.log("Submitting FormData...");
+    console.log("Submitting to Knowledge Base API...");
 
     try {
-      const response = await fetch("/api/documents/", {
-        method: "POST",
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        console.log("Document created successfully.");
-        onBack();
+      if (mode === "edit" && record) {
+        await knowledgeRecords.update(record.id, formDataToSend);
+        console.log("Document updated successfully");
       } else {
-        console.error("Failed to create document.");
+        const result = await knowledgeRecords.create(formDataToSend);
+        console.log("Document created successfully:", result);
       }
+      
+      // Invalidate queries to refresh the list and detail views
+      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
+      if (mode === "edit" && record) {
+        queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(record.id) });
+      }
+      
+      onBack();
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Error saving document:", error);
+      alert("Failed to save document. Please try again.");
     }
   };
 
@@ -268,7 +308,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                         formData.lifecycle_status === "In Review" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
                       )}
                     >
-                      <option value="current-user-id">You</option>
+                      {managers.length > 0 ? (
+                        <option value={String(managers[0].id)}>You ({managers[0].username})</option>
+                      ) : (
+                        <option value="1">You</option>
+                      )}
                       {managers.map(user => (
                         <option key={user.id} value={user.id}>{user.username}</option>
                       ))}
@@ -318,7 +362,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                 <Globe className="w-3 h-3" />
                 <span>{mode === "create" ? "Create" : "Edit"}</span>
                 <span className="text-border">/</span>
-                <span className="text-foreground/60">{activeTab === "Write" ? "Article" : "Upload"}</span>
+                <span className="text-foreground/60">Assets</span>
               </div>
             </div>
             <h1 className="text-2xl lg:text-4xl font-black text-foreground tracking-tight ml-0 lg:ml-0">
@@ -344,104 +388,70 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
         <div className="flex-1 flex bg-background">
           <div className="w-full flex flex-col min-h-[400px] xl:min-h-[600px] overflow-hidden">
-            {/* Tab Switcher */}
-            <div className="flex items-center justify-between px-6 xl:px-10 py-4 xl:py-6 border-b border-border/10">
-              <div className="flex gap-6 lg:gap-10">
-                <button
-                  onClick={() => setActiveTab("Write")}
-                  className={cn(
-                    "text-[10px] font-black uppercase tracking-[0.2em] pb-2 transition-all border-b-2",
-                    activeTab === "Write" ? "text-foreground border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
-                  )}
-                >
-                  Write Content
-                </button>
-                <button
-                  onClick={() => setActiveTab("Upload")}
-                  className={cn(
-                    "text-[10px] font-black uppercase tracking-[0.2em] pb-2 transition-all border-b-2",
-                    activeTab === "Upload" ? "text-foreground border-primary" : "text-muted-foreground border-transparent hover:text-foreground"
-                  )}
-                >
-                  Assets
-                </button>
-              </div>
-            </div>
-
             <div className="p-4 lg:p-8">
-              {activeTab === "Write" ? (
-                <div className="prose prose-slate max-w-none px-2">
-                  <textarea
-                    value={formData.content}
-                    onChange={(e) => handleChange("content", e.target.value)}
-                    className="w-full h-[300px] lg:h-[500px] resize-none focus:outline-none text-lg lg:text-2xl font-medium leading-relaxed bg-transparent border-none"
-                    placeholder="Start writing..."
+              <div className="space-y-8 lg:space-y-12">
+                {/* Upload Area */}
+                <div
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  className={cn(
+                    "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer",
+                    formData.file ? "border-primary/60 bg-primary/5" : "border-border/40"
+                  )}
+                >
+                  <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
                   />
-                </div>
-              ) : (
-                <div className="space-y-8 lg:space-y-12">
-                  {/* Upload Area */}
-                  <div
-                    onClick={() => document.getElementById('file-upload')?.click()}
-                    className={cn(
-                      "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer",
-                      formData.file ? "border-primary/60 bg-primary/5" : "border-border/40"
-                    )}
-                  >
-                    <input
-                      id="file-upload"
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <div className={cn(
-                      "w-12 h-12 lg:w-16 lg:h-16 rounded-2xl shadow-xl flex items-center justify-center mb-6 transition-colors",
-                      formData.file ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
-                    )}>
-                      {formData.file ? <CheckCircle2 className="w-6 h-6 lg:w-8 lg:h-8" /> : <Upload className="w-6 h-6 lg:w-8 lg:h-8" />}
-                    </div>
-                    <h3 className="text-xl lg:text-3xl font-black text-foreground mb-3">
-                      {formData.file ? formData.file.name : "Drop files here"}
-                    </h3>
-                    <button className="text-sm lg:text-lg font-black text-primary hover:underline transition-all">
-                      {formData.file ? "Change file" : "Browse files"}
-                    </button>
-                    {formData.file && (
-                      <span className="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        {(formData.file.size / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                    )}
+                  <div className={cn(
+                    "w-12 h-12 lg:w-16 lg:h-16 rounded-2xl shadow-xl flex items-center justify-center mb-6 transition-colors",
+                    formData.file ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
+                  )}>
+                    {formData.file ? <CheckCircle2 className="w-6 h-6 lg:w-8 lg:h-8" /> : <Upload className="w-6 h-6 lg:w-8 lg:h-8" />}
                   </div>
+                  <h3 className="text-xl lg:text-3xl font-black text-foreground mb-3">
+                    {formData.file ? formData.file.name : "Drop files here"}
+                  </h3>
+                  <button className="text-sm lg:text-lg font-black text-primary hover:underline transition-all">
+                    {formData.file ? "Change file" : "Browse files"}
+                  </button>
+                  {formData.file && (
+                    <span className="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                      {(formData.file.size / (1024 * 1024)).toFixed(2)} MB
+                    </span>
+                  )}
+                </div>
 
-                  {/* Existing Assets */}
-                  {mode === "edit" && formData.assets.length > 0 && (
-                    <div className="bg-secondary/60 border border-border/40 rounded-[24px] lg:rounded-[40px] p-6 lg:p-10 space-y-6 lg:space-y-8">
-                      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Existing Assets ({formData.assets.length})</h3>
-                      <div className="space-y-4">
-                        {formData.assets.map((asset) => (
-                          <div key={asset.fileName} className="flex items-center justify-between p-4 lg:p-6 bg-background border border-border/20 rounded-2xl lg:rounded-3xl shadow-sm transition-all group">
-                            <div className="flex items-center gap-4 lg:gap-6">
-                              <FileText className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
-                              <div className="flex flex-col">
-                                <span className="text-sm lg:text-lg font-bold text-foreground truncate max-w-[150px] sm:max-w-none">{asset.fileName}</span>
-                                <span className="text-[10px] lg:text-sm font-medium text-muted-foreground/60 uppercase">{asset.size}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 lg:gap-4">
-                              <div className="hidden sm:block px-3 py-1 bg-secondary border border-border/20 text-muted-foreground/60 rounded text-[9px] font-black uppercase tracking-widest shadow-sm">
-                                Current
-                              </div>
-                              <button className="p-2 hover:bg-secondary rounded-lg text-muted-foreground">
-                                <MoreHorizontal className="w-5 h-5" />
-                              </button>
+                {/* Existing Assets */}
+                {mode === "edit" && formData.assets.length > 0 && (
+                  <div className="bg-secondary/60 border border-border/40 rounded-[24px] lg:rounded-[40px] p-6 lg:p-10 space-y-6 lg:space-y-8">
+                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Existing Assets ({formData.assets.length})</h3>
+                    <div className="space-y-4">
+                      {formData.assets.map((asset) => (
+                        <div key={asset.fileName} className="flex items-center justify-between p-4 lg:p-6 bg-background border border-border/20 rounded-2xl lg:rounded-3xl shadow-sm transition-all group">
+                          <div className="flex items-center gap-4 lg:gap-6">
+                            <FileText className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
+                            <div className="flex flex-col">
+                              <span className="text-sm lg:text-lg font-bold text-foreground truncate max-w-[150px] sm:max-w-none">{asset.fileName}</span>
+                              <span className="text-[10px] lg:text-sm font-medium text-muted-foreground/60 uppercase">{asset.size}</span>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="flex items-center gap-2 lg:gap-4">
+                            <button
+                              onClick={() => document.getElementById('file-upload')?.click()}
+                              className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                            >
+                              Update
+                            </button>
+                          </div>
+
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -450,54 +460,6 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       {/* Right Sidebar - Review/Tags (Stacked on Mobile, Fixed on Desktop) */}
       <aside className="w-full xl:w-60 bg-background border-t xl:border-t-0 xl:border-l border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
         <div className="p-6 space-y-12">
-          {mode === "create" ? (
-            <div>
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Review Checklist</h3>
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-              </div>
-              <div className="space-y-6">
-                {["Title and metadata set", "Owner assigned", "Images alt-text added", "Ready for publish"].map((item, i) => (
-                  <div key={item} className="flex items-center gap-4 group cursor-pointer">
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-all",
-                      i < 2 ? "bg-primary/10 text-primary group-hover:bg-primary shadow-primary/20" : "border-2 border-border/40 text-border group-hover:border-primary"
-                    )}>
-                      {i < 2 ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-3 h-3 opacity-0 group-hover:opacity-100" />}
-                    </div>
-                    <span className={cn("text-xs font-bold", i < 2 ? "text-foreground" : "text-muted-foreground")}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-12">
-              <div>
-                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Review</h3>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Version Preview</h3>
-                  <button className="text-[10px] font-black text-primary uppercase tracking-widest leading-none text-right">View Current Draft</button>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-black text-foreground">Version 2</span>
-                    <span className="text-xs font-medium text-muted-foreground">Feb 28</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Sara Kim</p>
-
-                  <div className="p-4 bg-secondary/20 rounded-2xl border border-border/10">
-                    <p className="text-[11px] font-medium text-foreground/70 leading-relaxed italic">
-                      &quot;Use this guide during the first week. Install required tooling, review the branching model, and complete the onboarding checklist.&quot;
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Tags</h3>
@@ -517,49 +479,80 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                 </div>
               )}
 
-              {/* Available Tags Dropdown */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Available Tags</label>
-                <div className="relative">
-                  <select
-                    value=""
-                    disabled={isTagsLoading || isTagsError}
-                    onChange={(e) => addTag(e.target.value)}
-                    className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10 disabled:opacity-50"
-                  >
-                    <option value="" disabled>{isTagsLoading ? "Loading tags..." : isTagsError ? "Error loading tags" : "Select a tag..."}</option>
-                    {!isTagsLoading && !isTagsError && availableTags
-                      .filter(tag => !formData.tags.includes(tag))
-                      .map(tag => (
-                        <option key={tag} value={tag}>#{tag}</option>
-                      ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Custom Tag Input */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Custom Tag</label>
+              {/* Unified Searchable Tag Input */}
+              <div className="space-y-2 relative" ref={tagDropdownRef}>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Tags</label>
                 <div className={cn(
-                  "flex items-center gap-2 px-3 py-2 bg-background text-muted-foreground border border-border/40 border-dashed rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-primary/40 transition-colors group",
-                  isTagsCreating ? "opacity-70 cursor-not-allowed" : ""
+                  "flex items-center gap-2 px-3 py-2 bg-background border rounded-xl shadow-sm transition-all group",
+                  isTagDropdownOpen ? "border-primary/40 ring-2 ring-primary/10" : "border-border/60 hover:border-primary/30"
                 )}>
+                  <Search className="w-3 h-3 text-muted-foreground" />
                   <input
                     type="text"
                     value={newTag}
-                    disabled={isTagsCreating}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !isTagsCreating && addTag()}
-                    placeholder={isTagsCreating ? "CREATING..." : "TYPE TAG..."}
-                    className="bg-transparent border-none outline-none w-full placeholder:text-muted-foreground/40"
+                    onFocus={() => setIsTagDropdownOpen(true)}
+                    onChange={(e) => {
+                      setNewTag(e.target.value);
+                      setIsTagDropdownOpen(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isTagsCreating && newTag.trim()) {
+                        addTag();
+                      }
+                    }}
+                    placeholder="Search or type..."
+                    className="bg-transparent border-none outline-none w-full text-[10px] font-bold uppercase tracking-widest placeholder:text-muted-foreground/40"
                   />
-                  {isTagsCreating ? (
+                  {isTagsCreating && (
                     <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-                  ) : (
-                    <Plus className="w-3 h-3 cursor-pointer hover:text-primary transition-colors shrink-0" onClick={() => addTag()} />
                   )}
                 </div>
+
+                {/* Dropdown Menu */}
+                {isTagDropdownOpen && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-background border border-border/40 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
+                      {/* Filtered Results */}
+                      {availableTags
+                        .filter(tag => 
+                          !formData.tags.includes(tag) && 
+                          (newTag.trim() === "" || tag.includes(newTag.toUpperCase()))
+                        )
+                        .map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => addTag(tag)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-secondary flex items-center gap-3 transition-colors"
+                          >
+                            <Tag className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">#{tag}</span>
+                          </button>
+                        ))
+                      }
+
+                      {/* Create New Option */}
+                      {newTag.trim() !== "" && !availableTags.includes(newTag.toUpperCase()) && (
+                        <button
+                          onClick={() => addTag()}
+                          className="w-full text-left px-4 py-2.5 hover:bg-primary/5 group border-t border-border/10 flex items-center justify-between transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Plus className="w-3 h-3 text-primary" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Create &quot;{newTag.toUpperCase()}&quot;</span>
+                          </div>
+                          <span className="text-[8px] font-bold text-muted-foreground/40 group-hover:text-primary/40">ENTER</span>
+                        </button>
+                      )}
+
+                      {/* Empty State */}
+                      {newTag.trim() === "" && availableTags.filter(tag => !formData.tags.includes(tag)).length === 0 && (
+                        <div className="px-4 py-6 text-center">
+                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">No tags available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

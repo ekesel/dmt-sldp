@@ -32,13 +32,19 @@ let mockMetadataCategories: MetadataCategory[] = [
 let mockMetadataValues: MetadataValue[] = [
   { id: 11, category: 1, value: "Knowledge Base" },
   { id: 12, category: 1, value: "Infrastructure" },
+  { id: 13, category: 1, value: "docs" },
+  { id: 14, category: 1, value: "Security" },
 
   { id: 21, category: 2, value: "Engineering" },
   { id: 22, category: 2, value: "Backend" },
   { id: 23, category: 2, value: "Design" },
 
   { id: 31, category: 3, value: "PPT" },
-  { id: 32, category: 3, value: "DOC" }
+  { id: 32, category: 3, value: "DOC" },
+  { id: 33, category: 3, value: "Onboarding" },
+  { id: 34, category: 3, value: "Guideline" },
+  { id: 35, category: 3, value: "Documentation" },
+  { id: 36, category: 3, value: "Technical Doc" }
 ];
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

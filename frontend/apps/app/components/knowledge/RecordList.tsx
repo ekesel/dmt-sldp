@@ -1,37 +1,62 @@
 "use client";
-import React from "react";
-import { FileText, ArrowUpRight, Loader2, Paperclip } from "lucide-react";
+import React, { useState } from "react";
+import { FileText, ArrowUpRight, Loader2, Paperclip, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRecords } from "@/features/knowledge-base/hooks/useRecords";
-import type { KnowledgeRecord, RecordSearchParams } from "@dmt/api";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useRecords } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/context/AuthContext";
+import { KnowledgeRecord, RecordSearchParams, knowledgeRecords } from "@dmt/api";
+import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 // Re-export KnowledgeRecord as Record so the rest of the app keeps compiling
 export type { KnowledgeRecord as Record } from "@dmt/api";
-// Re-export mock data for any consumers that still need it directly
-export { MOCK_RECORDS as mockRecords } from "@dmt/api";
 
 
 interface RecordCardProps {
   record: KnowledgeRecord;
   isSelected: boolean;
   onClick: () => void;
+  onDownload: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
+  isDownloading: boolean;
+  isDeleting: boolean;
+  isManager: boolean;
+  isOwner: boolean;
+  onApprove: (e: React.MouseEvent) => void;
+  onReject: (e: React.MouseEvent) => void;
+  isUpdatingStatus: boolean;
 }
 
-const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) => {
+const RecordCard: React.FC<RecordCardProps> = ({ 
+  record, 
+  isSelected, 
+  onClick, 
+  onDownload, 
+  onDelete, 
+  isDownloading,
+  isDeleting,
+  isManager,
+  isOwner,
+  onApprove,
+  onReject,
+  isUpdatingStatus
+}) => {
   return (
     <div
       onClick={onClick}
       className={cn(
         "group relative p-3 lg:p-4 border rounded-lg transition-all duration-300 cursor-pointer hover:shadow-md hover:shadow-primary/5",
-        isSelected 
-          ? "bg-primary/10 border-primary/40 shadow-sm" 
+        isSelected
+          ? "bg-primary/10 border-primary/40 shadow-sm"
           : "bg-background/60 border-border/40 hover:bg-background/80 hover:border-primary/20"
       )}
     >
       <div className="flex items-center gap-3 lg:gap-4">
         <div className={cn(
-            "w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
-            isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary/15"
+          "w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
+          isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary/15"
         )}>
           <FileText className="w-4 h-4 lg:w-5 h-5" />
         </div>
@@ -45,6 +70,14 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
             </span>
             <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-secondary/80 text-muted-foreground rounded border border-border/40 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
               {record.type}
+            </span>
+            <span className={cn(
+              "text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-tighter shrink-0 self-start sm:self-auto shadow-sm",
+              record.status === "Approved" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+              record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+              "bg-primary/10 text-primary border-primary/20"
+            )}>
+              {record.status}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -67,11 +100,79 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, isSelected, onClick }) 
             </span>
           </div>
         </div>
-        <div className={cn(
-            "p-2 rounded-lg lg:opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+        <div className="flex items-center gap-2 shrink-0">
+          {record.assets.length > 0 && (
+            <button
+              onClick={onDownload}
+              disabled={isDownloading}
+              className={cn(
+                "p-2 rounded-lg transition-all border border-transparent hover:border-primary/20 hover:bg-primary/5 active:scale-95 disabled:opacity-50",
+                isSelected ? "text-primary" : "text-muted-foreground hover:text-primary"
+              )}
+              title="Quick download main asset"
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </button>
+          )}
+          
+          {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
+            <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-3">
+              <button
+                onClick={onApprove}
+                disabled={isUpdatingStatus}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-lg border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                title="Approve document"
+              >
+                {isUpdatingStatus ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                )}
+                Approve
+              </button>
+              <button
+                onClick={onReject}
+                disabled={isUpdatingStatus}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg border border-rose-500/20 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                title="Reject document"
+              >
+                {isUpdatingStatus ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <XCircle className="w-3.5 h-3.5" />
+                )}
+                Reject
+              </button>
+            </div>
+          )}
+
+          {isManager && (
+            <button
+              onClick={onDelete}
+              disabled={isDeleting}
+              className={cn(
+                "p-2 rounded-lg transition-all border border-transparent hover:border-destructive/20 hover:bg-destructive/5 active:scale-95 disabled:opacity-50 text-muted-foreground hover:text-destructive"
+              )}
+              title="Delete document"
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
+
+          <div className={cn(
+            "p-2 rounded-lg lg:opacity-0 group-hover:opacity-100 transition-opacity",
             isSelected ? "opacity-100 text-primary" : "text-muted-foreground"
-        )}>
-          <ArrowUpRight className="w-4 h-4 lg:w-5 lg:h-5" />
+          )}>
+            <ArrowUpRight className="w-4 h-4 lg:w-5 lg:h-5" />
+          </div>
         </div>
       </div>
     </div>
@@ -88,6 +189,8 @@ interface RecordListProps {
   category?: number;
   /** Forwarded directly to GET /documents/?tag= */
   tag?: number | string;
+  /** Filter by ownership: GET /documents/?mine=true */
+  mine?: boolean;
   onSelect: (record: KnowledgeRecord) => void;
 }
 
@@ -97,20 +200,93 @@ export const RecordList: React.FC<RecordListProps> = ({
   search,
   category,
   tag,
+  mine,
   onSelect,
 }) => {
-  const searchParams: RecordSearchParams = {};
-  if (search)   searchParams.search   = search;
-  if (category) searchParams.category = category;
-  if (tag)      searchParams.tag      = tag;
+  const queryClient = useQueryClient();
+  const { isManager } = usePermissions();
+  const { user } = useAuth();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  
+  // Debug log to help identify why buttons might be missing
+  React.useEffect(() => {
+    if (user) console.log("Current User ID:", user.id);
+  }, [user]);
+
+  const workflowMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) => 
+      knowledgeRecords.updateStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(variables.id) });
+    },
+    onError: (err) => {
+      console.error("Workflow update failed:", err);
+      alert("Failed to update status. Please try again.");
+    }
+  });
+
+  const handleStatusChange = (e: React.MouseEvent, record: KnowledgeRecord, status: "APPROVED" | "REJECTED") => {
+    e.stopPropagation();
+    workflowMutation.mutate({ id: record.id, status });
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string | number) => knowledgeRecords.deleteDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
+    },
+    onError: (error) => {
+      console.error("Deletion failed:", error);
+      alert("Failed to delete the document. Please check your permissions.");
+    }
+  });
+
+  const handleDelete = async (e: React.MouseEvent, record: KnowledgeRecord) => {
+    e.stopPropagation();
+    if (!isManager) return;
+    
+    if (window.confirm(`Are you sure you want to delete "${record.title}"? This action cannot be undone.`)) {
+      deleteMutation.mutate(record.id);
+    }
+  };
+
+  const handleQuickDownload = async (e: React.MouseEvent, record: KnowledgeRecord) => {
+    e.stopPropagation();
+    if (record.assets.length === 0) return;
+
+    setDownloadingId(record.id);
+    try {
+      await knowledgeRecords.downloadFile(record.id, record.assets[0].name);
+    } catch (error) {
+      console.error("Quick download failed:", error);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+  const searchParams: RecordSearchParams = {
+    category: category,
+    tag: tag,
+    mine: mine,
+  };
 
   const { records, isLoading, isFetching, isError } = useRecords(searchParams);
+
+  // Client-side search filtering (since backend doesn't support ?search=)
+  const filteredRecords = React.useMemo(() => {
+    if (!search) return records;
+    const lowerSearch = search.toLowerCase();
+    return records.filter(r =>
+      r.title.toLowerCase().includes(lowerSearch) ||
+      r.description.toLowerCase().includes(lowerSearch)
+    );
+  }, [records, search]);
 
   // When no API search is active, further filter by the sidebar-selected team
   const isSearching = !!(search || category || tag);
   const displayRecords = isSearching
-    ? records
-    : records.filter((r) => !activeTeam || r.team === activeTeam);
+    ? filteredRecords
+    : filteredRecords.filter((r) => !activeTeam || r.team === activeTeam);
 
   if (isLoading) {
     return (
@@ -143,13 +319,22 @@ export const RecordList: React.FC<RecordListProps> = ({
               key={record.id}
               record={record}
               isSelected={selectedId === record.id}
+              isManager={isManager}
+              isOwner={String(user?.id) === record.owner}
               onClick={() => onSelect(record)}
+              onDownload={(e) => handleQuickDownload(e, record)}
+              onDelete={(e) => handleDelete(e, record)}
+              onApprove={(e) => handleStatusChange(e, record, "APPROVED")}
+              onReject={(e) => handleStatusChange(e, record, "REJECTED")}
+              isDownloading={downloadingId === record.id}
+              isDeleting={deleteMutation.isPending && deleteMutation.variables === record.id}
+              isUpdatingStatus={workflowMutation.isPending && workflowMutation.variables?.id === record.id}
             />
           ))
         ) : (
           <div className="p-12 text-center bg-background/40 rounded-3xl border border-dashed border-border/60">
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
-              {isSearching ? "No records match your search" : "No records found for this team"}
+              {mine ? "No documents for review" : isSearching ? "No records match your search" : "No records found for this team"}
             </p>
           </div>
         )}

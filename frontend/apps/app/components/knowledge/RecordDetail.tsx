@@ -1,17 +1,60 @@
 "use client";
-import React from "react";
-import { FileText, X, Lock } from "lucide-react";
+import React, { useState } from "react";
+import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle } from "lucide-react";
 import { Record } from "./RecordList";
 import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { knowledgeRecords } from "@dmt/api";
+import { usePermissions } from "@/hooks/usePermissions";
+import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
+import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 
 interface RecordDetailProps {
   record: Record | null;
   onClose?: () => void;
   onEdit?: (record: Record) => void;
   currentUser: string;
+  isLoading?: boolean;
 }
 
-export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser }) => {
+export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser, isLoading }) => {
+  const queryClient = useQueryClient();
+  const { isManager } = usePermissions();
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+
+  const workflowMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) => 
+      knowledgeRecords.updateStatus(id, status),
+    onSuccess: () => {
+      // Refresh list and detail to reflect the status change
+      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
+      if (record?.id) {
+        queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(record.id) });
+      }
+    },
+    onError: (err) => {
+      console.error("Workflow update failed:", err);
+      alert("Failed to update status. Please try again.");
+    }
+  });
+
+  const handleStatusChange = (status: "APPROVED" | "REJECTED") => {
+    if (!record) return;
+    workflowMutation.mutate({ id: record.id, status });
+  };
+
+  const handleDownload = async (fileId: string | number) => {
+    if (!record) return;
+    setDownloadingFileId(String(fileId));
+    try {
+      await knowledgeRecords.downloadFile(record.id, fileId);
+    } catch (error) {
+      console.error("Download failed:", error);
+    } finally {
+      setDownloadingFileId(null);
+    }
+  };
+
   if (!record) {
     return (
       <div className="hidden xl:flex w-[300px] flex-shrink-0 bg-background/40 backdrop-blur-sm border-l border-border/40 p-8 flex-col items-center justify-center text-center">
@@ -38,9 +81,17 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
       />
 
       <aside className={cn(
-        "fixed inset-y-0 right-0 z-50 w-full sm:w-[300px] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0",
-        record ? "translate-x-0" : "translate-x-full"
+        "fixed inset-y-0 right-0 z-50 w-full sm:w-[300px] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0 relative",
+        record || isLoading ? "translate-x-0" : "translate-x-full"
       )}>
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center p-8 text-center">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              Fetching details...
+            </p>
+          </div>
+        )}
         <div className="p-6">
           {/* Mobile Close Button */}
           <button
@@ -50,17 +101,21 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <X className="w-5 h-5" />
           </button>
 
-          {/* Top Label and Edit Button */}
+          {/* Top Label and Action Buttons */}
           <div className="flex items-center justify-between mb-6">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
               Document
             </span>
-            <button
-              onClick={() => record && onEdit?.(record)}
-              className="px-4 py-1.5 bg-secondary/50 hover:bg-secondary text-foreground rounded-lg border border-border/40 text-sm font-semibold transition-all active:scale-95 shadow-sm"
-            >
-              Edit
-            </button>
+            <div className="flex gap-2">
+              {isManager && (
+                <button
+                  onClick={() => record && onEdit?.(record)}
+                  className="px-4 py-1.5 bg-secondary/50 hover:bg-secondary text-foreground rounded-lg border border-border/40 text-sm font-semibold transition-all active:scale-95 shadow-sm"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Title and Description */}
@@ -77,7 +132,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
             <div>
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Status</h3>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-md text-[11px] font-semibold">
+              <div className={cn(
+                "inline-flex items-center gap-2 px-3 py-1 rounded-md text-[11px] font-semibold",
+                record.status === "Approved" && "bg-emerald-500/10 text-emerald-600",
+                record.status === "Rejected" && "bg-rose-500/10 text-rose-600",
+                record.status === "Draft" && "bg-primary/10 text-primary"
+              )}>
                 {record.status}
               </div>
             </div>
@@ -146,19 +206,40 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <div className="space-y-3">
               {record.status === "Approved" || record.owner === currentUser ? (
                 record.assets.length > 0 ? (
-                  record.assets.map((asset, index) => (
-                    <div key={asset.name} className={cn(
-                      "flex items-center justify-between py-1",
-                      index !== record.assets.length - 1 && "pb-3 border-b border-border/20"
-                    )}>
-                      <span className="text-[14px] font-medium text-foreground truncate max-w-[280px]">
-                        {asset.name}
-                      </span>
-                      <span className="text-sm font-medium text-muted-foreground shrink-0 uppercase tracking-tight">
-                        {asset.size}
-                      </span>
-                    </div>
-                  ))
+                  record.assets.map((asset, index) => {
+                    const isDownloading = downloadingFileId === String(asset.name); // Using name as ID for mock
+                    return (
+                      <div 
+                        key={asset.name} 
+                        onClick={() => !isDownloading && handleDownload(asset.name)}
+                        className={cn(
+                          "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
+                          index !== record.assets.length - 1 && "mb-1"
+                        )}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                            {isDownloading ? (
+                              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
+                              {asset.name}
+                            </span>
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                              {asset.size}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
+                          <Download className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                        </div>
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-muted-foreground italic">No assets available</p>
                 )
@@ -177,32 +258,61 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           </div>
 
           {/* Version History Section */}
-          <div className="mt-8 pt-6 border-t border-border/40">
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-5 text-foreground/40">Version History</h3>
-            <div className="space-y-6">
-              {record.history.map((item, index) => (
-                <div key={item.version} className={cn(
-                  "space-y-2.5",
-                  index !== record.history.length - 1 && "pb-5 border-b border-border/20"
-                )}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-foreground">{item.version}</span>
-                    <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {item.author}
-                    </p>
-                    <p className="text-[14px] text-foreground font-medium leading-snug">
-                      {item.comment}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <VersionHistoryList recordId={record.id} initialHistory={record.history} />
         </div>
       </aside>
     </>
   );
 };
+
+/**
+ * Sub-component to handle dynamic version history fetching and rendering.
+ */
+const VersionHistoryList: React.FC<{ recordId: string | number; initialHistory: any[] }> = ({ recordId, initialHistory }) => {
+  const { versions, isLoading, isError } = useRecordVersions(recordId);
+
+  // Fallback to initial history from the list fetch if versions are still loading or errored,
+  // but show a subtle loading indicator if we're actually fetching live data.
+  const displayHistory = isLoading ? initialHistory : versions;
+
+  return (
+    <div className="mt-8 pt-6 border-t border-border/40">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">
+          Version History
+        </h3>
+        {isLoading && (
+          <Loader2 className="w-3 h-3 text-primary animate-spin" />
+        )}
+      </div>
+      
+      <div className="space-y-6">
+        {displayHistory.length > 0 ? (
+          displayHistory.map((item: any, index: number) => (
+            <div key={item.version} className={cn(
+              "space-y-2.5",
+              index !== displayHistory.length - 1 && "pb-5 border-b border-border/20"
+            )}>
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-semibold text-foreground">{item.version}</span>
+                <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {item.author}
+                </p>
+                <p className="text-[14px] text-foreground font-medium leading-snug">
+                  {item.comment}
+                </p>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground italic">No version history found.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+

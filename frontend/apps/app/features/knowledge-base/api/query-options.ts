@@ -41,14 +41,14 @@ export function usersOptions() {
 }
 
 /**
- * Drives the KnowledgeHeader search input.
+ * Drives the Knowledge Base list and filters.
  *
  * Supported params:
- *  - search    : free-text matched against title + description
  *  - category  : metadata category id (e.g. 2 = team, 1 = project)
- *  - tag       : tag id (endpoint-ready), string name still supported in fallback
+ *  - tag       : tag id (GET /documents/?tag=1)
+ *  - mine      : true (GET /documents/?mine=true)
  *
- * Maps to: GET /documents/?search=&category=&tag=
+ * Maps to: GET /documents/
  */
 export function recordsOptions(params: RecordSearchParams = {}) {
   return queryOptions({
@@ -56,5 +56,21 @@ export function recordsOptions(params: RecordSearchParams = {}) {
     queryFn:  () => recordsApi.search(params),
     // Keep previous results while new ones load (instant perceived performance)
     placeholderData: (prev) => prev,
+  });
+}
+
+export function recordDetailOptions(id: string | number | null) {
+  return queryOptions({
+    queryKey: id ? RECORD_QUERY_KEYS.detail(id) : ["records", "detail", "null"],
+    queryFn: () => (id ? recordsApi.getById(id) : null),
+    enabled: !!id,
+  });
+}
+
+export function recordVersionsOptions(id: string | number | null) {
+  return queryOptions({
+    queryKey: id ? [...RECORD_QUERY_KEYS.detail(id), "versions"] : ["records", "detail", "null", "versions"],
+    queryFn: () => (id ? recordsApi.getVersions(id) : []),
+    enabled: !!id,
   });
 }
