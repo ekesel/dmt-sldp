@@ -10,10 +10,11 @@ from .serializers import (
     TagSerializer, MetadataCategorySerializer, MetadataValueSerializer,
     DocumentSerializer, VersionSerializer, UserSerializer
 )
-from .permissions import IsManager, IsManagerOrReadOnly
+from .permissions import IsManager, IsManagerOrReadOnly, IsTenantUser
 
 from .utils import get_visible_docs
 from users.models import User
+from django_tenants.utils import schema_context
 
 
 # Documents  →  /documents/
@@ -175,7 +176,7 @@ class UploadVersionAPI(APIView):
 
 
 class VersionListAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTenantUser]
 
 
     def get(self, request, id):
@@ -187,7 +188,7 @@ class VersionListAPI(APIView):
 
 
 class DownloadAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTenantUser]
 
 
     def get(self, request, vid):
@@ -258,8 +259,10 @@ class MetadataValueAPI(APIView):
 class TenantUsersAPI(APIView):
     permission_classes = [IsManager]
 
-
     def get(self, request):
-        tenant = request.tenant
-        users = User.objects.filter(tenant=tenant, is_active=True, is_manager=True)
-        return Response(UserSerializer(users, many=True).data)
+        with schema_context(request.tenant.schema_name):
+            tenant = request.tenant
+            users = User.objects.filter(tenant=tenant, 
+                                    is_active=True, 
+                                    is_manager=True)
+            return Response(UserSerializer(users, many=True).data)
