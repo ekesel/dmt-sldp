@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { RecordSearchParams } from "@dmt/api";
 import { recordsOptions, recordDetailOptions, recordVersionsOptions } from "../api/query-options";
 
+const STABLE_EMPTY_ARRAY: any[] = [];
+
 /**
  * useRecords — fetches knowledge base records via endpoint-ready API integration.
  *
@@ -17,7 +19,7 @@ export const useRecords = (params: RecordSearchParams = {}) => {
   const recordsQuery = useQuery(recordsOptions(params));
 
   return {
-    records:   recordsQuery.data ?? [],
+    records:   recordsQuery.data ?? STABLE_EMPTY_ARRAY,
     isLoading: recordsQuery.isLoading,
     isFetching: recordsQuery.isFetching, // useful for showing a subtle loading indicator
     isError:   recordsQuery.isError,
@@ -66,10 +68,9 @@ export const useRecordVersions = (id: string | number | null) => {
   const versionsQuery = useQuery(recordVersionsOptions(id));
 
   return {
-    versions:  versionsQuery.data ?? [],
+    versions:  versionsQuery.data ?? STABLE_EMPTY_ARRAY,
     isLoading: versionsQuery.isLoading,
     isError:   versionsQuery.isError,
     error:     versionsQuery.error,
   };
 };
-

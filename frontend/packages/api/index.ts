@@ -722,7 +722,7 @@ export type { Metadata, MetadataCategory, MetadataValue } from './knowledge-base
 export { users as knowledgeUsers } from './knowledge-base-apis/users-api';
 export type { KnowledgeManager } from './knowledge-base-apis/users-api';
 
-export { knowledgeRecords, MOCK_RECORDS } from './knowledge-base-apis/records-api';
+export { knowledgeRecords } from './knowledge-base-apis/records-api';
 export type { KnowledgeRecord, RecordSearchParams } from './knowledge-base-apis/records-api';
 
 export { getWebSocketManager } from './websocket';

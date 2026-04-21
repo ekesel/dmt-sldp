@@ -19,130 +19,85 @@ export interface Metadata {
   values: string[];
 }
 
-// Mock Data
-let metadataValueIdCounter = 100;
-let metadataCategoryIdCounter = 10;
-
-let mockMetadataCategories: MetadataCategory[] = [
-  { id: 1, name: "project" },
-  { id: 2, name: "team" },
-  { id: 3, name: "type" }
-];
-
-let mockMetadataValues: MetadataValue[] = [
-  { id: 11, category: 1, value: "Knowledge Base" },
-  { id: 12, category: 1, value: "Infrastructure" },
-  { id: 13, category: 1, value: "docs" },
-  { id: 14, category: 1, value: "Security" },
-
-  { id: 21, category: 2, value: "Engineering" },
-  { id: 22, category: 2, value: "Backend" },
-  { id: 23, category: 2, value: "Design" },
-
-  { id: 31, category: 3, value: "PPT" },
-  { id: 32, category: 3, value: "DOC" },
-  { id: 33, category: 3, value: "Onboarding" },
-  { id: 34, category: 3, value: "Guideline" },
-  { id: 35, category: 3, value: "Documentation" },
-  { id: 36, category: 3, value: "Technical Doc" }
-];
+// Mock Data (Cleanup: categories and values moved to API)
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const metadata = {
-  // Replace with get('/metadata/categories/')
+  /** GET /kb/metadata/categories/ */
   getCategories: async (): Promise<MetadataCategory[]> => {
-    await delay(200);
-    return [...mockMetadataCategories];
+    try {
+      const response = await api.get<MetadataCategory[] | { results: MetadataCategory[] }>("/kb/metadata/categories/");
+      const responseData = response.data;
+      return Array.isArray(responseData) ? responseData : (responseData as any).results || responseData;
+    } catch (error) {
+      console.error("Error fetching metadata categories:", error);
+      throw error;
+    }
   },
 
-  // Replace with get('/metadata/')
+  /** Aggregated view of categories and their values */
   list: async (): Promise<Metadata[]> => {
-    await delay(300);
-    return mockMetadataCategories.map(category => ({
-      id: category.id,
-      name: category.name,
-      values: mockMetadataValues
-        .filter(v => v.category === category.id)
-        .map(v => v.value)
-    }));
+    try {
+      const categories = await metadata.getCategories();
+      const results = await Promise.all(
+        categories.map(async (category) => {
+          const values = await metadata.listValues(category.id);
+          return {
+            id: category.id,
+            name: category.name,
+            values: values.map(v => v.value)
+          };
+        })
+      );
+      return results;
+    } catch (error) {
+      console.error("Error fetching aggregated metadata:", error);
+      return [];
+    }
   },
 
-  // Endpoint-ready: GET /metadata/values/?category=1
-  // Falls back to mock data until backend endpoint is available.
+  /** GET /kb/metadata/values/?category=1 */
   listValues: async (category?: number): Promise<MetadataValue[]> => {
     try {
-      const response = await api.get<MetadataValue[]>("/metadata/values/", {
+      const response = await api.get<MetadataValue[] | { results: MetadataValue[] }>("/kb/metadata/values/", {
         params: category !== undefined ? { category } : undefined,
       });
+      const responseData = response.data;
+      return Array.isArray(responseData) ? responseData : (responseData as any).results || responseData;
+    } catch (error) {
+      console.error("Error fetching metadata values:", error);
+      throw error;
+    }
+  },
+
+  /** Helper refactored to use listValues */
+  getByCategory: async (categoryId: number): Promise<{ id: number, value: string }[]> => {
+    const values = await metadata.listValues(categoryId);
+    return values.map(v => ({ id: v.id, value: v.value }));
+  },
+
+  /** POST /kb/metadata/categories/ */
+  createCategory: async (body: { name: string }): Promise<MetadataCategory> => {
+    try {
+      const response = await api.post<MetadataCategory>("/kb/metadata/categories/", body);
       return response.data;
     } catch (error) {
-      const isEndpointUnavailable =
-        axios.isAxiosError(error) &&
-        (error.response?.status === 404 || error.response?.status === 405 || error.response?.status === 501);
-
-      if (!isEndpointUnavailable) {
-        throw error;
-      }
+      console.error("Error creating metadata category:", error);
+      throw error;
     }
-
-    await delay(200);
-
-    if (category !== undefined) {
-      return mockMetadataValues.filter((item) => item.category === category);
-    }
-
-    return [...mockMetadataValues];
   },
 
-  // Replace with get(`/metadata/categories/${categoryId}/values/`)
-  getByCategory: async (categoryId: number): Promise<{ id: number, value: string }[]> => {
-    await delay(200);
-    return mockMetadataValues
-      .filter(v => v.category === categoryId)
-      .map(v => ({ id: v.id, value: v.value }));
-  },
-
-  // Replace with post('/metadata/categories/', body)
-  createCategory: async (body: { name: string }): Promise<MetadataCategory> => {
-    await delay(200);
-    if (!body.name || !body.name.trim()) {
-      throw new Error("Category name is required");
-    }
-    const newCategory: MetadataCategory = {
-      id: ++metadataCategoryIdCounter,
-      name: body.name.trim()
-    };
-    mockMetadataCategories.push(newCategory);
-    return newCategory;
-  },
-
-  // Replace with post('/metadata/values/', body)
+  /** POST /kb/metadata/values/ */
   addValue: async (body: { category: number; value: string }): Promise<MetadataValue> => {
-    await delay(200);
-    if (!body.value || !body.value.trim()) {
-      throw new Error("Value cannot be empty");
+    try {
+      const response = await api.post<MetadataValue>("/kb/metadata/values/", body);
+      return response.data;
+    } catch (error) {
+      console.error("Error adding metadata value:", error);
+      throw error;
     }
-    const categoryObj = mockMetadataCategories.find(cat => cat.id === body.category);
-    if (!categoryObj) {
-      throw new Error(`Category with ID ${body.category} does not exist`);
-    }
-    const isDuplicate = mockMetadataValues.some(
-      v => v.category === body.category &&
-        v.value.toLowerCase() === body.value.trim().toLowerCase()
-    );
-    if (isDuplicate) {
-      throw new Error(`Value '${body.value}' already exists in this category`);
-    }
-
-    const newValue: MetadataValue = {
-      id: ++metadataValueIdCounter,
-      category: body.category,
-      category_name: categoryObj.name,
-      value: body.value.trim()
-    };
-
-    mockMetadataValues.push(newValue);
-    return newValue;
   }
 };
+
+

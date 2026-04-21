@@ -3,6 +3,8 @@ import { categoriesOptions, metadataOptions, metadataValuesOptions } from "../ap
 import { addMetadataValueMutationOptions, createMetadataCategoryMutationOptions } from "../api/mutation-options";
 import { METADATA_QUERY_KEYS } from "../api/query-keys";
 
+const STABLE_EMPTY_ARRAY: any[] = [];
+
 export const useMetadata = (activeCategory?: number) => {
   const queryClient = useQueryClient();
 
@@ -31,9 +33,9 @@ export const useMetadata = (activeCategory?: number) => {
   });
 
   return {
-    categories: categoriesQuery.data || [],
-    allMetadata: metadataQuery.data || [],
-    allValues: valuesQuery.data || [],
+    categories: categoriesQuery.data || STABLE_EMPTY_ARRAY,
+    allMetadata: metadataQuery.data || STABLE_EMPTY_ARRAY,
+    allValues: valuesQuery.data || STABLE_EMPTY_ARRAY,
     isLoading: categoriesQuery.isLoading || metadataQuery.isLoading || valuesQuery.isLoading,
     isError: categoriesQuery.isError || metadataQuery.isError || valuesQuery.isError,
     addValue: addValueMutation.mutateAsync,

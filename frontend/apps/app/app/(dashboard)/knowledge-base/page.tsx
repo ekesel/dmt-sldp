@@ -13,53 +13,51 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 
 export default function KnowledgeBasePage() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [activeTeam, setActiveTeam] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<number>(1);
   const [headerTitle, setHeaderTitle] = useState<string>("Loading...");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [teams, setTeams] = useState<Team[]>([]);
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isReviewActive, setIsReviewActive] = useState(false);
 
-  const { 
-    categories, 
-    allMetadata, 
+  const {
+    categories,
+    allMetadata,
     allValues,
-    addValue, 
-    addCategory, 
+    addValue,
+    addCategory,
     isAdding: isSubmittingValue,
-    isAddingCategory: isSubmittingCategory 
+    isAddingCategory: isSubmittingCategory
   } = useMetadata(activeCategory);
   const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
   const { count: reviewCount } = useReviewCount();
   const { isManager } = usePermissions();
   const { user } = useAuth();
 
-  // Sync sidebar list with active category
-  useEffect(() => {
-    if (allValues.length === 0) return;
-
-    const filteredValues = allValues.filter(v => v.category === activeCategory);
-    
-    setTeams(filteredValues.map(v => ({
+  // Derive teams list from metadata values
+  const teams = React.useMemo(() => 
+    allValues.map(v => ({
       name: v.value,
       count: 0 // Default count
-    })));
+    })), 
+    [allValues]
+  );
 
-    // Set initial active team once data loads if none selected
-    if (!activeTeam && filteredValues.length > 0 && headerTitle === "Loading...") {
-      const firstVal = filteredValues[0].value;
+  // Set initial active team once data loads if none selected
+  useEffect(() => {
+    if (!activeTeam && allValues.length > 0 && headerTitle === "Loading...") {
+      const firstVal = allValues[0].value;
       setActiveTeam(firstVal);
       setHeaderTitle(firstVal);
     }
-  }, [activeCategory, allValues, activeTeam, headerTitle]);
+  }, [allValues, activeTeam, headerTitle]);
 
   // Show a "Welcome" toast if there are pending reviews on initial land
   useEffect(() => {
@@ -74,7 +72,7 @@ export default function KnowledgeBasePage() {
 
   const handleAddValueSubmit = async () => {
     if (!newTeamName.trim() || !isManager) return;
-    
+
     try {
       await addValue({
         category: activeCategory,
@@ -105,11 +103,11 @@ export default function KnowledgeBasePage() {
     setActiveCategory(categoryId);
     setSearchTerm(""); // Reset search on category change
     setSelectedId(null); // Clear detail view on context switch
-    
+
     const category = categories.find(c => c.id === categoryId);
     const title = category?.name || "Records";
     setHeaderTitle(title);
-    
+
     if (category?.name.toUpperCase() !== "TEAM") {
       setActiveTeam("");
     }

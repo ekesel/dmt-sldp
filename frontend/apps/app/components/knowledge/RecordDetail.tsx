@@ -23,7 +23,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
 
   const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) => 
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) =>
       knowledgeRecords.updateStatus(id, status),
     onSuccess: () => {
       // Refresh list and detail to reflect the status change
@@ -209,8 +209,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                   record.assets.map((asset, index) => {
                     const isDownloading = downloadingFileId === String(asset.name); // Using name as ID for mock
                     return (
-                      <div 
-                        key={asset.name} 
+                      <div
+                        key={asset.name}
                         onClick={() => !isDownloading && handleDownload(asset.name)}
                         className={cn(
                           "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
@@ -285,7 +285,7 @@ const VersionHistoryList: React.FC<{ recordId: string | number; initialHistory: 
           <Loader2 className="w-3 h-3 text-primary animate-spin" />
         )}
       </div>
-      
+
       <div className="space-y-6">
         {displayHistory.length > 0 ? (
           displayHistory.map((item: any, index: number) => (

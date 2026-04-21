@@ -29,12 +29,12 @@ interface RecordCardProps {
   isUpdatingStatus: boolean;
 }
 
-const RecordCard: React.FC<RecordCardProps> = ({ 
-  record, 
-  isSelected, 
-  onClick, 
-  onDownload, 
-  onDelete, 
+const RecordCard: React.FC<RecordCardProps> = ({
+  record,
+  isSelected,
+  onClick,
+  onDownload,
+  onDelete,
   isDownloading,
   isDeleting,
   isManager,
@@ -74,8 +74,8 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <span className={cn(
               "text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-tighter shrink-0 self-start sm:self-auto shadow-sm",
               record.status === "Approved" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-              record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-              "bg-primary/10 text-primary border-primary/20"
+                record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                  "bg-primary/10 text-primary border-primary/20"
             )}>
               {record.status}
             </span>
@@ -118,7 +118,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
               )}
             </button>
           )}
-          
+
           {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
             <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-3">
               <button
@@ -207,14 +207,14 @@ export const RecordList: React.FC<RecordListProps> = ({
   const { isManager } = usePermissions();
   const { user } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  
+
   // Debug log to help identify why buttons might be missing
   React.useEffect(() => {
     if (user) console.log("Current User ID:", user.id);
   }, [user]);
 
   const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) => 
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) =>
       knowledgeRecords.updateStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
@@ -245,7 +245,7 @@ export const RecordList: React.FC<RecordListProps> = ({
   const handleDelete = async (e: React.MouseEvent, record: KnowledgeRecord) => {
     e.stopPropagation();
     if (!isManager) return;
-    
+
     if (window.confirm(`Are you sure you want to delete "${record.title}"? This action cannot be undone.`)) {
       deleteMutation.mutate(record.id);
     }
