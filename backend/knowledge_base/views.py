@@ -16,6 +16,9 @@ from .utils import get_visible_docs
 from users.models import User
 from django_tenants.utils import schema_context
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Documents  →  /documents/
 class DocumentAPI(APIView):
@@ -23,6 +26,7 @@ class DocumentAPI(APIView):
 
 
     def get(self, request):
+        logger.info(f"DocumentAPI GET: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         # Base visibility: Managers/Admins see all; Regular users see APPROVED or OWNED.
         docs = get_visible_docs(request.user)
 
@@ -50,6 +54,7 @@ class DocumentAPI(APIView):
         return Response(DocumentSerializer(docs.distinct(), many=True).data)
 
     def post(self, request):
+        logger.info(f"DocumentAPI POST: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         ser = DocumentSerializer(data=request.data)
 
         if ser.is_valid():
@@ -67,6 +72,7 @@ class DocumentAPI(APIView):
                 )
             return Response({"data": ser.data, "msg": "Document created"}, status=status.HTTP_201_CREATED)
 
+        logger.error(f"DocumentAPI POST: Validation failed. Errors={ser.errors}")
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -84,6 +90,7 @@ class DocumentDetailAPI(APIView):
 
 
     def get(self, request, id):
+        logger.info(f"DocumentDetailAPI GET: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         doc = self.get_object(request, id)
         latest_version = doc.versions.order_by("-version_number").first()
 
@@ -95,6 +102,7 @@ class DocumentDetailAPI(APIView):
 
 
     def patch(self, request, id):
+        logger.info(f"DocumentDetailAPI PATCH: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         doc = self.get_object(request, id)
         
         # Only owner or manager (if applicable) should update. 
@@ -108,9 +116,11 @@ class DocumentDetailAPI(APIView):
             ser.save()
             return Response({"msg": "Updated"})
 
+        logger.error(f"DocumentDetailAPI PATCH: Validation failed. Errors={ser.errors}")
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, id):
+        logger.info(f"DocumentDetailAPI DELETE: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         doc = self.get_object(request, id)
         
         # Manager check is handled by permission_classes
@@ -127,6 +137,7 @@ class DocumentStatusAPI(APIView):
 
 
     def post(self, request, id):
+        logger.info(f"DocumentStatusAPI POST: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         doc = get_object_or_404(Document, id=id)
         # Check for 'status' or 'Status' to be user-friendly
         target_status = request.data.get("status") or request.data.get("Status")
@@ -152,6 +163,7 @@ class UploadVersionAPI(APIView):
 
 
     def post(self, request, id):
+        logger.info(f"UploadVersionAPI POST: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         doc = get_object_or_404(Document, id=id)
 
         file_obj = request.FILES.get("file")
@@ -180,6 +192,7 @@ class VersionListAPI(APIView):
 
 
     def get(self, request, id):
+        logger.info(f"VersionListAPI GET: id={id}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         # Allow all users to see versions of any non-deleted document
         get_object_or_404(Document, id=id)
         versions = DocumentVersion.objects.filter(document_id=id)
@@ -192,6 +205,7 @@ class DownloadAPI(APIView):
 
 
     def get(self, request, vid):
+        logger.info(f"DownloadAPI GET: vid={vid}, User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         version = get_object_or_404(DocumentVersion, id=vid)
         # Check if the parent document is deleted
         if version.document.is_deleted:
@@ -205,16 +219,17 @@ class DownloadAPI(APIView):
 class TagAPI(APIView):
     permission_classes = [IsManagerOrReadOnly]
 
-
-
     def get(self, request):
+        logger.info(f"TagAPI GET: Reached view successfully. User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         return Response(TagSerializer(Tag.objects.all(), many=True).data)
 
     def post(self, request):
+        logger.info(f"TagAPI POST: Reached view successfully. User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         ser = TagSerializer(data=request.data)
         if ser.is_valid():
             ser.save()
             return Response(ser.data, status=status.HTTP_201_CREATED)
+        logger.error(f"TagAPI POST: Validation failed. Errors={ser.errors}")
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -225,13 +240,16 @@ class MetadataCategoryAPI(APIView):
 
 
     def get(self, request):
+        logger.info(f"MetadataCategoryAPI GET: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         return Response(MetadataCategorySerializer(MetadataCategory.objects.all(), many=True).data)
 
     def post(self, request):
+        logger.info(f"MetadataCategoryAPI POST: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         ser = MetadataCategorySerializer(data=request.data)
         if ser.is_valid():
             ser.save()
             return Response(ser.data, status=status.HTTP_201_CREATED)
+        logger.error(f"MetadataCategoryAPI POST: Validation failed. Errors={ser.errors}")
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -242,16 +260,19 @@ class MetadataValueAPI(APIView):
 
 
     def get(self, request):
+        logger.info(f"MetadataValueAPI GET: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         qs = MetadataValue.objects.filter(category__is_deleted=False)
         if request.GET.get("category"):
             qs = qs.filter(category_id=request.GET["category"])
         return Response(MetadataValueSerializer(qs, many=True).data)
 
     def post(self, request):
+        logger.info(f"MetadataValueAPI POST: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         ser = MetadataValueSerializer(data=request.data)
         if ser.is_valid():
             ser.save()
             return Response(ser.data, status=status.HTTP_201_CREATED)
+        logger.error(f"MetadataValueAPI POST: Validation failed. Errors={ser.errors}")
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -260,6 +281,7 @@ class TenantUsersAPI(APIView):
     permission_classes = [IsManager]
 
     def get(self, request):
+        logger.info(f"TenantUsersAPI GET: User={request.user}, Tenant={getattr(request, 'tenant', 'None')}")
         with schema_context(request.tenant.schema_name):
             tenant = request.tenant
             users = User.objects.filter(tenant=tenant, 
