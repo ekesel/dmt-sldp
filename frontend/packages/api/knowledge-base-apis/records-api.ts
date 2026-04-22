@@ -21,29 +21,19 @@ export interface KnowledgeRecord {
   versionCount: number;
   author: string;
   owner: string;
-  audience: string;
-  type: string;
   date: string;
   status: "Approved" | "Draft" | "Rejected";
   description: string;
-  project: string;
-  team: string;
   uid: string;
   tags: string[];
   /** category_id → value pairs */
-  metadata: { category: number; category_name: string; value: string }[];
+  metadata: { category: number; category_name: string; value: string; value_id?: number | string }[];
   assets: { name: string; size: string }[];
   filesPreview: {
     total: number;
     firstFileName: string | null;
     totalSize: string;
   };
-  history: {
-    version: string;
-    date: string;
-    comment: string;
-    author: string;
-  }[];
   fileUrl?: string; // from latest_version.file
 }
 
@@ -66,6 +56,8 @@ interface DocumentFileDetail {
   id: number;
   name: string;
   size_bytes: number;
+  file?: string;
+  file_url?: string;
 }
 
 interface DocumentResponseItem {
@@ -89,12 +81,9 @@ interface DocumentResponseItem {
   metadata_details?: DocumentMetadataDetail[];
   metadata?: DocumentMetadataDetail[]; // For endpoints that return 'metadata' instead of 'metadata_details'
   file_details?: DocumentFileDetail[];
-  history?: {
-    version: string;
-    date: string;
-    comment: string;
-    author: string;
-  }[];
+  latest_version?: any;
+  file?: string;
+  file_url?: string;
 }
 
 interface PaginatedDocumentsResponse {
@@ -114,13 +103,21 @@ const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
 };
 
 const formatFileSize = (sizeBytes: number): string => {
-  if (sizeBytes >= 1024 * 1024) {
-    return `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
-  if (sizeBytes >= 1024) {
-    return `${(sizeBytes / 1024).toFixed(2)} KB`;
-  }
-  return `${sizeBytes} B`;
+  if (sizeBytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(sizeBytes) / Math.log(k));
+  return parseFloat((sizeBytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+/** Normalizes relative paths to absolute URLs using the API's base URL */
+const ensureAbsoluteUrl = (url?: string): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+
+  const baseUrl = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
+  const relativePath = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${relativePath}`;
 };
 
 const formatDateLabel = (isoDate: string): string => {
@@ -138,43 +135,74 @@ const formatDateLabel = (isoDate: string): string => {
 const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?: any): KnowledgeRecord => {
   const fileDetails = doc.file_details || [];
   const totalFileBytes = fileDetails.reduce((sum, file) => sum + (file.size_bytes || 0), 0);
-  
+
   // Backend sometimes returns 'metadata' and sometimes 'metadata_details'
   const rawMetadata = doc.metadata_details || doc.metadata || [];
-  
-  return {
+
+  const record = {
     id: String(doc.id),
     title: doc.title,
-    version: doc.version || "v1.0",
-    versionCount: doc.version_count || 1,
+    version: latestVersion?.version_number ? `v${latestVersion.version_number}.0` : (doc.version || "v1.0"),
+    versionCount: doc.version_count || (latestVersion?.version_number || 1),
     author: String(doc.created_by),
     owner: String(doc.owner),
-    audience: doc.audience || "General",
-    type: doc.type || "Document",
     date: formatDateLabel(doc.created_at),
     status: STATUS_LABEL_BY_API[doc.status] || "Draft",
     description: doc.description || "",
-    project: doc.project || "General",
-    team: doc.team || "General",
     uid: doc.uid || `KB-${doc.id}`,
-    tags: (doc.tag_details || []).map((tag) => tag.name),
-    metadata: rawMetadata.map((item) => ({
-      category: item.category_id ?? 0,
-      category_name: item.category,
-      value: item.value,
-    })),
+    tags: (() => {
+      const rawTags = (doc.tag_details && doc.tag_details.length > 0) ? doc.tag_details : (doc.tags || []);
+      return (rawTags as any[]).map(t => {
+        if (typeof t === 'string') return t;
+        if (typeof t === 'object' && t !== null && 'name' in t) return t.name;
+        return String(t);
+      }).filter(t => t && t !== "[object Object]");
+    })(),
+    metadata: [
+      ...rawMetadata.map((item) => ({
+        category: item.category_id ?? 0,
+        category_name: item.category,
+        value: item.value,
+        value_id: item.id,
+      })),
+      // Fallback for top-level legacy fields if missing from metadata_details
+      ...((doc.project && !rawMetadata.some(m => m.category.toLowerCase() === 'project')) 
+          ? [{ category: 1, category_name: 'Project', value: doc.project }] : []),
+      ...((doc.team && !rawMetadata.some(m => m.category.toLowerCase() === 'team')) 
+          ? [{ category: 2, category_name: 'Team', value: doc.team }] : []),
+      ...((doc.type && !rawMetadata.some(m => m.category.toLowerCase() === 'type')) 
+          ? [{ category: 3, category_name: 'Type', value: doc.type }] : [])
+    ],
     assets: fileDetails.map((file) => ({
       name: file.name,
       size: formatFileSize(file.size_bytes || 0),
+      url: ensureAbsoluteUrl(file.file || file.file_url),
     })),
     filesPreview: {
       total: fileDetails.length,
       firstFileName: fileDetails[0]?.name ?? null,
       totalSize: formatFileSize(totalFileBytes),
     },
-    history: doc.history || [],
-    fileUrl: latestVersion?.file || latestVersion?.file_url,
+    fileUrl: ensureAbsoluteUrl(
+      latestVersion?.file ||
+      latestVersion?.file_url ||
+      doc.latest_version?.file ||
+      doc.latest_version?.file_url ||
+      doc.file ||
+      doc.file_url ||
+      (doc as any).latest_version_file ||
+      (doc as any).latest_version_file_url
+    ),
   };
+
+  // If fileDetails is empty but we identified a fileUrl OR versionCount > 0, update preview count
+  if (record.filesPreview.total === 0 && (record.fileUrl || record.versionCount > 0)) {
+    record.filesPreview.total = Math.max(1, record.versionCount);
+    record.filesPreview.firstFileName = record.filesPreview.firstFileName || "Latest Version";
+    record.filesPreview.totalSize = record.fileUrl ? "View File" : "Check for versions";
+  }
+
+  return record;
 };
 
 const toDocumentItems = (
@@ -199,6 +227,8 @@ export interface RecordSearchParams {
   tag?: number | string;
   /** Filter by ownership: GET /kb/documents/?mine=true */
   mine?: boolean;
+  /** Full text search: GET /kb/documents/?search=text */
+  search?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +245,7 @@ export const knowledgeRecords = {
         ...(params.category !== undefined ? { category: params.category } : {}),
         ...(params.tag !== undefined ? { tag: params.tag } : {}),
         ...(params.mine !== undefined ? { mine: params.mine } : {}),
+        ...(params.search !== undefined ? { search: params.search } : {}),
       },
     });
     return toDocumentItems(response.data).map(mapDocumentToKnowledgeRecord);
@@ -245,16 +276,67 @@ export const knowledgeRecords = {
     return mapDocumentToKnowledgeRecord(doc);
   },
 
-  /** GET /kb/documents/:docId/files/:fileId/download/ */
-  downloadFile: async (documentId: string | number, fileId: string | number): Promise<void> => {
-    // Note: This often redirects to a file URL or serves a blob. 
-    // Usually handled by window.open if it's a direct download link.
-    const url = `${api.defaults.baseURL}kb/documents/${documentId}/files/${fileId}/download/`;
-    window.open(url, '_blank');
+  /**
+   * Robust document download - fetches file as blob and triggers browser download.
+   * Ensures auth headers are included and handles absolute/relative URLs.
+   */
+  downloadFile: async (
+    fileUrl: string, 
+    fileName?: string, 
+    onProgress?: (progress: number) => void
+  ): Promise<void> => {
+    console.log("File URL:", fileUrl);
+    if (!fileUrl) {
+      alert("Invalid download URL. Please ensure the file exists.");
+      return;
+    }
+
+    try {
+      const absoluteUrl = ensureAbsoluteUrl(fileUrl);
+      if (!absoluteUrl) throw new Error("Could not construct absolute URL");
+
+      const response = await api.get(absoluteUrl, {
+        responseType: 'blob',
+        onDownloadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+          }
+        },
+      });
+
+      // Create a blob URL and trigger download
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      link.href = url;
+      // Use provided fileName or extract from URL
+      link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Document download failed:", error);
+      
+      let errorMsg = "Failed to download file.";
+      if (error.response?.status === 403) {
+        errorMsg = "Access denied. You do not have permission to download this file.";
+      } else if (error.response?.status === 404) {
+        errorMsg = "File not found on the server.";
+      }
+      
+      alert(errorMsg);
+      throw error;
+    }
   },
 
   /** POST /kb/documents/:id/status/ */
-  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED"): Promise<void> => {
+  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED" | "DRAFT"): Promise<void> => {
     await api.post(`/kb/documents/${id}/status/`, { status });
   },
 
@@ -262,7 +344,20 @@ export const knowledgeRecords = {
   getVersions: async (id: string | number): Promise<any[]> => {
     const response = await api.get<{ versions: any[] }>(`/kb/documents/${id}/versions/`);
     const payload = response.data as any;
-    return payload.versions || payload.results || payload;
+    const items = payload.versions || payload.results || payload;
+
+    // Map production fields to the UI-expected shape
+    return (Array.isArray(items) ? items : []).map(v => ({
+      version: `v${v.version_number}`,
+      date: new Date(v.created_at).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }),
+      author: String(v.uploaded_by),
+      comment: v.comment || "No comment provided.",
+      fileUrl: v.file || v.file_url,
+    }));
   },
 
   /** DELETE /kb/documents/:id/ */
@@ -270,14 +365,29 @@ export const knowledgeRecords = {
     await api.delete(`/kb/documents/${id}/`);
   },
 
-  /** PATCH /kb/documents/:id/ */
-  update: async (id: string | number, data: { title?: string; metadata?: number[]; tags?: number[] } | FormData): Promise<KnowledgeRecord> => {
-    const isFormData = data instanceof FormData;
-    const response = await api.patch<DocumentResponseItem>(`/kb/documents/${id}/`, data, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
-    });
+  /** 
+   * PATCH /kb/documents/:id/
+   * Standard metadata update (JSON)
+   */
+  update: async (id: string | number, data: { title?: string; metadata?: number[]; tags?: number[] }): Promise<KnowledgeRecord> => {
+    const response = await api.patch<DocumentResponseItem>(`/kb/documents/${id}/`, data);
     const payload = response.data as any;
     const doc = payload.data || payload;
     return mapDocumentToKnowledgeRecord(doc);
   },
+
+  /** 
+   * POST /kb/documents/:id/upload-version/
+   * Upload a new binary file for an existing document
+   */
+  uploadVersion: async (id: string | number, file: File): Promise<void> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    await api.post(`/kb/documents/${id}/upload-version/`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  /** Helper to get the base site URL for asset resolution */
+  getBaseUrl: () => api.defaults.baseURL || "",
 };

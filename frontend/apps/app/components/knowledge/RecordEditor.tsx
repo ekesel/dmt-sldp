@@ -4,8 +4,6 @@ import {
   ChevronLeft,
   ChevronDown,
   Eye,
-  Save,
-  Globe,
   Type,
   Bold,
   Italic,
@@ -20,8 +18,12 @@ import {
   Search,
   Upload,
   FileText,
+  Loader2,
   MoreHorizontal,
-  Settings
+  Settings,
+  XCircle,
+  Save,
+  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Record as KBRecord } from "./RecordList";
@@ -33,6 +35,7 @@ import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
 import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
+import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 
 interface RecordEditorProps {
   mode: "create" | "edit";
@@ -76,7 +79,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   const { tags, createTag, isLoading: isTagsLoading, isError: isTagsError, isCreating: isTagsCreating } = useTags();
   const { managers, isLoading: isUsersLoading } = useUsers();
   const { categories, allValues, isLoading: isMetadataLoading } = useMetadata();
-  
+  const { versions, isLoading: isHistoryLoading } = useRecordVersions(record?.id || null);
+
   const availableTags = tags.map(t => t.name.toUpperCase());
 
   // Handle clicking outside of tag dropdown to close it
@@ -107,18 +111,33 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     if (mode === "edit" && record?.metadata && allValues.length > 0) {
       const initialSelections: Record<number, string> = {};
       record.metadata.forEach(item => {
-        // Find the value object that matches this category and string value
-        const valObj = allValues.find(v => 
-          Number(v.category) === item.category && 
-          v.value.toLowerCase() === item.value.toLowerCase()
-        );
+        let categoryId = item.category;
+
+        // Fallback: if category ID is 0 or missing, try matching by name against categories list
+        if ((!categoryId || categoryId === 0) && item.category_name && categories.length > 0) {
+          const cat = categories.find(c => c.name.toLowerCase() === item.category_name.toLowerCase());
+          if (cat) categoryId = cat.id;
+        }
+
+        if (!categoryId || categoryId === 0) return;
+
+        // Find the value object that matches this category and value
+        const valObj = allValues.find(v => {
+          const isSameCategory = Number(v.category) === categoryId;
+          if (!isSameCategory) return false;
+
+          // Prefer matching by ID if available, otherwise match by string value
+          if (item.value_id && String(v.id) === String(item.value_id)) return true;
+          return v.value.toLowerCase() === item.value.toLowerCase();
+        });
+
         if (valObj) {
-          initialSelections[item.category] = String(valObj.id);
+          initialSelections[categoryId] = String(valObj.id);
         }
       });
       setMetadataSelections(prev => ({ ...prev, ...initialSelections }));
     }
-  }, [mode, record, allValues]);
+  }, [mode, record, allValues, categories]);
 
   const handleMetadataChange = (categoryId: number, valueId: string) => {
     setMetadataSelections(prev => ({ ...prev, [categoryId]: valueId }));
@@ -169,55 +188,70 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       return;
     }
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("title", formData.title);
-    
-    // Default to first manager if none selected for now, to ensure numeric owner
-    const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
-    formDataToSend.append("owner", String(selectedOwnerId));
-    
-    formDataToSend.append("lifecycle_status", formData.lifecycle_status);
-    formDataToSend.append("content", ""); // No longer using write content section
-    formDataToSend.append("version", formData.version.toString());
-
-    // Map metadata: send all selected value IDs as individual 'metadata' fields
-    Object.values(metadataSelections).forEach((valueId) => {
-      if (valueId) formDataToSend.append("metadata", valueId);
-    });
-
-    // Map tags: formData.tags contains NAMES (UPPERCASE). We need IDs.
-    formData.tags.forEach((tagName) => {
-      const tagObj = tags.find(t => t.name.toUpperCase() === tagName);
-      if (tagObj) {
-        formDataToSend.append("tags", String(tagObj.id));
-      }
-    });
-
-    if (formData.file) {
-      formDataToSend.append("file", formData.file);
-    }
-
-    console.log("Submitting to Knowledge Base API...");
-
     try {
       if (mode === "edit" && record) {
-        await knowledgeRecords.update(record.id, formDataToSend);
+        // 1. Prepare JSON payload for metadata update
+        const updatePayload = {
+          title: formData.title,
+          tags: formData.tags.map(tagName => {
+            const tagObj = tags.find(t => t.name.toUpperCase() === tagName);
+            return tagObj?.id;
+          }).filter(id => id !== undefined) as number[],
+          metadata: Object.values(metadataSelections)
+            .map(id => Number(id))
+            .filter(id => !isNaN(id)),
+        };
+
+        // 2. Patch metadata
+        await knowledgeRecords.update(record.id, updatePayload);
+        console.log("Metadata updated via PATCH");
+
+        // 3. If a new file is attached, upload it as a new version
+        if (formData.file) {
+          console.log("Uploading new version...");
+          await knowledgeRecords.uploadVersion(record.id, formData.file);
+          console.log("New version uploaded");
+        }
+
         console.log("Document updated successfully");
       } else {
+        // Create mode: use FormData for single-stage creation (Document + initial version)
+        const formDataToSend = new FormData();
+        formDataToSend.append("title", formData.title);
+
+        const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
+        formDataToSend.append("owner", String(selectedOwnerId));
+        formDataToSend.append("lifecycle_status", formData.lifecycle_status);
+        formDataToSend.append("content", "");
+        formDataToSend.append("version", formData.version.toString());
+
+        Object.values(metadataSelections).forEach((valueId) => {
+          if (valueId) formDataToSend.append("metadata", valueId);
+        });
+
+        formData.tags.forEach((tagName) => {
+          const tagObj = tags.find(t => t.name.toUpperCase() === tagName);
+          if (tagObj) formDataToSend.append("tags", String(tagObj.id));
+        });
+
+        if (formData.file) {
+          formDataToSend.append("file", formData.file);
+        }
+
         const result = await knowledgeRecords.create(formDataToSend);
         console.log("Document created successfully:", result);
       }
-      
+
       // Invalidate queries to refresh the list and detail views
       queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
       if (mode === "edit" && record) {
         queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(record.id) });
       }
-      
+
       onBack();
     } catch (error) {
       console.error("Error saving document:", error);
-      alert("Failed to save document. Please try again.");
+      alert("Failed to save document. Please check your permissions and try again.");
     }
   };
 
@@ -411,10 +445,10 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     {formData.file ? <CheckCircle2 className="w-6 h-6 lg:w-8 lg:h-8" /> : <Upload className="w-6 h-6 lg:w-8 lg:h-8" />}
                   </div>
                   <h3 className="text-xl lg:text-3xl font-black text-foreground mb-3">
-                    {formData.file ? formData.file.name : "Drop files here"}
+                    {formData.file ? formData.file.name : (mode === "edit" ? "Upload New Version" : "Drop files here")}
                   </h3>
                   <button className="text-sm lg:text-lg font-black text-primary hover:underline transition-all">
-                    {formData.file ? "Change file" : "Browse files"}
+                    {formData.file ? "Change file" : (mode === "edit" ? "Select New File" : "Browse files")}
                   </button>
                   {formData.file && (
                     <span className="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
@@ -514,8 +548,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                     <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
                       {/* Filtered Results */}
                       {availableTags
-                        .filter(tag => 
-                          !formData.tags.includes(tag) && 
+                        .filter(tag =>
+                          !formData.tags.includes(tag) &&
                           (newTag.trim() === "" || tag.includes(newTag.toUpperCase()))
                         )
                         .map(tag => (
@@ -557,20 +591,53 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
             </div>
           </div>
 
-          {mode === "edit" && record?.history && (
+          {mode === "edit" && (
             <div className="pt-8 border-t border-border/40">
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Version History</h3>
-              <div className="relative flex gap-4">
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-                  <div className="w-2 h-2 rounded-full bg-background" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-black text-foreground">V2.1</span>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Feb 28</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-muted-foreground mb-4">Sara Kim</p>
-                </div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Version History</h3>
+                {isHistoryLoading && (
+                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                )}
+              </div>
+              
+              <div className="space-y-8">
+                {versions.length > 0 ? (
+                  versions.map((item, index) => (
+                    <div key={item.version} className="relative flex gap-4">
+                      {/* Progress Line */}
+                      {index !== versions.length - 1 && (
+                        <div className="absolute left-[11px] top-6 bottom-[-32px] w-[2px] bg-border/20" />
+                      )}
+
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-lg",
+                        index === 0 ? "bg-primary shadow-primary/20" : "bg-secondary border border-border/40"
+                      )}>
+                        {index === 0 ? (
+                          <div className="w-2 h-2 rounded-full bg-background" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-black text-foreground">{item.version}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.date}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-muted-foreground mb-1">
+                          {item.author.startsWith("User #") ? item.author : `User #${item.author}`}
+                        </p>
+                        {item.comment && (
+                          <p className="text-[11px] font-medium text-foreground/60 leading-tight italic truncate">
+                            &quot;{item.comment}&quot;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  !isHistoryLoading && <p className="text-[10px] font-medium text-muted-foreground italic">No versions found.</p>
+                )}
               </div>
             </div>
           )}

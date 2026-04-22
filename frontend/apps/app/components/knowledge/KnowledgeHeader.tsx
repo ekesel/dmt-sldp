@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Plus, X, Menu } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // ---------------------------------------------------------------------------
 // useDebouncedSearch — mock search hook
@@ -60,6 +61,8 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
     searchTerm
   );
 
+  const { isManager } = usePermissions();
+
   return (
     <header className="flex items-center justify-between px-4 xl:px-8 py-4 bg-background/40 backdrop-blur-sm border-b border-border/40">
       <div className="flex items-center gap-4 min-w-0">
@@ -101,15 +104,18 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
           )}
         </div>
 
-        <button
-          onClick={onNewRecord}
-          className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-foreground text-background rounded-xl hover:opacity-90 transition-all active:scale-[0.98] shadow-md shadow-foreground/5 text-xs lg:text-sm font-bold"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Record</span>
-          <span className="sm:hidden text-[10px]">New</span>
-        </button>
+        {isManager && (
+          <button
+            onClick={onNewRecord}
+            className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-foreground text-background rounded-xl hover:opacity-90 transition-all active:scale-[0.98] shadow-md shadow-foreground/5 text-xs lg:text-sm font-bold"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Record</span>
+            <span className="sm:hidden text-[10px]">New</span>
+          </button>
+        )}
       </div>
     </header>
   );
 };
+

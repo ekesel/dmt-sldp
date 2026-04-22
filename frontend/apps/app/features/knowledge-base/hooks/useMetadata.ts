@@ -44,3 +44,13 @@ export const useMetadata = (activeCategory?: number) => {
     isAddingCategory: createCategoryMutation.isPending,
   };
 };
+
+export const useAllMetadataValues = () => {
+  const valuesQuery = useQuery(metadataValuesOptions());
+
+  return {
+    allValues: valuesQuery.data || STABLE_EMPTY_ARRAY,
+    isLoading: valuesQuery.isLoading,
+    isError: valuesQuery.isError,
+  };
+};

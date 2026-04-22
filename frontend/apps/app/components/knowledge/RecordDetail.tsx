@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle } from "lucide-react";
+import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle, ArrowUpRight } from "lucide-react";
 import { Record } from "./RecordList";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { knowledgeRecords } from "@dmt/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 
 interface RecordDetailProps {
   record: Record | null;
@@ -15,12 +16,21 @@ interface RecordDetailProps {
   onEdit?: (record: Record) => void;
   currentUser: string;
   isLoading?: boolean;
+  onTagClick?: (tag: { id: number | string; name: string }) => void;
 }
 
-export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser, isLoading }) => {
+export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser, isLoading, onTagClick }) => {
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
+  const { managers } = useUsers();
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+
+  // Helper to find username by ID
+  const resolveUserName = (userId: string | number) => {
+    if (!userId) return "Unknown";
+    const user = managers.find(m => String(m.id) === String(userId));
+    return user ? user.username : `User #${userId}`;
+  };
 
   const workflowMutation = useMutation({
     mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) =>
@@ -43,11 +53,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
     workflowMutation.mutate({ id: record.id, status });
   };
 
-  const handleDownload = async (fileId: string | number) => {
-    if (!record) return;
-    setDownloadingFileId(String(fileId));
+  const handleDownload = async (fileUrl: string, assetName: string) => {
+    if (!record || !fileUrl) return;
+    setDownloadingFileId(assetName);
     try {
-      await knowledgeRecords.downloadFile(record.id, fileId);
+      await knowledgeRecords.downloadFile(fileUrl, assetName);
     } catch (error) {
       console.error("Download failed:", error);
     } finally {
@@ -107,6 +117,35 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               Document
             </span>
             <div className="flex gap-2">
+
+              {isManager && record.status === "Draft" && (
+                <>
+                  <button
+                    onClick={() => handleStatusChange("APPROVED")}
+                    disabled={workflowMutation.isPending}
+                    className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-lg border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
+                    title="Approve document"
+                  >
+                    {workflowMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange("REJECTED")}
+                    disabled={workflowMutation.isPending}
+                    className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg border border-rose-500/20 transition-all active:scale-95 disabled:opacity-50"
+                    title="Reject document"
+                  >
+                    {workflowMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4" />
+                    )}
+                  </button>
+                </>
+              )}
               {isManager && (
                 <button
                   onClick={() => record && onEdit?.(record)}
@@ -146,10 +185,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               <span className="text-sm font-semibold text-foreground">{record.date.split(',')[0]}</span>
             </div>
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Type</h3>
-              <span className="text-sm font-semibold text-foreground">{record.type}</span>
-            </div>
-            <div>
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Versions</h3>
               <span className="text-sm font-semibold text-foreground">{record.versionCount}</span>
             </div>
@@ -161,24 +196,26 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Owner</span>
-                <span className="text-sm font-semibold text-foreground text-right">{record.owner}</span>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-border/20">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Audience</span>
-                <span className="text-sm font-semibold text-foreground text-right">{record.audience}</span>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-border/20">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Project</span>
-                <span className="text-sm font-semibold text-foreground text-right">{record.project}</span>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-border/20">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Team</span>
-                <span className="text-sm font-semibold text-foreground text-right">{record.team}</span>
+                <span className="text-sm font-semibold text-foreground text-right">{resolveUserName(record.owner)}</span>
               </div>
               <div className="flex items-center justify-between pt-3 border-t border-border/20">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Document ID</span>
                 <span className="text-sm font-semibold text-foreground text-right">{record.uid}</span>
               </div>
+
+              {/* Dynamically render all metadata entries from production */}
+              {record.metadata.map((item, index) => (
+                <div key={`${item.category}-${index}`} className="flex items-center justify-between pt-3 border-t border-border/20">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">{item.category_name}</span>
+                  <span className="text-sm font-semibold text-foreground text-right">{item.value}</span>
+                </div>
+              ))}
+
+              {record.metadata.length === 0 && (
+                <div className="pt-3 border-t border-border/20">
+                  <p className="text-[10px] font-medium text-muted-foreground italic">No additional metadata specified.</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -187,9 +224,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Tags</h3>
             <div className="flex flex-wrap gap-2">
               {record.tags.map(tag => (
-                <span key={tag} className="px-3 py-1 bg-background text-[12px] font-medium text-foreground rounded-lg border border-border/60 cursor-default">
+                <button
+                  key={tag}
+                  onClick={() => onTagClick?.({ id: tag, name: tag })}
+                  className="px-3 py-1 bg-background hover:bg-primary/5 hover:border-primary/40 text-[12px] font-medium text-foreground hover:text-primary rounded-lg border border-border/60 transition-all active:scale-95 shadow-sm"
+                >
                   {tag}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -207,11 +248,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               {record.status === "Approved" || record.owner === currentUser ? (
                 record.assets.length > 0 ? (
                   record.assets.map((asset, index) => {
-                    const isDownloading = downloadingFileId === String(asset.name); // Using name as ID for mock
+                    const isDownloading = downloadingFileId === asset.name;
                     return (
                       <div
                         key={asset.name}
-                        onClick={() => !isDownloading && handleDownload(asset.name)}
+                        onClick={() => !isDownloading && record.fileUrl && handleDownload(record.fileUrl, asset.name)}
                         className={cn(
                           "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
                           index !== record.assets.length - 1 && "mb-1"
@@ -258,7 +299,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           </div>
 
           {/* Version History Section */}
-          <VersionHistoryList recordId={record.id} initialHistory={record.history} />
+          <VersionHistoryList
+            recordId={record.id}
+            onDownload={(url, name) => handleDownload(url, name)}
+            resolveUserName={resolveUserName}
+          />
         </div>
       </aside>
     </>
@@ -268,12 +313,14 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 /**
  * Sub-component to handle dynamic version history fetching and rendering.
  */
-const VersionHistoryList: React.FC<{ recordId: string | number; initialHistory: any[] }> = ({ recordId, initialHistory }) => {
+const VersionHistoryList: React.FC<{
+  recordId: string | number;
+  onDownload?: (url: string, name: string) => void;
+  resolveUserName: (userId: string | number) => string;
+}> = ({ recordId, onDownload, resolveUserName }) => {
   const { versions, isLoading, isError } = useRecordVersions(recordId);
 
-  // Fallback to initial history from the list fetch if versions are still loading or errored,
-  // but show a subtle loading indicator if we're actually fetching live data.
-  const displayHistory = isLoading ? initialHistory : versions;
+  const displayHistory = versions;
 
   return (
     <div className="mt-8 pt-6 border-t border-border/40">
@@ -290,16 +337,28 @@ const VersionHistoryList: React.FC<{ recordId: string | number; initialHistory: 
         {displayHistory.length > 0 ? (
           displayHistory.map((item: any, index: number) => (
             <div key={item.version} className={cn(
-              "space-y-2.5",
+              "space-y-2.5 group/version",
               index !== displayHistory.length - 1 && "pb-5 border-b border-border/20"
             )}>
               <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-foreground">{item.version}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-semibold text-foreground">{item.version}</span>
+                  {item.fileUrl && (
+                    <button
+                      onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
+                      className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                      title="Download version"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
                 <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {item.author}
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground/40 tracking-wider">Uploaded by</span>
+                  {resolveUserName(item.author)}
                 </p>
                 <p className="text-[14px] text-foreground font-medium leading-snug">
                   {item.comment}

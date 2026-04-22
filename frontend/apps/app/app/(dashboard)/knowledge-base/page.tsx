@@ -1,31 +1,34 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { KnowledgeSidebar, Team } from "@/components/knowledge/KnowledgeSidebar";
 import { KnowledgeHeader } from "@/components/knowledge/KnowledgeHeader";
 import { RecordList, Record } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
-import { RecordEditor } from "@/components/knowledge/RecordEditor";
 import { MetadataCategory as Category } from "@dmt/api";
-import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
+import { useMetadata, useAllMetadataValues } from "@/features/knowledge-base/hooks/useMetadata";
 import { useRecord, useReviewCount } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { useTags } from "@/features/knowledge-base/hooks/useTags";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 
 export default function KnowledgeBasePage() {
+  const router = useRouter();
   const [activeTeam, setActiveTeam] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<number>(1);
   const [headerTitle, setHeaderTitle] = useState<string>("Loading...");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<Record | null>(null);
+  // isCreating state removed in favor of page-based navigation
+  // Editor state removed in favor of page-based navigation
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isReviewActive, setIsReviewActive] = useState(false);
+  const [activeTag, setActiveTag] = useState<{ id: number | string, name: string } | null>(null);
 
   const {
     categories,
@@ -38,15 +41,17 @@ export default function KnowledgeBasePage() {
   } = useMetadata(activeCategory);
   const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
   const { count: reviewCount } = useReviewCount();
+  const { tags } = useTags();
+  const { allValues: globalValues } = useAllMetadataValues();
   const { isManager } = usePermissions();
   const { user } = useAuth();
 
   // Derive teams list from metadata values
-  const teams = React.useMemo(() => 
+  const teams = React.useMemo(() =>
     allValues.map(v => ({
       name: v.value,
       count: 0 // Default count
-    })), 
+    })),
     [allValues]
   );
 
@@ -111,16 +116,73 @@ export default function KnowledgeBasePage() {
     if (category?.name.toUpperCase() !== "TEAM") {
       setActiveTeam("");
     }
+    setActiveTag(null); // Clear tag on category change
     setIsReviewActive(false);
   };
 
   const handleTeamChange = (team: string) => {
     setActiveTeam(team);
     setHeaderTitle(team);
-    setSearchTerm(""); // Reset search on team change
-    setSelectedId(null); // Clear detail view on selection change
+    setSearchTerm("");
+    setActiveTag(null); // Clear tag on team change
+    setSelectedId(null);
     setIsSidebarOpen(false); // Close sidebar on selection (mobile)
     setIsReviewActive(false);
+  };
+
+  const handleTagClick = (tag: { id: number | string; name: string }) => {
+    setActiveTag(tag);
+    setHeaderTitle(tag.name);
+    setSearchTerm("");
+    setActiveCategory(1); // Default to project or clear? Clear is better for "all"
+    setActiveTeam("");
+    setSelectedId(null);
+    setIsSidebarOpen(false);
+    setIsReviewActive(false);
+  };
+
+  const handleSearchChange = (query: string) => {
+    if (!query) {
+      setSearchTerm("");
+      return;
+    }
+
+    // Check if query matches a tag (case-insensitive)
+    const matchingTag = tags.find(t => t.name.toLowerCase() === query.toLowerCase());
+
+    if (matchingTag) {
+      handleTagClick(matchingTag);
+      setSearchTerm(""); // Reset search term when we match a tag
+      toast.success(`Filtering by tag: ${matchingTag.name}`, { duration: 2000, id: 'tag-filter-match' });
+      return;
+    }
+
+    // Check if query matches a metadata value (case-insensitive)
+    const matchingValue = globalValues.find(v => v.value.toLowerCase() === query.toLowerCase());
+
+    if (matchingValue) {
+      const category = categories.find(c => c.id === matchingValue.category);
+      const categoryName = category?.name || matchingValue.category_name || "Record";
+
+      // Pivot context
+      setActiveCategory(matchingValue.category);
+      if (categoryName.toUpperCase() === "TEAM") {
+        setActiveTeam(matchingValue.value);
+      }
+      setHeaderTitle(matchingValue.value);
+      setSearchTerm("");
+      setActiveTag(null);
+      setIsReviewActive(false);
+      setSelectedId(null);
+
+      toast.success(`Switching to ${categoryName}: ${matchingValue.value}`, {
+        duration: 2000,
+        id: 'category-filter-match'
+      });
+    } else {
+      setSearchTerm(query);
+      setActiveTag(null); // Clear tag filter when performing text search
+    }
   };
 
   const handleReviewClick = () => {
@@ -131,14 +193,6 @@ export default function KnowledgeBasePage() {
     setSelectedId(null); // Clear detail view when switching to review
     setIsSidebarOpen(false);
   };
-
-  if (isCreating) {
-    return <RecordEditor mode="create" onBack={() => setIsCreating(false)} />;
-  }
-
-  if (editingRecord) {
-    return <RecordEditor mode="edit" record={editingRecord} onBack={() => setEditingRecord(null)} />;
-  }
 
   const currentUser = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Unknown User";
 
@@ -194,9 +248,11 @@ export default function KnowledgeBasePage() {
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         <KnowledgeHeader
           activeItem={headerTitle}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onNewRecord={() => setIsCreating(true)}
+          searchTerm={searchTerm || activeTag?.name || ""}
+          onSearchChange={handleSearchChange}
+          onNewRecord={() => {
+            if (isManager) router.push("/knowledge-base/new");
+          }}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
@@ -207,17 +263,19 @@ export default function KnowledgeBasePage() {
               activeTeam={activeTeam}
               search={searchTerm}
               category={activeCategory}
+              tag={activeTag?.id}
               mine={isReviewActive}
               onSelect={(record) => {
                 setSelectedId(record.id);
                 if (searchTerm) {
-                  // If we were searching, sync the UI to the selected record's team
-                  setActiveTeam(record.team);
-                  setHeaderTitle(record.team);
+                  const teamMeta = record.metadata.find(m => m.category === 1)?.value || "";
+                  setActiveTeam(teamMeta);
+                  setHeaderTitle(teamMeta || "Library");
                   setActiveCategory(1);
-                  setSearchTerm(""); // Clear search after selection
+                  setSearchTerm("");
                 }
               }}
+              onTagClick={handleTagClick}
             />
           </main>
 
@@ -226,7 +284,8 @@ export default function KnowledgeBasePage() {
             isLoading={isRecordLoading}
             currentUser={currentUser}
             onClose={() => setSelectedId(null)}
-            onEdit={(record) => setEditingRecord(record)}
+            onEdit={(record) => router.push(`/knowledge-base/edit/${record.id}`)}
+            onTagClick={handleTagClick}
           />
         </div>
       </div>

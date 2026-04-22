@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { KnowledgeRecord, RecordSearchParams, knowledgeRecords } from "@dmt/api";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 
 // Re-export KnowledgeRecord as Record so the rest of the app keeps compiling
 export type { KnowledgeRecord as Record } from "@dmt/api";
@@ -17,7 +18,6 @@ export type { KnowledgeRecord as Record } from "@dmt/api";
 interface RecordCardProps {
   record: KnowledgeRecord;
   isSelected: boolean;
-  onClick: () => void;
   onDownload: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
   isDownloading: boolean;
@@ -27,6 +27,9 @@ interface RecordCardProps {
   onApprove: (e: React.MouseEvent) => void;
   onReject: (e: React.MouseEvent) => void;
   isUpdatingStatus: boolean;
+  onClick: () => void;
+  onTagClick?: (tag: { id: number | string; name: string }) => void;
+  resolveUserName: (userId: string | number) => string;
 }
 
 const RecordCard: React.FC<RecordCardProps> = ({
@@ -41,7 +44,9 @@ const RecordCard: React.FC<RecordCardProps> = ({
   isOwner,
   onApprove,
   onReject,
-  isUpdatingStatus
+  isUpdatingStatus,
+  onTagClick,
+  resolveUserName
 }) => {
   return (
     <div
@@ -68,9 +73,6 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
               {record.version}
             </span>
-            <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-secondary/80 text-muted-foreground rounded border border-border/40 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
-              {record.type}
-            </span>
             <span className={cn(
               "text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-tighter shrink-0 self-start sm:self-auto shadow-sm",
               record.status === "Approved" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
@@ -82,7 +84,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span className="flex items-center gap-1">
-              <span className="text-foreground/40 font-bold">By</span> {record.author}
+              <span className="text-foreground/40 font-bold">By</span> {resolveUserName(record.author)}
             </span>
             <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
             <span className="flex items-center gap-1">
@@ -99,17 +101,36 @@ const RecordCard: React.FC<RecordCardProps> = ({
               </span>
             </span>
           </div>
+          
+          {/* Tags Section added back */}
+          {record.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {record.tags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.({ id: tag, name: tag }); // Fallback for string-based tags
+                  }}
+                  className="px-2 py-0.5 bg-secondary/50 text-[9px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded border border-border/40 transition-colors uppercase tracking-tight"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {record.assets.length > 0 && (
+          <div className="flex items-center gap-1">
+
             <button
               onClick={onDownload}
-              disabled={isDownloading}
+              disabled={record.versionCount === 0 || isDownloading}
               className={cn(
-                "p-2 rounded-lg transition-all border border-transparent hover:border-primary/20 hover:bg-primary/5 active:scale-95 disabled:opacity-50",
-                isSelected ? "text-primary" : "text-muted-foreground hover:text-primary"
+                "p-2 rounded-lg transition-all border border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 disabled:opacity-50 text-emerald-600",
+                "shadow-sm"
               )}
-              title="Quick download main asset"
+              title={record.versionCount > 0 ? "Download latest version" : "No file available to download"}
             >
               {isDownloading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -117,7 +138,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                 <Download className="w-4 h-4" />
               )}
             </button>
-          )}
+          </div>
 
           {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
             <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-3">
@@ -167,12 +188,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
             </button>
           )}
 
-          <div className={cn(
-            "p-2 rounded-lg lg:opacity-0 group-hover:opacity-100 transition-opacity",
-            isSelected ? "opacity-100 text-primary" : "text-muted-foreground"
-          )}>
-            <ArrowUpRight className="w-4 h-4 lg:w-5 lg:h-5" />
-          </div>
+
         </div>
       </div>
     </div>
@@ -192,6 +208,7 @@ interface RecordListProps {
   /** Filter by ownership: GET /documents/?mine=true */
   mine?: boolean;
   onSelect: (record: KnowledgeRecord) => void;
+  onTagClick?: (tag: { id: number | string; name: string }) => void;
 }
 
 export const RecordList: React.FC<RecordListProps> = ({
@@ -202,11 +219,20 @@ export const RecordList: React.FC<RecordListProps> = ({
   tag,
   mine,
   onSelect,
+  onTagClick,
 }) => {
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
+  const { managers } = useUsers();
   const { user } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Helper to find username by ID
+  const resolveUserName = (userId: string | number) => {
+    if (!userId) return "Unknown";
+    const user = managers.find(m => String(m.id) === String(userId));
+    return user ? user.username : `User #${userId}`;
+  };
 
   // Debug log to help identify why buttons might be missing
   React.useEffect(() => {
@@ -251,13 +277,27 @@ export const RecordList: React.FC<RecordListProps> = ({
     }
   };
 
+
   const handleQuickDownload = async (e: React.MouseEvent, record: KnowledgeRecord) => {
     e.stopPropagation();
-    if (record.assets.length === 0) return;
-
     setDownloadingId(record.id);
     try {
-      await knowledgeRecords.downloadFile(record.id, record.assets[0].name);
+      let fileUrl = record.fileUrl;
+      let fileName = record.filesPreview.firstFileName || record.title;
+
+      // Lazy-load fileUrl if missing from list view
+      if (!fileUrl && record.id) {
+        const fullDetail = await knowledgeRecords.getById(record.id);
+        fileUrl = fullDetail.fileUrl;
+        fileName = fullDetail.filesPreview.firstFileName || fullDetail.title;
+      }
+
+      if (!fileUrl) {
+        alert("Could not locate a file for this document.");
+        return;
+      }
+
+      await knowledgeRecords.downloadFile(fileUrl, fileName);
     } catch (error) {
       console.error("Quick download failed:", error);
     } finally {
@@ -268,25 +308,26 @@ export const RecordList: React.FC<RecordListProps> = ({
     category: category,
     tag: tag,
     mine: mine,
+    search: search,
   };
 
   const { records, isLoading, isFetching, isError } = useRecords(searchParams);
 
-  // Client-side search filtering (since backend doesn't support ?search=)
-  const filteredRecords = React.useMemo(() => {
-    if (!search) return records;
-    const lowerSearch = search.toLowerCase();
-    return records.filter(r =>
-      r.title.toLowerCase().includes(lowerSearch) ||
-      r.description.toLowerCase().includes(lowerSearch)
-    );
-  }, [records, search]);
-
-  // When no API search is active, further filter by the sidebar-selected team
   const isSearching = !!(search || category || tag);
-  const displayRecords = isSearching
-    ? filteredRecords
-    : filteredRecords.filter((r) => !activeTeam || r.team === activeTeam);
+
+  const displayRecords = React.useMemo(() => {
+    // Start with the records from the API (which may be filtered by category, tag, or search term)
+    let filtered = records;
+
+    // Further refine by the specific metadata value (Team/Project/etc.) selected in the sidebar
+    if (activeTeam) {
+      filtered = filtered.filter((r) =>
+        r.metadata.some(m => m.value.toLowerCase() === activeTeam.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [records, activeTeam]);
 
   if (isLoading) {
     return (
@@ -323,12 +364,14 @@ export const RecordList: React.FC<RecordListProps> = ({
               isOwner={String(user?.id) === record.owner}
               onClick={() => onSelect(record)}
               onDownload={(e) => handleQuickDownload(e, record)}
+              isDownloading={downloadingId === record.id}
               onDelete={(e) => handleDelete(e, record)}
               onApprove={(e) => handleStatusChange(e, record, "APPROVED")}
               onReject={(e) => handleStatusChange(e, record, "REJECTED")}
-              isDownloading={downloadingId === record.id}
               isDeleting={deleteMutation.isPending && deleteMutation.variables === record.id}
               isUpdatingStatus={workflowMutation.isPending && workflowMutation.variables?.id === record.id}
+              onTagClick={onTagClick}
+              resolveUserName={resolveUserName}
             />
           ))
         ) : (
