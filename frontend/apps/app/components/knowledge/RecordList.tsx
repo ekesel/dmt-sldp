@@ -101,7 +101,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
               </span>
             </span>
           </div>
-          
+
           {/* Tags Section added back */}
           {record.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">

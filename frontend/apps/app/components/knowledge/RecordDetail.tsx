@@ -252,7 +252,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                     return (
                       <div
                         key={asset.name}
-                        onClick={() => !isDownloading && record.fileUrl && handleDownload(record.fileUrl, asset.name)}
+                        onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
                         className={cn(
                           "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
                           index !== record.assets.length - 1 && "mb-1"

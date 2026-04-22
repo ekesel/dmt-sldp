@@ -28,7 +28,7 @@ export interface KnowledgeRecord {
   tags: string[];
   /** category_id → value pairs */
   metadata: { category: number; category_name: string; value: string; value_id?: number | string }[];
-  assets: { name: string; size: string }[];
+  assets: { name: string; size: string; url?: string }[];
   filesPreview: {
     total: number;
     firstFileName: string | null;
@@ -113,11 +113,21 @@ const formatFileSize = (sizeBytes: number): string => {
 /** Normalizes relative paths to absolute URLs using the API's base URL */
 const ensureAbsoluteUrl = (url?: string): string | undefined => {
   if (!url) return undefined;
-  if (url.startsWith('http')) return url;
 
-  const baseUrl = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
-  const relativePath = url.startsWith('/') ? url : `/${url}`;
-  return `${baseUrl}${relativePath}`;
+  // If it's already an absolute URL (http, https, blob, data, or //), use it as-is
+  if (/^((https?|blob|data):|\/\/)/i.test(url)) return url;
+
+  // Documents base URL
+  const mediaBaseUrl = "https://samta.elevate.samta.ai/";
+
+
+  // Cleanly join to ensure no duplicate slashes
+  const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
+  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+
+  const result = `${cleanBase}${cleanPath}`;
+  console.log("Constructed Media URL:", result);
+  return result;
 };
 
 const formatDateLabel = (isoDate: string): string => {
@@ -166,12 +176,12 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?:
         value_id: item.id,
       })),
       // Fallback for top-level legacy fields if missing from metadata_details
-      ...((doc.project && !rawMetadata.some(m => m.category.toLowerCase() === 'project')) 
-          ? [{ category: 1, category_name: 'Project', value: doc.project }] : []),
-      ...((doc.team && !rawMetadata.some(m => m.category.toLowerCase() === 'team')) 
-          ? [{ category: 2, category_name: 'Team', value: doc.team }] : []),
-      ...((doc.type && !rawMetadata.some(m => m.category.toLowerCase() === 'type')) 
-          ? [{ category: 3, category_name: 'Type', value: doc.type }] : [])
+      ...((doc.project && !rawMetadata.some(m => m.category.toLowerCase() === 'project'))
+        ? [{ category: 1, category_name: 'Project', value: doc.project }] : []),
+      ...((doc.team && !rawMetadata.some(m => m.category.toLowerCase() === 'team'))
+        ? [{ category: 2, category_name: 'Team', value: doc.team }] : []),
+      ...((doc.type && !rawMetadata.some(m => m.category.toLowerCase() === 'type'))
+        ? [{ category: 3, category_name: 'Type', value: doc.type }] : [])
     ],
     assets: fileDetails.map((file) => ({
       name: file.name,
@@ -281,8 +291,8 @@ export const knowledgeRecords = {
    * Ensures auth headers are included and handles absolute/relative URLs.
    */
   downloadFile: async (
-    fileUrl: string, 
-    fileName?: string, 
+    fileUrl: string,
+    fileName?: string,
     onProgress?: (progress: number) => void
   ): Promise<void> => {
     console.log("File URL:", fileUrl);
@@ -291,10 +301,13 @@ export const knowledgeRecords = {
       return;
     }
 
-    try {
-      const absoluteUrl = ensureAbsoluteUrl(fileUrl);
-      if (!absoluteUrl) throw new Error("Could not construct absolute URL");
+    const absoluteUrl = ensureAbsoluteUrl(fileUrl);
+    if (!absoluteUrl) {
+      alert("Could not construct absolute URL");
+      return;
+    }
 
+    try {
       const response = await api.get(absoluteUrl, {
         responseType: 'blob',
         onDownloadProgress: (progressEvent) => {
@@ -309,27 +322,46 @@ export const knowledgeRecords = {
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      
+
       link.href = url;
       // Use provided fileName or extract from URL
       link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error("Document download failed:", error);
-      
+      console.error("Authenticated document download failed, trying fallback:", error);
+
+      // Fallback: Try direct download via browser link
+      // This bypasses script-level CORS preflight for simple downloads
+      try {
+        const link = document.createElement('a');
+        link.href = absoluteUrl;
+        // Ensure browser treats it as download if possible
+        link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
+        link.setAttribute('target', '_blank'); // Open in new tab if browser can't force download
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log("Fallback download triggered.");
+        return;
+      } catch (fallbackError) {
+        console.error("Fallback download failed:", fallbackError);
+      }
+
       let errorMsg = "Failed to download file.";
       if (error.response?.status === 403) {
         errorMsg = "Access denied. You do not have permission to download this file.";
       } else if (error.response?.status === 404) {
         errorMsg = "File not found on the server.";
       }
-      
+
       alert(errorMsg);
       throw error;
     }
@@ -356,7 +388,7 @@ export const knowledgeRecords = {
       }),
       author: String(v.uploaded_by),
       comment: v.comment || "No comment provided.",
-      fileUrl: v.file || v.file_url,
+      fileUrl: ensureAbsoluteUrl(v.file || v.file_url),
     }));
   },
 

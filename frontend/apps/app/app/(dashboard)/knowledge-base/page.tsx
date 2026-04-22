@@ -7,7 +7,7 @@ import { RecordList, Record } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
 import { MetadataCategory as Category } from "@dmt/api";
 import { useMetadata, useAllMetadataValues } from "@/features/knowledge-base/hooks/useMetadata";
-import { useRecord, useReviewCount } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { useRecord, useReviewCount, useRecords } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
@@ -41,18 +41,21 @@ export default function KnowledgeBasePage() {
   } = useMetadata(activeCategory);
   const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
   const { count: reviewCount } = useReviewCount();
+  const { records: allCategoryRecords } = useRecords({ category: activeCategory });
   const { tags } = useTags();
   const { allValues: globalValues } = useAllMetadataValues();
   const { isManager } = usePermissions();
   const { user } = useAuth();
 
-  // Derive teams list from metadata values
+  // Derive teams list with real counts from metadata values
   const teams = React.useMemo(() =>
     allValues.map(v => ({
       name: v.value,
-      count: 0 // Default count
+      count: allCategoryRecords.filter(r =>
+        r.metadata.some(m => m.value.trim().toLowerCase() === v.value.trim().toLowerCase())
+      ).length
     })),
-    [allValues]
+    [allValues, allCategoryRecords, activeCategory]
   );
 
   // Set initial active team once data loads if none selected

@@ -248,12 +248,12 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                       : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40 hover:bg-secondary/50"
                   )}
                 >
-                  <span className="text-sm font-medium">Review Documents</span>
+                  <span className="text-sm font-medium"> Documents Review</span>
                   {reviewCount !== undefined && reviewCount > 0 && (
                     <span className={cn(
                       "ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-md transition-all animate-in zoom-in-50 duration-300",
-                      isReviewActive 
-                        ? "bg-white text-primary" 
+                      isReviewActive
+                        ? "bg-white text-primary"
                         : "bg-primary text-white shadow-lg shadow-primary/20"
                     )}>
                       {reviewCount}
