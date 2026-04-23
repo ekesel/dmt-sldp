@@ -48,6 +48,7 @@ class MetadataValue(models.Model):
 class Document(BaseModel):
 
     class Status(models.TextChoices):
+        UNDER_REVIEW = "UNDER_REVIEW", "UNDER_REVIEW"
         DRAFT = "DRAFT", "DRAFT"
         APPROVED = "APPROVED", "APPROVED"
         REJECTED = "REJECTED", "REJECTED"
