@@ -12,17 +12,17 @@ export const users = {
    */
   listKnowledgeManagers: async (): Promise<KnowledgeManager[]> => {
     const response = await api.get<KnowledgeManager[] | { results: KnowledgeManager[] }>("/kb/users/");
-    const data = response as any;
+    const responseData = (response as any).data || response;
     
     // Handle both flat array and paginated results ({ results: [...] })
-    if (Array.isArray(data)) {
-      return data;
+    if (Array.isArray(responseData)) {
+      return responseData;
     }
-    if (data && typeof data === "object" && Array.isArray(data.results)) {
-      return data.results;
+    if (responseData && typeof responseData === "object" && Array.isArray(responseData.results)) {
+      return responseData.results;
     }
-    if (data && typeof data === "object" && Array.isArray(data.data)) {
-      return data.data;
+    if (responseData && typeof responseData === "object" && Array.isArray(responseData.data)) {
+      return responseData.data;
     }
     
     return [];

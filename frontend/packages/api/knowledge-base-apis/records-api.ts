@@ -22,7 +22,7 @@ export interface KnowledgeRecord {
   author: string;
   owner: string;
   date: string;
-  status: "Approved" | "Draft" | "Rejected";
+  status: "Approved" | "Draft" | "Rejected" | "Under Review";
   description: string;
   uid: string;
   tags: string[];
@@ -63,7 +63,7 @@ interface DocumentFileDetail {
 interface DocumentResponseItem {
   id: number;
   title: string;
-  status: "APPROVED" | "DRAFT" | "REJECTED";
+  status: "APPROVED" | "DRAFT" | "REJECTED" | "UNDER_REVIEW";
   description: string;
   created_by: number;
   owner: number;
@@ -97,9 +97,11 @@ const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
   APPROVED: "Approved",
   DRAFT: "Draft",
   REJECTED: "Rejected",
+  UNDER_REVIEW: "Under Review",
   approved: "Approved",
   draft: "Draft",
   rejected: "Rejected",
+  under_review: "Under Review",
 };
 
 const formatFileSize = (sizeBytes: number): string => {
@@ -368,7 +370,7 @@ export const knowledgeRecords = {
   },
 
   /** POST /kb/documents/:id/status/ */
-  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED" | "DRAFT"): Promise<void> => {
+  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED" | "DRAFT" | "UNDER_REVIEW"): Promise<void> => {
     await api.post(`/kb/documents/${id}/status/`, { status });
   },
 

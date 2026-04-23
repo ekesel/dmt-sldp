@@ -24,6 +24,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
   const { isManager } = usePermissions();
   const { managers } = useUsers();
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const { versions, isLoading: isLoadingVersions } = useRecordVersions(record?.id ?? null);
 
   // Helper to find username by ID
   const resolveUserName = (userId: string | number) => {
@@ -33,7 +34,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
   };
 
   const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) =>
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" | "UNDER_REVIEW" }) =>
       knowledgeRecords.updateStatus(id, status),
     onSuccess: () => {
       // Refresh list and detail to reflect the status change
@@ -48,7 +49,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
     }
   });
 
-  const handleStatusChange = (status: "APPROVED" | "REJECTED") => {
+  const handleStatusChange = (status: "APPROVED" | "REJECTED" | "UNDER_REVIEW") => {
     if (!record) return;
     workflowMutation.mutate({ id: record.id, status });
   };
@@ -118,7 +119,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             </span>
             <div className="flex gap-2">
 
-              {isManager && record.status === "Draft" && (
+              {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
                 <>
                   <button
                     onClick={() => handleStatusChange("APPROVED")}
@@ -175,9 +176,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                 "inline-flex items-center gap-2 px-3 py-1 rounded-md text-[11px] font-semibold",
                 record.status === "Approved" && "bg-emerald-500/10 text-emerald-600",
                 record.status === "Rejected" && "bg-rose-500/10 text-rose-600",
-                record.status === "Draft" && "bg-primary/10 text-primary"
+                (record.status !== "Approved" && record.status !== "Rejected") && "bg-primary/10 text-primary"
               )}>
-                {record.status}
+                {record.status === "Approved" || record.status === "Rejected" ? record.status : "Under Review"}
               </div>
             </div>
             <div>
@@ -246,44 +247,56 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
             <div className="space-y-3">
               {record.status === "Approved" || record.owner === currentUser ? (
-                record.assets.length > 0 ? (
-                  record.assets.map((asset, index) => {
-                    const isDownloading = downloadingFileId === asset.name;
-                    return (
-                      <div
-                        key={asset.name}
-                        onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
-                        className={cn(
-                          "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
-                          index !== record.assets.length - 1 && "mb-1"
-                        )}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
-                            {isDownloading ? (
-                              <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                            ) : (
-                              <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
-                            )}
+                (() => {
+                  const combinedAssets = [
+                    ...record.assets,
+                    ...(versions || []).map((v: any) => ({
+                      name: `${record.title} ${v.version}`,
+                      url: v.fileUrl,
+                      size: v.date,
+                      isVersion: true
+                    }))
+                  ];
+
+                  return combinedAssets.length > 0 ? (
+                    combinedAssets.map((asset, index) => {
+                      const isDownloading = downloadingFileId === asset.name;
+                      return (
+                        <div
+                          key={asset.name}
+                          onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
+                          className={cn(
+                            "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
+                            index !== combinedAssets.length - 1 && "mb-1"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                              {isDownloading ? (
+                                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
+                                {asset.name}
+                              </span>
+                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                                {asset.size}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
-                              {asset.name}
-                            </span>
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
-                              {asset.size}
-                            </span>
+                          <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
+                            <Download className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
-                          <Download className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No assets available</p>
-                )
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No assets available</p>
+                  );
+                })()
               ) : (
                 <div className="p-5 bg-secondary/20 rounded-2xl border border-border/10 flex flex-col items-center text-center">
                   <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center mb-3 shadow-sm border border-border/10">

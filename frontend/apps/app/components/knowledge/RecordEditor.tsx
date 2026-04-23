@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import {
   ChevronLeft,
   ChevronDown,
-  Eye,
   Type,
   Bold,
   Italic,
@@ -45,7 +44,7 @@ interface RecordEditorProps {
 
 interface FormData {
   title: string;
-  lifecycle_status: "Draft" | "In Review" | "Approved";
+  lifecycle_status: "DRAFT" | "UNDER_REVIEW" | "APPROVED";
   tags: string[];
   assets: {
     fileName: string;
@@ -61,7 +60,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    lifecycle_status: record?.status === "Approved" ? "Approved" : "Draft",
+    lifecycle_status: record?.status === "Approved" ? "APPROVED" : 
+                      record?.status === "Under Review" ? "UNDER_REVIEW" : "DRAFT",
     tags: record?.tags || [],
     assets: record?.assets?.map(a => ({
       fileName: a.name,
@@ -221,7 +221,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
         const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
         formDataToSend.append("owner", String(selectedOwnerId));
-        formDataToSend.append("lifecycle_status", formData.lifecycle_status);
+        const statusToSave = formData.lifecycle_status === "DRAFT" ? "UNDER_REVIEW" : formData.lifecycle_status;
+        formDataToSend.append("lifecycle_status", statusToSave);
         formDataToSend.append("content", "");
         formDataToSend.append("version", formData.version.toString());
 
@@ -324,11 +325,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
                 <div className={cn(
                   "space-y-2 p-3 -m-3 rounded-2xl transition-all duration-500",
-                  formData.lifecycle_status === "In Review" ? "bg-primary/5 ring-1 ring-primary/20 shadow-sm" : ""
+                  formData.lifecycle_status === "UNDER_REVIEW" ? "bg-primary/5 ring-1 ring-primary/20 shadow-sm" : ""
                 )}>
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Ownership</label>
-                    {formData.lifecycle_status === "In Review" && (
+                    {formData.lifecycle_status === "UNDER_REVIEW" && (
                       <span className="text-[8px] font-black text-primary uppercase tracking-widest animate-pulse">Required</span>
                     )}
                   </div>
@@ -339,7 +340,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                       disabled={isUsersLoading}
                       className={cn(
                         "w-full appearance-none px-4 py-3 bg-background border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10 disabled:opacity-50",
-                        formData.lifecycle_status === "In Review" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
+                        formData.lifecycle_status === "UNDER_REVIEW" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
                       )}
                     >
                       {managers.length > 0 ? (
@@ -360,7 +361,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
             <div>
               <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Lifecycle</h3>
               <div className="flex bg-secondary/30 p-1 rounded-xl gap-1">
-                {(["Draft", "In Review", "Approved"] as const).map((status) => {
+                {(["DRAFT", "UNDER_REVIEW", "APPROVED"] as const).map((status) => {
                   return (
                     <button
                       key={status}
@@ -370,7 +371,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                         formData.lifecycle_status === status ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/50"
                       )}
                     >
-                      {status}
+                      {status === "UNDER_REVIEW" ? "Under Review" : status === "DRAFT" ? "Draft" : "Approved"}
                     </button>
                   );
                 })}
@@ -406,10 +407,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
           <div className="flex items-center gap-2 lg:gap-3 xl:gap-4">
 
-            <button className="flex items-center gap-2 px-4 xl:px-6 py-2 xl:py-3 bg-background border border-border/60 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold text-foreground hover:bg-secondary transition-all shadow-sm">
-              <Eye className="w-4 h-4" />
-              <span className="hidden md:inline">Preview</span>
-            </button>
+
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90"
@@ -599,7 +597,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                   <Loader2 className="w-3 h-3 text-primary animate-spin" />
                 )}
               </div>
-              
+
               <div className="space-y-8">
                 {versions.length > 0 ? (
                   versions.map((item, index) => (

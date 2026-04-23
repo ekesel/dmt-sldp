@@ -6,7 +6,8 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint",
+        "test": "vitest"
     },
     "dependencies": {
         "@dmt/ui": "*",
@@ -24,13 +25,20 @@
         "recharts": "^2.15.4"
     },
     "devDependencies": {
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
+        "@testing-library/user-event": "^14.6.1",
         "@types/jspdf": "^1.3.3",
         "@types/node": "^20",
         "@types/react": "^18",
         "@types/react-dom": "^18",
+        "@vitejs/plugin-react": "^6.0.1",
         "autoprefixer": "^10.4.27",
+        "jsdom": "^29.0.2",
+        "msw": "^2.13.5",
         "postcss": "^8.5.8",
         "tailwindcss": "^4.0.0",
-        "typescript": "^5"
+        "typescript": "^5",
+        "vitest": "^4.1.5"
     }
 }

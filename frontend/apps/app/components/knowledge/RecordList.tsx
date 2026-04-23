@@ -79,7 +79,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                 record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
                   "bg-primary/10 text-primary border-primary/20"
             )}>
-              {record.status}
+              {record.status === "Approved" || record.status === "Rejected" ? record.status : "Under Review"}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -240,7 +240,7 @@ export const RecordList: React.FC<RecordListProps> = ({
   }, [user]);
 
   const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" }) =>
+    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" | "UNDER_REVIEW" }) =>
       knowledgeRecords.updateStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
@@ -252,7 +252,7 @@ export const RecordList: React.FC<RecordListProps> = ({
     }
   });
 
-  const handleStatusChange = (e: React.MouseEvent, record: KnowledgeRecord, status: "APPROVED" | "REJECTED") => {
+  const handleStatusChange = (e: React.MouseEvent, record: KnowledgeRecord, status: "APPROVED" | "REJECTED" | "UNDER_REVIEW") => {
     e.stopPropagation();
     workflowMutation.mutate({ id: record.id, status });
   };
