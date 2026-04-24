@@ -58,7 +58,6 @@ export function useDashboardData(projectId?: number | null) {
   const [error, setError] = useState<string | null>(null);
 
 
-
   const { lastMessage } = useWebSocket();
 
   const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
@@ -75,7 +74,7 @@ export function useDashboardData(projectId?: number | null) {
       setLoading(true);
       const params = projectId ? { project_id: projectId } : {};
 
-      console.log(`[DashboardData] Fetching data for project: ${projectId || 'Global'}`);
+
 
       const [summaryData, velocityData, complianceData, insightsData, forecastData, assigneeData] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
@@ -121,7 +120,7 @@ export function useDashboardData(projectId?: number | null) {
       if (lastMessage.type === 'metrics_update') {
         debouncedFetchData();
       } else if (lastMessage.type === 'ai_insight_update') {
-        console.log(`[WebSocket] ${lastMessage.type} received, refreshing insights...`);
+
         setIsRefreshingInsights(false);
         setAiProgress(100);
         setAiStatus('Complete');

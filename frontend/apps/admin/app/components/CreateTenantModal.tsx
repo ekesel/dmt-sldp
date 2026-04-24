@@ -53,7 +53,11 @@ export function CreateTenantModal({ isOpen, onClose, onSuccess }: CreateTenantMo
             <div className="bg-popover border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between p-6 border-b border-border">
                     <h2 className="text-xl font-bold text-foreground">Create New Tenant</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground">
+                    <button 
+                        onClick={onClose} 
+                        aria-label="Close"
+                        className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground"
+                    >
                         <X size={20} />
                     </button>
                 </div>

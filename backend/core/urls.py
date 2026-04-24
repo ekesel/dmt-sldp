@@ -25,6 +25,8 @@ from rest_framework.routers import DefaultRouter
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
+
+
 router = DefaultRouter()
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
 router.register(r'admin/users', UserViewSet, basename='users')
@@ -99,6 +101,13 @@ urlpatterns = [
     path('api/admin/identity-mappings/<int:pk>/', UserIdentityMappingViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='identity-detail'),
 
     path('api/', include(router.urls)),
+
+
+    # Newsapp
+    path('api/news/', include('newsapp.urls')),
+
+    # Centralize Knowledge Base 
+    path('api/kb/', include('knowledge_base.urls')),
 ]
 
 if settings.DEBUG:

@@ -10,6 +10,7 @@ from core.middleware import JWTAuthMiddleware
 import data.routing
 import tenants.routing
 import notifications.routing
+import newsapp.routing
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
@@ -17,7 +18,8 @@ application = ProtocolTypeRouter({
         URLRouter(
             data.routing.websocket_urlpatterns +
             tenants.routing.websocket_urlpatterns +
-            notifications.routing.websocket_urlpatterns
+            notifications.routing.websocket_urlpatterns +
+            newsapp.routing.websocket_urlpatterns
         )
     ),
 })

@@ -6,6 +6,7 @@ import { deduplicateRequest } from './deduplication';
    Axios Instance
 ========================= */
 const getBaseURL = () => {
+
   // 1. ALWAYS respect the explicit environment variable FIRST (e.g. https://api.elevate.samta.ai/api/)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
@@ -724,6 +725,85 @@ export type { KnowledgeManager } from './knowledge-base-apis/users-api';
 
 export { knowledgeRecords } from './knowledge-base-apis/records-api';
 export type { KnowledgeRecord, RecordSearchParams } from './knowledge-base-apis/records-api';
+
+/** ---------- newsfeed ---------- */
+
+export interface Comment {
+  comment_id: number;
+  post: number;
+  user: number | { id: number; username: string; avatar_url?: string };
+  user_name?: string;
+  user_avatar?: string;
+  comment_text: string;
+  parent_comment?: number | null;
+  replies?: Comment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentSummary {
+  total_comments: number;
+  comments: Comment[];
+}
+
+export const comments = {
+  list: (postId: number) => {
+    const url = `/news/comments/post/${postId}/`;
+
+    return get<CommentSummary>(url);
+  },
+  create: (data: { post: number; comment_text: string; parent_comment?: number | null }) => {
+    const url = '/news/comments/create/';
+
+    return post<Comment, typeof data>(url, data);
+  },
+  update: (id: number, data: { comment_text: string }) => {
+    const url = `/news/comments/update/${id}/`;
+
+    return api.put<Comment>(url, data).then(res => res.data);
+  },
+  delete: (id: number) => {
+    const url = `/news/comments/delete/${id}/`;
+
+    return del<{ success?: boolean }>(url);
+  },
+};
+
+export type ReactionType = 'like' | 'love' | 'haha' | 'sad';
+
+export interface ReactionSummary {
+  total_reactions: number;
+  reactions: any[];
+  types: Record<ReactionType, number>;
+  user_reaction?: ReactionType;
+}
+
+export const reactions = {
+  getSummary: (postId: number) => {
+    const url = `/news/reactions/post/${postId}/`;
+
+    return get<ReactionSummary>(url).then(data => {
+
+      return data;
+    });
+  },
+  create: (data: { post: number; reaction_type: ReactionType }) => {
+    const url = '/news/reactions/create/';
+
+    return post<{ success: boolean; reaction: any }, typeof data>(url, data).then(res => {
+
+      return res;
+    });
+  },
+  delete: (postId: number) => {
+    const url = `/news/reactions/delete/${postId}/`;
+
+    return del<{ success: boolean }>(url).then(res => {
+
+      return res;
+    });
+  },
+};
 
 export { getWebSocketManager } from './websocket';
 export type { TelemetryMessage } from './websocket';

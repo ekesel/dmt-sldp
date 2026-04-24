@@ -72,13 +72,30 @@ const DEFAULT_OPTIONS: Required<
   baseUrl: process.env.NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE || (
     typeof window !== 'undefined'
       ? (
-        process.env.NEXT_PUBLIC_WS_HOST
-          ? `wss://${process.env.NEXT_PUBLIC_WS_HOST}/ws/telemetry/{tenant_id}/`
-          : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? `wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/`
-            : `wss://${window.location.hostname}/ws/telemetry/{tenant_id}/`)
+        (() => {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+          let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
+          wsHost = 'api.elevate.samta.ai';
+
+          const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
+
+          if (isLocalhost) {
+
+            wsHost = `${wsHost}:8000`;
+          } else if (!wsHost.includes(':') && window.location.port) {
+
+            wsHost = `${wsHost}:${window.location.port}`;
+          }
+
+          if (!wsHost.startsWith('ws://') && !wsHost.startsWith('wss://')) {
+            wsHost = `${wsProtocol}//${wsHost}`;
+          }
+
+          return `${wsProtocol}//${wsHost}/ws/telemetry/{tenant_id}/`;
+        })()
       )
-      : `wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/`
+      : `wss://{wsHost}/ws/telemetry/{tenant_id}/`
   ),
   tenantStorageKey: "dmt-tenant",
   tokenStorageKey: "dmt-access-token",
@@ -157,12 +174,12 @@ export class WebSocketConnectionManager {
     const baseUrl = this.options.baseUrl.replace("{tenant_id}", encodeURIComponent(tenantId));
     const token = this.getJwtToken();
     if (token) {
-      console.log("[WebSocketManager] Found auth token, constructing URL with token...");
+
       // Append token to query string
       const url = new URL(baseUrl);
       url.searchParams.set('token', token);
       const finalUrl = url.toString();
-      console.log(`[WebSocketManager] Connecting to: ${finalUrl.split('?')[0]}?token=***${token.slice(-6)}`);
+
       return finalUrl;
     }
     console.warn(`[WebSocketManager] No JWT token found in localStorage keys. Connecting without token.`);
@@ -173,7 +190,7 @@ export class WebSocketConnectionManager {
     if (!isBrowser()) return null;
     const token = localStorage.getItem(this.options.tokenStorageKey);
     if (token) return token;
-    
+
     // Fallback for access_token as reported in Newsfeed issue
     return localStorage.getItem("access_token");
   }

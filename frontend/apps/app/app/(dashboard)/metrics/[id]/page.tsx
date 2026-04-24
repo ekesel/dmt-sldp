@@ -64,17 +64,16 @@ export default function DeveloperDetailsPage({
         setDeveloper(currentDev || null);
 
         // Fetch metrics (limit 10 for trends) & comparison
-        // The current API client doesn't explicitly show 'limit' in params, but our backend now supports it
-        // We'll pass it in the query string manually if needed, but developers.getMetrics might need update
+        const normalizedProjectId = selectedProjectId === "all" ? null : selectedProjectId;
         const [metricsData, comparisonData] = await Promise.all([
           developers.getMetrics(
             developerEmail,
-            selectedProjectId,
+            normalizedProjectId,
             selectedSprintId,
           ),
           developers.getComparison(
             developerEmail,
-            selectedProjectId,
+            normalizedProjectId,
             selectedSprintId,
           ),
         ]);

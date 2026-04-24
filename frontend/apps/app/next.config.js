@@ -3,6 +3,7 @@ const nextConfig = {
     reactStrictMode: true,
     transpilePackages: ['@dmt/api', '@dmt/ui'],
     trailingSlash: true,
+    transpilePackages: ['@dmt/api', '@dmt/ui'],
     async redirects() {
         return [
             {
@@ -12,7 +13,16 @@ const nextConfig = {
             },
         ]
     },
-
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'www.gravatar.com',
+                port: '',
+                pathname: '/avatar/**',
+            },
+        ],
+    },
 };
 
 module.exports = nextConfig;
