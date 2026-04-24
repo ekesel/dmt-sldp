@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { FileText, ArrowUpRight, Loader2, Paperclip, Download, Trash2 } from "lucide-react";
+import { FileText, ArrowUpRight, Loader2, Paperclip, Download, Trash2, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useRecords } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
@@ -10,6 +10,7 @@ import { KnowledgeRecord, RecordSearchParams, knowledgeRecords } from "@dmt/api"
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
+import { toast } from "react-hot-toast";
 
 // Re-export KnowledgeRecord as Record so the rest of the app keeps compiling
 export type { KnowledgeRecord as Record } from "@dmt/api";
@@ -19,8 +20,10 @@ interface RecordCardProps {
   record: KnowledgeRecord;
   isSelected: boolean;
   onDownload: (e: React.MouseEvent) => void;
+  onView: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
   isDownloading: boolean;
+  isViewing: boolean;
   isDeleting: boolean;
   isManager: boolean;
   isOwner: boolean;
@@ -37,8 +40,10 @@ const RecordCard: React.FC<RecordCardProps> = ({
   isSelected,
   onClick,
   onDownload,
+  onView,
   onDelete,
   isDownloading,
+  isViewing,
   isDeleting,
   isManager,
   isOwner,
@@ -79,7 +84,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                 record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
                   "bg-primary/10 text-primary border-primary/20"
             )}>
-              {record.status === "Approved" || record.status === "Rejected" ? record.status : "Under Review"}
+              {record.status}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -124,6 +129,22 @@ const RecordCard: React.FC<RecordCardProps> = ({
           <div className="flex items-center gap-1">
 
             <button
+              onClick={onView}
+              disabled={record.versionCount === 0 || isViewing}
+              className={cn(
+                "p-2 rounded-lg transition-all border border-primary/10 bg-primary/5 hover:bg-primary/10 active:scale-95 disabled:opacity-50 text-primary",
+                "shadow-sm"
+              )}
+              title={record.versionCount > 0 ? "View online" : "No file available to view"}
+            >
+              {isViewing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+
+            <button
               onClick={onDownload}
               disabled={record.versionCount === 0 || isDownloading}
               className={cn(
@@ -139,6 +160,8 @@ const RecordCard: React.FC<RecordCardProps> = ({
               )}
             </button>
           </div>
+
+
 
           {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
             <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-3">
@@ -170,7 +193,6 @@ const RecordCard: React.FC<RecordCardProps> = ({
               </button>
             </div>
           )}
-
           {isManager && (
             <button
               onClick={onDelete}
@@ -226,6 +248,7 @@ export const RecordList: React.FC<RecordListProps> = ({
   const { managers } = useUsers();
   const { user } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   // Helper to find username by ID
   const resolveUserName = (userId: string | number) => {
@@ -248,7 +271,7 @@ export const RecordList: React.FC<RecordListProps> = ({
     },
     onError: (err) => {
       console.error("Workflow update failed:", err);
-      alert("Failed to update status. Please try again.");
+      toast.error("Failed to update status. Please try again.");
     }
   });
 
@@ -264,7 +287,7 @@ export const RecordList: React.FC<RecordListProps> = ({
     },
     onError: (error) => {
       console.error("Deletion failed:", error);
-      alert("Failed to delete the document. Please check your permissions.");
+      toast.error("Failed to delete the document. Please check your permissions.");
     }
   });
 
@@ -293,7 +316,7 @@ export const RecordList: React.FC<RecordListProps> = ({
       }
 
       if (!fileUrl) {
-        alert("Could not locate a file for this document.");
+        toast.error("Could not locate a file for this document.");
         return;
       }
 
@@ -304,6 +327,32 @@ export const RecordList: React.FC<RecordListProps> = ({
       setDownloadingId(null);
     }
   };
+
+  const handleQuickView = async (e: React.MouseEvent, record: KnowledgeRecord) => {
+    e.stopPropagation();
+    setViewingId(record.id);
+    try {
+      let fileUrl = record.fileUrl;
+
+      // Lazy-load fileUrl if missing from list view
+      if (!fileUrl && record.id) {
+        const fullDetail = await knowledgeRecords.getById(record.id);
+        fileUrl = fullDetail.fileUrl;
+      }
+
+      if (!fileUrl) {
+        toast.error("Could not locate a file for this document.");
+        return;
+      }
+
+      await knowledgeRecords.viewFile(fileUrl);
+    } catch (error) {
+      console.error("Quick view failed:", error);
+    } finally {
+      setViewingId(null);
+    }
+  };
+
   const searchParams: RecordSearchParams = {
     category: category,
     tag: tag,
@@ -365,6 +414,8 @@ export const RecordList: React.FC<RecordListProps> = ({
               onClick={() => onSelect(record)}
               onDownload={(e) => handleQuickDownload(e, record)}
               isDownloading={downloadingId === record.id}
+              onView={(e) => handleQuickView(e, record)}
+              isViewing={viewingId === record.id}
               onDelete={(e) => handleDelete(e, record)}
               onApprove={(e) => handleStatusChange(e, record, "APPROVED")}
               onReject={(e) => handleStatusChange(e, record, "REJECTED")}

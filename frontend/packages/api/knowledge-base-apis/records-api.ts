@@ -23,6 +23,7 @@ export interface KnowledgeRecord {
   owner: string;
   date: string;
   status: "Approved" | "Draft" | "Rejected" | "Under Review";
+  rawStatus: string;
   description: string;
   uid: string;
   tags: string[];
@@ -95,11 +96,11 @@ interface PaginatedDocumentsResponse {
 
 const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
   APPROVED: "Approved",
-  DRAFT: "Draft",
+  DRAFT: "Under Review",
   REJECTED: "Rejected",
   UNDER_REVIEW: "Under Review",
   approved: "Approved",
-  draft: "Draft",
+  draft: "Under Review",
   rejected: "Rejected",
   under_review: "Under Review",
 };
@@ -120,15 +121,15 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
   if (/^((https?|blob|data):|\/\/)/i.test(url)) return url;
 
   // Documents base URL
-  const mediaBaseUrl = "https://samta.elevate.samta.ai/";
+  // Use explicit media base URL from environment, or fallback to the requested production URL
 
+  const mediaBaseUrl = "https://samta.elevate.samta.ai/";
 
   // Cleanly join to ensure no duplicate slashes
   const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
   const cleanPath = url.startsWith("/") ? url : `/${url}`;
 
   const result = `${cleanBase}${cleanPath}`;
-  console.log("Constructed Media URL:", result);
   return result;
 };
 
@@ -160,6 +161,7 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?:
     owner: String(doc.owner),
     date: formatDateLabel(doc.created_at),
     status: STATUS_LABEL_BY_API[doc.status] || "Draft",
+    rawStatus: doc.status,
     description: doc.description || "",
     uid: doc.uid || `KB-${doc.id}`,
     tags: (() => {
@@ -299,14 +301,12 @@ export const knowledgeRecords = {
   ): Promise<void> => {
     console.log("File URL:", fileUrl);
     if (!fileUrl) {
-      alert("Invalid download URL. Please ensure the file exists.");
-      return;
+      throw new Error("Invalid download URL. Please ensure the file exists.");
     }
 
     const absoluteUrl = ensureAbsoluteUrl(fileUrl);
     if (!absoluteUrl) {
-      alert("Could not construct absolute URL");
-      return;
+      throw new Error("Could not construct absolute URL");
     }
 
     try {
@@ -346,11 +346,11 @@ export const knowledgeRecords = {
         // Ensure browser treats it as download if possible
         link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
         link.setAttribute('target', '_blank'); // Open in new tab if browser can't force download
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         console.log("Fallback download triggered.");
         return;
       } catch (fallbackError) {
@@ -363,9 +363,7 @@ export const knowledgeRecords = {
       } else if (error.response?.status === 404) {
         errorMsg = "File not found on the server.";
       }
-
-      alert(errorMsg);
-      throw error;
+      throw new Error(errorMsg);
     }
   },
 
@@ -420,6 +418,47 @@ export const knowledgeRecords = {
     await api.post(`/kb/documents/${id}/upload-version/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+  },
+
+  /**
+   * View file in new tab - fetches file as blob and opens it.
+   * Ensures auth headers are included.
+   */
+  viewFile: async (fileUrl: string): Promise<void> => {
+    if (!fileUrl) {
+      throw new Error("Invalid view URL. Please ensure the file exists.");
+    }
+
+    const absoluteUrl = ensureAbsoluteUrl(fileUrl);
+    if (!absoluteUrl) {
+      throw new Error("Could not construct absolute URL");
+    }
+
+    // Check if it's an Office document (Word, Excel, PowerPoint)
+    const isOfficeDoc = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(absoluteUrl);
+
+    if (isOfficeDoc) {
+      // Browsers cannot natively render Office docs. 
+      // We'll use Google Docs Viewer if it's a public URL, 
+      // or explain that it requires a specialized viewer.
+      // Note: This works only if the file is publicly accessible.
+      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
+      window.open(viewerUrl, '_blank');
+      return;
+    }
+
+    try {
+      const response = await api.get(absoluteUrl, {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error: any) {
+      console.error("Authenticated document view failed, trying fallback:", error);
+      window.open(absoluteUrl, '_blank');
+    }
   },
 
   /** Helper to get the base site URL for asset resolution */

@@ -29,6 +29,7 @@ import { Record as KBRecord } from "./RecordList";
 import { knowledgeRecords } from "@dmt/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
+import { toast } from "react-hot-toast";
 
 
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
@@ -44,7 +45,7 @@ interface RecordEditorProps {
 
 interface FormData {
   title: string;
-  lifecycle_status: "DRAFT" | "UNDER_REVIEW" | "APPROVED";
+  lifecycle_status: "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
   tags: string[];
   assets: {
     fileName: string;
@@ -60,8 +61,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    lifecycle_status: record?.status === "Approved" ? "APPROVED" : 
-                      record?.status === "Under Review" ? "UNDER_REVIEW" : "DRAFT",
+    lifecycle_status: mode === "create" ? "DRAFT" : (record?.rawStatus as any || "UNDER_REVIEW"),
     tags: record?.tags || [],
     assets: record?.assets?.map(a => ({
       fileName: a.name,
@@ -184,7 +184,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
   const handleSave = async () => {
     if (mode === "create" && !formData.file) {
-      alert("Please select a file to upload.");
+      toast.error("Please select a file to upload.");
       return;
     }
 
@@ -221,8 +221,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
         const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
         formDataToSend.append("owner", String(selectedOwnerId));
-        const statusToSave = formData.lifecycle_status === "DRAFT" ? "UNDER_REVIEW" : formData.lifecycle_status;
-        formDataToSend.append("lifecycle_status", statusToSave);
+        formDataToSend.append("lifecycle_status", formData.lifecycle_status);
         formDataToSend.append("content", "");
         formDataToSend.append("version", formData.version.toString());
 
@@ -252,7 +251,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
       onBack();
     } catch (error) {
       console.error("Error saving document:", error);
-      alert("Failed to save document. Please check your permissions and try again.");
+      toast.error("Failed to save document. Please check your permissions and try again.");
     }
   };
 
@@ -360,22 +359,19 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
             <div>
               <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Lifecycle</h3>
-              <div className="flex bg-secondary/30 p-1 rounded-xl gap-1">
-                {(["DRAFT", "UNDER_REVIEW", "APPROVED"] as const).map((status) => {
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => handleChange("lifecycle_status", status)}
-                      className={cn(
-                        "flex-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tighter",
-                        formData.lifecycle_status === status ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/50"
-                      )}
-                    >
-                      {status === "UNDER_REVIEW" ? "Under Review" : status === "DRAFT" ? "Draft" : "Approved"}
-                    </button>
-                  );
-                })}
+              <div className="flex bg-secondary/30 p-3 rounded-xl">
+                <span className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full",
+                    formData.lifecycle_status === "APPROVED" ? "bg-emerald-500" :
+                    formData.lifecycle_status === "REJECTED" ? "bg-rose-500" : "bg-primary"
+                  )} />
+                  {formData.lifecycle_status === "UNDER_REVIEW" ? "Under Review" : 
+                   formData.lifecycle_status === "DRAFT" ? "Draft" : 
+                   formData.lifecycle_status === "REJECTED" ? "Rejected" : "Approved"}
+                </span>
               </div>
+              <p className="text-[9px] text-muted-foreground mt-2 italic font-medium">Status is managed automatically by the system.</p>
             </div>
           </div>
         </div>

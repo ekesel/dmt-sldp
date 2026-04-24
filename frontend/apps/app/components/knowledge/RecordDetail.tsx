@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle, ArrowUpRight } from "lucide-react";
+import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle, ArrowUpRight, Eye } from "lucide-react";
 import { Record } from "./RecordList";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
+import { toast } from "react-hot-toast";
 
 interface RecordDetailProps {
   record: Record | null;
@@ -24,6 +25,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
   const { isManager } = usePermissions();
   const { managers } = useUsers();
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const { versions, isLoading: isLoadingVersions } = useRecordVersions(record?.id ?? null);
 
   // Helper to find username by ID
@@ -45,7 +47,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
     },
     onError: (err) => {
       console.error("Workflow update failed:", err);
-      alert("Failed to update status. Please try again.");
+      toast.error("Failed to update status. Please try again.");
     }
   });
 
@@ -59,10 +61,24 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
     setDownloadingFileId(assetName);
     try {
       await knowledgeRecords.downloadFile(fileUrl, assetName);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Download failed:", error);
+      toast.error(error.message || "Failed to download the file.");
     } finally {
       setDownloadingFileId(null);
+    }
+  };
+
+  const handleView = async (fileUrl: string) => {
+    if (!record || !fileUrl) return;
+    setViewingFileId(fileUrl);
+    try {
+      await knowledgeRecords.viewFile(fileUrl);
+    } catch (error: any) {
+      console.error("View failed:", error);
+      toast.error(error.message || "Failed to view the file online.");
+    } finally {
+      setViewingFileId(null);
     }
   };
 
@@ -118,6 +134,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               Document
             </span>
             <div className="flex gap-2">
+
 
               {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
                 <>
@@ -176,9 +193,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                 "inline-flex items-center gap-2 px-3 py-1 rounded-md text-[11px] font-semibold",
                 record.status === "Approved" && "bg-emerald-500/10 text-emerald-600",
                 record.status === "Rejected" && "bg-rose-500/10 text-rose-600",
-                (record.status !== "Approved" && record.status !== "Rejected") && "bg-primary/10 text-primary"
+                record.status === "Under Review" && "bg-primary/10 text-primary"
               )}>
-                {record.status === "Approved" || record.status === "Rejected" ? record.status : "Under Review"}
+                {record.status}
               </div>
             </div>
             <div>
@@ -261,16 +278,19 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                   return combinedAssets.length > 0 ? (
                     combinedAssets.map((asset, index) => {
                       const isDownloading = downloadingFileId === asset.name;
+                      const isViewing = viewingFileId === asset.url;
                       return (
                         <div
                           key={asset.name}
-                          onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
                           className={cn(
-                            "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all cursor-pointer hover:bg-secondary/50 active:scale-[0.98]",
+                            "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50",
                             index !== combinedAssets.length - 1 && "mb-1"
                           )}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
+                            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          >
                             <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
                               {isDownloading ? (
                                 <Loader2 className="w-4 h-4 text-primary animate-spin" />
@@ -288,7 +308,28 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                             </div>
                           </div>
                           <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
-                            <Download className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                (asset.url || record.fileUrl) && handleView(asset.url || record.fileUrl);
+                              }}
+                              disabled={isViewing}
+                              className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
+                              title="View online"
+                            >
+                              {isViewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name);
+                              }}
+                              disabled={isDownloading}
+                              className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
+                              title="Download"
+                            >
+                              {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                            </button>
                           </div>
                         </div>
                       );
@@ -315,6 +356,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           <VersionHistoryList
             recordId={record.id}
             onDownload={(url, name) => handleDownload(url, name)}
+            onView={(url) => handleView(url)}
             resolveUserName={resolveUserName}
           />
         </div>
@@ -329,8 +371,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 const VersionHistoryList: React.FC<{
   recordId: string | number;
   onDownload?: (url: string, name: string) => void;
+  onView?: (url: string) => void;
   resolveUserName: (userId: string | number) => string;
-}> = ({ recordId, onDownload, resolveUserName }) => {
+}> = ({ recordId, onDownload, onView, resolveUserName }) => {
   const { versions, isLoading, isError } = useRecordVersions(recordId);
 
   const displayHistory = versions;
@@ -357,13 +400,22 @@ const VersionHistoryList: React.FC<{
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-semibold text-foreground">{item.version}</span>
                   {item.fileUrl && (
-                    <button
-                      onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
-                      className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
-                      title="Download version"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onView?.(item.fileUrl)}
+                        className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                        title="View version online"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
+                        className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                        title="Download version"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
