@@ -204,16 +204,16 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
         // 2. Patch metadata
         await knowledgeRecords.update(record.id, updatePayload);
-        console.log("Metadata updated via PATCH");
+
 
         // 3. If a new file is attached, upload it as a new version
         if (formData.file) {
-          console.log("Uploading new version...");
+
           await knowledgeRecords.uploadVersion(record.id, formData.file);
-          console.log("New version uploaded");
+
         }
 
-        console.log("Document updated successfully");
+
       } else {
         // Create mode: use FormData for single-stage creation (Document + initial version)
         const formDataToSend = new FormData();
@@ -239,7 +239,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         }
 
         const result = await knowledgeRecords.create(formDataToSend);
-        console.log("Document created successfully:", result);
+
       }
 
       // Invalidate queries to refresh the list and detail views
@@ -364,11 +364,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                   <div className={cn(
                     "w-2 h-2 rounded-full",
                     formData.lifecycle_status === "APPROVED" ? "bg-emerald-500" :
-                    formData.lifecycle_status === "REJECTED" ? "bg-rose-500" : "bg-primary"
+                      formData.lifecycle_status === "REJECTED" ? "bg-rose-500" : "bg-primary"
                   )} />
-                  {formData.lifecycle_status === "UNDER_REVIEW" ? "Under Review" : 
-                   formData.lifecycle_status === "DRAFT" ? "Draft" : 
-                   formData.lifecycle_status === "REJECTED" ? "Rejected" : "Approved"}
+                  {formData.lifecycle_status === "UNDER_REVIEW" ? "Under Review" :
+                    formData.lifecycle_status === "DRAFT" ? "Draft" :
+                      formData.lifecycle_status === "REJECTED" ? "Rejected" : "Approved"}
                 </span>
               </div>
               <p className="text-[9px] text-muted-foreground mt-2 italic font-medium">Status is managed automatically by the system.</p>

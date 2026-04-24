@@ -299,7 +299,7 @@ export const knowledgeRecords = {
     fileName?: string,
     onProgress?: (progress: number) => void
   ): Promise<void> => {
-    console.log("File URL:", fileUrl);
+
     if (!fileUrl) {
       throw new Error("Invalid download URL. Please ensure the file exists.");
     }
@@ -351,7 +351,7 @@ export const knowledgeRecords = {
         link.click();
         document.body.removeChild(link);
 
-        console.log("Fallback download triggered.");
+
         return;
       } catch (fallbackError) {
         console.error("Fallback download failed:", fallbackError);
