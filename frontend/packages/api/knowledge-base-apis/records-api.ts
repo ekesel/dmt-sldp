@@ -122,8 +122,10 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
 
   // Documents base URL
   // Use explicit media base URL from environment, or fallback to the requested production URL
-
-  const mediaBaseUrl = "https://samta.elevate.samta.ai/";
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const mediaBaseUrl = (typeof window !== 'undefined' && !isLocalhost) 
+    ? `https://${window.location.host}` 
+    : "https://samta.elevate.samta.ai/";
 
   // Cleanly join to ensure no duplicate slashes
   const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
