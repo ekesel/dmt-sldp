@@ -13,4 +13,4 @@ This repository is a full-stack monorepo with:
 - `frontend/packages/ui/`: shared UI components
 
 ## Additional Instructions
-- For Code review related task refer ai-docs/patter/review-patter
+- For Frontend Code review related task refer ai-docs/pattern/review-pattern

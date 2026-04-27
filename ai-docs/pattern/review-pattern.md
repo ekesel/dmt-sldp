@@ -9,9 +9,9 @@ Generate a code review file with findings from each review session.
 
 ## How to Use
 
-1. Generate a diff patch of the branch against `dev`:
+1. Generate a diff patch of the branch against `master` for frontend directory:
    ```bash
-   git diff dev..<branch-name> > branch_diff_patch.patch
+   git diff master..<branch-name> > branch_diff_patch.patch
    ```
 2. Review the patch against the four pillars below.
 3. Write findings into `ai-docs/review/<file name>` with file links, problem statements, and impact.
@@ -152,3 +152,4 @@ Track which lens was used each session to ensure rotation.
 |---|---|---|
 | 2026-04-23 | feature/apply-filters-search-pagination-userlist | (initial review, no lens applied yet) |
 | 2026-04-24 | feature/apply-filters-search-pagination-userlist | Race Conditions |
+| 2026-04-27 | feature/knowledge-base | Network Failure |
