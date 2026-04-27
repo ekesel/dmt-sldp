@@ -1,12 +1,36 @@
 import React, { useState } from 'react';
 import { Comment, User } from '@dmt/api';
 import { Author } from '../../hooks/useNewsfeedData';
-import { formatDistanceToNow } from 'date-fns';
 import { Edit2, Trash2, Reply, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { users } from '@dmt/api';
-import { cn } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 import { useEffect } from 'react';
+
+// Cache promise to prevent N+1 API calls for users
+let usersPromise: Promise<Record<number, User>> | null = null;
+
+const fetchAllUsers = (): Promise<Record<number, User>> => {
+  if (!usersPromise) {
+    usersPromise = users.list()
+      .then(userList => {
+        const map: Record<number, User> = {};
+        if (Array.isArray(userList)) {
+          userList.forEach(u => {
+            if (u && u.id) {
+              map[Number(u.id)] = u;
+            }
+          });
+        }
+        return map;
+      })
+      .catch(err => {
+        usersPromise = null;
+        throw err;
+      });
+  }
+  return usersPromise;
+};
 
 interface CommentItemProps {
   comment: Comment;
@@ -43,14 +67,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
   useEffect(() => {
     let isMounted = true;
     if (typeof comment.user === 'number' || typeof comment.user === 'string') {
-      users.get(comment.user).then((u) => {
-        if (isMounted && u) {
-          setResolvedUser({
-            username: u.username || u.first_name || `User #${commentUserId}`,
-            avatar_url: u.avatar_url || u.profile_picture || ''
-          });
-        }
-      }).catch(err => console.error("Failed to fetch comment user details", err));
+      fetchAllUsers()
+        .then((userMap) => {
+          const u = userMap[Number(commentUserId)];
+          if (isMounted && u) {
+            setResolvedUser({
+              username: u.username || u.first_name || `User #${commentUserId}`,
+              avatar_url: u.avatar_url || u.profile_picture || ''
+            });
+          }
+        })
+        .catch(err => console.error("Failed to fetch comment user details", err));
     }
     return () => { isMounted = false; };
   }, [comment.user, commentUserId]);
@@ -123,32 +150,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               {displayUser.username}
             </span>
             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-              {(() => {
-                try {
-                  const raw = comment.created_at?.toString().trim();
-                  if (!raw) return 'Just now';
-
-                  // Handle timezone mismatch: if no Z/+/GMT, assume UTC
-                  const dateStr = (raw.includes('Z') || raw.includes('+') || raw.includes('GMT')) 
-                    ? raw 
-                    : `${raw.replace(' ', 'T')}Z`;
-
-                  const date = new Date(dateStr);
-                  if (date && !isNaN(date.getTime())) {
-                    const relative = formatDistanceToNow(date, { addSuffix: true });
-                    const absolute = date.toLocaleString([], { 
-                      month: 'short', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-                    return `${absolute} • ${relative}`;
-                  }
-                  return 'Just now';
-                } catch (e) {
-                  return 'Just now';
-                }
-              })()}
+              {formatTimestamp(comment.created_at, 'Just now', false)}
             </span>
           </div>
 

@@ -43,7 +43,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
             // Path must include tenant slug for proper routing in Django Channels
             const tenantSlug = user?.tenant_slug || localStorage.getItem('dmt-tenant') || 'default';
-            const finalWsUrl = `${wsHost}/news/?token=${token}`;
+            let finalWsUrl = `${wsHost}/news/?token=${token}`;
+            
+            // For localhost, hardcode to wss://api.elevate.samta.ai/ws/news/
+            const isLocal = isLocalhost || window.location.port !== '';
+            if (isLocal) {
+                finalWsUrl = `wss://api.elevate.samta.ai/ws/news/?token=${token}`;
+            }
 
 
             setWsUrl(finalWsUrl);
