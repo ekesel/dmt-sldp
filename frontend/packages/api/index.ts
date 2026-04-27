@@ -714,6 +714,18 @@ export const identity = {
   deleteMapping: (id: number, tenantId: string) => del<{ success?: boolean }>(`/admin/identity-mappings/${id}/`, { 'X-Tenant': tenantId }),
 };
 
+export { tags } from './knowledge-base-apis/tags-api';
+export type { Tag } from './knowledge-base-apis/tags-api';
+
+export { metadata } from './knowledge-base-apis/metadata-api';
+export type { Metadata, MetadataCategory, MetadataValue } from './knowledge-base-apis/metadata-api';
+
+export { users as knowledgeUsers } from './knowledge-base-apis/users-api';
+export type { KnowledgeManager } from './knowledge-base-apis/users-api';
+
+export { knowledgeRecords } from './knowledge-base-apis/records-api';
+export type { KnowledgeRecord, RecordSearchParams } from './knowledge-base-apis/records-api';
+
 /** ---------- newsfeed ---------- */
 
 export interface Comment {
