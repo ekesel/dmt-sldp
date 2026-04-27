@@ -61,7 +61,7 @@ const PostCard = ({
     comments: initialComments = 0,
   } = post;
 
-  const { totalComments } = useComments(post.post_id, { enabled: showComments });
+  const { totalComments } = useComments(post.post_id);
   const displayCommentCount = totalComments || initialComments;
 
 

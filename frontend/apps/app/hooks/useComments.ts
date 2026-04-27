@@ -18,7 +18,7 @@ const buildCommentTree = (flatComments: Comment[]): Comment[] => {
 
   // Initialize map and deep copy comments
   flatComments.forEach(comment => {
-    commentMap[comment.comment_id] = { ...comment, replies: [] };
+    commentMap[comment.comment_id] = { ...comment, replies: Array.isArray(comment.replies) ? [...comment.replies] : [] };
   });
 
   // Build tree

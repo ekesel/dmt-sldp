@@ -4,7 +4,9 @@ import { Author } from '../../hooks/useNewsfeedData';
 import { formatDistanceToNow } from 'date-fns';
 import { Edit2, Trash2, Reply, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { users } from '@dmt/api';
 import { cn } from "@/lib/utils";
+import { useEffect } from 'react';
 
 interface CommentItemProps {
   comment: Comment;
@@ -36,6 +38,23 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const canDelete = isCommentOwner || isPostAuthor;
   const isAuthor = isCommentOwner; // Keep for edit permission check
   
+  const [resolvedUser, setResolvedUser] = useState<{ username: string; avatar_url: string } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof comment.user === 'number' || typeof comment.user === 'string') {
+      users.get(comment.user).then((u) => {
+        if (isMounted && u) {
+          setResolvedUser({
+            username: u.username || u.first_name || `User #${commentUserId}`,
+            avatar_url: u.avatar_url || u.profile_picture || ''
+          });
+        }
+      }).catch(err => console.error("Failed to fetch comment user details", err));
+    }
+    return () => { isMounted = false; };
+  }, [comment.user, commentUserId]);
+  
   const handleUpdate = async () => {
     if (editText.trim() === comment.comment_text) {
       setIsEditing(false);
@@ -58,7 +77,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
     avatar_url: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
   };
 
-  if (typeof comment.user === 'object' && comment.user.username) {
+  if (resolvedUser) {
+    displayUser = {
+      username: resolvedUser.username || displayUser.username,
+      avatar_url: resolvedUser.avatar_url || displayUser.avatar_url
+    };
+  } else if (typeof comment.user === 'object' && comment.user.username) {
     displayUser = {
       username: comment.user.username,
       avatar_url: comment.user.avatar_url || displayUser.avatar_url
