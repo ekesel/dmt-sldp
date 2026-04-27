@@ -60,6 +60,9 @@ class TenantHeaderMiddleware:
                 else:
                     tenant = Tenant.objects.get(Q(slug=tenant_id) | Q(schema_name=tenant_id))
                 
+                # IMPORTANT: Update request.tenant for downstream middleware and permissions
+                request.tenant = tenant
+                
                 with schema_context(tenant.schema_name):
                     return self.get_response(request)
             except (Tenant.DoesNotExist, ValueError):
