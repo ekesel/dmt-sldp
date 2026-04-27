@@ -4,38 +4,11 @@ import { Post } from "../../hooks/useNewsfeedData";
 import { useAuth } from "../../context/AuthContext";
 import ReactionBar from "./ReactionBar";
 import CommentSection from "./CommentSection";
-import { cn } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
-import { formatDistanceToNow } from 'date-fns';
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
 
-const formatTimestamp = (timestamp?: string) => {
-  if (!timestamp) return "Recently";
-  try {
-    const raw = timestamp.toString().trim();
-    // If timestamp doesn't have timezone info, assume it is UTC and manually append Z
-    const dateStr = (raw.includes('Z') || raw.includes('+') || raw.includes('GMT'))
-      ? raw
-      : `${raw.replace(' ', 'T')}Z`;
-
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "Recently";
-
-    const relative = formatDistanceToNow(date, { addSuffix: true });
-    const absolute = date.toLocaleString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    return `${absolute} • ${relative}`;
-  } catch (e) {
-    return "Recently";
-  }
-};
 
 const PostCard = ({
   post,
@@ -61,7 +34,7 @@ const PostCard = ({
     comments: initialComments = 0,
   } = post;
 
-  const { totalComments } = useComments(post.post_id, { enabled: showComments });
+  const { totalComments } = useComments(post.post_id);
   const displayCommentCount = totalComments || initialComments;
 
 

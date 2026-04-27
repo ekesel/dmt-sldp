@@ -27,9 +27,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) =
   const [newCommentText, setNewCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
