@@ -28,11 +28,10 @@ class WSClient {
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (isLocal) {
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         console.warn(`[WSClient] Max reconnection attempts (${this.maxReconnectAttempts}) reached for ${this.url}. This is common when the backend is not running locally.`);
       } else {
-        console.error(`[WSClient] Max reconnection attempts (${this.maxReconnectAttempts}) reached for ${this.url}. Giving up.`);
+        console.error(`[WSClient] Max reconnection attempts (${this.maxReconnectAttempts}) reached. Giving up.`);
       }
       this.dispatchEvent("error", new Error("Max reconnection attempts reached"));
       return;
@@ -64,12 +63,11 @@ class WSClient {
     };
 
     this.socket.onerror = (error) => {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       // Use warn for localhost to reduce console noise since the backend might not be present
-      if (isLocal) {
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
         console.warn(`[WSClient] WebSocket error for ${this.url}:`, error);
       } else {
-        console.error(`[WSClient] WebSocket error for ${this.url}:`, error);
+        console.error("[WSClient] WebSocket error:", error);
       }
       this.dispatchEvent("error", error);
     };
