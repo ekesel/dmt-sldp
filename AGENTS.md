@@ -14,3 +14,4 @@ This repository is a full-stack monorepo with:
 
 ## Additional Instructions
 - For Frontend Code review related task refer ai-docs/pattern/review-pattern
+- Frontend Agent Guide are inside frontend/ directory (/frontend/AGENTS.md). Use When working on frontend related tasks.
