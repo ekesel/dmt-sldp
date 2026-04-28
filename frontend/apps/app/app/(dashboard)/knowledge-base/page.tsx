@@ -279,6 +279,11 @@ export default function KnowledgeBasePage() {
                 }
               }}
               onTagClick={handleTagClick}
+              onDeleteSuccess={(deletedId) => {
+                if (selectedId === String(deletedId)) {
+                  setSelectedId(null);
+                }
+              }}
             />
           </main>
 
