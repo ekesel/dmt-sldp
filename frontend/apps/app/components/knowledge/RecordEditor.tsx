@@ -61,7 +61,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    lifecycle_status: mode === "create" ? "DRAFT" : (record?.rawStatus as any || "UNDER_REVIEW"),
+    lifecycle_status: mode === "create" ? "DRAFT" : (
+      record?.rawStatus && ["DRAFT", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(record.rawStatus)
+        ? (record.rawStatus as FormData["lifecycle_status"])
+        : "UNDER_REVIEW"
+    ),
     tags: record?.tags || [],
     assets: record?.assets?.map(a => ({
       fileName: a.name,
@@ -143,7 +147,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     setMetadataSelections(prev => ({ ...prev, [categoryId]: valueId }));
   };
 
-  const handleChange = (field: keyof FormData, value: any) => {
+  const handleChange = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,

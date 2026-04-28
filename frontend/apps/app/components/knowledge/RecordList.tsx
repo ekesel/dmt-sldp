@@ -231,6 +231,7 @@ interface RecordListProps {
   mine?: boolean;
   onSelect: (record: KnowledgeRecord) => void;
   onTagClick?: (tag: { id: number | string; name: string }) => void;
+  onDeleteSuccess?: (id: string | number) => void;
 }
 
 export const RecordList: React.FC<RecordListProps> = ({
@@ -242,6 +243,7 @@ export const RecordList: React.FC<RecordListProps> = ({
   mine,
   onSelect,
   onTagClick,
+  onDeleteSuccess,
 }) => {
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
@@ -282,8 +284,9 @@ export const RecordList: React.FC<RecordListProps> = ({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string | number) => knowledgeRecords.deleteDocument(id),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
+      onDeleteSuccess?.(deletedId);
     },
     onError: (error) => {
       console.error("Deletion failed:", error);
@@ -375,8 +378,19 @@ export const RecordList: React.FC<RecordListProps> = ({
       );
     }
 
+    // Sort "Under Review" to the top in Document Review mode
+    if (mine) {
+      filtered = [...filtered].sort((a, b) => {
+        const aIsUnderReview = a.status === "Under Review";
+        const bIsUnderReview = b.status === "Under Review";
+        if (aIsUnderReview && !bIsUnderReview) return -1;
+        if (!aIsUnderReview && bIsUnderReview) return 1;
+        return 0;
+      });
+    }
+
     return filtered;
-  }, [records, activeTeam]);
+  }, [records, activeTeam, mine]);
 
   if (isLoading) {
     return (
