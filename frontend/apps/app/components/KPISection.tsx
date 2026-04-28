@@ -1,4 +1,4 @@
-import { Card } from "@dmt/ui";
+import { Card, cn } from "@dmt/ui";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import React from "react";
 
@@ -12,6 +12,9 @@ interface KPIProps {
   };
   description?: React.ReactNode;
   icon?: React.ReactNode;
+  valueClassName?: string;
+  className?: string;
+  labelClassName?: string;
 }
 
 export const KPICard = ({
@@ -20,6 +23,9 @@ export const KPICard = ({
   trend,
   description,
   icon,
+  valueClassName = "text-foreground",
+  className,
+  labelClassName,
 }: KPIProps) => {
   const getSentimentColor = () => {
     if (!trend) return "text-muted-foreground";
@@ -38,12 +44,12 @@ export const KPICard = ({
   };
 
   return (
-    <Card className="flex flex-col gap-3 p-5 hover:border-primary/40 transition-colors duration-200 group bg-card border-border">
-      <h3 className="text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider">
+    <Card className={cn("flex flex-col gap-3 p-5 hover:border-primary/40 transition-colors duration-200 group bg-card border-border", className)}>
+      <h3 className={cn("text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider", labelClassName)}>
         {label}
       </h3>
       <div className="flex items-end gap-3 flex-wrap">
-        <p className="text-4xl font-bold text-foreground tracking-tight">
+        <p className={`text-4xl font-bold tracking-tight ${valueClassName}`}>
           {value}
         </p>
         {trend && (

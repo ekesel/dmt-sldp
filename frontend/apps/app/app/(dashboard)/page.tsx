@@ -222,18 +222,27 @@ export default function DashboardPage() {
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description="Average of last 5 sprints"
+                        valueClassName="text-accent"
+                        className="border-2 border-primary"
+                        labelClassName="font-bold text-base"
                     />
                     <KPICard
                         label="Cycle Time"
                         value={`${summary?.cycle_time || 0} Days`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description="Average resolution duration"
+                        valueClassName="text-accent"
+                        className="border-2 border-primary"
+                        labelClassName="font-bold text-base"
                     />
                     <KPICard
                         label="DMT Compliance"
                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                         description="Minimum Threshold: 80%"
+                        valueClassName="text-accent"
+                        className="border-2 border-primary"
+                        labelClassName="font-bold text-base"
                     />
                     <KPICard
                         label="Objective AI"
@@ -241,12 +250,18 @@ export default function DashboardPage() {
                         trend={{ direction: 'neutral', value: 'Analyzed' }}
                         description="PR-based AI evaluation"
                         icon={<Sparkles size={16} className="text-brand-primary" />}
+                        valueClassName="text-accent"
+                        className="border-2 border-primary"
+                        labelClassName="font-bold text-base"
                     />
                     <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
                         description="Bugs fixed in last 5 sprints"
+                        valueClassName="text-accent"
+                        className="border-2 border-primary"
+                        labelClassName="font-bold text-base"
                     />
                 </div>
 
