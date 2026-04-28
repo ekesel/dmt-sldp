@@ -8,6 +8,7 @@ import { useUsers } from '@/features/knowledge-base/hooks/useUsers';
 import { useMetadata } from '@/features/knowledge-base/hooks/useMetadata';
 import { useRecordVersions } from '@/features/knowledge-base/hooks/useKnowledgeRecords';
 import { knowledgeRecords } from '@dmt/api';
+import { toast } from 'react-hot-toast';
 
 // Mock hooks
 vi.mock('@tanstack/react-query', () => ({
@@ -32,6 +33,12 @@ vi.mock('@dmt/api', () => ({
     create: vi.fn(),
     update: vi.fn(),
     uploadVersion: vi.fn(),
+  },
+}));
+vi.mock('react-hot-toast', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
@@ -145,7 +152,6 @@ describe('RecordEditor', () => {
 
     it('shows a validation alert when trying to publish without a file in create mode', () => {
       // ARRANGE
-      window.alert = vi.fn();
       render(<RecordEditor mode="create" onBack={vi.fn()} />);
 
       // ACT
@@ -153,7 +159,7 @@ describe('RecordEditor', () => {
       fireEvent.click(saveBtn);
 
       // ASSERT
-      expect(window.alert).toHaveBeenCalledWith("Please select a file to upload.");
+      expect(toast.error).toHaveBeenCalledWith("Please select a file to upload.");
       expect(knowledgeRecords.create).not.toHaveBeenCalled();
     });
   });

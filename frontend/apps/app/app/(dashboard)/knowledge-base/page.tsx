@@ -17,12 +17,12 @@ export default function KnowledgeBasePage() {
   const router = useRouter();
   const [activeTeam, setActiveTeam] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<number>(1);
-  const [headerTitle, setHeaderTitle] = useState<string>("Loading...");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // isCreating state removed in favor of page-based navigation
   // Editor state removed in favor of page-based navigation
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -37,7 +37,8 @@ export default function KnowledgeBasePage() {
     addValue,
     addCategory,
     isAdding: isSubmittingValue,
-    isAddingCategory: isSubmittingCategory
+    isAddingCategory: isSubmittingCategory,
+    isLoading: isMetadataLoading
   } = useMetadata(activeCategory);
   const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
   const { count: reviewCount } = useReviewCount();
@@ -58,14 +59,24 @@ export default function KnowledgeBasePage() {
     [allValues, allCategoryRecords, activeCategory]
   );
 
+  // Derive header title dynamically to prevent state desynchronization
+  const headerTitle = React.useMemo(() => {
+    if (isMetadataLoading && categories.length === 0) return "Loading...";
+    if (isReviewActive) return "Review Inbox";
+    if (activeTag) return activeTag.name;
+    if (activeTeam) return activeTeam;
+    
+    const category = categories.find(c => c.id === activeCategory);
+    return category?.name || "Records";
+  }, [isMetadataLoading, categories, isReviewActive, activeTag, activeTeam, activeCategory]);
+
   // Set initial active team once data loads if none selected
   useEffect(() => {
-    if (!activeTeam && allValues.length > 0 && headerTitle === "Loading...") {
+    if (!activeTeam && allValues.length > 0) {
       const firstVal = allValues[0].value;
       setActiveTeam(firstVal);
-      setHeaderTitle(firstVal);
     }
-  }, [allValues, activeTeam, headerTitle]);
+  }, [allValues, activeTeam]);
 
   // Show a "Welcome" toast if there are pending reviews on initial land
   useEffect(() => {
@@ -76,7 +87,24 @@ export default function KnowledgeBasePage() {
         id: 'review-notification', // Prevent duplicate toasts
       });
     }
-  }, [isManager, reviewCount > 0]); // Triggers when count or role changes and count is positive
+  }, [isManager, reviewCount]); // Triggers when count or role changes
+
+  // Debounce search input to prevent excessive API calls
+  useEffect(() => {
+    if (!searchInput) {
+      setSearchTerm("");
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setActiveTag(null); // Clear tag filter when performing text search
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchInput]);
 
   const handleAddValueSubmit = async () => {
     if (!newTeamName.trim() || !isManager) return;
@@ -110,11 +138,10 @@ export default function KnowledgeBasePage() {
   const handleCategoryChange = (categoryId: number) => {
     setActiveCategory(categoryId);
     setSearchTerm(""); // Reset search on category change
+    setSearchInput("");
     setSelectedId(null); // Clear detail view on context switch
 
     const category = categories.find(c => c.id === categoryId);
-    const title = category?.name || "Records";
-    setHeaderTitle(title);
 
     if (category?.name.toUpperCase() !== "TEAM") {
       setActiveTeam("");
@@ -125,8 +152,8 @@ export default function KnowledgeBasePage() {
 
   const handleTeamChange = (team: string) => {
     setActiveTeam(team);
-    setHeaderTitle(team);
     setSearchTerm("");
+    setSearchInput("");
     setActiveTag(null); // Clear tag on team change
     setSelectedId(null);
     setIsSidebarOpen(false); // Close sidebar on selection (mobile)
@@ -135,8 +162,8 @@ export default function KnowledgeBasePage() {
 
   const handleTagClick = (tag: { id: number | string; name: string }) => {
     setActiveTag(tag);
-    setHeaderTitle(tag.name);
     setSearchTerm("");
+    setSearchInput("");
     setActiveCategory(1); // Default to project or clear? Clear is better for "all"
     setActiveTeam("");
     setSelectedId(null);
@@ -145,6 +172,8 @@ export default function KnowledgeBasePage() {
   };
 
   const handleSearchChange = (query: string) => {
+    setSearchInput(query);
+
     if (!query) {
       setSearchTerm("");
       return;
@@ -155,7 +184,8 @@ export default function KnowledgeBasePage() {
 
     if (matchingTag) {
       handleTagClick(matchingTag);
-      setSearchTerm(""); // Reset search term when we match a tag
+      setSearchInput("");
+      setSearchTerm("");
       toast.success(`Filtering by tag: ${matchingTag.name}`, { duration: 2000, id: 'tag-filter-match' });
       return;
     }
@@ -172,7 +202,7 @@ export default function KnowledgeBasePage() {
       if (categoryName.toUpperCase() === "TEAM") {
         setActiveTeam(matchingValue.value);
       }
-      setHeaderTitle(matchingValue.value);
+      setSearchInput("");
       setSearchTerm("");
       setActiveTag(null);
       setIsReviewActive(false);
@@ -182,17 +212,14 @@ export default function KnowledgeBasePage() {
         duration: 2000,
         id: 'category-filter-match'
       });
-    } else {
-      setSearchTerm(query);
-      setActiveTag(null); // Clear tag filter when performing text search
     }
   };
 
   const handleReviewClick = () => {
     setIsReviewActive(true);
-    setHeaderTitle("Review Inbox");
     setActiveTeam("");
     setSearchTerm("");
+    setSearchInput("");
     setSelectedId(null); // Clear detail view when switching to review
     setIsSidebarOpen(false);
   };
@@ -251,7 +278,7 @@ export default function KnowledgeBasePage() {
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         <KnowledgeHeader
           activeItem={headerTitle}
-          searchTerm={searchTerm || activeTag?.name || ""}
+          searchTerm={searchInput || activeTag?.name || ""}
           onSearchChange={handleSearchChange}
           onNewRecord={() => {
             if (isManager) router.push("/knowledge-base/new");
@@ -273,7 +300,6 @@ export default function KnowledgeBasePage() {
                 if (searchTerm) {
                   const teamMeta = record.metadata.find(m => m.category === 1)?.value || "";
                   setActiveTeam(teamMeta);
-                  setHeaderTitle(teamMeta || "Library");
                   setActiveCategory(1);
                   setSearchTerm("");
                 }

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RecordSearchParams } from "@dmt/api";
 import { recordsOptions, recordDetailOptions, recordVersionsOptions } from "../api/query-options";
 
-const STABLE_EMPTY_ARRAY: any[] = [];
+const STABLE_EMPTY_ARRAY: never[] = [];
 
 /**
  * useRecords — fetches knowledge base records via endpoint-ready API integration.
