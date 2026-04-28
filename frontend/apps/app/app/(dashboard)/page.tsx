@@ -35,28 +35,55 @@ export default function DashboardPage() {
 
 
             // Dynamically import client-side only libraries
-            const html2canvas = (await import('html2canvas')).default;
+            const html2canvas = (await import('html2canvas-pro')).default;
             const jspdfMod = await import('jspdf');
             const JsPDF = (jspdfMod as any).jsPDF || (jspdfMod as any).default;
 
             if (!JsPDF) throw new Error('Could not load jsPDF library');
 
             const element = dashboardRef.current;
-            const originalStyle = element.style.cssText;
 
-            // Force desktop layout (1400px) and disable constraints
-            element.style.width = '1400px';
-            element.style.minWidth = '1400px';
-            element.style.maxWidth = 'none';
-            element.style.margin = '0';
-            element.style.padding = '0';
-            element.style.height = 'auto';
-            element.style.overflow = 'visible';
+            // Create off-screen clone to prevent layout shift for the user
+            const clone = element.cloneNode(true) as HTMLElement;
 
-            // Wait for reflow
+            // Copy canvas content if any exist
+            const sourceCanvases = element.querySelectorAll('canvas');
+            const clonedCanvases = clone.querySelectorAll('canvas');
+            for (let i = 0; i < sourceCanvases.length; i++) {
+                const destCtx = (clonedCanvases[i] as HTMLCanvasElement).getContext('2d');
+                if (destCtx) {
+                    destCtx.drawImage(sourceCanvases[i] as HTMLCanvasElement, 0, 0);
+                }
+            }
+
+            // Wrap in parent container to preserve inherited styles
+            const parent = element.parentElement;
+            const cloneWrapper = document.createElement('div');
+            if (parent) {
+                cloneWrapper.className = parent.className;
+            }
+            cloneWrapper.style.position = 'absolute';
+            cloneWrapper.style.left = '-9999px';
+            cloneWrapper.style.top = '0';
+            cloneWrapper.style.width = '1400px';
+            cloneWrapper.style.minWidth = '1400px';
+
+            // Apply desktop constraints to clone
+            clone.style.width = '1400px';
+            clone.style.minWidth = '1400px';
+            clone.style.maxWidth = 'none';
+            clone.style.margin = '0';
+            clone.style.padding = '0';
+            clone.style.height = 'auto';
+            clone.style.overflow = 'visible';
+
+            cloneWrapper.appendChild(clone);
+            document.body.appendChild(cloneWrapper);
+
+            // Wait for reflow/render
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            const mainCanvas = await html2canvas(element, {
+            const mainCanvas = await html2canvas(clone, {
                 scale: 2, // High resolution
                 useCORS: true,
                 backgroundColor: '#f9fafa',
@@ -64,8 +91,8 @@ export default function DashboardPage() {
                 width: 1400,
             });
 
-            // Restore original styles
-            element.style.cssText = originalStyle;
+            // Clean up clone from DOM
+            document.body.removeChild(cloneWrapper);
 
             const pdf = new JsPDF({
                 orientation: 'landscape',
@@ -222,27 +249,27 @@ export default function DashboardPage() {
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description="Average of last 5 sprints"
-                        valueClassName="text-accent"
-                        className="border-2 border-primary"
-                        labelClassName="font-bold text-base"
+                        valueClassName="text-accent !text-3xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Cycle Time"
                         value={`${summary?.cycle_time || 0} Days`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description="Average resolution duration"
-                        valueClassName="text-accent"
-                        className="border-2 border-primary"
-                        labelClassName="font-bold text-base"
+                        valueClassName="text-accent !text-3xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="DMT Compliance"
                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                         description="Minimum Threshold: 80%"
-                        valueClassName="text-accent"
-                        className="border-2 border-primary"
-                        labelClassName="font-bold text-base"
+                        valueClassName="text-accent !text-3xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Objective AI"
@@ -250,18 +277,18 @@ export default function DashboardPage() {
                         trend={{ direction: 'neutral', value: 'Analyzed' }}
                         description="PR-based AI evaluation"
                         icon={<Sparkles size={16} className="text-brand-primary" />}
-                        valueClassName="text-accent"
-                        className="border-2 border-primary"
-                        labelClassName="font-bold text-base"
+                        valueClassName="text-accent !text-3xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
                         description="Bugs fixed in last 5 sprints"
-                        valueClassName="text-accent"
-                        className="border-2 border-primary"
-                        labelClassName="font-bold text-base"
+                        valueClassName="text-accent !text-3xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        labelClassName="font-bold text-xl text-primary"
                     />
                 </div>
 

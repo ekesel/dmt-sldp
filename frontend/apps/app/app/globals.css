@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --warning: rgb(251, 191, 36);
+  --warning: rgb(249, 156, 62);
   --warning-foreground: rgb(17, 24, 39);
 }
 

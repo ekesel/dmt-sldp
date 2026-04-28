@@ -44,7 +44,7 @@ export const KPICard = ({
   };
 
   return (
-    <Card className={cn("flex flex-col gap-3 p-5 hover:border-primary/40 transition-colors duration-200 group bg-card border-border", className)}>
+    <Card className={cn("flex flex-col gap-3 p-5 transition-all duration-200 group bg-card border-border", className)}>
       <h3 className={cn("text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider", labelClassName)}>
         {label}
       </h3>
