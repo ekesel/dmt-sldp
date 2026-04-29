@@ -248,46 +248,46 @@ export default function DashboardPage() {
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
-                        description="Average of last 5 sprints"
+                        description={<span className="text-primary">Average of last 5 sprints</span>}
                         valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
                         labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Cycle Time"
                         value={`${summary?.cycle_time || 0} Days`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
-                        description="Average resolution duration"
+                        description={<span className="text-primary">Average resolution duration</span>}
                         valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
                         labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="DMT Compliance"
                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
-                        description="Minimum Threshold: 80%"
+                        description={<span className="text-primary">Minimum Threshold: 80%</span>}
                         valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
                         labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Objective AI"
                         value={`${(summary?.code_ai_usage_percent || 0).toFixed(1)}%`}
                         trend={{ direction: 'neutral', value: 'Analyzed' }}
-                        description="PR-based AI evaluation"
+                        description={<span className="text-primary">PR-based AI evaluation</span>}
                         icon={<Sparkles size={16} className="text-brand-primary" />}
                         valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
                         labelClassName="font-bold text-xl text-primary"
                     />
                     <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
-                        description="Bugs fixed in last 5 sprints"
+                        description={<span className="text-primary">Bugs fixed in last 5 sprints</span>}
                         valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
                         labelClassName="font-bold text-xl text-primary"
                     />
                 </div>
