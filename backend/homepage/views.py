@@ -279,12 +279,24 @@ class LeaderDashboardAPIView(APIView):
             score=Avg('ai_usage_percent')
         ).order_by('-score').first()
 
+        def attach_avatar(winner):
+            import hashlib
+            if not winner:
+                return winner
+            email = winner.get('developer_email')
+            if email:
+                email_hash = hashlib.md5(email.strip().lower().encode('utf-8')).hexdigest()
+                winner['profile_picture'] = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon"
+            else:
+                winner['profile_picture'] = None
+            return winner
+
         return Response({
             'message': 'Leaderboard data',
             'top_performers': {
-                'quality': quality_winner,
-                'velocity': velocity_winner,
-                'reviewer': reviewer_winner,
-                'ai': ai_winner
+                'quality': attach_avatar(quality_winner),
+                'velocity': attach_avatar(velocity_winner),
+                'reviewer': attach_avatar(reviewer_winner),
+                'ai': attach_avatar(ai_winner)
             }
         }, status=200)
