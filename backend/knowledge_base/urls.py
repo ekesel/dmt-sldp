@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     DocumentAPI, DocumentDetailAPI, DocumentStatusAPI,
     UploadVersionAPI, VersionListAPI, DownloadAPI,
-    TagAPI, MetadataCategoryAPI, MetadataValueAPI,
+      TagAPI, MetadataCategoryAPI, MetadataValueAPI,
     TenantUsersAPI
 )
 
