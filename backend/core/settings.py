@@ -46,7 +46,8 @@ TENANT_APPS = [
     'django.contrib.messages',
     'data',
     'newsapp',
-    'knowledge_base'
+    'knowledge_base',
+    'homepage'
 ]
 
 
