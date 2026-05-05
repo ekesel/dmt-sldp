@@ -54,6 +54,8 @@ class OrgChartAPIView(APIView):
             )
         serializer = OrgChartSerializer(queryset, data=request.data, partial=True)
         if serializer.is_valid():
+            if 'org_chart_file' in serializer.validated_data and queryset.org_chart_file:
+                queryset.org_chart_file.delete(save=False)
             serializer.save()
             return Response(
                 {'message': 'Organization chart updated successfully'},
@@ -116,6 +118,8 @@ class HolidayCalendarAPIView(APIView):
             )
         serializer = HolidayCalendarSerializer(queryset, data=request.data, partial=True)
         if serializer.is_valid():
+            if 'holiday_calendar_file' in serializer.validated_data and queryset.holiday_calendar_file:
+                queryset.holiday_calendar_file.delete(save=False)
             serializer.save()
             return Response(
                 {'message': 'Holiday calendar updated successfully'},
@@ -179,6 +183,8 @@ class EmployeeEngagementCalendarAPIView(APIView):
             )
         serializer = EmployeeEngagementCalendarSerializer(queryset, data=request.data, partial=True)
         if serializer.is_valid():
+            if 'employee_engagement_calendar_file' in serializer.validated_data and queryset.employee_engagement_calendar_file:
+                queryset.employee_engagement_calendar_file.delete(save=False)
             serializer.save()
             return Response(
                 {'message': 'Employee engagement calendar updated successfully'},
@@ -241,6 +247,8 @@ class PolicyAPIView(APIView):
             )
         serializer = PolicySerializer(queryset, data=request.data, partial=True)
         if serializer.is_valid():
+            if 'policy_file' in serializer.validated_data and queryset.policy_file:
+                queryset.policy_file.delete(save=False)
             serializer.save()
             return Response(
                 {'message': 'Policy updated successfully'},
@@ -284,16 +292,18 @@ class LeaderDashboardAPIView(APIView):
             sprint_end_date__month=now.month
         )
 
-        # FIX: If there is no data for the current month, fallback to all-time data
-        if not base_qs.exists():
-            base_qs = DeveloperMetrics.objects.all()
-
         if project_id:
             try:
                 project_id = int(project_id)
             except ValueError:
                 return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
             base_qs = base_qs.filter(project_id=project_id)
+            
+        # Fallback to all-time data if no records exist for the current month (and project)
+        if not base_qs.exists():
+            base_qs = DeveloperMetrics.objects.all()
+            if project_id:
+                base_qs = base_qs.filter(project_id=project_id)
             
         # 1. Highest Compliance
         quality_winner = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
@@ -317,15 +327,15 @@ class LeaderDashboardAPIView(APIView):
         ).order_by('-score').first()
 
         def attach_avatar(winner):
-            import hashlib
+            from users.models import User
             if not winner:
                 return winner
             email = winner.get('developer_email')
+            winner['profile_picture'] = None
             if email:
-                email_hash = hashlib.md5(email.strip().lower().encode('utf-8')).hexdigest()
-                winner['profile_picture'] = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon"
-            else:
-                winner['profile_picture'] = None
+                user = User.objects.filter(email=email).first()
+                if user and user.profile_picture:
+                    winner['profile_picture'] = request.build_absolute_uri(user.profile_picture.url)
             return winner
 
         return Response({

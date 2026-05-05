@@ -44,6 +44,10 @@ class IsUser(BasePermission):
     message = "You are not authorized to perform this action."
 
     def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            self.message = "Please log in first."
+            return False
+
         if not hasattr(request, 'tenant'):
             self.message = "Tenant header is missing or invalid."
             return False
