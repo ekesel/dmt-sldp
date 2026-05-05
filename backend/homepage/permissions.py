@@ -16,10 +16,13 @@ class IsManagerOrReadOnly(BasePermission):
             return False
 
         # Step 2: Check if user belongs to same organization (tenant)
-        if hasattr(request, 'tenant') and hasattr(request.user, 'tenant'):
-            if request.user.tenant_id != request.tenant.id:
-                self.message = "You do not belong to this organization."
-                return False
+        if not hasattr(request, 'tenant'):
+            self.message = "Tenant header is missing or invalid."
+            return False
+
+        if hasattr(request.user, 'tenant') and request.user.tenant_id != request.tenant.id:
+            self.message = "You do not belong to this organization."
+            return False
 
         # Step 3: Allow read-only requests (GET, HEAD, OPTIONS)
         if request.method in SAFE_METHODS:
@@ -41,10 +44,13 @@ class IsUser(BasePermission):
     message = "You are not authorized to perform this action."
 
     def has_permission(self, request, view):
-        if hasattr(request, 'tenant') and hasattr(request.user, 'tenant'):
-            if request.user.tenant_id != request.tenant.id:
-                self.message = "You do not belong to this organization."
-                return False
+        if not hasattr(request, 'tenant'):
+            self.message = "Tenant header is missing or invalid."
+            return False
+
+        if hasattr(request.user, 'tenant') and request.user.tenant_id != request.tenant.id:
+            self.message = "You do not belong to this organization."
+            return False
 
         if request.user.is_authenticated and request.tenant.id == request.user.tenant_id:
             return True

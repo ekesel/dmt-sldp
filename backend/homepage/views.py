@@ -20,7 +20,7 @@ class OrgChartAPIView(APIView):
 
     def post(self, request):
         serializer = OrgChartSerializer(data=request.data)
-        logger.info(request.data)
+        logger.info("Received request to upload organization chart")
 
         if serializer.is_valid():
             serializer.save(org_name=request.tenant.name)
@@ -29,7 +29,7 @@ class OrgChartAPIView(APIView):
                 status=201
             )
 
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for organization chart upload")   
         return Response(serializer.errors, status=400)
 
     def get(self, request, id=None):
@@ -43,7 +43,9 @@ class OrgChartAPIView(APIView):
             serializer = OrgChartSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
-    def patch(self, request, id):
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response(
@@ -57,13 +59,19 @@ class OrgChartAPIView(APIView):
                 {'message': 'Organization chart updated successfully'},
                 status=200
             )
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for organization chart update")   
         return Response(serializer.errors, status=400)
 
-    def delete(self, request, id):
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response({'message': 'Organization chart not found'}, status=404)
+            
+        if queryset.org_chart_file:
+            queryset.org_chart_file.delete(save=False)
+            
         queryset.delete()
         return Response({'message': 'Organization chart deleted successfully'}, status=200)
 
@@ -74,7 +82,7 @@ class HolidayCalendarAPIView(APIView):
 
     def post(self, request):
         serializer = HolidayCalendarSerializer(data=request.data)
-        logger.info(request.data)
+        logger.info("Received request to upload holiday calendar")
 
         if serializer.is_valid():
             serializer.save(org_name=request.tenant.name)
@@ -83,7 +91,7 @@ class HolidayCalendarAPIView(APIView):
                 status=201
             )
 
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for holiday calendar upload")   
         return Response(serializer.errors, status=400)
 
     def get(self, request, id=None):
@@ -97,7 +105,9 @@ class HolidayCalendarAPIView(APIView):
             serializer = HolidayCalendarSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
-    def patch(self, request, id):
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response(
@@ -111,14 +121,21 @@ class HolidayCalendarAPIView(APIView):
                 {'message': 'Holiday calendar updated successfully'},
                 status=200
             )
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for holiday calendar update")   
         return Response(serializer.errors, status=400)
 
-    def delete(self, request, id):
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response({'message': 'Holiday calendar not found'}, status=404)
+            
+        if queryset.holiday_calendar_file:
+            queryset.holiday_calendar_file.delete(save=False)
+            
         queryset.delete()
+        
         return Response({'message': 'Holiday calendar deleted successfully'}, status=200)
 
 # Employee engagement calendar api
@@ -128,7 +145,7 @@ class EmployeeEngagementCalendarAPIView(APIView):
 
     def post(self, request):
         serializer = EmployeeEngagementCalendarSerializer(data=request.data)
-        logger.info(request.data)
+        logger.info("Received request to upload employee engagement calendar")
 
         if serializer.is_valid():
             serializer.save(org_name=request.tenant.name)
@@ -137,7 +154,7 @@ class EmployeeEngagementCalendarAPIView(APIView):
                 status=201
             )
 
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for employee engagement calendar upload")   
         return Response(serializer.errors, status=400)
 
     def get(self, request, id=None):
@@ -151,7 +168,9 @@ class EmployeeEngagementCalendarAPIView(APIView):
             serializer = EmployeeEngagementCalendarSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
-    def patch(self, request, id):
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response(
@@ -165,13 +184,19 @@ class EmployeeEngagementCalendarAPIView(APIView):
                 {'message': 'Employee engagement calendar updated successfully'},
                 status=200
             )
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for employee engagement calendar update")   
         return Response(serializer.errors, status=400)
 
-    def delete(self, request, id):
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response({'message': 'Employee engagement calendar not found'}, status=404)
+            
+        if queryset.employee_engagement_calendar_file:
+            queryset.employee_engagement_calendar_file.delete(save=False)
+            
         queryset.delete()
         return Response({'message': 'Employee engagement calendar deleted successfully'}, status=200)
 
@@ -182,7 +207,7 @@ class PolicyAPIView(APIView):
 
     def post(self, request):
         serializer = PolicySerializer(data=request.data)
-        logger.info(request.data)
+        logger.info("Received request to upload policy")
 
         if serializer.is_valid():
             serializer.save(org_name=request.tenant.name)
@@ -191,7 +216,7 @@ class PolicyAPIView(APIView):
                 status=201
             )
 
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for policy upload")   
         return Response(serializer.errors, status=400)
 
     def get(self, request, id=None):
@@ -205,7 +230,9 @@ class PolicyAPIView(APIView):
             serializer = PolicySerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
-    def patch(self, request, id):
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Policy.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response(
@@ -219,16 +246,22 @@ class PolicyAPIView(APIView):
                 {'message': 'Policy updated successfully'},
                 status=200
             )
-        logger.error(serializer.errors)   
+        logger.error("Validation failed for policy update")   
         return Response(serializer.errors, status=400)
 
-    def delete(self, request, id):
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
         queryset = Policy.objects.filter(org_name=request.tenant.name, id=id).first()
         if not queryset:
             return Response(
                 {'message': 'Policy not found'},
                 status=404
             )
+            
+        if queryset.policy_file:
+            queryset.policy_file.delete(save=False)
+            
         queryset.delete()
         return Response(
             {'message': 'Policy deleted successfully'},
@@ -256,6 +289,10 @@ class LeaderDashboardAPIView(APIView):
             base_qs = DeveloperMetrics.objects.all()
 
         if project_id:
+            try:
+                project_id = int(project_id)
+            except ValueError:
+                return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
             base_qs = base_qs.filter(project_id=project_id)
             
         # 1. Highest Compliance
