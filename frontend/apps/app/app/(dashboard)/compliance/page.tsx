@@ -47,10 +47,14 @@ export default function CompliancePage() {
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
 
-    const handleHelpClick = (id: string) => {
+    const handleHelpClick = useCallback((id: string) => {
         setActiveHelpId(id);
         setIsHelpOpen(true);
-    };
+    }, []);
+
+    const handleCloseHelp = useCallback(() => {
+        setIsHelpOpen(false);
+    }, []);
 
     const fetchData = useCallback((projectId: number | null, sprintId: number | null) => {
         setLoading(true);
@@ -74,10 +78,10 @@ export default function CompliancePage() {
     }, [selectedProjectId, selectedSprintId, fetchData]);
 
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
-    const handleProjectChange = (projectId: number | null) => {
+    const handleProjectChange = useCallback((projectId: number | null) => {
         setSelectedProjectId(projectId);
         // Sprint will be reset by SprintSelector internally via onSelect
-    };
+    }, []);
 
     const formatDateTime = (dateString: string) => {
         try {
@@ -310,7 +314,7 @@ export default function CompliancePage() {
             
             <HelpSidebar
                 isOpen={isHelpOpen}
-                onClose={() => setIsHelpOpen(false)}
+                onClose={handleCloseHelp}
                 activeTermId={activeHelpId}
             />
         </main>

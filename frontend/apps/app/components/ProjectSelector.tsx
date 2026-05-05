@@ -7,7 +7,7 @@ interface ProjectSelectorProps {
     onSelect: (projectId: number | null) => void;
 }
 
-export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ selectedProjectId, onSelect }) => {
+export const ProjectSelector = React.memo(({ selectedProjectId, onSelect }: ProjectSelectorProps) => {
     const { projects, loading, error } = useProjects();
     const [isOpen, setIsOpen] = React.useState(false);
 
@@ -63,4 +63,6 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ selectedProjec
             )}
         </div>
     );
-};
+});
+
+ProjectSelector.displayName = 'ProjectSelector';

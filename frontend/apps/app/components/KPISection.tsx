@@ -19,7 +19,7 @@ interface KPIProps {
   onHelpClick?: (id: string) => void;
 }
 
-export const KPICard = ({
+export const KPICard = React.memo(({
   label,
   value,
   trend,
@@ -92,4 +92,6 @@ export const KPICard = ({
       )}
     </Card>
   );
-};
+});
+
+KPICard.displayName = 'KPICard';

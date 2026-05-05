@@ -3,31 +3,38 @@ import { X } from "lucide-react";
 import { dmtTerms } from "../constants/dmtTerms";
 import { cn } from "@dmt/ui";
 
+type TermId = typeof dmtTerms[number]["id"];
+
 interface HelpSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTermId: string | null;
+  activeTermId: TermId | null;
 }
 
-export const HelpSidebar: React.FC<HelpSidebarProps> = ({
+export const HelpSidebar = React.memo(({
   isOpen,
   onClose,
   activeTermId,
-}) => {
+}: HelpSidebarProps) => {
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const termRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const termRefs = useRef<Partial<Record<TermId, HTMLDivElement | null>>>({});
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
+    let scrollTimeout: any;
+    let highlightTimeout: any;
+
     if (isOpen && activeTermId) {
+      // Clear any existing highlight immediately when the term changes
+      setHighlightedId(null);
       // Small delay to ensure the DOM has rendered the sidebar content
-      setTimeout(() => {
+      scrollTimeout = window.setTimeout(() => {
         const element = termRefs.current[activeTermId];
         if (element) {
           element.scrollIntoView({ behavior: "auto", block: "start" });
           setHighlightedId(activeTermId);
           // Remove highlight after a few seconds
-          setTimeout(() => {
+          highlightTimeout = window.setTimeout(() => {
             setHighlightedId(null);
           }, 3000);
         }
@@ -35,6 +42,11 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
     } else {
       setHighlightedId(null);
     }
+
+    return () => {
+      if (scrollTimeout) window.clearTimeout(scrollTimeout);
+      if (highlightTimeout) window.clearTimeout(highlightTimeout);
+    };
   }, [isOpen, activeTermId]);
 
   return (
@@ -92,4 +104,6 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
       </div>
     </>
   );
-};
+});
+
+HelpSidebar.displayName = 'HelpSidebar';
