@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card } from "@dmt/ui";
-import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2, HelpCircle } from "lucide-react";
 import { compliance } from '@dmt/api';
 import { ProjectSelector } from "../../../components/ProjectSelector";
 import { SprintSelector } from "../../../components/SprintSelector";
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
+import { HelpSidebar } from "../../../components/HelpSidebar";
 
 interface ComplianceFlag {
     id: string;
@@ -42,6 +43,14 @@ export default function CompliancePage() {
     const [summaryLoading, setSummaryLoading] = useState(true);
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
+
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
 
     const fetchData = useCallback((projectId: number | null, sprintId: number | null) => {
         setLoading(true);
@@ -101,6 +110,13 @@ export default function CompliancePage() {
                         </div>
                         <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
                             Compliance Flags
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_rules'); }}
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
+                                title="Learn more about DMT compliance rules"
+                            >
+                                <HelpCircle size={24} />
+                            </button>
                         </h1>
                         <p className="text-muted-foreground mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
@@ -130,7 +146,16 @@ export default function CompliancePage() {
                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
                                 <ShieldCheck size={20} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Overall Health</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Overall Health</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_compliance'); }}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={16} />
+                                </button>
+                            </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
                             <div className="text-3xl font-black text-foreground">
@@ -145,7 +170,16 @@ export default function CompliancePage() {
                             <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
                                 <AlertCircle size={20} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={16} />
+                                </button>
+                            </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
                             <div className="text-3xl font-black text-destructive">
@@ -160,7 +194,16 @@ export default function CompliancePage() {
                             <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
                                 <Activity size={20} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={16} />
+                                </button>
+                            </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
                             <div className="text-3xl font-black text-warning">
@@ -175,7 +218,16 @@ export default function CompliancePage() {
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                                 <CheckCircle2 size={20} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliant Items</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliant Items</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('compliant_items'); }}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={16} />
+                                </button>
+                            </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
                             <div className="text-3xl font-black text-foreground">
@@ -193,6 +245,13 @@ export default function CompliancePage() {
                     <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
                         <Activity size={20} className="text-primary" />
                         Active Violations
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleHelpClick('active_violations'); }}
+                            className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                            title="Learn more about this section"
+                        >
+                            <HelpCircle size={16} />
+                        </button>
                     </h2>
                     <div className="grid gap-4">
                         {loading ? (
@@ -248,6 +307,12 @@ export default function CompliancePage() {
                     </div>
                 </div>
             </div>
+            
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={() => setIsHelpOpen(false)}
+                activeTermId={activeHelpId}
+            />
         </main>
     );
 }

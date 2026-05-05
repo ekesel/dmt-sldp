@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -14,18 +14,26 @@ import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
 import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
 import { toast } from "react-hot-toast";
+import { HelpSidebar } from "../../components/HelpSidebar";
 
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
     const dashboardRef = useRef<HTMLDivElement>(null);
     const {
         summary, velocity, compliance, insights, forecast, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
     } = useDashboardData(selectedProjectId);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
 
     const handleExportPDF = async () => {
         if (!dashboardRef.current) return;
@@ -252,6 +260,8 @@ export default function DashboardPage() {
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="velocity"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Cycle Time"
@@ -261,6 +271,8 @@ export default function DashboardPage() {
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="cycle_time"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="DMT Compliance"
@@ -270,6 +282,8 @@ export default function DashboardPage() {
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="compliance"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Objective AI"
@@ -280,6 +294,8 @@ export default function DashboardPage() {
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="objective_ai"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Bugs Resolved"
@@ -289,6 +305,8 @@ export default function DashboardPage() {
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="bugs_resolved"
+                        onHelpClick={handleHelpClick}
                     />
                 </div>
 
@@ -318,6 +336,13 @@ export default function DashboardPage() {
                             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                                 <TrendingUp className="text-primary" />
                                 Delivery Forecast
+                                <button
+                                    onClick={() => handleHelpClick('forecast')}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none ml-2"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={20} />
+                                </button>
                             </h2>
                             <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
                         </div>
@@ -402,6 +427,12 @@ export default function DashboardPage() {
                     tenantId={localStorage.getItem('dmt-tenant') || undefined}
                 />
             )}
+
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={() => setIsHelpOpen(false)}
+                activeTermId={activeHelpId}
+            />
         </main>
     );
 }

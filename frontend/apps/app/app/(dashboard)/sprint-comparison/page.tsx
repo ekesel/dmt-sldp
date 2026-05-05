@@ -9,6 +9,7 @@ import { RadarChartComponent } from '../../../components/charts/RadarChartCompon
 import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChart';
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
 import WorkloadDistributionChart from '../../../components/charts/WorkloadDistributionChart';
+import { HelpSidebar } from '../../../components/HelpSidebar';
 
 export default function SprintComparisonPage() {
     const [projectId, setProjectId] = useState<number | null>(null);
@@ -21,6 +22,13 @@ export default function SprintComparisonPage() {
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
 
     // Fetch Developers list for the dropdown
     useEffect(() => {
@@ -138,6 +146,8 @@ export default function SprintComparisonPage() {
                                                 <span className="text-muted-foreground font-medium italic opacity-80">({sprintAName})</span>
                                             </div>
                                         }
+                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key === 'item_volume' ? 'throughput' : key}
+                                        onHelpClick={handleHelpClick}
                                     />
                                 );
                             })}
@@ -204,6 +214,12 @@ export default function SprintComparisonPage() {
                     </div>
                 )}
             </div>
+
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={() => setIsHelpOpen(false)}
+                activeTermId={activeHelpId}
+            />
         </div>
     );
 }
