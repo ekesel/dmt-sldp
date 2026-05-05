@@ -249,27 +249,27 @@ export default function DashboardPage() {
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description={<span className="text-primary">Average of last 5 sprints</span>}
-                        valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
-                        labelClassName="font-bold text-xl text-primary"
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                     />
                     <KPICard
                         label="Cycle Time"
                         value={`${summary?.cycle_time || 0} Days`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description={<span className="text-primary">Average resolution duration</span>}
-                        valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
-                        labelClassName="font-bold text-xl text-primary"
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                     />
                     <KPICard
                         label="DMT Compliance"
                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                         description={<span className="text-primary">Minimum Threshold: 80%</span>}
-                        valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
-                        labelClassName="font-bold text-xl text-primary"
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                     />
                     <KPICard
                         label="Objective AI"
@@ -277,18 +277,18 @@ export default function DashboardPage() {
                         trend={{ direction: 'neutral', value: 'Analyzed' }}
                         description={<span className="text-primary">PR-based AI evaluation</span>}
                         icon={<Sparkles size={16} className="text-brand-primary" />}
-                        valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
-                        labelClassName="font-bold text-xl text-primary"
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                     />
                     <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
                         description={<span className="text-primary">Bugs fixed in last 5 sprints</span>}
-                        valueClassName="text-accent !text-3xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md"
-                        labelClassName="font-bold text-xl text-primary"
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                     />
                 </div>
 
