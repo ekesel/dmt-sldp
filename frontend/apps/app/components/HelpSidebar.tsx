@@ -24,7 +24,7 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
       setTimeout(() => {
         const element = termRefs.current[activeTermId];
         if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "start" });
+          element.scrollIntoView({ behavior: "auto", block: "start" });
           setHighlightedId(activeTermId);
           // Remove highlight after a few seconds
           setTimeout(() => {
@@ -51,11 +51,11 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
       <div
         ref={sidebarRef}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-full md:w-96 bg-card border-l border-border shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed inset-y-0 right-0 z-50 w-full md:w-96 bg-card shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between p-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex items-center justify-between p-6 bg-card/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-bold text-foreground">DMT Terms</h2>
             <p className="text-sm text-muted-foreground mt-1">Understanding the metrics</p>
@@ -76,14 +76,14 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({
                 termRefs.current[term.id] = el;
               }}
               className={cn(
-                "p-4 rounded-xl border transition-all duration-500",
+                "p-4 transition-all duration-500",
                 highlightedId === term.id
-                  ? "bg-primary/10 border-primary ring-2 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
-                  : "bg-muted/30 border-border"
+                  ? "bg-primary/10 rounded-xl ring-2 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  : ""
               )}
             >
-              <h3 className="text-lg font-bold text-foreground mb-3">{term.title}</h3>
-              <div className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="text-lg font-bold text-accent mb-3">{term.title}</h3>
+              <div className="text-sm text-primary leading-relaxed">
                 {term.description}
               </div>
             </div>

@@ -146,7 +146,7 @@ export default function SprintComparisonPage() {
                                                 <span className="text-muted-foreground font-medium italic opacity-80">({sprintAName})</span>
                                             </div>
                                         }
-                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key === 'item_volume' ? 'throughput' : key}
+                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key}
                                         onHelpClick={handleHelpClick}
                                     />
                                 );
