@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@dmt/ui';
 import { dashboard, LeaderboardResponse, LeaderboardWinner } from '@dmt/api';
-import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award } from 'lucide-react';
+import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award, HelpCircle } from 'lucide-react';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
+import { HelpSidebar } from "../../../components/HelpSidebar";
 
 const CategoryCard = ({
     title,
@@ -134,6 +135,14 @@ export default function LeaderboardPage() {
     const [data, setData] = useState<LeaderboardResponse | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
+
     useEffect(() => {
         const fetchLeaderboard = async () => {
             setLoading(true);
@@ -159,7 +168,16 @@ export default function LeaderboardPage() {
                             <Award size={16} />
                             Monthly Awards
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleHelpClick('leaderboard'); }}
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
+                                title="Learn more about the leaderboard categories"
+                            >
+                                <HelpCircle size={24} />
+                            </button>
+                        </div>
                         <p className="text-muted-foreground mt-2 font-medium">Recognizing engineering excellence across the organization.</p>
                     </div>
                     <div className="flex gap-4 items-center flex-wrap justify-end">
@@ -268,6 +286,12 @@ export default function LeaderboardPage() {
                     <div className="text-muted-foreground text-center py-12">Failed to load leaderboard.</div>
                 )}
             </div>
+            
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={() => setIsHelpOpen(false)}
+                activeTermId={activeHelpId}
+            />
         </main>
     );
 }
