@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -14,18 +14,26 @@ import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
 import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
 import { toast } from "react-hot-toast";
+import { HelpSidebar } from "../../components/HelpSidebar";
 
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
     const dashboardRef = useRef<HTMLDivElement>(null);
     const {
         summary, velocity, compliance, insights, forecast, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
     } = useDashboardData(selectedProjectId);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
 
     const handleExportPDF = async () => {
         if (!dashboardRef.current) return;
@@ -35,28 +43,55 @@ export default function DashboardPage() {
 
 
             // Dynamically import client-side only libraries
-            const html2canvas = (await import('html2canvas')).default;
+            const html2canvas = (await import('html2canvas-pro')).default;
             const jspdfMod = await import('jspdf');
             const JsPDF = (jspdfMod as any).jsPDF || (jspdfMod as any).default;
 
             if (!JsPDF) throw new Error('Could not load jsPDF library');
 
             const element = dashboardRef.current;
-            const originalStyle = element.style.cssText;
 
-            // Force desktop layout (1400px) and disable constraints
-            element.style.width = '1400px';
-            element.style.minWidth = '1400px';
-            element.style.maxWidth = 'none';
-            element.style.margin = '0';
-            element.style.padding = '0';
-            element.style.height = 'auto';
-            element.style.overflow = 'visible';
+            // Create off-screen clone to prevent layout shift for the user
+            const clone = element.cloneNode(true) as HTMLElement;
 
-            // Wait for reflow
+            // Copy canvas content if any exist
+            const sourceCanvases = element.querySelectorAll('canvas');
+            const clonedCanvases = clone.querySelectorAll('canvas');
+            for (let i = 0; i < sourceCanvases.length; i++) {
+                const destCtx = (clonedCanvases[i] as HTMLCanvasElement).getContext('2d');
+                if (destCtx) {
+                    destCtx.drawImage(sourceCanvases[i] as HTMLCanvasElement, 0, 0);
+                }
+            }
+
+            // Wrap in parent container to preserve inherited styles
+            const parent = element.parentElement;
+            const cloneWrapper = document.createElement('div');
+            if (parent) {
+                cloneWrapper.className = parent.className;
+            }
+            cloneWrapper.style.position = 'absolute';
+            cloneWrapper.style.left = '-9999px';
+            cloneWrapper.style.top = '0';
+            cloneWrapper.style.width = '1400px';
+            cloneWrapper.style.minWidth = '1400px';
+
+            // Apply desktop constraints to clone
+            clone.style.width = '1400px';
+            clone.style.minWidth = '1400px';
+            clone.style.maxWidth = 'none';
+            clone.style.margin = '0';
+            clone.style.padding = '0';
+            clone.style.height = 'auto';
+            clone.style.overflow = 'visible';
+
+            cloneWrapper.appendChild(clone);
+            document.body.appendChild(cloneWrapper);
+
+            // Wait for reflow/render
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            const mainCanvas = await html2canvas(element, {
+            const mainCanvas = await html2canvas(clone, {
                 scale: 2, // High resolution
                 useCORS: true,
                 backgroundColor: '#f9fafa',
@@ -64,8 +99,8 @@ export default function DashboardPage() {
                 width: 1400,
             });
 
-            // Restore original styles
-            element.style.cssText = originalStyle;
+            // Clean up clone from DOM
+            document.body.removeChild(cloneWrapper);
 
             const pdf = new JsPDF({
                 orientation: 'landscape',
@@ -221,32 +256,57 @@ export default function DashboardPage() {
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
-                        description="Average of last 5 sprints"
+                        description={<span className="text-primary">Average of last 5 sprints</span>}
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="velocity"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Cycle Time"
                         value={`${summary?.cycle_time || 0} Days`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
-                        description="Average resolution duration"
+                        description={<span className="text-primary">Average resolution duration</span>}
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="cycle_time"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="DMT Compliance"
                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
-                        description="Minimum Threshold: 80%"
+                        description={<span className="text-primary">Minimum Threshold: 80%</span>}
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="compliance"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Objective AI"
                         value={`${(summary?.code_ai_usage_percent || 0).toFixed(1)}%`}
                         trend={{ direction: 'neutral', value: 'Analyzed' }}
-                        description="PR-based AI evaluation"
+                        description={<span className="text-primary">PR-based AI evaluation</span>}
                         icon={<Sparkles size={16} className="text-brand-primary" />}
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="objective_ai"
+                        onHelpClick={handleHelpClick}
                     />
                     <KPICard
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
-                        description="Bugs fixed in last 5 sprints"
+                        description={<span className="text-primary">Bugs fixed in last 5 sprints</span>}
+                        valueClassName="text-accent !text-2xl"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                        helpId="bugs_resolved"
+                        onHelpClick={handleHelpClick}
                     />
                 </div>
 
@@ -276,6 +336,13 @@ export default function DashboardPage() {
                             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                                 <TrendingUp className="text-primary" />
                                 Delivery Forecast
+                                <button
+                                    onClick={() => handleHelpClick('forecast')}
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none ml-2"
+                                    title="Learn more about this metric"
+                                >
+                                    <HelpCircle size={20} />
+                                </button>
                             </h2>
                             <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
                         </div>
@@ -360,6 +427,12 @@ export default function DashboardPage() {
                     tenantId={localStorage.getItem('dmt-tenant') || undefined}
                 />
             )}
+
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={() => setIsHelpOpen(false)}
+                activeTermId={activeHelpId}
+            />
         </main>
     );
 }

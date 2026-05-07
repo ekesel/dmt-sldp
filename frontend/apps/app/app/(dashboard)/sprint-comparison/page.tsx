@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { dashboard, developers } from '@dmt/api';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { SprintSelector } from '../../../components/SprintSelector';
@@ -9,6 +9,7 @@ import { RadarChartComponent } from '../../../components/charts/RadarChartCompon
 import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChart';
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
 import WorkloadDistributionChart from '../../../components/charts/WorkloadDistributionChart';
+import { HelpSidebar } from '../../../components/HelpSidebar';
 
 export default function SprintComparisonPage() {
     const [projectId, setProjectId] = useState<number | null>(null);
@@ -21,6 +22,28 @@ export default function SprintComparisonPage() {
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+    const handleHelpClick = useCallback((id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    }, []);
+
+    const handleProjectSelect = useCallback((id: number | null) => {
+        setProjectId(id);
+        setSprintAId(null);
+        setSprintBId(null);
+        setDeveloperId(null);
+    }, []);
+
+    const handleDeveloperChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setDeveloperId(e.target.value || null);
+    }, []);
+
+    const handleHelpClose = useCallback(() => {
+        setIsHelpOpen(false);
+    }, []);
 
     // Fetch Developers list for the dropdown
     useEffect(() => {
@@ -38,9 +61,9 @@ export default function SprintComparisonPage() {
 
     useEffect(() => {
         const sA = availableSprints.find(s => s.id === sprintAId);
-        if (sA) setSprintAName(sA.name);
+        setSprintAName(sA?.name || '');
         const sB = availableSprints.find(s => s.id === sprintBId);
-        if (sB) setSprintBName(sB.name);
+        setSprintBName(sB?.name || '');
     }, [sprintAId, sprintBId, availableSprints]);
 
     useEffect(() => {
@@ -60,7 +83,7 @@ export default function SprintComparisonPage() {
                     <div className="font-bold text-xl text-foreground tracking-tight mr-2 border-r border-border pr-6">Sprint Comparison</div>
 
                     <div className="flex items-center gap-4 flex-wrap">
-                        <ProjectSelector selectedProjectId={projectId} onSelect={(id) => { setProjectId(id); setSprintAId(null); setSprintBId(null); setDeveloperId(null); }} />
+                        <ProjectSelector selectedProjectId={projectId} onSelect={handleProjectSelect} />
 
                         <div className="h-6 w-px bg-border hidden md:block" />
 
@@ -81,7 +104,7 @@ export default function SprintComparisonPage() {
                     <select
                         className="bg-transparent text-foreground/80 text-sm font-medium focus:outline-none"
                         value={developerId || ''}
-                        onChange={(e) => setDeveloperId(e.target.value || null)}
+                        onChange={handleDeveloperChange}
                     >
                         <option value="" className="bg-popover">All Developers (Team View)</option>
                         {devsList.map(dev => (
@@ -138,6 +161,8 @@ export default function SprintComparisonPage() {
                                                 <span className="text-muted-foreground font-medium italic opacity-80">({sprintAName})</span>
                                             </div>
                                         }
+                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key}
+                                        onHelpClick={handleHelpClick}
                                     />
                                 );
                             })}
@@ -204,6 +229,12 @@ export default function SprintComparisonPage() {
                     </div>
                 )}
             </div>
+
+            <HelpSidebar
+                isOpen={isHelpOpen}
+                onClose={handleHelpClose}
+                activeTermId={activeHelpId}
+            />
         </div>
     );
 }

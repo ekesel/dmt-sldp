@@ -1,5 +1,5 @@
-import { Card } from "@dmt/ui";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Card, cn } from "@dmt/ui";
+import { TrendingUp, TrendingDown, Minus, HelpCircle } from "lucide-react";
 import React from "react";
 
 interface KPIProps {
@@ -12,14 +12,24 @@ interface KPIProps {
   };
   description?: React.ReactNode;
   icon?: React.ReactNode;
+  valueClassName?: string;
+  className?: string;
+  labelClassName?: string;
+  helpId?: string;
+  onHelpClick?: (id: string) => void;
 }
 
-export const KPICard = ({
+export const KPICard = React.memo(({
   label,
   value,
   trend,
   description,
   icon,
+  valueClassName = "text-foreground",
+  className,
+  labelClassName,
+  helpId,
+  onHelpClick,
 }: KPIProps) => {
   const getSentimentColor = () => {
     if (!trend) return "text-muted-foreground";
@@ -38,12 +48,26 @@ export const KPICard = ({
   };
 
   return (
-    <Card className="flex flex-col gap-3 p-5 hover:border-primary/40 transition-colors duration-200 group bg-card border-border">
-      <h3 className="text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider">
-        {label}
-      </h3>
+    <Card className={cn("flex flex-col gap-3 p-5 transition-all duration-200 group bg-card border-border", className)}>
+      <div className="flex items-center justify-between">
+        <h3 className={cn("text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider flex items-center gap-2", labelClassName)}>
+          {label}
+          {helpId && onHelpClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onHelpClick(helpId);
+              }}
+              className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+              title="Learn more about this metric"
+            >
+              <HelpCircle size={16} />
+            </button>
+          )}
+        </h3>
+      </div>
       <div className="flex items-end gap-3 flex-wrap">
-        <p className="text-4xl font-bold text-foreground tracking-tight">
+        <p className={`text-4xl font-bold tracking-tight ${valueClassName}`}>
           {value}
         </p>
         {trend && (
@@ -68,4 +92,6 @@ export const KPICard = ({
       )}
     </Card>
   );
-};
+});
+
+KPICard.displayName = 'KPICard';

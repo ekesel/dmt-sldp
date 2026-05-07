@@ -17,7 +17,7 @@ interface SprintSelectorProps {
     onSelect: (sprintId: number | null) => void;
 }
 
-export const SprintSelector: React.FC<SprintSelectorProps> = ({ projectId, selectedSprintId, onSelect }) => {
+export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelect }: SprintSelectorProps) => {
     const [sprintList, setSprintList] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
@@ -131,4 +131,6 @@ export const SprintSelector: React.FC<SprintSelectorProps> = ({ projectId, selec
             )}
         </div>
     );
-};
+});
+
+SprintSelector.displayName = 'SprintSelector';
