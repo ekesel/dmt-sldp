@@ -23,7 +23,14 @@ class OrgChartAPIView(APIView):
         logger.info("Received request to upload organization chart")
 
         if serializer.is_valid():
-            serializer.save(org_name=request.tenant.name)
+            queryset = Org_chart.objects.filter(org_name=request.tenant.name)
+            for obj in queryset:
+                if obj.org_chart_file:
+                    obj.org_chart_file.delete(save=False)
+                obj.delete()
+
+            obj = serializer.save(org_name=request.tenant.name,is_active=True)
+        
             return Response(
                 {'message': 'Organization chart uploaded successfully'},
                 status=201
@@ -39,7 +46,7 @@ class OrgChartAPIView(APIView):
                 return Response({'message': 'Organization chart not found'}, status=404)
             serializer = OrgChartSerializer(queryset)
         else:
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name).order_by('-id')
+            queryset = Org_chart.objects.filter(org_name=request.tenant.name, is_active=True)
             serializer = OrgChartSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
@@ -63,19 +70,6 @@ class OrgChartAPIView(APIView):
             )
         logger.error("Validation failed for organization chart update")   
         return Response(serializer.errors, status=400)
-
-    def delete(self, request, id=None):
-        if not id:
-            return Response({'message': 'ID is required'}, status=400)
-        queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
-        if not queryset:
-            return Response({'message': 'Organization chart not found'}, status=404)
-            
-        if queryset.org_chart_file:
-            queryset.org_chart_file.delete(save=False)
-            
-        queryset.delete()
-        return Response({'message': 'Organization chart deleted successfully'}, status=200)
 
 # Holiday Calendar API
 class HolidayCalendarAPIView(APIView):
