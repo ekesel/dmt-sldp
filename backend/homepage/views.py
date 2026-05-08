@@ -10,6 +10,7 @@ from django.db.models import Avg, Sum
 from data.models import DeveloperMetrics
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,12 @@ class OrgChartAPIView(APIView):
         logger.info("Received request to upload organization chart")
 
         if serializer.is_valid():
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name)
-            for obj in queryset:
-                if obj.org_chart_file:
-                    obj.org_chart_file.delete(save=False)
-                obj.delete()
+            with transaction.atomic():
+                queryset = Org_chart.objects.filter(org_name=request.tenant.name)
+                for obj in queryset:
+                    if obj.org_chart_file:
+                        obj.org_chart_file.delete(save=False)
+                    obj.delete()
 
             obj = serializer.save(org_name=request.tenant.name,is_active=True)
         
