@@ -9,4 +9,4 @@ def get_visible_docs(user):
     if not user.is_authenticated:
         return Document.objects.none()
 
-    return Document.objects.all()
+    return Document.objects.filter(is_deleted=False)
