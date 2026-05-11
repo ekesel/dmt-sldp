@@ -58,7 +58,6 @@ export function usersOptions() {
  * Supported params:
  *  - category  : metadata category id (e.g. 2 = team, 1 = project)
  *  - tag       : tag id (GET /documents/?tag=1)
- *  - mine      : true (GET /documents/?mine=true)
  *
  * Maps to: GET /documents/
  */

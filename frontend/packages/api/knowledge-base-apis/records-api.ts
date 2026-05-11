@@ -1,18 +1,8 @@
 import axios from "axios";
 import api from "..";
 
-// ---------------------------------------------------------------------------
-// Records API — production adapter for GET /kb/documents/
-//
-// Supported query params:
-//   GET /kb/documents/?search=<text>
-//   GET /kb/documents/?category=<id>
-//   GET /kb/documents/?tag=<id_or_name>
-//   GET /kb/documents/?mine=true
-//
-// Data flow:
-//   endpoint payload -> mapDocumentToKnowledgeRecord() -> UI shape
-// ---------------------------------------------------------------------------
+
+
 
 export interface KnowledgeRecord {
   id: string;
@@ -23,9 +13,11 @@ export interface KnowledgeRecord {
   owner: string;
   date: string;
   createdAt: string;
+  updatedAt?: string;
   description: string;
   uid: string;
   tags: string[];
+  tagDetails?: { id: number; name: string }[];
   /** category_id → value pairs */
   metadata: { category: number; category_name: string; value: string; value_id?: number | string }[];
   assets: { name: string; size: string; url?: string }[];
@@ -42,7 +34,7 @@ export interface RecordVersionUI {
   date: string;
   author: string;
   comment: string;
-  fileUrl: string;
+  fileUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,13 +63,14 @@ interface DocumentFileDetail {
 interface DocumentResponseItem {
   id: number;
   title: string;
-  
+
   description: string;
   created_by: number;
   owner: number;
   audience?: string;
   type?: string;
   created_at: string;
+  updated_at?: string;
   uid?: string;
   version?: string;
   version_count?: number;
@@ -130,8 +123,8 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
     const cleanHost = urlObj.host.replace(/^api\./, "");
     mediaBaseUrl = `${urlObj.protocol}//${cleanHost}`;
   } else {
-    mediaBaseUrl = isLocal 
-      ? `${cleanProtocol}//${window.location.host}` 
+    mediaBaseUrl = isLocal
+      ? `${cleanProtocol}//${window.location.host}`
       : "https://samta.elevate.samta.ai";
   }
 
@@ -171,16 +164,20 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?:
     owner: String(doc.owner),
     date: formatDateLabel(doc.created_at),
     createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
     description: doc.description || "",
     uid: doc.uid || `KB-${doc.id}`,
     tags: (() => {
       const rawTags = (doc.tag_details && doc.tag_details.length > 0) ? doc.tag_details : (doc.tags || []);
       return (rawTags as any[]).map(t => {
-        if (typeof t === 'string') return t;
-        if (typeof t === 'object' && t !== null && 'name' in t) return t.name;
-        return String(t);
+        if (typeof t === 'string') return t.toUpperCase();
+        if (typeof t === 'object' && t !== null && 'name' in t) return t.name.toUpperCase();
+        return String(t).toUpperCase();
       }).filter(t => t && t !== "[object Object]");
     })(),
+    tagDetails: (doc.tag_details && Array.isArray(doc.tag_details)) 
+      ? doc.tag_details.map(t => ({ id: t.id, name: t.name }))
+      : [],
     metadata: [
       ...rawMetadata.map((item) => ({
         category: item.category_id ?? 0,
@@ -248,8 +245,6 @@ export interface RecordSearchParams {
   category?: number;
   /** Filter by tag id: GET /kb/documents/?tag=1 */
   tag?: number | string;
-  /** Filter by ownership: GET /kb/documents/?mine=true */
-  mine?: boolean;
   /** Full text search: GET /kb/documents/?search=text */
   search?: string;
 }
@@ -260,14 +255,13 @@ export interface RecordSearchParams {
 export const knowledgeRecords = {
   /**
    * GET /kb/documents/
-   * Supports ?category=ID, ?tag=ID, ?mine=true
+   * Supports ?category=ID, ?tag=ID
    */
   search: async (params: RecordSearchParams = {}): Promise<KnowledgeRecord[]> => {
     const response = await api.get<DocumentResponseItem[] | PaginatedDocumentsResponse>("/kb/documents/", {
       params: {
         ...(params.category !== undefined ? { category: params.category } : {}),
         ...(params.tag !== undefined ? { tag: params.tag } : {}),
-        ...(params.mine !== undefined ? { mine: params.mine } : {}),
         ...(params.search !== undefined ? { search: params.search } : {}),
       },
     });
@@ -320,7 +314,7 @@ export const knowledgeRecords = {
 
     try {
       const isCrossOrigin = absoluteUrl.startsWith("http") && !absoluteUrl.includes(window.location.host);
-      
+
       // If cross-origin, we use plain axios to avoid sending Authorization headers 
       // that might trigger CORS preflight failures on media servers.
       const requester = isCrossOrigin ? axios : api;
@@ -350,7 +344,7 @@ export const knowledgeRecords = {
     } catch (error: any) {
       // If it's a network error or CORS issue, try the simplest fallback: a direct link
       const isNetworkError = error.message === "Network Error" || !error.response;
-      
+
       if (isNetworkError) {
         console.warn("Download failed via script (likely CORS), attempting direct browser download.");
       } else {
@@ -446,7 +440,7 @@ export const knowledgeRecords = {
 
     // Check if it's an Office document (Word, Excel, PowerPoint)
     const isOfficeDoc = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(absoluteUrl);
-    
+
     // Treat API domain and localhost as "internal" so we send Authorization headers.
     let isInternal = absoluteUrl.includes(window.location.host);
     try {

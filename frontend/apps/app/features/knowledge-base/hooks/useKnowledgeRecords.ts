@@ -10,7 +10,6 @@ const STABLE_EMPTY_ARRAY: never[] = [];
  * Params are forwarded directly to GET /documents/:
  *   - category  : metadata category id  → GET /documents/?category=1
  *   - tag       : tag id (preferred)    → GET /documents/?tag=1
- *   - mine      : true                  → GET /documents/?mine=true
  *
  * React Query will automatically re-fetch whenever params change, giving
  * instant reactivity to the search input in KnowledgeHeader.

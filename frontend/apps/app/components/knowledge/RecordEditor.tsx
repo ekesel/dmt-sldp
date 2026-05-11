@@ -46,6 +46,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   });
 
   const [metadataSelections, setMetadataSelections] = useState<Record<number, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const { tags } = useTags();
 
   const handleChange = <K extends keyof FormData>(field: K, value: FormData[K]) => {
@@ -60,20 +61,38 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title.");
+      return;
+    }
+
     if (mode === "create" && !formData.file) {
       toast.error("Please select a file to upload.");
       return;
     }
 
     try {
+      setIsSaving(true);
       if (mode === "edit" && record) {
-        // 1. Prepare JSON payload for metadata update
+        // 1. If a new file is attached, upload it as a new version first
+        if (formData.file) {
+          await knowledgeRecords.uploadVersion(record.id, formData.file);
+        }
+
+        // 2. Prepare JSON payload for metadata update
         const updatePayload = {
           title: formData.title,
           tags: formData.tags
             .map((tagName) => {
-              const tagObj = tags.find((t) => t.name.toUpperCase() === tagName);
-              return tagObj?.id;
+              // 1. Try finding in the global tags list (freshly loaded/created)
+              const tagObj = tags.find((t) => t.name.toUpperCase() === tagName.toUpperCase());
+              if (tagObj) return tagObj.id;
+
+              // 2. Fallback: Check if the tag existed on the record originally
+              const originalTag = record?.tagDetails?.find(t => t.name.toUpperCase() === tagName.toUpperCase());
+              return originalTag?.id;
             })
             .filter((id) => id !== undefined) as number[],
           metadata: Object.values(metadataSelections)
@@ -81,13 +100,8 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
             .filter((id) => !isNaN(id)),
         };
 
-        // 2. Patch metadata
+        // 3. Patch metadata only if file upload succeeded (or wasn't needed)
         await knowledgeRecords.update(record.id, updatePayload);
-
-        // 3. If a new file is attached, upload it as a new version
-        if (formData.file) {
-          await knowledgeRecords.uploadVersion(record.id, formData.file);
-        }
       } else {
         // Create mode: use FormData for single-stage creation (Document + initial version)
         const formDataToSend = new FormData();
@@ -119,9 +133,14 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
       toast.success(mode === "create" ? "Document uploaded successfully" : "Document updated successfully");
       onBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving document:", error);
-      toast.error("Failed to save document. Please check your permissions and try again.");
+      const message = error.response?.data?.detail || 
+                      error.message || 
+                      "Failed to save document. Please check your permissions and try again.";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -181,10 +200,17 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
           <div className="flex items-center gap-2 lg:gap-3 xl:gap-4">
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {mode === "create" ? <Globe className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-              {mode === "create" ? "Publish" : "Save"}
+              {isSaving ? (
+                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              ) : mode === "create" ? (
+                <Globe className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? (mode === "create" ? "Publishing..." : "Saving...") : mode === "create" ? "Publish" : "Save"}
             </button>
           </div>
         </header>

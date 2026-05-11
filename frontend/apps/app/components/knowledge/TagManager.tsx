@@ -39,14 +39,20 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
       if (isCustom) {
         try {
           await createTag(tagName);
+          onChange([...selectedTags, tagToDisplay]);
+          setNewTag("");
+          setIsTagDropdownOpen(false);
         } catch (error) {
           console.error("Error creating tag:", error);
+          return;
         }
+      } else {
+        onChange([...selectedTags, tagToDisplay]);
+        setIsTagDropdownOpen(false);
       }
-      onChange([...selectedTags, tagToDisplay]);
-      if (isCustom) setNewTag("");
+    } else {
+      setIsTagDropdownOpen(false);
     }
-    setIsTagDropdownOpen(false);
   };
 
   const removeTag = (tagToRemove: string) => {
@@ -70,10 +76,14 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
                 className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm"
               >
                 {tag}
-                <X
-                  className="w-2.5 h-2.5 cursor-pointer hover:text-foreground transition-colors"
+                <button
+                  type="button"
                   onClick={() => removeTag(tag)}
-                />
+                  aria-label={`Remove ${tag}`}
+                  className="hover:text-foreground transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
               </span>
             ))}
           </div>
@@ -98,8 +108,12 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
                 setIsTagDropdownOpen(true);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !isTagsCreating && newTag.trim()) {
-                  addTag();
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isTagsCreating && newTag.trim()) {
+                    addTag();
+                  }
                 }
               }}
               placeholder="Search or type..."

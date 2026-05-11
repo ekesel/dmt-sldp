@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
 import { Record as KBRecord } from "./RecordList";
@@ -22,17 +22,23 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
   record,
 }) => {
   const { categories, allValues, isLoading: isMetadataLoading } = useMetadata();
+  const didPrefillRef = useRef<string | null>(null);
 
   // Build a dynamic map of categoryId → values
-  const valuesByCategory = categories.reduce<Record<number, typeof allValues>>((acc, cat) => {
-    acc[cat.id] = allValues.filter((v) => v.category === cat.id);
-    return acc;
-  }, {});
+  const valuesByCategory = useMemo(() => {
+    return categories.reduce<Record<number, typeof allValues>>((acc, cat) => {
+      acc[cat.id] = allValues.filter((v) => v.category === cat.id);
+      return acc;
+    }, {});
+  }, [categories, allValues]);
 
   // Pre-fill metadata selections when in edit mode and values are loaded
   useEffect(() => {
-    if (mode === "edit" && record?.metadata && allValues.length > 0) {
-      record.metadata.forEach((item) => {
+    const recordKey = record ? String(record.id) : null;
+    if (mode === "edit" && recordKey && allValues.length > 0 && didPrefillRef.current !== recordKey) {
+      didPrefillRef.current = recordKey;
+      
+      record?.metadata?.forEach((item) => {
         let categoryId = item.category;
 
         // Fallback: if category ID is 0 or missing, try matching by name against categories list
@@ -53,12 +59,12 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
           return v.value.toLowerCase() === item.value.toLowerCase();
         });
 
-        if (valObj && !metadataSelections[categoryId]) {
+        if (valObj) {
           onMetadataChange(categoryId, String(valObj.id));
         }
       });
     }
-  }, [mode, record, allValues, categories, metadataSelections, onMetadataChange]);
+  }, [mode, record, allValues, categories]);
 
   return (
     <div className="space-y-6">

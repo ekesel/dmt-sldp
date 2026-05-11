@@ -94,7 +94,7 @@ describe('RecordList', () => {
 
     it('displays the empty state when no records match the search criteria', () => {
       // ARRANGE
-      (useRecords as any).mockReturnValue({ records: [], isLoading: false });
+      vi.mocked(useRecords).mockReturnValue({ records: [], isLoading: false } as any);
       render(<RecordList selectedId={null} onSelect={vi.fn()} search="nothing" />);
 
       // ASSERT
@@ -128,7 +128,7 @@ describe('RecordList', () => {
     it('triggers the delete mutation after user confirmation', () => {
       // ARRANGE
       const mockDelete = vi.fn();
-      (useMutation as any).mockReturnValue({ mutate: mockDelete, isPending: false });
+      vi.mocked(useMutation).mockReturnValue({ mutate: mockDelete, isPending: false } as any);
       window.confirm = vi.fn(() => true);
       render(<RecordList selectedId={null} onSelect={vi.fn()} />);
 

@@ -63,12 +63,11 @@ describe("knowledgeRecords", () => {
         );
 
         // ACT
-        await knowledgeRecords.search({ search: "test", category: 1, mine: true });
+        await knowledgeRecords.search({ search: "test", category: 1 });
 
         // ASSERT
         expect(capturedParams.search).toBe("test");
         expect(capturedParams.category).toBe("1");
-        expect(capturedParams.mine).toBe("true");
       });
     });
   });
@@ -89,7 +88,6 @@ describe("knowledgeRecords", () => {
 
         // ASSERT
         expect(result.id).toBe("10");
-        expect(result.status).toBe("Approved");
       });
     });
 
@@ -134,24 +132,6 @@ describe("knowledgeRecords", () => {
     });
   });
 
-  describe("updateStatus", () => {
-    it("should call the status endpoint", async () => {
-      // ARRANGE
-      let capturedBody: any;
-      server.use(
-        http.post("*/kb/documents/1/status/", async ({ request }) => {
-          capturedBody = await request.json();
-          return new HttpResponse(null, { status: 200 });
-        })
-      );
-
-      // ACT
-      await knowledgeRecords.updateStatus(1, "APPROVED");
-
-      // ASSERT
-      expect(capturedBody.status).toBe("APPROVED");
-    });
-  });
 
   describe("deleteDocument", () => {
     it("should call the delete endpoint", async () => {

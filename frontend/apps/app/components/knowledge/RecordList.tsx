@@ -185,8 +185,6 @@ interface RecordListProps {
   category?: number;
   /** Forwarded directly to GET /documents/?tag= */
   tag?: number | string;
-  /** Filter by ownership: GET /documents/?mine=true */
-  mine?: boolean;
   onSelect: (record: KnowledgeRecord) => void;
   onTagClick?: (tag: { id: number | string; name: string }) => void;
   onDeleteSuccess?: (id: string | number) => void;
@@ -198,7 +196,6 @@ export const RecordList: React.FC<RecordListProps> = ({
   search,
   category,
   tag,
-  mine,
   onSelect,
   onTagClick,
   onDeleteSuccess,
@@ -209,11 +206,6 @@ export const RecordList: React.FC<RecordListProps> = ({
   const { managers } = useUsers();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
-
-  // Debug log to help identify why buttons might be missing
-  React.useEffect(() => {
-    if (user) console.log("Current User ID:", user.id);
-  }, [user]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string | number) => knowledgeRecords.deleteDocument(id),
@@ -292,7 +284,6 @@ export const RecordList: React.FC<RecordListProps> = ({
   const searchParams: RecordSearchParams = {
     category: category,
     tag: tag,
-    mine: mine,
     search: search,
   };
 
@@ -317,7 +308,7 @@ export const RecordList: React.FC<RecordListProps> = ({
     );
 
     return filtered;
-  }, [records, activeTeam, mine]);
+  }, [records, activeTeam]);
 
   if (isLoading) {
     return (
@@ -366,7 +357,7 @@ export const RecordList: React.FC<RecordListProps> = ({
         ) : (
           <div className="p-12 text-center bg-background/40 rounded-3xl border border-dashed border-border/60">
             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
-              {mine ? "No documents for review" : isSearching ? "No records match your search" : "No records found for this team"}
+              {isSearching ? "No records match your search" : "No records found for this team"}
             </p>
           </div>
         )}

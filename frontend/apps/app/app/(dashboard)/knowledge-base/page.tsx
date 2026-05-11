@@ -266,7 +266,6 @@ export default function KnowledgeBasePage() {
               search={searchTerm}
               category={activeCategory}
               tag={activeTag?.id}
-              mine={false}
               onSelect={(record) => {
                 setSelectedId(record.id);
                 if (searchTerm) {

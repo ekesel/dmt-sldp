@@ -98,6 +98,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           {/* Mobile Close Button */}
           <button
             onClick={onClose}
+            aria-label="Close record"
             className="xl:hidden absolute top-4 right-4 p-2 hover:bg-secondary rounded-full text-muted-foreground mb-4"
           >
             <X className="w-5 h-5" />
@@ -135,9 +136,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           {/* Info Grid (Status, Updated, Type, Versions) */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Updated</h3>
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">
+                {record.updatedAt ? "Updated" : "Created"}
+              </h3>
               <span className="text-sm font-semibold text-foreground">
-                {new Date(record.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
+                {new Date(record.updatedAt || record.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
               </span>
             </div>
             <div>
@@ -203,7 +206,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               {(() => {
                 const combinedAssets = [
                   ...record.assets,
-                  ...(versions || []).map((v: any) => ({
+                  ...(versions || []).map((v: RecordVersionUI) => ({
                     name: `${record.title} ${v.version}`,
                     url: v.fileUrl,
                     size: v.date,
@@ -215,16 +218,18 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                   combinedAssets.map((asset, index) => {
                     const isDownloading = downloadingFileId === asset.name;
                     const isViewing = viewingFileId === asset.url;
+                    const assetUrl = asset.url || record.fileUrl;
+
                     return (
                       <div
-                        key={asset.name}
+                        key={`${asset.url || 'asset'}-${asset.name}-${index}`}
                         className={cn(
                           "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50",
                           index !== combinedAssets.length - 1 && "mb-1"
                         )}
                       >
                         <div
-                          onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
+                          onClick={() => !isDownloading && assetUrl && handleDownload(assetUrl, asset.name)}
                           className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
                         >
                           <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
@@ -247,7 +252,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              (asset.url || record.fileUrl) && handleView(asset.url || record.fileUrl);
+                              assetUrl && handleView(assetUrl);
                             }}
                             disabled={isViewing}
                             className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
@@ -258,7 +263,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name);
+                              assetUrl && handleDownload(assetUrl, asset.name);
                             }}
                             disabled={isDownloading}
                             className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
@@ -295,7 +300,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
  * Sub-component to handle dynamic version history fetching and rendering.
  */
 const VersionHistoryList: React.FC<{
-  versions: any[];
+  versions: RecordVersionUI[];
   isLoading: boolean;
   isError: boolean;
   onDownload?: (url: string, name: string) => void;
@@ -340,24 +345,28 @@ const VersionHistoryList: React.FC<{
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-semibold text-foreground">{item.version}</span>
-                    {item.fileUrl && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => onView?.(item.fileUrl)}
-                          className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
-                          title="View version online"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
-                          className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
-                          title="Download version"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+                    {(() => {
+                      const versionFileUrl = item.fileUrl;
+                      if (!versionFileUrl) return null;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => onView?.(versionFileUrl)}
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                            title="View version online"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDownload?.(versionFileUrl, `${item.version}_file`)}
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                            title="Download version"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-wrap items-center gap-1 text-[11px] font-medium text-muted-foreground">
                     <span className="break-all">{authorName}</span>

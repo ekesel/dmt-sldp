@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useRef } from "react";
 import { Upload, CheckCircle2, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
@@ -26,6 +26,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
 }) => {
   const { versions, isLoading: isHistoryLoading, isError: isHistoryError } = useRecordVersions(recordId);
   const { managers } = useUsers();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -39,13 +40,21 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
       <div className="flex-1 space-y-8 lg:space-y-12">
         {/* Upload Area */}
         <div
-          onClick={() => document.getElementById("file-upload")?.click()}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className={cn(
-            "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer",
+            "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             currentFile ? "border-primary/60 bg-primary/5" : "border-border/40"
           )}
         >
-          <input id="file-upload" type="file" className="hidden" onChange={handleFileUpload} />
+          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} />
           <div
             className={cn(
               "w-12 h-12 lg:w-16 lg:h-16 rounded-2xl shadow-xl flex items-center justify-center mb-6 transition-colors",
@@ -78,9 +87,9 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
               Existing Assets ({assets.length})
             </h3>
             <div className="space-y-4">
-              {assets.map((asset) => (
+              {assets.map((asset, index) => (
                 <div
-                  key={asset.fileName}
+                  key={`${asset.fileName}-${index}`}
                   className="flex items-center justify-between p-4 lg:p-6 bg-background border border-border/20 rounded-2xl lg:rounded-3xl shadow-sm transition-all group"
                 >
                   <div className="flex items-center gap-4 lg:gap-6">
@@ -96,7 +105,11 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
                   </div>
                   <div className="flex items-center gap-2 lg:gap-4">
                     <button
-                      onClick={() => document.getElementById("file-upload")?.click()}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
                       className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                     >
                       Update

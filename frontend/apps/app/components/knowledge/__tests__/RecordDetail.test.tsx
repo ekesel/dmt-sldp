@@ -26,6 +26,7 @@ vi.mock('@/features/knowledge-base/hooks/useKnowledgeRecords', () => ({
 vi.mock('@dmt/api', () => ({
   knowledgeRecords: {
     downloadFile: vi.fn(),
+    viewFile: vi.fn(),
   },
 }));
 
@@ -115,7 +116,7 @@ describe('RecordDetail', () => {
       render(<RecordDetail record={record as any} currentUser="1" onClose={onClose} />);
 
       // ACT
-      const closeBtn = screen.getByRole('button', { name: '' });
+      const closeBtn = screen.getByRole('button', { name: /Close record/i });
       fireEvent.click(closeBtn);
 
       // ASSERT
