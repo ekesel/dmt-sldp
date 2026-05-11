@@ -47,17 +47,8 @@ class MetadataValue(models.Model):
 # DOCUMENT (WORKFLOW CORE)
 class Document(BaseModel):
 
-    class Status(models.TextChoices):
-        UNDER_REVIEW = "UNDER_REVIEW", "UNDER_REVIEW"
-        DRAFT = "DRAFT", "DRAFT"
-        APPROVED = "APPROVED", "APPROVED"
-        REJECTED = "REJECTED", "REJECTED"
-
-
     title = models.CharField(max_length=255)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_docs")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_docs")
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # M2M FIELDS
