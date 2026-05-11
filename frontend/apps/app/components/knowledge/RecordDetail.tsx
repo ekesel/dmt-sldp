@@ -130,17 +130,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           {/* Info Grid (Status, Updated, Type, Versions) */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Status</h3>
-              <div className={cn(
-                "inline-flex items-center gap-2 px-3 py-1 rounded-md text-[11px] font-semibold",
-                record.status === "Approved" && "bg-emerald-500/10 text-emerald-600",
-                record.status === "Rejected" && "bg-rose-500/10 text-rose-600",
-                record.status === "Under Review" && "bg-primary/10 text-primary"
-              )}>
-                {record.status}
-              </div>
-            </div>
-            <div>
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Updated</h3>
               <span className="text-sm font-semibold text-foreground">{record.date.split(',')[0]}</span>
             </div>
@@ -195,9 +184,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           <div className="mt-8 pt-6 border-t border-border/40">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">Assets</h3>
-              {!record.status.includes("Approved") && (
-                <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest bg-primary/5 px-2 py-0.5 rounded border border-primary/10">Private Draft</span>
-              )}
             </div>
 
             <div className="space-y-3">

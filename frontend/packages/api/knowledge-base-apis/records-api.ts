@@ -120,19 +120,22 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
   // If it's already an absolute URL (http, https, blob, data, or //), use it as-is
   if (/^((https?|blob|data):|\/\/)/i.test(url)) return url;
 
-  // Documents base URL
-  // Use explicit media base URL from environment, or fallback to the requested production URL
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const mediaBaseUrl = (typeof window !== 'undefined' && !isLocalhost) 
-    ? `https://${window.location.host}` 
-    : "https://samta.elevate.samta.ai/";
+  // Use the API's base URL as the foundation for media if it's absolute
+  const apiBaseUrl = api.defaults.baseURL || "";
+  let mediaBaseUrl = "https://api.elevate.samta.ai"; // Production fallback
+  
+  if (apiBaseUrl.startsWith("http")) {
+    const urlObj = new URL(apiBaseUrl);
+    mediaBaseUrl = `${urlObj.protocol}//${urlObj.host}`;
+  } else if (typeof window !== 'undefined') {
+    mediaBaseUrl = `${window.location.protocol}//${window.location.host}`;
+  }
 
   // Cleanly join to ensure no duplicate slashes
   const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
   const cleanPath = url.startsWith("/") ? url : `/${url}`;
 
-  const result = `${cleanBase}${cleanPath}`;
-  return result;
+  return `${cleanBase}${cleanPath}`;
 };
 
 const formatDateLabel = (isoDate: string): string => {
@@ -312,7 +315,13 @@ export const knowledgeRecords = {
     }
 
     try {
-      const response = await api.get(absoluteUrl, {
+      const isCrossOrigin = absoluteUrl.startsWith("http") && !absoluteUrl.includes(window.location.host);
+      
+      // If cross-origin, we use plain axios to avoid sending Authorization headers 
+      // that might trigger CORS preflight failures on media servers.
+      const requester = isCrossOrigin ? axios : api;
+
+      const response = await requester.get(absoluteUrl, {
         responseType: 'blob',
         onDownloadProgress: (progressEvent) => {
           if (progressEvent.total && onProgress) {
@@ -328,32 +337,31 @@ export const knowledgeRecords = {
       const link = document.createElement('a');
 
       link.href = url;
-      // Use provided fileName or extract from URL
       link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
 
       document.body.appendChild(link);
       link.click();
-
-      // Cleanup
-      link.parentNode?.removeChild(link);
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error("Authenticated document download failed, trying fallback:", error);
+      // If it's a network error or CORS issue, try the simplest fallback: a direct link
+      const isNetworkError = error.message === "Network Error" || !error.response;
+      
+      if (isNetworkError) {
+        console.warn("Download failed via script (likely CORS), attempting direct browser download.");
+      } else {
+        console.error("Authenticated document download failed:", error);
+      }
 
-      // Fallback: Try direct download via browser link
-      // This bypasses script-level CORS preflight for simple downloads
       try {
         const link = document.createElement('a');
         link.href = absoluteUrl;
-        // Ensure browser treats it as download if possible
         link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
-        link.setAttribute('target', '_blank'); // Open in new tab if browser can't force download
+        link.setAttribute('target', '_blank');
 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-
         return;
       } catch (fallbackError) {
         console.error("Fallback download failed:", fallbackError);
@@ -369,10 +377,6 @@ export const knowledgeRecords = {
     }
   },
 
-  /** POST /kb/documents/:id/status/ */
-  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED" | "DRAFT" | "UNDER_REVIEW"): Promise<void> => {
-    await api.post(`/kb/documents/${id}/status/`, { status });
-  },
 
   /** GET /kb/documents/:id/versions/ */
   getVersions: async (id: string | number): Promise<any[]> => {
@@ -450,7 +454,10 @@ export const knowledgeRecords = {
     }
 
     try {
-      const response = await api.get(absoluteUrl, {
+      const isCrossOrigin = absoluteUrl.startsWith("http") && !absoluteUrl.includes(window.location.host);
+      const requester = isCrossOrigin ? axios : api;
+
+      const response = await requester.get(absoluteUrl, {
         responseType: 'blob',
       });
 

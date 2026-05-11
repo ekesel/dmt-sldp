@@ -70,14 +70,6 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
               {record.version}
             </span>
-            <span className={cn(
-              "text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-tighter shrink-0 self-start sm:self-auto shadow-sm",
-              record.status === "Approved" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                record.status === "Rejected" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                  "bg-primary/10 text-primary border-primary/20"
-            )}>
-              {record.status}
-            </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -313,15 +305,6 @@ export const RecordList: React.FC<RecordListProps> = ({
     }
 
     // Sort "Under Review" to the top in Document Review mode
-    if (mine) {
-      filtered = [...filtered].sort((a, b) => {
-        const aIsUnderReview = a.status === "Under Review";
-        const bIsUnderReview = b.status === "Under Review";
-        if (aIsUnderReview && !bIsUnderReview) return -1;
-        if (!aIsUnderReview && bIsUnderReview) return 1;
-        return 0;
-      });
-    }
 
     return filtered;
   }, [records, activeTeam, mine]);

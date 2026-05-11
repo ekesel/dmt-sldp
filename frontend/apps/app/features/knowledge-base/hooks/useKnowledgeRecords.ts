@@ -45,21 +45,6 @@ export const useRecord = (id: string | number | null) => {
   };
 };
 
-/**
- * useReviewCount — returns the count of documents where the user is the owner
- * and they are not yet Approved (i.e., pending review).
- */
-export const useReviewCount = () => {
-  const { records, isLoading, isError } = useRecords({ mine: true });
-  
-  const pendingCount = records.filter(r => r.status !== "Approved" && r.status !== "Rejected").length;
-
-  return {
-    count: pendingCount,
-    isLoading,
-    isError,
-  };
-};
 
 /**
  * useRecordVersions — fetches the full version history for a document.

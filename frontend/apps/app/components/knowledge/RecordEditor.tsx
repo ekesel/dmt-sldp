@@ -205,8 +205,6 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         // 3. If a new file is attached, upload it as a new version
         if (formData.file) {
           await knowledgeRecords.uploadVersion(record.id, formData.file);
-          // Auto-approve after upload because backend resets to DRAFT
-          await knowledgeRecords.updateStatus(record.id, "APPROVED");
         }
 
 
@@ -232,12 +230,6 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         }
 
         const result = await knowledgeRecords.create(formDataToSend);
-        
-        // Auto-approve newly created document
-        if (result && result.id) {
-          await knowledgeRecords.updateStatus(result.id, "APPROVED");
-        }
-
       }
 
       // Invalidate queries to refresh the list and detail views
@@ -246,6 +238,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(record.id) });
       }
 
+      toast.success(mode === "create" ? "Document uploaded successfully" : "Document updated successfully");
       onBack();
     } catch (error) {
       console.error("Error saving document:", error);

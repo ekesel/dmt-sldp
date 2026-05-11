@@ -34,9 +34,6 @@ interface KnowledgeSidebarProps {
   isSubmittingCategory?: boolean;
   isAddingValue?: boolean;
   isManager?: boolean;
-  isReviewActive?: boolean;
-  onReviewClick?: () => void;
-  reviewCount?: number;
 }
 
 export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
@@ -63,9 +60,6 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
   isSubmittingCategory,
   isAddingValue,
   isManager,
-  isReviewActive,
-  onReviewClick,
-  reviewCount
 }) => {
   const currentCategoryObj = categories.find(c => c.id === activeCategory);
   const activeCategoryName = currentCategoryObj?.name || "";
