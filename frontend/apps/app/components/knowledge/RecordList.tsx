@@ -9,7 +9,6 @@ import { useAuth } from "@/context/AuthContext";
 import { KnowledgeRecord, RecordSearchParams, knowledgeRecords } from "@dmt/api";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { toast } from "react-hot-toast";
 
 // Re-export KnowledgeRecord as Record so the rest of the app keeps compiling
@@ -27,12 +26,9 @@ interface RecordCardProps {
   isDeleting: boolean;
   isManager: boolean;
   isOwner: boolean;
-  onApprove: (e: React.MouseEvent) => void;
-  onReject: (e: React.MouseEvent) => void;
-  isUpdatingStatus: boolean;
+  isUpdatingStatus?: boolean;
   onClick: () => void;
   onTagClick?: (tag: { id: number | string; name: string }) => void;
-  resolveUserName: (userId: string | number) => string;
 }
 
 const RecordCard: React.FC<RecordCardProps> = ({
@@ -47,11 +43,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
   isDeleting,
   isManager,
   isOwner,
-  onApprove,
-  onReject,
-  isUpdatingStatus,
-  onTagClick,
-  resolveUserName
+  onTagClick
 }) => {
   return (
     <div
@@ -88,13 +80,11 @@ const RecordCard: React.FC<RecordCardProps> = ({
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <span className="flex items-center gap-1">
-              <span className="text-foreground/40 font-bold">By</span> {resolveUserName(record.author)}
-            </span>
-            <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
-            <span className="flex items-center gap-1">
-              <span className="text-foreground/40 font-bold">Updated</span> {record.date}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-muted-foreground truncate max-w-[80px]">
+                {record.date}
+              </span>
+            </div>
             <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
             <span className="flex items-center gap-1 min-w-0">
               <Paperclip className="w-3 h-3 shrink-0" />
@@ -163,36 +153,6 @@ const RecordCard: React.FC<RecordCardProps> = ({
 
 
 
-          {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
-            <div className="flex items-center gap-1.5 ml-2 border-l border-border/40 pl-3">
-              <button
-                onClick={onApprove}
-                disabled={isUpdatingStatus}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-lg border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
-                title="Approve document"
-              >
-                {isUpdatingStatus ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                )}
-                Approve
-              </button>
-              <button
-                onClick={onReject}
-                disabled={isUpdatingStatus}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg border border-rose-500/20 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
-                title="Reject document"
-              >
-                {isUpdatingStatus ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <XCircle className="w-3.5 h-3.5" />
-                )}
-                Reject
-              </button>
-            </div>
-          )}
           {isManager && (
             <button
               onClick={onDelete}
@@ -247,40 +207,14 @@ export const RecordList: React.FC<RecordListProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
-  const { managers } = useUsers();
   const { user } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
-
-  // Helper to find username by ID
-  const resolveUserName = (userId: string | number) => {
-    if (!userId) return "Unknown";
-    const user = managers.find(m => String(m.id) === String(userId));
-    return user ? user.username : `User #${userId}`;
-  };
 
   // Debug log to help identify why buttons might be missing
   React.useEffect(() => {
     if (user) console.log("Current User ID:", user.id);
   }, [user]);
-
-  const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" | "UNDER_REVIEW" }) =>
-      knowledgeRecords.updateStatus(id, status),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(variables.id) });
-    },
-    onError: (err) => {
-      console.error("Workflow update failed:", err);
-      toast.error("Failed to update status. Please try again.");
-    }
-  });
-
-  const handleStatusChange = (e: React.MouseEvent, record: KnowledgeRecord, status: "APPROVED" | "REJECTED" | "UNDER_REVIEW") => {
-    e.stopPropagation();
-    workflowMutation.mutate({ id: record.id, status });
-  };
 
   const deleteMutation = useMutation({
     mutationFn: (id: string | number) => knowledgeRecords.deleteDocument(id),
@@ -431,12 +365,8 @@ export const RecordList: React.FC<RecordListProps> = ({
               onView={(e) => handleQuickView(e, record)}
               isViewing={viewingId === record.id}
               onDelete={(e) => handleDelete(e, record)}
-              onApprove={(e) => handleStatusChange(e, record, "APPROVED")}
-              onReject={(e) => handleStatusChange(e, record, "REJECTED")}
               isDeleting={deleteMutation.isPending && deleteMutation.variables === record.id}
-              isUpdatingStatus={workflowMutation.isPending && workflowMutation.variables?.id === record.id}
               onTagClick={onTagClick}
-              resolveUserName={resolveUserName}
             />
           ))
         ) : (

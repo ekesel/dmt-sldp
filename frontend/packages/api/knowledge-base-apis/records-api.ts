@@ -96,13 +96,13 @@ interface PaginatedDocumentsResponse {
 
 const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
   APPROVED: "Approved",
-  DRAFT: "Under Review",
+  DRAFT: "Approved",
   REJECTED: "Rejected",
-  UNDER_REVIEW: "Under Review",
+  UNDER_REVIEW: "Approved",
   approved: "Approved",
-  draft: "Under Review",
+  draft: "Approved",
   rejected: "Rejected",
-  under_review: "Under Review",
+  under_review: "Approved",
 };
 
 const formatFileSize = (sizeBytes: number): string => {

@@ -33,7 +33,6 @@ import { toast } from "react-hot-toast";
 
 
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
-import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { useMetadata } from "@/features/knowledge-base/hooks/useMetadata";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 
@@ -54,18 +53,13 @@ interface FormData {
   }[];
   version: number;
   file: File | null;
-  owner_id: string | number;
 }
 
 export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<FormData>({
     title: record?.title || "",
-    lifecycle_status: mode === "create" ? "DRAFT" : (
-      record?.rawStatus && ["DRAFT", "UNDER_REVIEW", "APPROVED", "REJECTED"].includes(record.rawStatus)
-        ? (record.rawStatus as FormData["lifecycle_status"])
-        : "UNDER_REVIEW"
-    ),
+    lifecycle_status: "APPROVED",
     tags: record?.tags || [],
     assets: record?.assets?.map(a => ({
       fileName: a.name,
@@ -74,14 +68,12 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     })) || [],
     version: mode === "create" ? 1 : (record?.versionCount || 0) + 1,
     file: null,
-    owner_id: mode === "edit" ? record?.owner || "" : "",
   });
 
   const [newTag, setNewTag] = useState("");
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const tagDropdownRef = React.useRef<HTMLDivElement>(null);
   const { tags, createTag, isLoading: isTagsLoading, isError: isTagsError, isCreating: isTagsCreating } = useTags();
-  const { managers, isLoading: isUsersLoading } = useUsers();
   const { categories, allValues, isLoading: isMetadataLoading } = useMetadata();
   const { versions, isLoading: isHistoryLoading } = useRecordVersions(record?.id || null);
 
@@ -212,9 +204,9 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
         // 3. If a new file is attached, upload it as a new version
         if (formData.file) {
-
           await knowledgeRecords.uploadVersion(record.id, formData.file);
-
+          // Auto-approve after upload because backend resets to DRAFT
+          await knowledgeRecords.updateStatus(record.id, "APPROVED");
         }
 
 
@@ -222,9 +214,6 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         // Create mode: use FormData for single-stage creation (Document + initial version)
         const formDataToSend = new FormData();
         formDataToSend.append("title", formData.title);
-
-        const selectedOwnerId = formData.owner_id || (managers.length > 0 ? String(managers[0].id) : "1");
-        formDataToSend.append("owner", String(selectedOwnerId));
         formDataToSend.append("lifecycle_status", formData.lifecycle_status);
         formDataToSend.append("content", "");
         formDataToSend.append("version", formData.version.toString());
@@ -243,6 +232,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         }
 
         const result = await knowledgeRecords.create(formDataToSend);
+        
+        // Auto-approve newly created document
+        if (result && result.id) {
+          await knowledgeRecords.updateStatus(result.id, "APPROVED");
+        }
 
       }
 
@@ -326,57 +320,11 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                   })
                 )}
 
-                <div className={cn(
-                  "space-y-2 p-3 -m-3 rounded-2xl transition-all duration-500",
-                  formData.lifecycle_status === "UNDER_REVIEW" ? "bg-primary/5 ring-1 ring-primary/20 shadow-sm" : ""
-                )}>
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Ownership</label>
-                    {formData.lifecycle_status === "UNDER_REVIEW" && (
-                      <span className="text-[8px] font-black text-primary uppercase tracking-widest animate-pulse">Required</span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={formData.owner_id}
-                      onChange={(e) => handleChange("owner_id", e.target.value)}
-                      disabled={isUsersLoading}
-                      className={cn(
-                        "w-full appearance-none px-4 py-3 bg-background border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm pr-10 disabled:opacity-50",
-                        formData.lifecycle_status === "UNDER_REVIEW" ? "border-primary/40" : "border-border/60 focus:border-primary/40"
-                      )}
-                    >
-                      {managers.length > 0 ? (
-                        <option value={String(managers[0].id)}>You ({managers[0].username})</option>
-                      ) : (
-                        <option value="1">You</option>
-                      )}
-                      {managers.map(user => (
-                        <option key={user.id} value={user.id}>{user.username}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
+                {/* Ownership removed as requested */}
               </div>
             </div>
 
-            <div>
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4">Lifecycle</h3>
-              <div className="flex bg-secondary/30 p-3 rounded-xl">
-                <span className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    formData.lifecycle_status === "APPROVED" ? "bg-emerald-500" :
-                      formData.lifecycle_status === "REJECTED" ? "bg-rose-500" : "bg-primary"
-                  )} />
-                  {formData.lifecycle_status === "UNDER_REVIEW" ? "Under Review" :
-                    formData.lifecycle_status === "DRAFT" ? "Draft" :
-                      formData.lifecycle_status === "REJECTED" ? "Rejected" : "Approved"}
-                </span>
-              </div>
-              <p className="text-[9px] text-muted-foreground mt-2 italic font-medium">Status is managed automatically by the system.</p>
-            </div>
+            {/* Lifecycle managed automatically */}
           </div>
         </div>
       </aside>

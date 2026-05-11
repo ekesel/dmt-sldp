@@ -8,7 +8,6 @@ import { knowledgeRecords } from "@dmt/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
-import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { toast } from "react-hot-toast";
 
 interface RecordDetailProps {
@@ -23,38 +22,9 @@ interface RecordDetailProps {
 export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onEdit, currentUser, isLoading, onTagClick }) => {
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
-  const { managers } = useUsers();
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
   const { versions, isLoading: isLoadingVersions } = useRecordVersions(record?.id ?? null);
-
-  // Helper to find username by ID
-  const resolveUserName = (userId: string | number) => {
-    if (!userId) return "Unknown";
-    const user = managers.find(m => String(m.id) === String(userId));
-    return user ? user.username : `User #${userId}`;
-  };
-
-  const workflowMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string | number; status: "APPROVED" | "REJECTED" | "UNDER_REVIEW" }) =>
-      knowledgeRecords.updateStatus(id, status),
-    onSuccess: () => {
-      // Refresh list and detail to reflect the status change
-      queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.all });
-      if (record?.id) {
-        queryClient.invalidateQueries({ queryKey: RECORD_QUERY_KEYS.detail(record.id) });
-      }
-    },
-    onError: (err) => {
-      console.error("Workflow update failed:", err);
-      toast.error("Failed to update status. Please try again.");
-    }
-  });
-
-  const handleStatusChange = (status: "APPROVED" | "REJECTED" | "UNDER_REVIEW") => {
-    if (!record) return;
-    workflowMutation.mutate({ id: record.id, status });
-  };
 
   const handleDownload = async (fileUrl: string, assetName: string) => {
     if (!record || !fileUrl) return;
@@ -136,34 +106,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <div className="flex gap-2">
 
 
-              {isManager && record.status !== "Approved" && record.status !== "Rejected" && (
-                <>
-                  <button
-                    onClick={() => handleStatusChange("APPROVED")}
-                    disabled={workflowMutation.isPending}
-                    className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 rounded-lg border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
-                    title="Approve document"
-                  >
-                    {workflowMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange("REJECTED")}
-                    disabled={workflowMutation.isPending}
-                    className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg border border-rose-500/20 transition-all active:scale-95 disabled:opacity-50"
-                    title="Reject document"
-                  >
-                    {workflowMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <XCircle className="w-4 h-4" />
-                    )}
-                  </button>
-                </>
-              )}
               {isManager && (
                 <button
                   onClick={() => record && onEdit?.(record)}
@@ -213,10 +155,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Metadata</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Owner</span>
-                <span className="text-sm font-semibold text-foreground text-right">{resolveUserName(record.owner)}</span>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-border/20">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Document ID</span>
                 <span className="text-sm font-semibold text-foreground text-right">{record.uid}</span>
               </div>
@@ -263,8 +201,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             </div>
 
             <div className="space-y-3">
-              {record.status === "Approved" || record.owner === currentUser ? (
-                (() => {
+              {(() => {
                   const combinedAssets = [
                     ...record.assets,
                     ...(versions || []).map((v: any) => ({
@@ -337,18 +274,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                   ) : (
                     <p className="text-sm text-muted-foreground italic">No assets available</p>
                   );
-                })()
-              ) : (
-                <div className="p-5 bg-secondary/20 rounded-2xl border border-border/10 flex flex-col items-center text-center">
-                  <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center mb-3 shadow-sm border border-border/10">
-                    <Lock className="w-4 h-4 text-muted-foreground/40" />
-                  </div>
-                  <h4 className="text-[11px] font-bold text-foreground uppercase tracking-widest mb-1.5">Restricted Access</h4>
-                  <p className="text-[10px] font-medium text-muted-foreground/60 leading-relaxed max-w-[180px]">
-                    Assets are private during the review phase. Only the owner can approve them for public view.
-                  </p>
-                </div>
-              )}
+                })()}
             </div>
           </div>
 
@@ -357,7 +283,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             recordId={record.id}
             onDownload={(url, name) => handleDownload(url, name)}
             onView={(url) => handleView(url)}
-            resolveUserName={resolveUserName}
           />
         </div>
       </aside>
@@ -372,8 +297,7 @@ const VersionHistoryList: React.FC<{
   recordId: string | number;
   onDownload?: (url: string, name: string) => void;
   onView?: (url: string) => void;
-  resolveUserName: (userId: string | number) => string;
-}> = ({ recordId, onDownload, onView, resolveUserName }) => {
+}> = ({ recordId, onDownload, onView }) => {
   const { versions, isLoading, isError } = useRecordVersions(recordId);
 
   const displayHistory = versions;
@@ -421,10 +345,6 @@ const VersionHistoryList: React.FC<{
                 <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground/40 tracking-wider">Uploaded by</span>
-                  {resolveUserName(item.author)}
-                </p>
                 <p className="text-[14px] text-foreground font-medium leading-snug">
                   {item.comment}
                 </p>
