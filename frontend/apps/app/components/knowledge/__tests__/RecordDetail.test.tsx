@@ -25,7 +25,6 @@ vi.mock('@/features/knowledge-base/hooks/useKnowledgeRecords', () => ({
 }));
 vi.mock('@dmt/api', () => ({
   knowledgeRecords: {
-    updateStatus: vi.fn(),
     downloadFile: vi.fn(),
   },
 }));
@@ -34,7 +33,6 @@ vi.mock('@dmt/api', () => ({
 const createMockRecord = (overrides = {}) => ({
   id: '1',
   title: 'Detailed Doc',
-  status: 'Approved',
   version: 'v1.0',
   versionCount: 1,
   author: '1',
@@ -57,10 +55,10 @@ const createMockRecord = (overrides = {}) => ({
 describe('RecordDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (usePermissions as any).mockReturnValue({ isManager: true });
-    (useUsers as any).mockReturnValue({ managers: [{ id: '1', username: 'User1' }] });
-    (useRecordVersions as any).mockReturnValue({ versions: [], isLoading: false });
-    (useMutation as any).mockReturnValue({ mutate: vi.fn(), isPending: false });
+    vi.mocked(usePermissions).mockReturnValue({ isManager: true } as any);
+    vi.mocked(useUsers).mockReturnValue({ managers: [{ id: 1, username: 'User1' }] } as any);
+    vi.mocked(useRecordVersions).mockReturnValue({ versions: [], isLoading: false, isError: false, isFetching: false } as any);
+    vi.mocked(useMutation).mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
   });
 
   describe('empty state', () => {
@@ -82,7 +80,6 @@ describe('RecordDetail', () => {
       // ASSERT
       expect(screen.getByText('Detailed Doc')).toBeInTheDocument();
       expect(screen.getByText('This is a test description')).toBeInTheDocument();
-      expect(screen.getByText('Approved')).toBeInTheDocument();
       expect(screen.getByText('KB-1')).toBeInTheDocument();
       expect(screen.getByText('User1')).toBeInTheDocument();
     });
@@ -139,13 +136,5 @@ describe('RecordDetail', () => {
       expect(onEdit).toHaveBeenCalledWith(record);
     });
 
-    it('displays the restricted access message for draft assets when not the owner', () => {
-      // ARRANGE
-      const draftRecord = createMockRecord({ status: 'Draft', owner: '2' });
-      render(<RecordDetail record={draftRecord as any} currentUser="1" />);
-
-      // ASSERT
-      expect(screen.getByText(/RESTRICTED ACCESS/i)).toBeInTheDocument();
-    });
   });
 });

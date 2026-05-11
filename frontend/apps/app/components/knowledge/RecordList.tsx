@@ -8,6 +8,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
 import { KnowledgeRecord, RecordSearchParams, knowledgeRecords } from "@dmt/api";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
+import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -26,7 +27,7 @@ interface RecordCardProps {
   isDeleting: boolean;
   isManager: boolean;
   isOwner: boolean;
-  isUpdatingStatus?: boolean;
+  authorName: string;
   onClick: () => void;
   onTagClick?: (tag: { id: number | string; name: string }) => void;
 }
@@ -43,6 +44,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
   isDeleting,
   isManager,
   isOwner,
+  authorName,
   onTagClick
 }) => {
   return (
@@ -75,6 +77,10 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-muted-foreground truncate max-w-[80px]">
                 {record.date}
+              </span>
+              <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
+              <span className="text-muted-foreground truncate max-w-[80px]">
+                {authorName}
               </span>
             </div>
             <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
@@ -200,6 +206,7 @@ export const RecordList: React.FC<RecordListProps> = ({
   const queryClient = useQueryClient();
   const { isManager } = usePermissions();
   const { user } = useAuth();
+  const { managers } = useUsers();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
 
@@ -304,7 +311,10 @@ export const RecordList: React.FC<RecordListProps> = ({
       );
     }
 
-    // Sort "Under Review" to the top in Document Review mode
+    // Sort by createdAt descending (latest first)
+    filtered = [...filtered].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return filtered;
   }, [records, activeTeam, mine]);
@@ -342,6 +352,7 @@ export const RecordList: React.FC<RecordListProps> = ({
               isSelected={selectedId === record.id}
               isManager={isManager}
               isOwner={String(user?.id) === record.owner}
+              authorName={managers.find(m => String(m.id) === record.author)?.username || `User #${record.author}`}
               onClick={() => onSelect(record)}
               onDownload={(e) => handleQuickDownload(e, record)}
               isDownloading={downloadingId === record.id}

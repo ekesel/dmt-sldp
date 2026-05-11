@@ -22,8 +22,7 @@ export interface KnowledgeRecord {
   author: string;
   owner: string;
   date: string;
-  status: "Approved" | "Draft" | "Rejected" | "Under Review";
-  rawStatus: string;
+  createdAt: string;
   description: string;
   uid: string;
   tags: string[];
@@ -36,6 +35,14 @@ export interface KnowledgeRecord {
     totalSize: string;
   };
   fileUrl?: string; // from latest_version.file
+}
+
+export interface RecordVersionUI {
+  version: string;
+  date: string;
+  author: string;
+  comment: string;
+  fileUrl: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,7 +71,7 @@ interface DocumentFileDetail {
 interface DocumentResponseItem {
   id: number;
   title: string;
-  status: "APPROVED" | "DRAFT" | "REJECTED" | "UNDER_REVIEW";
+  
   description: string;
   created_by: number;
   owner: number;
@@ -94,16 +101,6 @@ interface PaginatedDocumentsResponse {
   results?: DocumentResponseItem[];
 }
 
-const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
-  APPROVED: "Approved",
-  DRAFT: "Approved",
-  REJECTED: "Rejected",
-  UNDER_REVIEW: "Approved",
-  approved: "Approved",
-  draft: "Approved",
-  rejected: "Rejected",
-  under_review: "Approved",
-};
 
 const formatFileSize = (sizeBytes: number): string => {
   if (sizeBytes === 0) return "0 Bytes";
@@ -120,22 +117,30 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
   // If it's already an absolute URL (http, https, blob, data, or //), use it as-is
   if (/^((https?|blob|data):|\/\/)/i.test(url)) return url;
 
-  // Use the API's base URL as the foundation for media if it's absolute
-  const apiBaseUrl = api.defaults.baseURL || "";
-  let mediaBaseUrl = "https://api.elevate.samta.ai"; // Production fallback
-  
-  if (apiBaseUrl.startsWith("http")) {
-    const urlObj = new URL(apiBaseUrl);
-    mediaBaseUrl = `${urlObj.protocol}//${urlObj.host}`;
-  } else if (typeof window !== 'undefined') {
-    mediaBaseUrl = `${window.location.protocol}//${window.location.host}`;
+  const apiBase = api.defaults.baseURL || "";
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+  const protocol = typeof window !== 'undefined' ? window.location.protocol : 'https:';
+  const cleanProtocol = protocol.endsWith(':') ? protocol : `${protocol}:`;
+
+  let mediaBaseUrl = "";
+  if (apiBase && apiBase.startsWith('http')) {
+    const urlObj = new URL(apiBase);
+    // Strip 'api.' from hostname as media is usually served from the main domain or tenant subdomain
+    const cleanHost = urlObj.host.replace(/^api\./, "");
+    mediaBaseUrl = `${urlObj.protocol}//${cleanHost}`;
+  } else {
+    mediaBaseUrl = isLocal 
+      ? `${cleanProtocol}//${window.location.host}` 
+      : "https://samta.elevate.samta.ai";
   }
 
   // Cleanly join to ensure no duplicate slashes
   const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
   const cleanPath = url.startsWith("/") ? url : `/${url}`;
 
-  return `${cleanBase}${cleanPath}`;
+  const result = `${cleanBase}${cleanPath}`;
+  return result;
 };
 
 const formatDateLabel = (isoDate: string): string => {
@@ -165,8 +170,7 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?:
     author: String(doc.created_by),
     owner: String(doc.owner),
     date: formatDateLabel(doc.created_at),
-    status: STATUS_LABEL_BY_API[doc.status] || "Draft",
-    rawStatus: doc.status,
+    createdAt: doc.created_at,
     description: doc.description || "",
     uid: doc.uid || `KB-${doc.id}`,
     tags: (() => {
@@ -379,10 +383,10 @@ export const knowledgeRecords = {
 
 
   /** GET /kb/documents/:id/versions/ */
-  getVersions: async (id: string | number): Promise<any[]> => {
-    const response = await api.get<{ versions: any[] }>(`/kb/documents/${id}/versions/`);
-    const payload = response.data as any;
-    const items = payload.versions || payload.results || payload;
+  getVersions: async (id: string | number): Promise<RecordVersionUI[]> => {
+    const response = await api.get<any>(`/kb/documents/${id}/versions/`);
+    const payload = response.data;
+    const items = Array.isArray(payload) ? payload : (payload.versions || payload.results || []);
 
     // Map production fields to the UI-expected shape
     return (Array.isArray(items) ? items : []).map(v => ({
@@ -393,7 +397,7 @@ export const knowledgeRecords = {
         year: 'numeric'
       }),
       author: String(v.uploaded_by),
-      comment: v.comment || "No comment provided.",
+      comment: v.comment || "",
       fileUrl: ensureAbsoluteUrl(v.file || v.file_url),
     }));
   },
@@ -442,20 +446,32 @@ export const knowledgeRecords = {
 
     // Check if it's an Office document (Word, Excel, PowerPoint)
     const isOfficeDoc = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(absoluteUrl);
+    
+    // Treat API domain and localhost as "internal" so we send Authorization headers.
+    let isInternal = absoluteUrl.includes(window.location.host);
+    try {
+      const apiHostname = new URL(api.defaults.baseURL || "").hostname;
+      if (apiHostname && absoluteUrl.includes(apiHostname)) {
+        isInternal = true;
+      }
+    } catch (e) { /* ignore URL parse errors */ }
 
     if (isOfficeDoc) {
-      // Browsers cannot natively render Office docs. 
-      // We'll use Google Docs Viewer if it's a public URL, 
-      // or explain that it requires a specialized viewer.
-      // Note: This works only if the file is publicly accessible.
-      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
-      window.open(viewerUrl, '_blank');
+      // Google Docs Viewer needs a public URL. 
+      // If the file is on production (internal API) or localhost, Google will fail.
+      if (!isInternal) {
+        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
+        window.open(viewerUrl, '_blank');
+      } else {
+        // Internal/Protected Office doc - online preview is not possible without a viewer.
+        // We trigger an authenticated download instead of opening a broken 404/401 tab.
+        await knowledgeRecords.downloadFile(fileUrl);
+      }
       return;
     }
 
     try {
-      const isCrossOrigin = absoluteUrl.startsWith("http") && !absoluteUrl.includes(window.location.host);
-      const requester = isCrossOrigin ? axios : api;
+      const requester = isInternal ? api : axios;
 
       const response = await requester.get(absoluteUrl, {
         responseType: 'blob',

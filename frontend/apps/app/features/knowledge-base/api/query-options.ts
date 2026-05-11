@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { tags as tagsApi, Tag, metadata as metadataApi, knowledgeUsers as usersApi, knowledgeRecords as recordsApi, RecordSearchParams } from "@dmt/api";
+import { tags as tagsApi, Tag, metadata as metadataApi, users as usersApi, User, knowledgeRecords as recordsApi, RecordSearchParams } from "@dmt/api";
 import { TAG_QUERY_KEYS, METADATA_QUERY_KEYS, USER_QUERY_KEYS, RECORD_QUERY_KEYS } from "./query-keys";
 
 export function tagsOptions() {
@@ -33,10 +33,22 @@ export function metadataValuesOptions(category?: number) {
   });
 }
 
+interface KnowledgeManagerResponse {
+  results?: User[];
+  data?: User[];
+}
+
 export function usersOptions() {
   return queryOptions({
     queryKey: USER_QUERY_KEYS.managers,
-    queryFn: () => usersApi.listKnowledgeManagers(),
+    queryFn: async () => {
+      const response = await usersApi.list();
+      // Handle both flat array and paginated results
+      const data = (response as KnowledgeManagerResponse)?.results || 
+                  (response as KnowledgeManagerResponse)?.data || 
+                  response;
+      return Array.isArray(data) ? data : [];
+    },
   });
 }
 

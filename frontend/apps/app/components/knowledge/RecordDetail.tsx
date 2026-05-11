@@ -4,10 +4,11 @@ import { FileText, X, Lock, Loader2, Download, CheckCircle2, XCircle, ArrowUpRig
 import { Record } from "./RecordList";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { knowledgeRecords } from "@dmt/api";
+import { knowledgeRecords, RecordVersionUI } from "@dmt/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RECORD_QUERY_KEYS } from "@/features/knowledge-base/api/query-keys";
 import { useRecordVersions } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { useUsers } from "@/features/knowledge-base/hooks/useUsers";
 import { toast } from "react-hot-toast";
 
 interface RecordDetailProps {
@@ -24,7 +25,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
   const { isManager } = usePermissions();
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
-  const { versions, isLoading: isLoadingVersions } = useRecordVersions(record?.id ?? null);
+  const { versions, isLoading: isLoadingVersions, isError: isErrorVersions } = useRecordVersions(record?.id ?? null);
+  const { managers } = useUsers();
+
+  const authorName = managers.find(m => String(m.id) === record?.author)?.username || 
+                    (record?.author ? `User #${record.author}` : "Unknown");
 
   const handleDownload = async (fileUrl: string, assetName: string) => {
     if (!record || !fileUrl) return;
@@ -131,7 +136,15 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
             <div>
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Updated</h3>
-              <span className="text-sm font-semibold text-foreground">{record.date.split(',')[0]}</span>
+              <span className="text-sm font-semibold text-foreground">
+                {new Date(record.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Author</h3>
+              <span className="text-sm font-semibold text-foreground block break-all">
+                {authorName}
+              </span>
             </div>
             <div>
               <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Versions</h3>
@@ -188,85 +201,87 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
             <div className="space-y-3">
               {(() => {
-                  const combinedAssets = [
-                    ...record.assets,
-                    ...(versions || []).map((v: any) => ({
-                      name: `${record.title} ${v.version}`,
-                      url: v.fileUrl,
-                      size: v.date,
-                      isVersion: true
-                    }))
-                  ];
+                const combinedAssets = [
+                  ...record.assets,
+                  ...(versions || []).map((v: any) => ({
+                    name: `${record.title} ${v.version}`,
+                    url: v.fileUrl,
+                    size: v.date,
+                    isVersion: true
+                  }))
+                ];
 
-                  return combinedAssets.length > 0 ? (
-                    combinedAssets.map((asset, index) => {
-                      const isDownloading = downloadingFileId === asset.name;
-                      const isViewing = viewingFileId === asset.url;
-                      return (
+                return combinedAssets.length > 0 ? (
+                  combinedAssets.map((asset, index) => {
+                    const isDownloading = downloadingFileId === asset.name;
+                    const isViewing = viewingFileId === asset.url;
+                    return (
+                      <div
+                        key={asset.name}
+                        className={cn(
+                          "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50",
+                          index !== combinedAssets.length - 1 && "mb-1"
+                        )}
+                      >
                         <div
-                          key={asset.name}
-                          className={cn(
-                            "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50",
-                            index !== combinedAssets.length - 1 && "mb-1"
-                          )}
+                          onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
+                          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
                         >
-                          <div
-                            onClick={() => !isDownloading && (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name)}
-                            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-                          >
-                            <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
-                              {isDownloading ? (
-                                <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                              ) : (
-                                <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
-                              )}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
-                                {asset.name}
-                              </span>
-                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
-                                {asset.size}
-                              </span>
-                            </div>
+                          <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                            {isDownloading ? (
+                              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                (asset.url || record.fileUrl) && handleView(asset.url || record.fileUrl);
-                              }}
-                              disabled={isViewing}
-                              className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
-                              title="View online"
-                            >
-                              {isViewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name);
-                              }}
-                              disabled={isDownloading}
-                              className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
-                              title="Download"
-                            >
-                              {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                            </button>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
+                              {asset.name}
+                            </span>
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                              {asset.size}
+                            </span>
                           </div>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No assets available</p>
-                  );
-                })()}
+                        <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              (asset.url || record.fileUrl) && handleView(asset.url || record.fileUrl);
+                            }}
+                            disabled={isViewing}
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
+                            title="View online"
+                          >
+                            {isViewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              (asset.url || record.fileUrl) && handleDownload(asset.url || record.fileUrl, asset.name);
+                            }}
+                            disabled={isDownloading}
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
+                            title="Download"
+                          >
+                            {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No assets available</p>
+                );
+              })()}
             </div>
           </div>
 
           {/* Version History Section */}
           <VersionHistoryList
-            recordId={record.id}
+            versions={versions}
+            isLoading={isLoadingVersions}
+            isError={isErrorVersions}
             onDownload={(url, name) => handleDownload(url, name)}
             onView={(url) => handleView(url)}
           />
@@ -280,13 +295,25 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
  * Sub-component to handle dynamic version history fetching and rendering.
  */
 const VersionHistoryList: React.FC<{
-  recordId: string | number;
+  versions: any[];
+  isLoading: boolean;
+  isError: boolean;
   onDownload?: (url: string, name: string) => void;
   onView?: (url: string) => void;
-}> = ({ recordId, onDownload, onView }) => {
-  const { versions, isLoading, isError } = useRecordVersions(recordId);
-
+}> = ({ versions, isLoading, isError, onDownload, onView }) => {
+  const { managers } = useUsers();
   const displayHistory = versions;
+
+  if (isError) {
+    return (
+      <div className="mt-8 pt-6 border-t border-border/40">
+        <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40 mb-4">
+          Version History
+        </h3>
+        <p className="text-sm text-destructive italic">Failed to load version history.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 pt-6 border-t border-border/40">
@@ -301,42 +328,45 @@ const VersionHistoryList: React.FC<{
 
       <div className="space-y-6">
         {displayHistory.length > 0 ? (
-          displayHistory.map((item: any, index: number) => (
-            <div key={item.version} className={cn(
-              "space-y-2.5 group/version",
-              index !== displayHistory.length - 1 && "pb-5 border-b border-border/20"
-            )}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-semibold text-foreground">{item.version}</span>
-                  {item.fileUrl && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onView?.(item.fileUrl)}
-                        className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
-                        title="View version online"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
-                        className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
-                        title="Download version"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+          displayHistory.map((item: RecordVersionUI, index: number) => {
+            const authorName = managers.find(m => String(m.id) === String(item.author))?.username || 
+                              (item.author?.startsWith("User #") ? item.author : `User #${item.author}`);
+
+            return (
+              <div key={item.version} className={cn(
+                "space-y-2.5 group/version",
+                index !== displayHistory.length - 1 && "pb-5 border-b border-border/20"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-semibold text-foreground">{item.version}</span>
+                    {item.fileUrl && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => onView?.(item.fileUrl)}
+                          className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                          title="View version online"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDownload?.(item.fileUrl, `${item.version}_file`)}
+                          className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                          title="Download version"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <span className="break-all">{authorName}</span>
+                    <span className="shrink-0">• {item.date}</span>
+                  </div>
                 </div>
-                <span className="text-sm font-medium text-muted-foreground">{item.date}</span>
               </div>
-              <div className="space-y-2">
-                <p className="text-[14px] text-foreground font-medium leading-snug">
-                  {item.comment}
-                </p>
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <p className="text-sm text-muted-foreground italic">No version history found.</p>
         )}
