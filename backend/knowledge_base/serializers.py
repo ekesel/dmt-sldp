@@ -50,10 +50,10 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = [
-            "id", "title", "created_by", "owner", "status", "created_at",
+            "id", "title", "created_by", "created_at",
             "tags", "metadata_values", "tag_details", "metadata_details"
         ]
-        read_only_fields = ["created_by", "status"]
+        read_only_fields = ["created_by"]
 
     def to_internal_value(self, data):
         data = data.copy() if hasattr(data, "copy") else data

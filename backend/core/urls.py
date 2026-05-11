@@ -108,6 +108,9 @@ urlpatterns = [
 
     # Centralize Knowledge Base 
     path('api/kb/', include('knowledge_base.urls')),
+
+    # Homepage
+    path('api/homepage/', include('homepage.urls')),
 ]
 
 if settings.DEBUG:

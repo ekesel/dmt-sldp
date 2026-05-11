@@ -16,12 +16,14 @@ import {
   Cpu,
   ChevronDown,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 import { developers, Developer } from "@dmt/api";
 import { useRouter } from "next/navigation";
 import { TrendingChart } from "../../../../components/charts/TrendingChart";
 import { ActiveFolderSelector } from "../../../../components/ActiveFolderSelector";
 import { SprintSelector } from "../../../../components/SprintSelector";
+import { HelpSidebar } from "../../../../components/HelpSidebar";
 
 export default function DeveloperDetailsPage({
   params,
@@ -38,6 +40,14 @@ export default function DeveloperDetailsPage({
   const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+  const handleHelpClick = (id: string) => {
+    setActiveHelpId(id);
+    setIsHelpOpen(true);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -166,8 +176,8 @@ export default function DeveloperDetailsPage({
                         {selectedProjectId === "all"
                           ? "All Projects Combined"
                           : (developer?.projects?.find(
-                              (p) => String(p.id) === selectedProjectId,
-                            )?.name ?? "Project")}
+                            (p) => String(p.id) === selectedProjectId,
+                          )?.name ?? "Project")}
                       </span>
                     </div>
                     <ChevronDown
@@ -191,18 +201,16 @@ export default function DeveloperDetailsPage({
                                 setSelectedProjectId(String(p.id));
                                 setDropdownOpen(false);
                               }}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${
-                                isActive
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
                                   ? "bg-primary/15 text-primary-foreground"
                                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                              }`}
+                                }`}
                             >
                               <div
-                                className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${
-                                  isActive
+                                className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive
                                     ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
                                     : "bg-muted group-hover:bg-muted-foreground"
-                                }`}
+                                  }`}
                               />
                               <span className="font-semibold text-sm truncate">
                                 {p.name}
@@ -249,13 +257,22 @@ export default function DeveloperDetailsPage({
             <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/10 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-3 text-primary mb-6 relative">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <TrendingUp size={20} />
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-primary">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <TrendingUp size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Velocity
+                </span>
               </div>
-              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                Velocity
-              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('velocity'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
             </div>
             <div className="relative">
               <div className="text-5xl font-black">
@@ -273,13 +290,22 @@ export default function DeveloperDetailsPage({
             <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
               <Sparkles size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-3 text-blue-400 mb-6 relative">
-              <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
-                <Sparkles size={20} />
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-blue-400">
+                <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
+                  <Sparkles size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  AI Usage
+                </span>
               </div>
-              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                AI Usage
-              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('ai_usage'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
             </div>
             <div className="relative">
               <div className="text-5xl font-black">
@@ -298,13 +324,22 @@ export default function DeveloperDetailsPage({
             <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/10 transition-colors">
               <ShieldCheck size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-3 text-warning mb-6 relative">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/20">
-                <CheckCircle2 size={20} />
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-warning">
+                <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/20">
+                  <CheckCircle2 size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Compliance
+                </span>
               </div>
-              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                Compliance
-              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('compliance'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
             </div>
             <div className="relative">
               <div className="text-5xl font-black">
@@ -321,13 +356,22 @@ export default function DeveloperDetailsPage({
             <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/10 transition-colors">
               <AlertCircle size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-3 text-destructive mb-6 relative">
-              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center border border-destructive/20">
-                <AlertCircle size={20} />
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-destructive">
+                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center border border-destructive/20">
+                  <AlertCircle size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Quality Gap
+                </span>
               </div>
-              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                Quality Gap
-              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('quality_gap'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
             </div>
             <div className="relative">
               <div className="text-5xl font-black">
@@ -467,7 +511,16 @@ export default function DeveloperDetailsPage({
 
               <div className="space-y-4">
                 <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
-                  <span>Relative Velocity</span>
+                  <div className="flex items-center gap-2">
+                    <span>Relative Velocity</span>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
+                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                        title="Learn more about this metric"
+                    >
+                        <HelpCircle size={14} />
+                    </button>
+                  </div>
                   <span className="text-foreground">
                     {comparison?.velocity?.you || 0} /{" "}
                     {comparison?.velocity?.team_avg?.toFixed(1) || 0} pts
@@ -488,7 +541,16 @@ export default function DeveloperDetailsPage({
 
               <div className="space-y-4">
                 <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
-                  <span>DMT Standards</span>
+                  <div className="flex items-center gap-2">
+                    <span>DMT Standards</span>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
+                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                        title="Learn more about this metric"
+                    >
+                        <HelpCircle size={14} />
+                    </button>
+                  </div>
                   <span className="text-foreground">
                     {comparison?.compliance?.you?.toFixed(1) || 0}% /{" "}
                     {comparison?.compliance?.team_avg?.toFixed(1) || 0}%
@@ -510,7 +572,7 @@ export default function DeveloperDetailsPage({
                   "Your compliance is{" "}
                   <span className="text-primary font-bold">
                     {comparison?.compliance?.you >
-                    comparison?.compliance?.team_avg
+                      comparison?.compliance?.team_avg
                       ? "above"
                       : "below"}
                   </span>{" "}
@@ -557,6 +619,12 @@ export default function DeveloperDetailsPage({
           </div>
         </div>
       </div>
+
+      <HelpSidebar
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+        activeTermId={activeHelpId}
+      />
     </main>
   );
 }

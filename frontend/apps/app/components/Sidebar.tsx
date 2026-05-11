@@ -136,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         onClick={onClose}
         className={`flex items-center gap-3 transition-all group/item ${isNested ? "pl-6 pr-3 py-2.5 rounded-md" : "px-4 py-3 rounded-lg"
           } ${isActive
-            ? "bg-accent text-accent-foreground font-bold shadow-sm"
+            ? "bg-accent text-accent-foreground font-bold shadow-sm saturate-[1.15]"
             : "text-primary-foreground font-medium hover:bg-muted hover:text-foreground"
           }`}
       >
