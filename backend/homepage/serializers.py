@@ -23,3 +23,14 @@ class PolicySerializer(serializers.ModelSerializer):
         model = Policy
         fields = ['id','policy_file']  
 
+
+class LearningAndDevelopmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LearningAndDevelopment
+        fields = ['id', 'learning_and_development_file']
+
+
+class OnboardingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Onboarding
+        fields = ['id', 'title', 'onboarding_file']

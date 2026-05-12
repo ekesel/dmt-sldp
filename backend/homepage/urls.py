@@ -12,5 +12,9 @@ urlpatterns = [
     path('employee-engagement/<int:id>/', EmployeeEngagementCalendarAPIView.as_view(), name='employee-engagement-detail'),
     path('policy/', PolicyAPIView.as_view(), name='policy'),
     path('policy/<int:id>/', PolicyAPIView.as_view(), name='policy-detail'),
+    path('learning-and-development/', LearningAndDevelopmentAPIView.as_view(), name='learning-and-development'),
+    path('learning-and-development/<int:id>/', LearningAndDevelopmentAPIView.as_view(), name='learning-and-development-detail'),
+    path('onboarding/', OnboardingAPIView.as_view(), name='onboarding'),
+    path('onboarding/<int:id>/', OnboardingAPIView.as_view(), name='onboarding-detail'),
     path('leaderboard/', LeaderDashboardAPIView.as_view(), name='leaderboard')
-    ]
+]

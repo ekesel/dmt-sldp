@@ -83,7 +83,14 @@ class HolidayCalendarAPIView(APIView):
         logger.info("Received request to upload holiday calendar")
 
         if serializer.is_valid():
-            serializer.save(org_name=request.tenant.name)
+            with transaction.atomic():
+                queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name)
+                for obj in queryset:
+                    if obj.holiday_calendar_file:
+                        obj.holiday_calendar_file.delete(save=False)
+                    obj.delete()
+
+            obj = serializer.save(org_name=request.tenant.name,is_active=True)
             return Response(
                 {'message': 'Holiday calendar uploaded successfully'},
                 status=201
@@ -99,7 +106,7 @@ class HolidayCalendarAPIView(APIView):
                 return Response({'message': 'Holiday calendar not found'}, status=404)
             serializer = HolidayCalendarSerializer(queryset)
         else:
-            queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name).order_by('-id')
+            queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name, is_active=True)
             serializer = HolidayCalendarSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
@@ -124,20 +131,6 @@ class HolidayCalendarAPIView(APIView):
         logger.error("Validation failed for holiday calendar update")   
         return Response(serializer.errors, status=400)
 
-    def delete(self, request, id=None):
-        if not id:
-            return Response({'message': 'ID is required'}, status=400)
-        queryset = Holidaycalendar.objects.filter(org_name=request.tenant.name, id=id).first()
-        if not queryset:
-            return Response({'message': 'Holiday calendar not found'}, status=404)
-            
-        if queryset.holiday_calendar_file:
-            queryset.holiday_calendar_file.delete(save=False)
-            
-        queryset.delete()
-        
-        return Response({'message': 'Holiday calendar deleted successfully'}, status=200)
-
 # Employee engagement calendar api
 class EmployeeEngagementCalendarAPIView(APIView):
     permission_classes = [IsManagerOrReadOnly]
@@ -148,7 +141,14 @@ class EmployeeEngagementCalendarAPIView(APIView):
         logger.info("Received request to upload employee engagement calendar")
 
         if serializer.is_valid():
-            serializer.save(org_name=request.tenant.name)
+            with transaction.atomic():
+                queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name)
+                for obj in queryset:
+                    if obj.employee_engagement_calendar_file:
+                        obj.employee_engagement_calendar_file.delete(save=False)
+                    obj.delete()
+
+            obj = serializer.save(org_name=request.tenant.name,is_active=True)
             return Response(
                 {'message': 'Employee engagement calendar uploaded successfully'},
                 status=201
@@ -164,7 +164,7 @@ class EmployeeEngagementCalendarAPIView(APIView):
                 return Response({'message': 'Employee engagement calendar not found'}, status=404)
             serializer = EmployeeEngagementCalendarSerializer(queryset)
         else:
-            queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name).order_by('-id')
+            queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name, is_active=True)
             serializer = EmployeeEngagementCalendarSerializer(queryset, many=True)
         return Response(serializer.data, status=200)
 
@@ -188,19 +188,6 @@ class EmployeeEngagementCalendarAPIView(APIView):
             )
         logger.error("Validation failed for employee engagement calendar update")   
         return Response(serializer.errors, status=400)
-
-    def delete(self, request, id=None):
-        if not id:
-            return Response({'message': 'ID is required'}, status=400)
-        queryset = EmployeeEngagementCalendar.objects.filter(org_name=request.tenant.name, id=id).first()
-        if not queryset:
-            return Response({'message': 'Employee engagement calendar not found'}, status=404)
-            
-        if queryset.employee_engagement_calendar_file:
-            queryset.employee_engagement_calendar_file.delete(save=False)
-            
-        queryset.delete()
-        return Response({'message': 'Employee engagement calendar deleted successfully'}, status=200)
 
 # Policy Api
 class PolicyAPIView(APIView):
@@ -273,6 +260,147 @@ class PolicyAPIView(APIView):
         )
 
 
+# Learning and Development Api
+class LearningAndDevelopmentAPIView(APIView):
+    permission_classes = [IsManagerOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = LearningAndDevelopmentSerializer(data=request.data)
+        logger.info("Received request to upload learning and development document")
+
+        if serializer.is_valid():
+            serializer.save(org_name=request.tenant.name)
+            return Response(
+                {'message': 'Learning and development document uploaded successfully'},
+                status=201
+            )
+
+        logger.error("Validation failed for learning and development document upload")   
+        return Response(serializer.errors, status=400)
+
+    def get(self, request, id=None):
+        if id:
+            queryset = LearningAndDevelopment.objects.filter(org_name=request.tenant.name, id=id).first()
+            if not queryset:
+                return Response({'message': 'Learning and development document not found'}, status=404)
+            serializer = LearningAndDevelopmentSerializer(queryset)
+        else:
+            queryset = LearningAndDevelopment.objects.filter(org_name=request.tenant.name).order_by('-id')
+            serializer = LearningAndDevelopmentSerializer(queryset, many=True)
+        return Response(serializer.data, status=200)
+
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
+        queryset = LearningAndDevelopment.objects.filter(org_name=request.tenant.name, id=id).first()
+        if not queryset:
+            return Response(
+                {'message': 'Learning and development document not found'},
+                status=404
+            )
+        serializer = LearningAndDevelopmentSerializer(queryset, data=request.data, partial=True)
+        if serializer.is_valid():
+            if 'learning_and_development_file' in serializer.validated_data and queryset.learning_and_development_file:
+                queryset.learning_and_development_file.delete(save=False)
+            serializer.save()
+            return Response(
+                {'message': 'Learning and development document updated successfully'},
+                status=200
+            )
+        logger.error("Validation failed for learning and development document update")   
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
+        queryset = LearningAndDevelopment.objects.filter(org_name=request.tenant.name, id=id).first()
+        if not queryset:
+            return Response(
+                {'message': 'Learning and development document not found'},
+                status=404
+            )
+            
+        if queryset.learning_and_development_file:
+            queryset.learning_and_development_file.delete(save=False)
+            
+        queryset.delete()
+        return Response(
+            {'message': 'Learning and development document deleted successfully'},
+            status=200
+        )
+
+
+# Onboarding Api
+class OnboardingAPIView(APIView):
+    permission_classes = [IsManagerOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = OnboardingSerializer(data=request.data)
+        logger.info("Received request to upload onboarding document")
+
+        if serializer.is_valid():
+            serializer.save(org_name=request.tenant.name)
+            return Response(
+                {'message': 'Onboarding document uploaded successfully'},
+                status=201
+            )
+
+        logger.error("Validation failed for onboarding document upload")   
+        return Response(serializer.errors, status=400)
+
+    def get(self, request, id=None):
+        if id:
+            queryset = Onboarding.objects.filter(org_name=request.tenant.name, id=id).first()
+            if not queryset:
+                return Response({'message': 'Onboarding document not found'}, status=404)
+            serializer = OnboardingSerializer(queryset)
+        else:
+            queryset = Onboarding.objects.filter(org_name=request.tenant.name).order_by('-id')
+            serializer = OnboardingSerializer(queryset, many=True)
+        return Response(serializer.data, status=200)
+
+    def patch(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
+        queryset = Onboarding.objects.filter(org_name=request.tenant.name, id=id).first()
+        if not queryset:
+            return Response(
+                {'message': 'Onboarding document not found'},
+                status=404
+            )
+        serializer = OnboardingSerializer(queryset, data=request.data, partial=True)
+        if serializer.is_valid():
+            if 'onboarding_file' in serializer.validated_data and queryset.onboarding_file:
+                queryset.onboarding_file.delete(save=False)
+            serializer.save()
+            return Response(
+                {'message': 'Onboarding document updated successfully'},
+                status=200
+            )
+        logger.error("Validation failed for onboarding document update")   
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, id=None):
+        if not id:
+            return Response({'message': 'ID is required'}, status=400)
+        queryset = Onboarding.objects.filter(org_name=request.tenant.name, id=id).first()
+        if not queryset:
+            return Response(
+                {'message': 'Onboarding document not found'},
+                status=404
+            )
+            
+        if queryset.onboarding_file:
+            queryset.onboarding_file.delete(save=False)
+            
+        queryset.delete()
+        return Response(
+            {'message': 'Onboarding document deleted successfully'},
+            status=200
+        )
+
 
 # star Profomer -
 class LeaderDashboardAPIView(APIView):
@@ -294,12 +422,6 @@ class LeaderDashboardAPIView(APIView):
             except ValueError:
                 return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
             base_qs = base_qs.filter(project_id=project_id)
-            
-        # Fallback to all-time data if no records exist for the current month (and project)
-        if not base_qs.exists():
-            base_qs = DeveloperMetrics.objects.all()
-            if project_id:
-                base_qs = base_qs.filter(project_id=project_id)
             
         # 1. Highest Compliance
         quality_winner = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
