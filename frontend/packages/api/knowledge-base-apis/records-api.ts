@@ -1,18 +1,8 @@
 import axios from "axios";
 import api from "..";
 
-// ---------------------------------------------------------------------------
-// Records API — production adapter for GET /kb/documents/
-//
-// Supported query params:
-//   GET /kb/documents/?search=<text>
-//   GET /kb/documents/?category=<id>
-//   GET /kb/documents/?tag=<id_or_name>
-//   GET /kb/documents/?mine=true
-//
-// Data flow:
-//   endpoint payload -> mapDocumentToKnowledgeRecord() -> UI shape
-// ---------------------------------------------------------------------------
+
+
 
 export interface KnowledgeRecord {
   id: string;
@@ -22,11 +12,12 @@ export interface KnowledgeRecord {
   author: string;
   owner: string;
   date: string;
-  status: "Approved" | "Draft" | "Rejected" | "Under Review";
-  rawStatus: string;
+  createdAt: string;
+  updatedAt?: string;
   description: string;
   uid: string;
   tags: string[];
+  tagDetails?: { id: number; name: string }[];
   /** category_id → value pairs */
   metadata: { category: number; category_name: string; value: string; value_id?: number | string }[];
   assets: { name: string; size: string; url?: string }[];
@@ -36,6 +27,14 @@ export interface KnowledgeRecord {
     totalSize: string;
   };
   fileUrl?: string; // from latest_version.file
+}
+
+export interface RecordVersionUI {
+  version: string;
+  date: string;
+  author: string;
+  comment: string;
+  fileUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,13 +63,14 @@ interface DocumentFileDetail {
 interface DocumentResponseItem {
   id: number;
   title: string;
-  status: "APPROVED" | "DRAFT" | "REJECTED" | "UNDER_REVIEW";
+
   description: string;
   created_by: number;
   owner: number;
   audience?: string;
   type?: string;
   created_at: string;
+  updated_at?: string;
   uid?: string;
   version?: string;
   version_count?: number;
@@ -94,16 +94,6 @@ interface PaginatedDocumentsResponse {
   results?: DocumentResponseItem[];
 }
 
-const STATUS_LABEL_BY_API: Record<string, KnowledgeRecord["status"]> = {
-  APPROVED: "Approved",
-  DRAFT: "Under Review",
-  REJECTED: "Rejected",
-  UNDER_REVIEW: "Under Review",
-  approved: "Approved",
-  draft: "Under Review",
-  rejected: "Rejected",
-  under_review: "Under Review",
-};
 
 const formatFileSize = (sizeBytes: number): string => {
   if (sizeBytes === 0) return "0 Bytes";
@@ -120,12 +110,23 @@ const ensureAbsoluteUrl = (url?: string): string | undefined => {
   // If it's already an absolute URL (http, https, blob, data, or //), use it as-is
   if (/^((https?|blob|data):|\/\/)/i.test(url)) return url;
 
-  // Documents base URL
-  // Use explicit media base URL from environment, or fallback to the requested production URL
-  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const mediaBaseUrl = (typeof window !== 'undefined' && !isLocalhost) 
-    ? `https://${window.location.host}` 
-    : "https://samta.elevate.samta.ai/";
+  const apiBase = api.defaults.baseURL || "";
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+  const protocol = typeof window !== 'undefined' ? window.location.protocol : 'https:';
+  const cleanProtocol = protocol.endsWith(':') ? protocol : `${protocol}:`;
+
+  let mediaBaseUrl = "";
+  if (apiBase && apiBase.startsWith('http')) {
+    const urlObj = new URL(apiBase);
+    // Strip 'api.' from hostname as media is usually served from the main domain or tenant subdomain
+    const cleanHost = urlObj.host.replace(/^api\./, "");
+    mediaBaseUrl = `${urlObj.protocol}//${cleanHost}`;
+  } else {
+    mediaBaseUrl = isLocal
+      ? `${cleanProtocol}//${window.location.host}`
+      : "https://samta.elevate.samta.ai";
+  }
 
   // Cleanly join to ensure no duplicate slashes
   const cleanBase = mediaBaseUrl.endsWith("/") ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
@@ -162,18 +163,21 @@ const mapDocumentToKnowledgeRecord = (doc: DocumentResponseItem, latestVersion?:
     author: String(doc.created_by),
     owner: String(doc.owner),
     date: formatDateLabel(doc.created_at),
-    status: STATUS_LABEL_BY_API[doc.status] || "Draft",
-    rawStatus: doc.status,
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
     description: doc.description || "",
     uid: doc.uid || `KB-${doc.id}`,
     tags: (() => {
       const rawTags = (doc.tag_details && doc.tag_details.length > 0) ? doc.tag_details : (doc.tags || []);
       return (rawTags as any[]).map(t => {
-        if (typeof t === 'string') return t;
-        if (typeof t === 'object' && t !== null && 'name' in t) return t.name;
-        return String(t);
+        if (typeof t === 'string') return t.toUpperCase();
+        if (typeof t === 'object' && t !== null && 'name' in t) return t.name.toUpperCase();
+        return String(t).toUpperCase();
       }).filter(t => t && t !== "[object Object]");
     })(),
+    tagDetails: (doc.tag_details && Array.isArray(doc.tag_details)) 
+      ? doc.tag_details.map(t => ({ id: t.id, name: t.name }))
+      : [],
     metadata: [
       ...rawMetadata.map((item) => ({
         category: item.category_id ?? 0,
@@ -241,8 +245,6 @@ export interface RecordSearchParams {
   category?: number;
   /** Filter by tag id: GET /kb/documents/?tag=1 */
   tag?: number | string;
-  /** Filter by ownership: GET /kb/documents/?mine=true */
-  mine?: boolean;
   /** Full text search: GET /kb/documents/?search=text */
   search?: string;
 }
@@ -253,14 +255,13 @@ export interface RecordSearchParams {
 export const knowledgeRecords = {
   /**
    * GET /kb/documents/
-   * Supports ?category=ID, ?tag=ID, ?mine=true
+   * Supports ?category=ID, ?tag=ID
    */
   search: async (params: RecordSearchParams = {}): Promise<KnowledgeRecord[]> => {
     const response = await api.get<DocumentResponseItem[] | PaginatedDocumentsResponse>("/kb/documents/", {
       params: {
         ...(params.category !== undefined ? { category: params.category } : {}),
         ...(params.tag !== undefined ? { tag: params.tag } : {}),
-        ...(params.mine !== undefined ? { mine: params.mine } : {}),
         ...(params.search !== undefined ? { search: params.search } : {}),
       },
     });
@@ -312,7 +313,13 @@ export const knowledgeRecords = {
     }
 
     try {
-      const response = await api.get(absoluteUrl, {
+      const isCrossOrigin = absoluteUrl.startsWith("http") && !absoluteUrl.includes(window.location.host);
+
+      // If cross-origin, we use plain axios to avoid sending Authorization headers 
+      // that might trigger CORS preflight failures on media servers.
+      const requester = isCrossOrigin ? axios : api;
+
+      const response = await requester.get(absoluteUrl, {
         responseType: 'blob',
         onDownloadProgress: (progressEvent) => {
           if (progressEvent.total && onProgress) {
@@ -328,32 +335,31 @@ export const knowledgeRecords = {
       const link = document.createElement('a');
 
       link.href = url;
-      // Use provided fileName or extract from URL
       link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
 
       document.body.appendChild(link);
       link.click();
-
-      // Cleanup
-      link.parentNode?.removeChild(link);
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error("Authenticated document download failed, trying fallback:", error);
+      // If it's a network error or CORS issue, try the simplest fallback: a direct link
+      const isNetworkError = error.message === "Network Error" || !error.response;
 
-      // Fallback: Try direct download via browser link
-      // This bypasses script-level CORS preflight for simple downloads
+      if (isNetworkError) {
+        console.warn("Download failed via script (likely CORS), attempting direct browser download.");
+      } else {
+        console.error("Authenticated document download failed:", error);
+      }
+
       try {
         const link = document.createElement('a');
         link.href = absoluteUrl;
-        // Ensure browser treats it as download if possible
         link.setAttribute('download', fileName || fileUrl.split('/').pop() || 'download');
-        link.setAttribute('target', '_blank'); // Open in new tab if browser can't force download
+        link.setAttribute('target', '_blank');
 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-
         return;
       } catch (fallbackError) {
         console.error("Fallback download failed:", fallbackError);
@@ -369,16 +375,12 @@ export const knowledgeRecords = {
     }
   },
 
-  /** POST /kb/documents/:id/status/ */
-  updateStatus: async (id: string | number, status: "APPROVED" | "REJECTED" | "DRAFT" | "UNDER_REVIEW"): Promise<void> => {
-    await api.post(`/kb/documents/${id}/status/`, { status });
-  },
 
   /** GET /kb/documents/:id/versions/ */
-  getVersions: async (id: string | number): Promise<any[]> => {
-    const response = await api.get<{ versions: any[] }>(`/kb/documents/${id}/versions/`);
-    const payload = response.data as any;
-    const items = payload.versions || payload.results || payload;
+  getVersions: async (id: string | number): Promise<RecordVersionUI[]> => {
+    const response = await api.get<any>(`/kb/documents/${id}/versions/`);
+    const payload = response.data;
+    const items = Array.isArray(payload) ? payload : (payload.versions || payload.results || []);
 
     // Map production fields to the UI-expected shape
     return (Array.isArray(items) ? items : []).map(v => ({
@@ -389,7 +391,7 @@ export const knowledgeRecords = {
         year: 'numeric'
       }),
       author: String(v.uploaded_by),
-      comment: v.comment || "No comment provided.",
+      comment: v.comment || "",
       fileUrl: ensureAbsoluteUrl(v.file || v.file_url),
     }));
   },
@@ -439,18 +441,33 @@ export const knowledgeRecords = {
     // Check if it's an Office document (Word, Excel, PowerPoint)
     const isOfficeDoc = /\.(docx|doc|xlsx|xls|pptx|ppt)$/i.test(absoluteUrl);
 
+    // Treat API domain and localhost as "internal" so we send Authorization headers.
+    let isInternal = absoluteUrl.includes(window.location.host);
+    try {
+      const apiHostname = new URL(api.defaults.baseURL || "").hostname;
+      if (apiHostname && absoluteUrl.includes(apiHostname)) {
+        isInternal = true;
+      }
+    } catch (e) { /* ignore URL parse errors */ }
+
     if (isOfficeDoc) {
-      // Browsers cannot natively render Office docs. 
-      // We'll use Google Docs Viewer if it's a public URL, 
-      // or explain that it requires a specialized viewer.
-      // Note: This works only if the file is publicly accessible.
-      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
-      window.open(viewerUrl, '_blank');
+      // Google Docs Viewer needs a public URL. 
+      // If the file is on production (internal API) or localhost, Google will fail.
+      if (!isInternal) {
+        const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
+        window.open(viewerUrl, '_blank');
+      } else {
+        // Internal/Protected Office doc - online preview is not possible without a viewer.
+        // We trigger an authenticated download instead of opening a broken 404/401 tab.
+        await knowledgeRecords.downloadFile(fileUrl);
+      }
       return;
     }
 
     try {
-      const response = await api.get(absoluteUrl, {
+      const requester = isInternal ? api : axios;
+
+      const response = await requester.get(absoluteUrl, {
         responseType: 'blob',
       });
 

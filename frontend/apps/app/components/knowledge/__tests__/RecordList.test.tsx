@@ -29,7 +29,6 @@ vi.mock('@/context/AuthContext', () => ({
 }));
 vi.mock('@dmt/api', () => ({
   knowledgeRecords: {
-    updateStatus: vi.fn(),
     deleteDocument: vi.fn(),
     downloadFile: vi.fn(),
     getById: vi.fn(),
@@ -40,7 +39,6 @@ vi.mock('@dmt/api', () => ({
 const createMockRecord = (overrides = {}) => ({
   id: '1',
   title: 'Doc One',
-  status: 'Approved',
   version: 'v1.0',
   author: '1',
   owner: '1',
@@ -58,19 +56,19 @@ describe('RecordList', () => {
     vi.clearAllMocks();
 
     // Default mock implementations
-    (useRecords as any).mockReturnValue({
+    vi.mocked(useRecords).mockReturnValue({
       records: [
         createMockRecord({ id: '1', title: 'Doc One', metadata: [{ value: 'Alpha' }] }),
-        createMockRecord({ id: '2', title: 'Doc Two', status: 'Draft', author: '2', metadata: [{ value: 'Beta' }], versionCount: 0 })
+        createMockRecord({ id: '2', title: 'Doc Two', author: '2', metadata: [{ value: 'Beta' }], versionCount: 0 })
       ],
       isLoading: false,
       isFetching: false,
       isError: false,
-    });
-    (usePermissions as any).mockReturnValue({ isManager: true });
-    (useUsers as any).mockReturnValue({ managers: [{ id: '1', username: 'User1' }] });
-    (useAuth as any).mockReturnValue({ user: { id: '1' } });
-    (useMutation as any).mockReturnValue({ mutate: vi.fn(), isPending: false });
+    } as any);
+    vi.mocked(usePermissions).mockReturnValue({ isManager: true } as any);
+    vi.mocked(useUsers).mockReturnValue({ managers: [{ id: '1', username: 'User1' }] } as any);
+    vi.mocked(useAuth).mockReturnValue({ user: { id: '1' } } as any);
+    vi.mocked(useMutation).mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
   });
 
   describe('rendering', () => {
@@ -96,7 +94,7 @@ describe('RecordList', () => {
 
     it('displays the empty state when no records match the search criteria', () => {
       // ARRANGE
-      (useRecords as any).mockReturnValue({ records: [], isLoading: false });
+      vi.mocked(useRecords).mockReturnValue({ records: [], isLoading: false } as any);
       render(<RecordList selectedId={null} onSelect={vi.fn()} search="nothing" />);
 
       // ASSERT
@@ -112,17 +110,6 @@ describe('RecordList', () => {
       expect(card).toHaveClass('bg-primary/10');
     });
 
-    it('renders Approve and Reject buttons for managers on Draft records', () => {
-      // ARRANGE
-      render(<RecordList selectedId={null} onSelect={vi.fn()} />);
-
-      // ASSERT
-      const approveButtons = screen.getAllByTitle(/APPROVE DOCUMENT/i);
-      expect(approveButtons).toHaveLength(1); // Only for Doc Two (Draft)
-
-      const rejectButtons = screen.getAllByTitle(/REJECT DOCUMENT/i);
-      expect(rejectButtons).toHaveLength(1);
-    });
   });
 
   describe('interactions', () => {
@@ -141,7 +128,7 @@ describe('RecordList', () => {
     it('triggers the delete mutation after user confirmation', () => {
       // ARRANGE
       const mockDelete = vi.fn();
-      (useMutation as any).mockReturnValue({ mutate: mockDelete, isPending: false });
+      vi.mocked(useMutation).mockReturnValue({ mutate: mockDelete, isPending: false } as any);
       window.confirm = vi.fn(() => true);
       render(<RecordList selectedId={null} onSelect={vi.fn()} />);
 

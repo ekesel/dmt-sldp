@@ -7,7 +7,7 @@ import { RecordList, Record } from "@/components/knowledge/RecordList";
 import { RecordDetail } from "@/components/knowledge/RecordDetail";
 import { MetadataCategory as Category } from "@dmt/api";
 import { useMetadata, useAllMetadataValues } from "@/features/knowledge-base/hooks/useMetadata";
-import { useRecord, useReviewCount, useRecords } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
+import { useRecord, useRecords } from "@/features/knowledge-base/hooks/useKnowledgeRecords";
 import { useTags } from "@/features/knowledge-base/hooks/useTags";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
@@ -27,7 +27,6 @@ export default function KnowledgeBasePage() {
   const [newTeamName, setNewTeamName] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [isReviewActive, setIsReviewActive] = useState(false);
   const [activeTag, setActiveTag] = useState<{ id: number | string, name: string } | null>(null);
 
   const {
@@ -41,7 +40,6 @@ export default function KnowledgeBasePage() {
     isLoading: isMetadataLoading
   } = useMetadata(activeCategory);
   const { record: selectedRecord, isLoading: isRecordLoading } = useRecord(selectedId);
-  const { count: reviewCount } = useReviewCount();
   const { records: allCategoryRecords } = useRecords({ category: activeCategory });
   const { tags } = useTags();
   const { allValues: globalValues } = useAllMetadataValues();
@@ -62,13 +60,12 @@ export default function KnowledgeBasePage() {
   // Derive header title dynamically to prevent state desynchronization
   const headerTitle = React.useMemo(() => {
     if (isMetadataLoading && categories.length === 0) return "Loading...";
-    if (isReviewActive) return "Review Inbox";
     if (activeTag) return activeTag.name;
     if (activeTeam) return activeTeam;
     
     const category = categories.find(c => c.id === activeCategory);
     return category?.name || "Records";
-  }, [isMetadataLoading, categories, isReviewActive, activeTag, activeTeam, activeCategory]);
+  }, [isMetadataLoading, categories, activeTag, activeTeam, activeCategory]);
 
   // Set initial active team once data loads if none selected
   useEffect(() => {
@@ -78,16 +75,6 @@ export default function KnowledgeBasePage() {
     }
   }, [allValues, activeTeam]);
 
-  // Show a "Welcome" toast if there are pending reviews on initial land
-  useEffect(() => {
-    if (isManager && reviewCount > 0) {
-      toast(`You have ${reviewCount} documents pending review.`, {
-        icon: '✉️',
-        duration: 5000,
-        id: 'review-notification', // Prevent duplicate toasts
-      });
-    }
-  }, [isManager, reviewCount]); // Triggers when count or role changes
 
   // Debounce search input to prevent excessive API calls
   useEffect(() => {
@@ -147,7 +134,6 @@ export default function KnowledgeBasePage() {
       setActiveTeam("");
     }
     setActiveTag(null); // Clear tag on category change
-    setIsReviewActive(false);
   };
 
   const handleTeamChange = (team: string) => {
@@ -157,7 +143,6 @@ export default function KnowledgeBasePage() {
     setActiveTag(null); // Clear tag on team change
     setSelectedId(null);
     setIsSidebarOpen(false); // Close sidebar on selection (mobile)
-    setIsReviewActive(false);
   };
 
   const handleTagClick = (tag: { id: number | string; name: string }) => {
@@ -168,7 +153,6 @@ export default function KnowledgeBasePage() {
     setActiveTeam("");
     setSelectedId(null);
     setIsSidebarOpen(false);
-    setIsReviewActive(false);
   };
 
   const handleSearchChange = (query: string) => {
@@ -205,7 +189,6 @@ export default function KnowledgeBasePage() {
       setSearchInput("");
       setSearchTerm("");
       setActiveTag(null);
-      setIsReviewActive(false);
       setSelectedId(null);
 
       toast.success(`Switching to ${categoryName}: ${matchingValue.value}`, {
@@ -215,14 +198,6 @@ export default function KnowledgeBasePage() {
     }
   };
 
-  const handleReviewClick = () => {
-    setIsReviewActive(true);
-    setActiveTeam("");
-    setSearchTerm("");
-    setSearchInput("");
-    setSelectedId(null); // Clear detail view when switching to review
-    setIsSidebarOpen(false);
-  };
 
   const currentUser = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Unknown User";
 
@@ -270,9 +245,6 @@ export default function KnowledgeBasePage() {
         isSubmittingCategory={isSubmittingCategory}
         isAddingValue={isSubmittingValue}
         isManager={isManager}
-        isReviewActive={isReviewActive}
-        onReviewClick={handleReviewClick}
-        reviewCount={reviewCount}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
@@ -294,7 +266,6 @@ export default function KnowledgeBasePage() {
               search={searchTerm}
               category={activeCategory}
               tag={activeTag?.id}
-              mine={isReviewActive}
               onSelect={(record) => {
                 setSelectedId(record.id);
                 if (searchTerm) {

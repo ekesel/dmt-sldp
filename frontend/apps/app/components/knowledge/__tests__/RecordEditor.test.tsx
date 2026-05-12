@@ -57,25 +57,25 @@ const createMockRecord = (overrides = {}) => ({
 describe('RecordEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useTags as any).mockReturnValue({
+    vi.mocked(useTags).mockReturnValue({
       tags: [{ id: 100, name: 'TECH' }],
       createTag: vi.fn(),
       isLoading: false,
       isCreating: false,
-    });
-    (useUsers as any).mockReturnValue({
+    } as any);
+    vi.mocked(useUsers).mockReturnValue({
       managers: [{ id: '1', username: 'User1' }],
       isLoading: false,
-    });
-    (useMetadata as any).mockReturnValue({
+    } as any);
+    vi.mocked(useMetadata).mockReturnValue({
       categories: [{ id: 1, name: 'Team' }],
       allValues: [{ id: 10, category: 1, value: 'Alpha' }],
       isLoading: false,
-    });
-    (useRecordVersions as any).mockReturnValue({
+    } as any);
+    vi.mocked(useRecordVersions).mockReturnValue({
       versions: [],
       isLoading: false,
-    });
+    } as any);
   });
 
   describe('initialization', () => {
