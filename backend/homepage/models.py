@@ -24,6 +24,7 @@ class Org_chart(BaseDocument):
 class Holidaycalendar(BaseDocument):
     folder_name = "holiday_calendar"
     holiday_calendar_file = models.FileField(upload_to=image_upload_path)
+    is_active = models.BooleanField(default=True)
     
     def __str__(self):
         return f"{self.org_name} - {self.holiday_calendar_file.name}"
@@ -33,6 +34,7 @@ class Holidaycalendar(BaseDocument):
 class EmployeeEngagementCalendar(BaseDocument):
     folder_name = "employee_engagement_calendar"
     employee_engagement_calendar_file= models.FileField(upload_to=image_upload_path)
+    is_active = models.BooleanField(default=True)
     
     def __str__(self):
         return f"{self.org_name} - {self.employee_engagement_calendar_file.name}"
@@ -45,3 +47,22 @@ class Policy(BaseDocument):
     
     def __str__(self):
         return f"{self.org_name} - {self.policy_file.name}"
+
+
+# Model for Learning And Development
+class LearningAndDevelopment(BaseDocument):
+    folder_name = "learning_and_development"
+    learning_and_development_file = models.FileField(upload_to=image_upload_path)
+    
+    def __str__(self):
+        return f"{self.org_name} - {self.learning_and_development_file.name}"
+
+
+# Model for Onboarding
+class Onboarding(BaseDocument):
+    folder_name = "onboarding"
+    title = models.CharField(max_length=255)
+    onboarding_file = models.FileField(upload_to=image_upload_path)
+    
+    def __str__(self):
+        return f"{self.org_name} - {self.title}"
