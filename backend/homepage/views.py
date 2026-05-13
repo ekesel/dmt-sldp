@@ -31,7 +31,7 @@ class OrgChartAPIView(APIView):
                         obj.org_chart_file.delete(save=False)
                     obj.delete()
 
-            obj = serializer.save(org_name=request.tenant.name,is_active=True)
+                obj = serializer.save(org_name=request.tenant.name,is_active=True)
         
             return Response(
                 {'message': 'Organization chart uploaded successfully'},
@@ -90,7 +90,7 @@ class HolidayCalendarAPIView(APIView):
                         obj.holiday_calendar_file.delete(save=False)
                     obj.delete()
 
-            obj = serializer.save(org_name=request.tenant.name,is_active=True)
+                obj = serializer.save(org_name=request.tenant.name,is_active=True)
             return Response(
                 {'message': 'Holiday calendar uploaded successfully'},
                 status=201
@@ -148,7 +148,7 @@ class EmployeeEngagementCalendarAPIView(APIView):
                         obj.employee_engagement_calendar_file.delete(save=False)
                     obj.delete()
 
-            obj = serializer.save(org_name=request.tenant.name,is_active=True)
+                obj = serializer.save(org_name=request.tenant.name,is_active=True)
             return Response(
                 {'message': 'Employee engagement calendar uploaded successfully'},
                 status=201
