@@ -17,6 +17,8 @@ class User(AbstractUser):
     custom_title = models.CharField(max_length=100, null=True, blank=True)
     competitive_title = models.CharField(max_length=100, null=True, blank=True)
     competitive_title_reason = models.TextField(null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    date_of_join = models.DateField(null=True, blank=True)
 
 class ExternalIdentity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='external_identities')

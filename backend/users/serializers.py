@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 
             'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 
-            'is_staff', 'is_superuser', 'is_manager', 'is_active', 'date_joined',
+            'is_staff', 'is_superuser', 'is_manager', 'is_active', 'date_of_join',
             'profile_picture', 'custom_title', 'competitive_title', 
             'competitive_title_reason', 'avatar_url'
         ]

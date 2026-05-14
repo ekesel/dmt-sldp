@@ -11,6 +11,8 @@ from data.models import DeveloperMetrics
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from users.models import User
+from users.serializers import UserSerializer   
 
 logger = logging.getLogger(__name__)
 
@@ -403,65 +405,156 @@ class OnboardingAPIView(APIView):
 
 
 # star Profomer -
-class LeaderDashboardAPIView(APIView):
-    permission_classes = [IsUser]
+class StarPerformerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_winner(self, queryset, category, metric_name, request):
+        """
+        Convert queryset first result into formatted response
+        """
+
+        w = queryset.first()
+
+        if not w:
+            return None
+
+        email = w['developer_email']
+
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user:
+            ser = UserSerializer(user, context={'request': request})
+
+            name = user.get_full_name() or user.username
+            title = user.custom_title or category
+
+            if user.profile_picture:
+                avatar = request.build_absolute_uri(
+                    user.profile_picture.url
+                )
+            else:
+                avatar = ser.data.get('avatar_url')
+
+            full_reason = getattr(
+                user,
+                'competitive_title_reason',
+                None
+            )
+
+            reason = (
+                full_reason
+                if full_reason and user.competitive_title == category
+                else f"Top performer in {metric_name}."
+            )
+
+        else:
+            import hashlib
+
+            name = w['developer_name'] or email
+            title = category
+
+            email_hash = hashlib.md5(
+                email.lower().encode('utf-8')
+            ).hexdigest()
+
+            avatar = (
+                f"https://www.gravatar.com/avatar/"
+                f"{email_hash}?d=identicon"
+            )
+
+            reason = f"Top performer in {metric_name}."
+
+        return {
+            "name": name,
+            "email": email,
+            "title": title,
+            "avatar": avatar,
+            "score": round(w['score'], 1) if w['score'] else 0,
+            "reason": reason,
+        }
 
     def get(self, request):
+
         project_id = request.query_params.get('project_id')
+
         now = timezone.now()
 
-        # Try to get data for the current month
+        # Current Month Query
         base_qs = DeveloperMetrics.objects.filter(
             sprint_end_date__year=now.year,
             sprint_end_date__month=now.month
         )
 
         if project_id:
-            try:
-                project_id = int(project_id)
-            except ValueError:
-                return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
             base_qs = base_qs.filter(project_id=project_id)
-            
+
         # 1. Highest Compliance
-        quality_winner = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
-            score=Avg('dmt_compliance_rate'),
-            coverage=Avg('coverage_avg_percent')
-        ).order_by('-score', '-coverage').first()
+        quality_qs = (
+            base_qs.filter(items_completed__gt=0)
+            .values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('dmt_compliance_rate'),
+                coverage=Avg('coverage_avg_percent')
+            )
+            .order_by('-score', '-coverage')
+        )
 
         # 2. Most Points
-        velocity_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('story_points_completed')
-        ).order_by('-score').first()
+        velocity_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('story_points_completed')
+            )
+            .order_by('-score')
+        )
 
         # 3. Top Reviewer
-        reviewer_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('prs_reviewed')
-        ).order_by('-score').first()
+        reviewer_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('prs_reviewed')
+            )
+            .order_by('-score')
+        )
 
         # 4. AI Specialist
-        ai_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Avg('ai_usage_percent')
-        ).order_by('-score').first()
-
-        def attach_avatar(winner):
-            from users.models import User
-            if not winner:
-                return winner
-            email = winner.get('developer_email')
-            winner['profile_picture'] = None
-            if email:
-                user = User.objects.filter(email=email).first()
-                if user and user.profile_picture:
-                    winner['profile_picture'] = request.build_absolute_uri(user.profile_picture.url)
-            return winner
+        ai_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('ai_usage_percent')
+            )
+            .order_by('-score')
+        )
 
         return Response({
-            'message': 'Leaderboard data',
-            'top_performers': {
-                'quality': attach_avatar(quality_winner),
-                'velocity': attach_avatar(velocity_winner),
-                'reviewer': attach_avatar(reviewer_winner),
-                'ai': attach_avatar(ai_winner)
+            "message": "Current month highest performers",
+            "top_performers": {
+                "quality": self._get_winner(
+                    quality_qs,
+                    "Code Quality Champion",
+                    "Code Compliance",
+                    request
+                ),
+
+                "velocity": self._get_winner(
+                    velocity_qs,
+                    "Velocity King",
+                    "Sprint Velocity",
+                    request
+                ),
+
+                "reviewer": self._get_winner(
+                    reviewer_qs,
+                    "Top Reviewer",
+                    "PR Reviews",
+                    request
+                ),
+
+                "ai": self._get_winner(
+                    ai_qs,
+                    "AI Specialist",
+                    "AI Usage",
+                    request
+                ),
             }
-        }, status=200)
+        })

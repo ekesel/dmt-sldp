@@ -1,3 +1,4 @@
+from rest_framework_simplejwt import authentication
 import os
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -12,7 +13,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
 from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer
-
+from users.utils import import_users_from_excel
 User = get_user_model()
 
 
@@ -297,3 +298,42 @@ class ResetPasswordConfirmView(APIView):
             return Response({'message': 'Password has been reset successfully'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+class UploadUserDataView(APIView):
+    """
+    POST /api/users/upload/
+    Accepts a file-like object (Excel) and imports users.
+    """
+    permission_classes = []
+
+    def post(self, request):
+        file_obj = request.FILES.get('file')
+
+        if not file_obj:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        tenant= request.user.tenant
+        if not tenant:
+            return Response({'error': 'No tenant found for user'}, status=status.HTTP_400_BAD_REQUEST)
+
+        result = import_users_from_excel(file_obj, tenant=tenant)
+
+        if result['success']:
+            return Response(
+                {
+                    'message': 'Upload completed',
+                    'stats': result['stats']
+                },
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {'error': result['error'], 'stats': result['stats']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
