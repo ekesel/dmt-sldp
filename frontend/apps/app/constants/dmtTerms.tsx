@@ -9,12 +9,52 @@ export interface DMTTerm {
 export const dmtTerms: DMTTerm[] = [
   {
     id: "velocity",
-    title: "Velocity",
+    title: "Sprint Velocity",
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Shows how much work a team finishes in one sprint (for example, 2 weeks). It helps answer: <em>How fast is the team working?</em></p>
         <p><strong>How it is calculated:</strong> Each task is given <strong>Story Points</strong> based on effort or difficulty. At the end of the sprint, only fully completed tasks are counted.</p>
         <p><strong>Formula:</strong> Velocity = ∑(Story Points of all Done Work Items)</p>
+      </div>
+    )
+  },
+  {
+    id: "cycle_time",
+    title: "Cycle Time",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Shows how long it takes to complete a task after work has started. It answers: <em>Once we start a task, how quickly is it finished?</em></p>
+        <p><strong>How it is calculated:</strong> Finds the difference between the start date and the finish date for each completed task, then calculates the average.</p>
+      </div>
+    )
+  },
+  {
+    id: "compliance",
+    title: "DMT Compliance",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Shows how well a person follows the company's process rules and standards (like filling ticket descriptions, linking code, updating status).</p>
+        <p><strong>Formula:</strong> (Number of Compliant Tasks / Total Number of Tasks) × 100</p>
+      </div>
+    )
+  },
+  {
+    id: "objective_ai",
+    title: "Objective AI",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> A smart, automated system that directly reads the code written by the developer and automatically figures out how much of that code was actually written by AI (like ChatGPT or Copilot).</p>
+        <p><strong>How it is calculated:</strong> Code is scanned via PRDiffAnalyzer which identifies patterns to assign an AI percentage score for the new code submitted.</p>
+      </div>
+    )
+  },
+  {
+    id: "bugs_resolved",
+    title: "Bugs Resolved",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Indicates the exact number of defects the team has successfully fixed in recent sprints.</p>
+        <p><strong>How it is calculated:</strong> Counts all tickets labeled as "Bug" that were moved to "Done" in the last 5 sprints.</p>
       </div>
     )
   },
@@ -58,16 +98,6 @@ export const dmtTerms: DMTTerm[] = [
     )
   },
   {
-    id: "cycle_time",
-    title: "Cycle Time",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Shows how long it takes to complete a task after work has started. It answers: <em>Once we start a task, how quickly is it finished?</em></p>
-        <p><strong>How it is calculated:</strong> Finds the difference between the start date and the finish date for each completed task, then calculates the average.</p>
-      </div>
-    )
-  },
-  {
     id: "forecast",
     title: "Delivery Forecast (Monte Carlo Simulation)",
     description: (
@@ -94,37 +124,6 @@ export const dmtTerms: DMTTerm[] = [
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Represents the self-reported (or custom-tracked) percentage of AI assistance the developer used to complete their tasks.</p>
         <p><strong>How it is calculated:</strong> Extracts values from work items and averages the percentages of all completed Work Items during the sprint.</p>
-      </div>
-    )
-  },
-  {
-    id: "objective_ai",
-    title: "Objective AI",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> A smart, automated system that directly reads the code written by the developer and automatically figures out how much of that code was actually written by AI (like ChatGPT or Copilot).</p>
-        <p><strong>How it is calculated:</strong> Code is scanned via PRDiffAnalyzer which identifies patterns to assign an AI percentage score for the new code submitted.</p>
-      </div>
-    )
-  },
-
-  {
-    id: "compliance",
-    title: "Compliance",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Shows how well a person follows the company's process rules and standards (like filling ticket descriptions, linking code, updating status).</p>
-        <p><strong>Formula:</strong> (Number of Compliant Tasks / Total Number of Tasks) × 100</p>
-      </div>
-    )
-  },
-  {
-    id: "bugs_resolved",
-    title: "Bugs Resolved",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Indicates the exact number of defects the team has successfully fixed in recent sprints.</p>
-        <p><strong>How it is calculated:</strong> Counts all tickets labeled as "Bug" that were moved to "Done" in the last 5 sprints.</p>
       </div>
     )
   },
