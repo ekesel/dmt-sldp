@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle, CalendarDays, X } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -16,8 +16,21 @@ import { projects } from "@dmt/api";
 import { toast } from "react-hot-toast";
 import { HelpSidebar } from "../../components/HelpSidebar";
 
+function fmtDate(d: string) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function sprintRangeLabel(startDate: string, endDate: string): string {
+    if (!startDate && !endDate) return 'Last 5 sprints';
+    if (startDate && endDate) return `${fmtDate(startDate)} – ${fmtDate(endDate)}`;
+    if (startDate) return `From ${fmtDate(startDate)}`;
+    return `Up to ${fmtDate(endDate)}`;
+}
+
 export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -28,7 +41,7 @@ export default function DashboardPage() {
         summary, velocity, compliance, insights, forecast, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
-    } = useDashboardData(selectedProjectId);
+    } = useDashboardData(selectedProjectId, startDate || null, endDate || null);
 
     const handleHelpClick = (id: string) => {
         setActiveHelpId(id);
@@ -63,6 +76,20 @@ export default function DashboardPage() {
                     destCtx.drawImage(sourceCanvases[i] as HTMLCanvasElement, 0, 0);
                 }
             }
+
+            // Replace date inputs with static text — cloneNode doesn't copy React-controlled .value,
+            // and html2canvas can't render native date picker chrome.
+            const originalDateInputs = element.querySelectorAll('input[type="date"]');
+            const clonedDateInputs = clone.querySelectorAll('input[type="date"]');
+            const fmtDatePdf = (d: string) =>
+                d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+            clonedDateInputs.forEach((clonedInput, i) => {
+                const val = (originalDateInputs[i] as HTMLInputElement)?.value || '';
+                const span = document.createElement('span');
+                span.className = clonedInput.className;
+                span.textContent = fmtDatePdf(val);
+                clonedInput.parentNode?.replaceChild(span, clonedInput);
+            });
 
             // Wrap in parent container to preserve inherited styles
             const parent = element.parentElement;
@@ -221,6 +248,46 @@ export default function DashboardPage() {
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
                         />
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 min-w-[180px]">
+                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                    <CalendarDays size={18} className="text-primary" />
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">From</span>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={e => setStartDate(e.target.value)}
+                                        className="bg-transparent font-bold text-sm text-foreground outline-none leading-none cursor-pointer w-full"
+                                    />
+                                </div>
+                            </div>
+                            <span className="text-muted-foreground text-sm font-bold">→</span>
+                            <div className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 min-w-[180px]">
+                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                    <CalendarDays size={18} className="text-primary" />
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">To</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={e => setEndDate(e.target.value)}
+                                        className="bg-transparent font-bold text-sm text-foreground outline-none leading-none cursor-pointer w-full"
+                                    />
+                                </div>
+                            </div>
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                    className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0"
+                                    title="Clear date filter"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
                         <ActiveFolderSelector
                             projectId={selectedProjectId}
                             onFolderChanged={() => {
@@ -256,7 +323,7 @@ export default function DashboardPage() {
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
-                        description={<span className="text-primary">Average of last 5 sprints</span>}
+                        description={<span className="text-primary">Average of {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -301,7 +368,7 @@ export default function DashboardPage() {
                         label="Bugs Resolved"
                         value={(summary?.bugs_resolved || 0).toString()}
                         trend={{ direction: 'neutral', value: 'Total' }}
-                        description={<span className="text-primary">Bugs fixed in last 5 sprints</span>}
+                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
                         valueClassName="text-accent !text-2xl"
                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -309,11 +376,6 @@ export default function DashboardPage() {
                         onHelpClick={handleHelpClick}
                     />
                 </div>
-
-                {/* Assignee Distribution Card */}
-                {assigneeDistribution.length > 0 && (
-                    <AssigneeDistributionCard assignees={assigneeDistribution} />
-                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl">
@@ -375,6 +437,11 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Assignee Distribution Card */}
+                {assigneeDistribution.length > 0 && (
+                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate)} />
+                )}
 
                 <div className="pt-8 border-t border-border">
                     <div className="flex items-center justify-between mb-4">

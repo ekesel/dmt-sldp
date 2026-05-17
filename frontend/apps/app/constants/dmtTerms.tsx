@@ -265,7 +265,7 @@ export const dmtTerms: DMTTerm[] = [
 
         <div>
           <h4 className="font-bold text-foreground">How it is calculated</h4>
-          <p className="mt-1">The system checks each team member’s performance and compares their scores using different metrics like Story Points, Compliance Rate, PR Reviews, and AI Usage.</p>
+          <p className="mt-1">All scores are calculated from sprints whose end date falls within the <strong>current calendar month</strong>. The past month section shows the same calculation for the previous calendar month.</p>
         </div>
 
         <div>
@@ -279,17 +279,37 @@ export const dmtTerms: DMTTerm[] = [
             <li className="bg-muted/30 p-3 rounded-lg border border-border">
               <strong className="text-foreground">Quality Champion</strong>
               <p className="mt-1 text-muted-foreground">Awarded to the person with the highest compliance rate and best code quality.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average Compliance Rate %)</span>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average DMT Compliance Rate %)</span>
             </li>
             <li className="bg-muted/30 p-3 rounded-lg border border-border">
               <strong className="text-foreground">Top Reviewer</strong>
               <p className="mt-1 text-muted-foreground">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Count of PRs Reviewed)</span>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Σ PRs Reviewed)</span>
+            </li>
+            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+              <strong className="text-foreground">Throughput Champion</strong>
+              <p className="mt-1 text-muted-foreground">Awarded to the person who completed the most work items (tickets) regardless of size.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Throughput Champion = max(Σ Items Completed)</span>
+            </li>
+            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+              <strong className="text-foreground">Coverage Champion</strong>
+              <p className="mt-1 text-muted-foreground">Awarded to the person with the highest average code coverage across their completed work items.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Coverage Champion = max(Average Code Coverage %)</span>
             </li>
             <li className="bg-muted/30 p-3 rounded-lg border border-border">
               <strong className="text-foreground">AI Specialist</strong>
-              <p className="mt-1 text-muted-foreground">Awarded to the person who uses AI tools most effectively.</p>
+              <p className="mt-1 text-muted-foreground">Awarded to the person with the highest self-reported AI tool usage across their work items.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">AI Specialist = max(Average AI Usage %)</span>
+            </li>
+            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+              <strong className="text-foreground">Objective AI Master</strong>
+              <p className="mt-1 text-muted-foreground">Awarded to the person with the highest PR-analyzed AI code contribution, measured automatically by scanning submitted code.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Objective AI Master = max(Average Code AI % from PR Analysis)</span>
+            </li>
+            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+              <strong className="text-foreground">Clean Coder</strong>
+              <p className="mt-1 text-muted-foreground">Awarded to the person with the fewest defects attributed to their work. Lower is better.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Clean Coder = min(Σ Defects Attributed)</span>
             </li>
           </ul>
         </div>

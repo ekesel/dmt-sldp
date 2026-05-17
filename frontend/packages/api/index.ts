@@ -420,6 +420,10 @@ export interface MonthLeaderboardData {
   velocity: LeaderboardWinner[];
   reviewer: LeaderboardWinner[];
   ai: LeaderboardWinner[];
+  objective_ai: LeaderboardWinner[];
+  throughput: LeaderboardWinner[];
+  coverage: LeaderboardWinner[];
+  clean_coder: LeaderboardWinner[];
 }
 
 export interface LeaderboardResponse {

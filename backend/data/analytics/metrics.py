@@ -213,12 +213,12 @@ class MetricService:
         return results
 
     @staticmethod
-    def get_dashboard_summary(project_id=None): # Modified to accept project_id
+    def get_dashboard_summary(project_id=None, start_date=None, end_date=None):
         from ..models import SprintMetrics, AIInsight
         from django.db import connection
         from tenants.models import AuditLog
         from configuration.models import SourceConfiguration
-        
+
         if connection.schema_name == 'public':
             return {
                 'compliance_rate': 0,
@@ -230,14 +230,18 @@ class MetricService:
             }
 
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
-        
+
         if project_id:
             sprints_qs = sprints_qs.filter(project_id=project_id)
         else:
             sprints_qs = sprints_qs.filter(project__isnull=True)
-            
-        # Get last 5 sprints for averaging
-        last_5_metrics = list(sprints_qs[:5])
+
+        if start_date:
+            sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
+        if end_date:
+            sprints_qs = sprints_qs.filter(sprint_end_date__lte=end_date)
+
+        last_5_metrics = list(sprints_qs) if (start_date or end_date) else list(sprints_qs[:5])
         
         latest_insight_qs = AIInsight.objects.order_by('-created_at')
         if project_id:

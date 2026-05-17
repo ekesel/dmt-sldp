@@ -48,18 +48,24 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
         from .analytics.metrics import MetricService
         from .models import PullRequest
         from django.db.models import Avg
         from configuration.models import SourceConfiguration
-        summary = MetricService.get_dashboard_summary(project_id)
-        
+        summary = MetricService.get_dashboard_summary(project_id, start_date=start_date, end_date=end_date)
+
         # Compute code_ai_usage_percent LIVE from analyzed PRs
         # (SprintMetrics may be stale if not re-populated after PR diff analysis)
         pr_qs = PullRequest.objects.filter(ai_code_percent__isnull=False, ai_code_percent__gt=0)
         if project_id:
             source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             pr_qs = pr_qs.filter(source_config_id__in=source_ids)
+        if start_date:
+            pr_qs = pr_qs.filter(created_at__date__gte=start_date)
+        if end_date:
+            pr_qs = pr_qs.filter(created_at__date__lte=end_date)
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
         
         data = {
@@ -78,13 +84,21 @@ class VelocityView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
         metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
             metrics_qs = metrics_qs.filter(project_id=project_id)
         else:
             metrics_qs = metrics_qs.filter(project__isnull=True)
-        metrics = metrics_qs[:5]
+
+        if start_date:
+            metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
+        if end_date:
+            metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
+
+        metrics = metrics_qs if (start_date or end_date) else metrics_qs[:5]
         
         data = []
         for m in metrics:
@@ -172,18 +186,25 @@ class ComplianceView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
         metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
             source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             from .models import WorkItem
             relevant_sprint_names = WorkItem.objects.filter(
-                source_config_id__in=source_config_ids, 
+                source_config_id__in=source_config_ids,
                 sprint__isnull=False
             ).values_list('sprint__name', flat=True).distinct()
             metrics_qs = metrics_qs.filter(sprint_name__in=relevant_sprint_names)
 
-        metrics = metrics_qs[:5]
+        if start_date:
+            metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
+        if end_date:
+            metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
+
+        metrics = metrics_qs if (start_date or end_date) else metrics_qs[:5]
         
         if not metrics and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
@@ -875,45 +896,69 @@ class AssigneeDistributionView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        date_filtered = bool(start_date or end_date)
 
         from .models import Sprint, SprintMetrics
         from configuration.models import SourceConfiguration
         from django.db.models import Q
         from collections import defaultdict
 
-        # Identify last 5 sprints
+        # Identify sprints — use date range when provided, otherwise last 5
         try:
             if project_id and project_id not in ['null', 'undefined']:
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
-                
-                # Preferred: Get from pre-calculated metrics
-                relevant_sprint_names = list(SprintMetrics.objects.filter(
-                    project_id=project_id
-                ).order_by('-sprint_end_date').values_list('sprint_name', flat=True)[:5])
-                
+
+                sm_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+                if start_date:
+                    sm_qs = sm_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    sm_qs = sm_qs.filter(sprint_end_date__lte=end_date)
+                if not date_filtered:
+                    sm_qs = sm_qs[:5]
+                relevant_sprint_names = list(sm_qs.values_list('sprint_name', flat=True))
+
                 if not relevant_sprint_names:
-                    # Fallback: Get from Sprint model based on work items in this project
-                    relevant_sprint_names = list(Sprint.objects.filter(
+                    sprint_qs = Sprint.objects.filter(
                         work_items__source_config_id__in=source_ids
-                    ).distinct().order_by('-end_date').values_list('name', flat=True)[:5])
-                
+                    ).distinct().order_by('-end_date')
+                    if start_date:
+                        sprint_qs = sprint_qs.filter(end_date__gte=start_date)
+                    if end_date:
+                        sprint_qs = sprint_qs.filter(end_date__lte=end_date)
+                    if not date_filtered:
+                        sprint_qs = sprint_qs[:5]
+                    relevant_sprint_names = list(sprint_qs.values_list('name', flat=True))
+
                 if relevant_sprint_names:
                     work_items = WorkItem.objects.filter(
-                        source_config_id__in=source_ids, 
+                        source_config_id__in=source_ids,
                         sprint__name__in=relevant_sprint_names
                     )
                 else:
-                    # If NO sprints found at all, we filter to empty to be safe (no data for last 5 sprints)
                     work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
             else:
                 # Global view
-                relevant_sprint_names = list(SprintMetrics.objects.filter(
-                    project__isnull=True
-                ).order_by('-sprint_end_date').values_list('sprint_name', flat=True)[:5])
-                
+                sm_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                if start_date:
+                    sm_qs = sm_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    sm_qs = sm_qs.filter(sprint_end_date__lte=end_date)
+                if not date_filtered:
+                    sm_qs = sm_qs[:5]
+                relevant_sprint_names = list(sm_qs.values_list('sprint_name', flat=True))
+
                 if not relevant_sprint_names:
-                    relevant_sprint_names = list(Sprint.objects.all().order_by('-end_date').values_list('name', flat=True)[:5])
-                
+                    sprint_qs = Sprint.objects.all().order_by('-end_date')
+                    if start_date:
+                        sprint_qs = sprint_qs.filter(end_date__gte=start_date)
+                    if end_date:
+                        sprint_qs = sprint_qs.filter(end_date__lte=end_date)
+                    if not date_filtered:
+                        sprint_qs = sprint_qs[:5]
+                    relevant_sprint_names = list(sprint_qs.values_list('name', flat=True))
+
                 if relevant_sprint_names:
                     work_items = WorkItem.objects.filter(sprint__name__in=relevant_sprint_names)
                 else:
