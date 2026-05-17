@@ -102,7 +102,7 @@ class UserIdentityMappingViewSet(viewsets.ModelViewSet):
             return Response([])
 
         with schema_context(tenant.schema_name):
-            # 1. Get pairs from WorkItems
+            # 1. Get pairs from WorkItems (assignees)
             wi_pairs = list(WorkItem.objects.filter(
                 assignee_email__isnull=False
             ).values('assignee_email', 'assignee_name').distinct())
@@ -110,7 +110,16 @@ class UserIdentityMappingViewSet(viewsets.ModelViewSet):
             # 2. Get pairs from PRs — must be inside schema_context
             pr_pairs = list(PullRequest.objects.values('author_email', 'author_name').distinct())
 
-            # 3. Existing mappings — must be inside schema_context
+            # 3. Get PM/Tech Lead pairs from WorkItems
+            pm_pairs = list(WorkItem.objects.filter(
+                pm_email__isnull=False
+            ).values('pm_email', 'pm_name').distinct())
+
+            tl_pairs = list(WorkItem.objects.filter(
+                tech_lead_email__isnull=False
+            ).values('tech_lead_email', 'tech_lead_name').distinct())
+
+            # 4. Existing mappings — must be inside schema_context
             merged_emails = {m.canonical_email.lower() for m in UserIdentityMapping.objects.all()}
             for m in UserIdentityMapping.objects.all():
                 for ident in m.source_identities:
@@ -138,6 +147,22 @@ class UserIdentityMappingViewSet(viewsets.ModelViewSet):
                 email_to_name[email] = name
                 name_key = name.lower()
                 identities.setdefault(name_key, set()).add(email)
+
+            for p in pm_pairs:
+                email = (p['pm_email'] or '').lower().strip()
+                name = (p['pm_name'] or '').strip()
+                if not email or not name:
+                    continue
+                email_to_name.setdefault(email, name)
+                identities.setdefault(name.lower(), set()).add(email)
+
+            for p in tl_pairs:
+                email = (p['tech_lead_email'] or '').lower().strip()
+                name = (p['tech_lead_name'] or '').strip()
+                if not email or not name:
+                    continue
+                email_to_name.setdefault(email, name)
+                identities.setdefault(name.lower(), set()).add(email)
 
             suggestions = []
             for name_key, emails in identities.items():
@@ -207,6 +232,26 @@ class UserIdentityMappingViewSet(viewsets.ModelViewSet):
                 email = item['author_email'].lower()
                 if email not in results:
                     results[email] = item['author_name'] or email
+
+            # 5. PM identities from WorkItems
+            pm_qs = WorkItem.objects.filter(pm_email__isnull=False)
+            if query:
+                pm_qs = pm_qs.filter(Q(pm_email__icontains=query) | Q(pm_name__icontains=query))
+
+            for item in pm_qs.values('pm_email', 'pm_name').distinct()[:50]:
+                email = item['pm_email'].lower()
+                if email not in results:
+                    results[email] = item['pm_name'] or email
+
+            # 6. Tech Lead identities from WorkItems
+            tl_qs = WorkItem.objects.filter(tech_lead_email__isnull=False)
+            if query:
+                tl_qs = tl_qs.filter(Q(tech_lead_email__icontains=query) | Q(tech_lead_name__icontains=query))
+
+            for item in tl_qs.values('tech_lead_email', 'tech_lead_name').distinct()[:50]:
+                email = item['tech_lead_email'].lower()
+                if email not in results:
+                    results[email] = item['tech_lead_name'] or email
 
             # Format for frontend
             formatted = [{'email': e, 'name': n} for e, n in results.items()]

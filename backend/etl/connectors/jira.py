@@ -140,7 +140,10 @@ class JiraConnector(BaseConnector):
 
         # 1. Sync issues (already handled in loop)
         
-        # 2. Post-sync: Infer assignees from PRs for unassigned work items
+        # 2. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
+        self._post_sync_attribution(source_id)
+
+        # 3. Post-sync: Infer assignees from PRs for unassigned work items
         self._infer_unassigned_assignees(source_id)
 
         report(100, f"Sync complete. Processed {item_count} items.")
@@ -266,6 +269,63 @@ class JiraConnector(BaseConnector):
                             sprint_obj = sprint_map[sid]
                             break
 
+        # Extract DMT custom fields via config field_mapping
+        config_mapping = self.config.get('field_mapping', {})
+
+        def get_jira_cf_val(field_id):
+            if not field_id:
+                return None
+            val = fields.get(field_id)
+            if val is None:
+                return None
+            if isinstance(val, dict):
+                return val.get('value') or val.get('name')
+            if isinstance(val, list) and val:
+                first = val[0]
+                return (first.get('value') or first.get('name')) if isinstance(first, dict) else first
+            return val
+
+        # PR Link
+        pr_link_val = get_jira_cf_val(config_mapping.get('pr_link_id'))
+        jira_pr_links = []
+        if pr_link_val and isinstance(pr_link_val, str):
+            import re as _re
+            found_urls = _re.findall(r'(https?://[^\s<",>]+)', pr_link_val)
+            jira_pr_links = list(dict.fromkeys(u.rstrip('.,;)') for u in found_urls))
+
+        # AC Quality
+        ac_quality_val = get_jira_cf_val(config_mapping.get('ac_quality_id'))
+        jira_ac_quality = ''
+        if ac_quality_val:
+            _lower = str(ac_quality_val).strip().lower()
+            if _lower == 'final': jira_ac_quality = 'final'
+            elif _lower == 'testable': jira_ac_quality = 'testable'
+            elif _lower == 'incomplete': jira_ac_quality = 'incomplete'
+
+        # Reviewer Signoff
+        signoff_val = get_jira_cf_val(config_mapping.get('reviewer_dmt_signoff_id'))
+        jira_reviewer_signoff = False
+        if signoff_val is not None:
+            _s = str(signoff_val).strip().lower()
+            if signoff_val is True or _s in ['y', 'yes', 'true', '1']:
+                jira_reviewer_signoff = True
+
+        # Unit Testing Status
+        unit_testing_val = get_jira_cf_val(config_mapping.get('unit_testing_status_id'))
+        jira_unit_testing = ''
+        if unit_testing_val:
+            _raw = str(unit_testing_val).strip().lower()
+            if _raw == 'not started': jira_unit_testing = 'not_started'
+            elif _raw == 'in progress': jira_unit_testing = 'in_progress'
+            elif _raw == 'done': jira_unit_testing = 'done'
+            elif _raw == 'exception approved': jira_unit_testing = 'exception_approved'
+
+        # PM Name / Tech Lead Name
+        jira_pm_name, jira_pm_email_raw = self._extract_person_field(get_jira_cf_val(config_mapping.get('pm_name_id')))
+        jira_pm_email = self.identity_resolver.resolve(jira_pm_email_raw) if jira_pm_email_raw else None
+        jira_tl_name, jira_tl_email_raw = self._extract_person_field(get_jira_cf_val(config_mapping.get('tech_lead_name_id')))
+        jira_tech_lead_email = self.identity_resolver.resolve(jira_tl_email_raw) if jira_tl_email_raw else None
+
         # Prepare data for model and compliance check
         work_item_data = {
             'source_config_id': source_id,
@@ -279,6 +339,15 @@ class JiraConnector(BaseConnector):
             'creator_email': self.identity_resolver.resolve(fields.get('creator', {}).get('emailAddress')),
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,
+            'inferred_assignee': False,
+            'ac_quality': jira_ac_quality,
+            'unit_testing_status': jira_unit_testing,
+            'reviewer_dmt_signoff': jira_reviewer_signoff,
+            'pr_links': jira_pr_links,
+            'pm_name': jira_pm_name,
+            'pm_email': jira_pm_email,
+            'tech_lead_name': jira_tl_name,
+            'tech_lead_email': jira_tech_lead_email,
             'created_at': created_at,
             'updated_at': updated_at,
             'started_at': started_at,
@@ -291,6 +360,10 @@ class JiraConnector(BaseConnector):
         is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
+
+        # Track compliance history (must run before update_or_create)
+        violation_tracking = self._track_violation_history(source_id, external_id, is_compliant, compliance_failures)
+        work_item_data.update(violation_tracking)
 
         WorkItem.objects.update_or_create(
             source_config_id=source_id,

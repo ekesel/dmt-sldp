@@ -669,27 +669,47 @@ class ComplianceFlagListView(APIView):
             for s in SourceConfiguration.objects.values('id', 'project__name')
         }
 
+        _AC_VIOLATIONS = {'missing_ac_quality'}
+        _TECH_VIOLATIONS = {'missing_pr_link', 'unit_testing_not_done', 'missing_dmt_signoff'}
+
         for item in items:
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-            
-            # Fix assignee_name if it's "None" or null
-            assignee = item.assignee_name
-            if not assignee or assignee == 'None':
-                assignee = item.assignee_email
-            if not assignee or assignee == 'None':
-                assignee = "Unassigned"
+
+            # Build assignee list — use contributions if multi-assignee, else single
+            if item.assignee_contributions and len(item.assignee_contributions) > 1:
+                assignee_names = [c.get('name') or c.get('email', '') for c in item.assignee_contributions if c.get('email')]
+            else:
+                primary = item.assignee_name
+                if not primary or primary == 'None':
+                    primary = item.assignee_email
+                if not primary or primary == 'None':
+                    primary = 'Unassigned'
+                assignee_names = [primary]
 
             for failure in item.compliance_failures:
-                 flags.append({
-                     "id": f"{item.id}-{failure}",
-                     "work_item_id": item.id,
-                     "work_item_title": item.title,
-                     "flag_type": failure,
-                     "severity": "critical" if item.status_category == 'done' else "warning",
-                     "created_at": item.updated_at,
-                     "project_name": project_name,
-                     "assignee_name": assignee
-                 })
+                if failure in _AC_VIOLATIONS:
+                    responsible_role = 'PM'
+                    responsible_name = item.pm_name or item.pm_email or None
+                elif failure in _TECH_VIOLATIONS:
+                    responsible_role = 'Tech Lead'
+                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                else:
+                    responsible_role = None
+                    responsible_name = None
+
+                flags.append({
+                    "id": f"{item.id}-{failure}",
+                    "work_item_id": item.id,
+                    "work_item_title": item.title,
+                    "flag_type": failure,
+                    "severity": "critical" if item.status_category == 'done' else "warning",
+                    "created_at": item.updated_at,
+                    "project_name": project_name,
+                    "assignee_name": assignee_names[0],
+                    "assignee_names": assignee_names,
+                    "responsible_role": responsible_role,
+                    "responsible_name": responsible_name,
+                })
                  
         return Response(flags)
 
@@ -784,6 +804,59 @@ class ComplianceSummaryView(APIView):
             "total_items": total,
             "compliant_items": compliant,
         })
+
+class ComplianceFixedLaterView(APIView):
+    """
+    Returns work items that had violations at some point but are now compliant.
+    had_violations=True AND dmt_compliant=True → "fixed later" items.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        project_id = request.query_params.get('project_id')
+        sprint_id = request.query_params.get('sprint_id')
+
+        items = WorkItem.objects.filter(
+            had_violations=True,
+            dmt_compliant=True,
+        ).order_by('-violations_cleared_at')
+
+        if project_id and project_id not in ['null', 'undefined', '']:
+            from configuration.models import SourceConfiguration
+            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            items = items.filter(source_config_id__in=source_config_ids)
+
+        if sprint_id and sprint_id not in ['null', 'undefined', '']:
+            items = items.filter(sprint_id=sprint_id)
+        else:
+            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
+            if latest_sprint:
+                items = items.filter(sprint_id=latest_sprint.id)
+
+        from configuration.models import SourceConfiguration
+        source_to_project = {
+            s['id']: s['project__name']
+            for s in SourceConfiguration.objects.values('id', 'project__name')
+        }
+
+        result = []
+        for item in items:
+            assignee = item.assignee_name or item.assignee_email or "Unassigned"
+            if assignee == 'None':
+                assignee = "Unassigned"
+            result.append({
+                "id": item.id,
+                "work_item_id": item.external_id,
+                "work_item_title": item.title,
+                "assignee_name": assignee,
+                "project_name": source_to_project.get(item.source_config_id, "Unknown Project"),
+                "violations_cleared_at": item.violations_cleared_at,
+                "violation_history": item.violation_history,
+                "updated_at": item.updated_at,
+            })
+
+        return Response(result)
+
 
 class AIInsightListView(APIView):
     permission_classes = [IsAuthenticated]

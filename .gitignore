@@ -29,7 +29,10 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+.omc
+.planning
 
 # OS
 .DS_Store
 Thumbs.db
+backend/celerybeat-schedule

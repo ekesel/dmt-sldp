@@ -460,6 +460,8 @@ export const compliance = {
     post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
     get<any>(`/compliance-summary/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  listFixedLater: (projectId?: string | number | null, sprintId?: string | number | null) =>
+    get<any[]>(`/compliance-fixed-later/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
 };
 
 export const sprints = {

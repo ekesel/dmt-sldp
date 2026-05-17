@@ -202,10 +202,14 @@ class ClickupConnector(BaseConnector):
                 gc.collect()
         
         # 6. Post-Sync: Link Parent/Child and Aggregate Points
-        report(95, "Resolving parent/child links and aggregating points...")
+        report(93, "Resolving parent/child links and aggregating points...")
         self._post_sync_linking(source_id)
 
-        # 7. Post-Sync: Infer assignees from PRs for unassigned work items
+        # 7. Post-Sync: Resolve multi-assignee attribution and bubble DMT fields
+        report(96, "Resolving assignee attribution from sub-tasks...")
+        self._post_sync_attribution(source_id)
+
+        # 8. Post-Sync: Infer assignees from PRs for unassigned work items
         self._infer_unassigned_assignees(source_id)
 
         report(100, f"Sync complete. Processed {item_count} items.")
@@ -356,6 +360,19 @@ class ClickupConnector(BaseConnector):
                     # Value extraction depends on type
                     val = cf.get('value')
                     
+                    # Handle labels (value is list of label IDs) -> Resolve to label text
+                    if cf.get('type') == 'labels' and val is not None:
+                        options = cf.get('type_config', {}).get('options', [])
+                        if isinstance(val, list) and val:
+                            names = []
+                            for label_id in val:
+                                for opt in options:
+                                    if opt.get('id') == label_id:
+                                        names.append(opt.get('label') or opt.get('name') or label_id)
+                                        break
+                            return names[0] if len(names) == 1 else (names if names else val)
+                        return val
+
                     # Handle drop_down (value is index) -> Resolve to Name
                     if cf.get('type') == 'drop_down' and val is not None:
                         options = cf.get('type_config', {}).get('options', [])
@@ -425,8 +442,10 @@ class ClickupConnector(BaseConnector):
         signoff_id = config_mapping.get('reviewer_dmt_signoff_id')
         reviewer_signoff_val = get_cf_value(signoff_id)
         reviewer_signoff = False
-        if reviewer_signoff_val and str(reviewer_signoff_val).upper() == 'Y':
-            reviewer_signoff = True
+        if reviewer_signoff_val is not None:
+            val_str = str(reviewer_signoff_val).strip().lower()
+            if reviewer_signoff_val is True or val_str in ['y', 'yes', 'true', '1']:
+                reviewer_signoff = True
             
         # 3c. Unit Testing Status
         unit_testing_id = config_mapping.get('unit_testing_status_id')
@@ -440,6 +459,15 @@ class ClickupConnector(BaseConnector):
             elif raw_val == 'done': unit_testing_status_db = 'done'
             elif raw_val == 'exception approved': unit_testing_status_db = 'exception_approved'
 
+
+        # 3d. PM Name / Tech Lead Name
+        pm_name_val = get_cf_value(config_mapping.get('pm_name_id'))
+        pm_name, pm_email_raw = self._extract_person_field(pm_name_val)
+        pm_email = self.identity_resolver.resolve(pm_email_raw) if pm_email_raw else None
+
+        tech_lead_val = get_cf_value(config_mapping.get('tech_lead_name_id'))
+        tech_lead_name, tech_lead_email_raw = self._extract_person_field(tech_lead_val)
+        tech_lead_email = self.identity_resolver.resolve(tech_lead_email_raw) if tech_lead_email_raw else None
 
         # 4. Story Points (Standard ClickUp field 'points')
         story_points = task.get('points')
@@ -505,6 +533,7 @@ class ClickupConnector(BaseConnector):
             'creator_email': self.identity_resolver.resolve(task.get('creator', {}).get('email')),
             'assignee_email': assignee_email,
             'assignee_name': task.get('assignees', [{}])[0].get('username') if task.get('assignees') else None,
+            'inferred_assignee': False,
             'created_at': created_at,
             'updated_at': updated_at,
             'resolved_at': resolved_at,
@@ -512,6 +541,10 @@ class ClickupConnector(BaseConnector):
             'ac_quality': ac_quality_db,
             'reviewer_dmt_signoff': reviewer_signoff,
             'unit_testing_status': unit_testing_status_db,
+            'pm_name': pm_name,
+            'pm_email': pm_email,
+            'tech_lead_name': tech_lead_name,
+            'tech_lead_email': tech_lead_email,
         }
 
         # Clear assignee if none in ClickUp
@@ -527,6 +560,10 @@ class ClickupConnector(BaseConnector):
         is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
+
+        # Track compliance history (must run before update_or_create)
+        violation_tracking = self._track_violation_history(source_id, external_id, is_compliant, compliance_failures)
+        work_item_data.update(violation_tracking)
 
         WorkItem.objects.update_or_create(
             source_config_id=source_id,

@@ -196,7 +196,10 @@ class AzureDevOpsConnector(BaseConnector):
             # 4. Sync Pull Requests
             self._sync_pull_requests(p_name, source_id, headers, progress_callback)
             
-        # 5. Post-sync: Infer assignees from PRs for unassigned work items
+        # 5. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
+        self._post_sync_attribution(source_id)
+
+        # 6. Post-sync: Infer assignees from PRs for unassigned work items
         self._infer_unassigned_assignees(source_id)
 
         return {'item_count': item_count}
@@ -547,6 +550,18 @@ class AzureDevOpsConnector(BaseConnector):
                 if clean_url not in pr_links:
                     pr_links.append(clean_url)
 
+        # 9. PM Name / Tech Lead Name
+        ado_config_mapping = self.config.get('field_mapping', {})
+        pm_name_raw = (fields.get(ado_config_mapping.get('pm_name_id', ''))
+                       or fields.get('Custom.PMName') or fields.get('Custom.ProductManager'))
+        ado_pm_name, ado_pm_email_raw = self._extract_person_field(pm_name_raw)
+        ado_pm_email = self.identity_resolver.resolve(ado_pm_email_raw) if ado_pm_email_raw else None
+
+        tl_name_raw = (fields.get(ado_config_mapping.get('tech_lead_name_id', ''))
+                       or fields.get('Custom.TechLeadName') or fields.get('Custom.TechLead'))
+        ado_tl_name, ado_tl_email_raw = self._extract_person_field(tl_name_raw)
+        ado_tech_lead_email = self.identity_resolver.resolve(ado_tl_email_raw) if ado_tl_email_raw else None
+
         # Prepare for DB
         work_item_data = {
             'source_config_id': source_id,
@@ -561,6 +576,7 @@ class AzureDevOpsConnector(BaseConnector):
             'creator_email': fields.get('System.CreatedBy', {}).get('uniqueName') if isinstance(fields.get('System.CreatedBy'), dict) else None,
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,
+            'inferred_assignee': False,
             'created_at': created_at,
             'updated_at': updated_at,
             'started_at': started_at,
@@ -574,6 +590,10 @@ class AzureDevOpsConnector(BaseConnector):
             'pr_links': pr_links,
             'dmt_exception_required': dmt_exception_required,
             'dmt_exception_reason': dmt_exception_reason,
+            'pm_name': ado_pm_name,
+            'pm_email': ado_pm_email,
+            'tech_lead_name': ado_tl_name,
+            'tech_lead_email': ado_tech_lead_email,
         }
 
         # Compliance
@@ -581,6 +601,10 @@ class AzureDevOpsConnector(BaseConnector):
         is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
+
+        # Track compliance history (must run before update_or_create)
+        violation_tracking = self._track_violation_history(source_id, external_id, is_compliant, compliance_failures)
+        work_item_data.update(violation_tracking)
 
         WorkItem.objects.update_or_create(
             source_config_id=source_id,
@@ -759,7 +783,9 @@ class AzureDevOpsConnector(BaseConnector):
                 
             rev_name = reviewer.get('displayName', '')
             vote = reviewer.get('vote', 0)
-            reviewed_at = updated_at if vote != 0 else None
+            # vote != 0 means reviewer actually acted (approved/rejected/suggested)
+            # vote == 0 means assigned but not yet acted — use created_at as assignment time
+            reviewed_at = updated_at if vote != 0 else created_at
             resolved_rev = UserResolver.resolve_by_identity('azure_devops', rev_email)
             
             PullRequestReviewer.objects.update_or_create(

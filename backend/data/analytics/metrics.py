@@ -108,8 +108,8 @@ class MetricService:
         
         results = []
         for project in projects:
-            # 1. Base query for this sprint
-            work_items = WorkItem.objects.filter(sprint=sprint)
+            # 1. Base query for this sprint — exclude sub-tasks to avoid double-counting
+            work_items = WorkItem.objects.filter(sprint=sprint, parent__isnull=True)
             
             # Apply project and folder filtering
             if project:
@@ -367,12 +367,22 @@ class MetricService:
         for project in projects:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
-            # 1. Get all developers who have work items or PRs in this project/sprint
-            # Resolve each raw email to its canonical counterpart to aggregate properly
-            raw_emails = WorkItem.objects.filter(
+            # 1. Collect developer emails from root items only (no sub-tasks)
+            raw_emails = set(WorkItem.objects.filter(
                 sprint=sprint,
-                source_config_id__in=source_conf_ids
-            ).values_list('assignee_email', flat=True).distinct()
+                source_config_id__in=source_conf_ids,
+                parent__isnull=True,
+            ).values_list('assignee_email', flat=True).distinct())
+
+            # Also include developers who appear only as sub-task contributors
+            for contrib_item in WorkItem.objects.filter(
+                sprint=sprint,
+                source_config_id__in=source_conf_ids,
+                parent__isnull=True,
+            ).exclude(assignee_contributions=[]).only('assignee_contributions'):
+                for c in (contrib_item.assignee_contributions or []):
+                    if c.get('email'):
+                        raw_emails.add(c['email'])
 
             # Map raw emails to canonical emails: canonical_email -> list of raw_emails
             canonical_to_raw = {}
@@ -389,7 +399,8 @@ class MetricService:
                 dev_work_items = WorkItem.objects.filter(
                     sprint=sprint,
                     assignee_email__in=aliases,
-                    source_config_id__in=source_conf_ids
+                    source_config_id__in=source_conf_ids,
+                    parent__isnull=True,
                 )
                 
                 # Active Folder Filtering
@@ -426,10 +437,14 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
                 
+                # Expand aliases to include all known identities (e.g. ADO email vs ClickUp email)
+                # Defined here so dev_prs and downstream queries all use the full alias set
+                all_known_aliases = list(set(resolver.all_aliases(canonical_email)) | set(aliases))
+
                 # Filter PRs for this developer in this sprint (approximate by date if not linked)
                 from django.db.models import Q
                 pr_filter = Q(
-                    author_email__in=aliases,
+                    author_email__in=all_known_aliases,
                     source_config_id__in=source_conf_ids,
                     created_at__lte=sprint_end
                 )
@@ -438,10 +453,20 @@ class MetricService:
 
                 dev_prs = PullRequest.objects.filter(pr_filter)
 
-                # Calculate stats
-                completed_items = dev_work_items.filter(status_category='done')
-                points = completed_items.aggregate(total=Sum('story_points'))['total'] or 0
-                items_count = completed_items.count()
+                # Calculate stats — use contribution SP for multi-assignee items
+                completed_items = list(dev_work_items.filter(status_category='done'))
+                points = 0
+                items_count = len(completed_items)
+                for wi in completed_items:
+                    if wi.assignee_contributions:
+                        contrib = next(
+                            (c for c in wi.assignee_contributions
+                             if resolver.resolve(c.get('email', '')) == canonical_email),
+                            None,
+                        )
+                        points += (contrib.get('story_points') or 0) if contrib else (wi.story_points or 0)
+                    else:
+                        points += wi.story_points or 0
                 
                 # DMT Compliance (Standardized to ALL work items)
                 total_compliance_target = dev_work_items.count()
@@ -465,20 +490,20 @@ class MetricService:
                 # Code Activity
                 prs_authored = dev_prs.count()
                 prs_merged = dev_prs.filter(merged_at__isnull=False).count()
-                
-                # Fetch reviews done by this developer in this sprint
+
+                # Fetch reviews done by this developer in this sprint (vote != 0 = actually reviewed)
                 prs_reviewed = PullRequestReviewer.objects.filter(
-                    reviewer_email__in=aliases,
+                    reviewer_email__in=all_known_aliases,
                     pull_request__source_config_id__in=source_conf_ids,
-                    reviewed_at__range=(sprint_start, sprint_end)
-                ).count()
+                    reviewed_at__range=(sprint_start, sprint_end),
+                ).exclude(vote=0).count() if sprint_start else 0
 
                 # Fetch commits by this developer in this sprint
                 commits_count = Commit.objects.filter(
-                    author_email__in=aliases,
+                    author_email__in=all_known_aliases,
                     source_config_id__in=source_conf_ids,
                     committed_at__range=(sprint_start, sprint_end)
-                ).count()
+                ).count() if sprint_start else 0
 
                 # Average Review Time integration could be added here later.
 
