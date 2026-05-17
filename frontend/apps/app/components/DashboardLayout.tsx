@@ -18,46 +18,28 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     useEffect(() => {
         if (isLoading) return;
         if (token) {
+            let finalWsUrl: string;
 
+            const buildWsBase = (host: string): string => {
+                // Already a full WS URL
+                if (host.startsWith('ws://') || host.startsWith('wss://')) return host.replace(/\/$/, '');
+                const h = host.replace(/\/$/, '');
+                const isLocal = h === 'localhost' || h === '127.0.0.1';
+                return isLocal ? `ws://${h}:8000` : `wss://${h}`;
+            };
 
-
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-            let wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
-
-
-            const isLocalhost = wsHost === 'localhost' || wsHost === '127.0.0.1';
-
-            if (isLocalhost) {
-
-                wsHost = `${wsHost}:8000`;
-            } else if (!wsHost.includes(':') && window.location.port) {
-
-                wsHost = `${wsHost}:${window.location.port}`;
-            }
-
-            if (!wsHost.startsWith('ws://') && !wsHost.startsWith('wss://')) {
-                wsHost = `${wsProtocol}//${wsHost}`;
-            }
-
-            // Path must include tenant slug for proper routing in Django Channels
-            const tenantSlug = user?.tenant_slug || localStorage.getItem('dmt-tenant') || 'default';
-            let finalWsUrl = `${wsHost}/news/?token=${token}`;
-            
-            // For localhost, hardcode to wss://api.elevate.samta.ai/ws/news/
-            const isLocal = isLocalhost || window.location.port !== '';
-            if (isLocal) {
-                finalWsUrl = `wss://api.elevate.samta.ai/ws/news/?token=${token}`;
-            }
-
+            const wsBase = buildWsBase(
+                process.env.NEXT_PUBLIC_WS_HOST ||
+                `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+            );
+            finalWsUrl = `${wsBase}/ws/news/?token=${token}`;
 
             setWsUrl(finalWsUrl);
         } else {
             console.warn('[DashboardLayout] No auth token available, skipping Newsfeed WebSocket initialization');
             setWsUrl(null);
         }
-    }, [token, isLoading]); // Still react to token from useAuth to trigger re-run
+    }, [token, isLoading]);
 
     const content = (
         <div className="flex flex-col h-screen bg-background transition-colors duration-200">

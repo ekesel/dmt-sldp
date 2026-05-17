@@ -209,30 +209,35 @@ class KimiAIProvider:
 
         return self._generate_json(prompt)
 
+    def _build_url(self) -> str:
+        url = (self.base_url or "").rstrip("/")
+        if url.endswith("/chat/completions"):
+            return url
+        # Strip any trailing /v1 so we can append the full path cleanly
+        if url.endswith("/v1"):
+            url = url[:-3]
+        return url.rstrip("/") + "/v1/chat/completions"
+
     def _generate_json(self, prompt: str):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
-        url = self.base_url
-        if not url.endswith("/chat/completions"):
-            if not url.endswith("/"):
-                url += "/"
-            url += "v1/chat/completions"
+
+        url = self._build_url()
 
         payload = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
             "max_tokens": 4096,
-            "chat_template_kwargs": {"thinking": True}
+            "chat_template_kwargs": {"thinking": True},
         }
 
 
         for attempt in range(1, 4):
             try:
-                response = requests.post(url, headers=headers, json=payload, timeout=300)
+                response = requests.post(url, headers=headers, json=payload, timeout=240)
                 response.raise_for_status()
                 result_text = response.json()['choices'][0]['message']['content']
                 
