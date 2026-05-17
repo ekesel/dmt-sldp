@@ -32,7 +32,7 @@ export default function SourceConfigPage() {
 
     // Sync Progress Modal State
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-    const [syncSource, setSyncSource] = useState<{ id: number, name: string, tenantId: string } | null>(null);
+    const [syncSource, setSyncSource] = useState<{ id: number, name: string, tenantId: string, alreadyRunning?: boolean } | null>(null);
 
     // PR Analysis Progress Modal State
     const [isPRModalOpen, setIsPRModalOpen] = useState(false);
@@ -210,7 +210,7 @@ export default function SourceConfigPage() {
                                             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Status</p>
                                             {s.last_sync_status === 'in_progress' ? (
                                                 <button
-                                                    onClick={() => { setSyncSource({ id: s.id, name: s.name, tenantId: String(s.tenant_id || '1') }); setIsSyncModalOpen(true); }}
+                                                    onClick={() => { setSyncSource({ id: s.id, name: s.name, tenantId: String(s.tenant_id || '1'), alreadyRunning: true }); setIsSyncModalOpen(true); }}
                                                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition"
                                                 >
                                                     <Loader2 size={11} className="animate-spin" />
@@ -312,6 +312,7 @@ export default function SourceConfigPage() {
                     sourceId={syncSource.id}
                     sourceName={syncSource.name}
                     tenantId={syncSource.tenantId}
+                    alreadyRunning={syncSource.alreadyRunning}
                 />
             )}
 
