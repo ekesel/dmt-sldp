@@ -231,13 +231,18 @@ class KimiAIProvider:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
             "max_tokens": 4096,
-            "chat_template_kwargs": {"thinking": True},
         }
+
+        model_lower = self.model_name.lower()
+        if "kimi" in model_lower or "moonshot" in model_lower:
+            payload["chat_template_kwargs"] = {"thinking": True}
 
 
         for attempt in range(1, 4):
             try:
                 response = requests.post(url, headers=headers, json=payload, timeout=240)
+                if not response.ok:
+                    logger.error(f"Kimi API error body (attempt {attempt}): {response.text}")
                 response.raise_for_status()
                 result_text = response.json()['choices'][0]['message']['content']
                 
