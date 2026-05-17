@@ -361,6 +361,7 @@ export const sources = {
   testConnection: (sourceId: string | number) => post<{ status: string; message: string }>(`/admin/sources/${sourceId}/test_connection/`),
   triggerSync: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_sync/`),
   triggerPrAnalysis: (sourceId: string | number) => post<{ status: string; message: string; task_id?: string }>(`/admin/sources/${sourceId}/trigger_pr_analysis/`),
+  resetSync: (sourceId: string | number) => post<{ status: string; message: string }>(`/admin/sources/${sourceId}/reset_sync/`),
   prAnalysisStatus: (sourceId: string | number) => get<{ status: string; message: string; error_message?: string; created_at?: string; finished_at?: string }>(`/admin/sources/${sourceId}/pr_analysis_status/`),
   remoteFolders: (sourceId: string | number) => get<{ status: string; folders?: { id: string; name: string }[] }>(`/admin/sources/${sourceId}/remote_folders/`),
   delete: (sourceId: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/sources/${sourceId}/`),

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Settings, RefreshCw, Eye, AlertCircle, Plus, Loader2, Trash2, Zap, ShieldCheck, Code2 } from "lucide-react";
+import { Settings, Pencil, AlertCircle, Plus, Loader2, Trash2, Zap, ShieldCheck, Code2, StopCircle } from "lucide-react";
 import { DashboardLayout } from '../../../components/DashboardLayout';
 import { Badge } from '../../../components/UIComponents';
 import { SourceConfigModal } from '../../../components/sources/SourceConfigModal';
@@ -57,6 +57,13 @@ export default function SourceConfigPage() {
         }
     };
 
+    useEffect(() => {
+        const hasInProgress = sources.some(s => s.last_sync_status === 'in_progress');
+        if (!hasInProgress) return;
+        const interval = setInterval(fetchSources, 8000);
+        return () => clearInterval(interval);
+    }, [sources]);
+
     const handleAddSource = () => {
         setSelectedSource(undefined);
         setIsModalOpen(true);
@@ -103,6 +110,17 @@ export default function SourceConfigPage() {
             await sourcesApi.triggerSync(source.id);
         } catch (err: any) {
             toast.error(`Failed to trigger sync: ${err.message}`);
+        }
+    };
+
+    const handleResetSync = async (source: Source) => {
+        if (!confirm(`Kill the running sync for "${source.name}" and reset its status?`)) return;
+        try {
+            await (sourcesApi as any).resetSync(source.id);
+            toast.success('Sync killed and status reset.');
+            fetchSources();
+        } catch (err: any) {
+            toast.error(`Failed to reset sync: ${err.message}`);
         }
     };
 
@@ -190,10 +208,20 @@ export default function SourceConfigPage() {
                                     <div className="flex flex-wrap items-center gap-8">
                                         <div className="text-center">
                                             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Status</p>
-                                            <Badge
-                                                label={s.last_sync_status || 'Never Synced'}
-                                                variant={getStatusColor(s.last_sync_status) as any}
-                                            />
+                                            {s.last_sync_status === 'in_progress' ? (
+                                                <button
+                                                    onClick={() => { setSyncSource({ id: s.id, name: s.name, tenantId: String(s.tenant_id || '1') }); setIsSyncModalOpen(true); }}
+                                                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition"
+                                                >
+                                                    <Loader2 size={11} className="animate-spin" />
+                                                    In Progress
+                                                </button>
+                                            ) : (
+                                                <Badge
+                                                    label={s.last_sync_status || 'Never Synced'}
+                                                    variant={getStatusColor(s.last_sync_status) as any}
+                                                />
+                                            )}
                                         </div>
                                         <div className="text-center">
                                             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Last Sync</p>
@@ -212,7 +240,7 @@ export default function SourceConfigPage() {
                                             <button
                                                 onClick={() => handleTriggerSync(s)}
                                                 className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 p-2 rounded-lg transition"
-                                                title="Sync Now"
+                                                title={['github', 'azure_devops_git'].includes(s.source_type) ? 'Sync PRs & Commits' : 'Sync Now'}
                                             >
                                                 <Zap size={18} />
                                             </button>
@@ -225,12 +253,21 @@ export default function SourceConfigPage() {
                                                     <Code2 size={18} />
                                                 </button>
                                             )}
+                                            {s.last_sync_status === 'in_progress' && (
+                                                <button
+                                                    onClick={() => handleResetSync(s)}
+                                                    className="bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 p-2 rounded-lg transition"
+                                                    title="Kill Sync"
+                                                >
+                                                    <StopCircle size={18} />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleEditSource(s)}
                                                 className="bg-btn-secondary hover:bg-btn-secondary-hover p-2 rounded-lg text-btn-secondary-foreground hover:text-btn-secondary-foreground transition"
                                                 title="Edit Config"
                                             >
-                                                <RefreshCw size={18} />
+                                                <Pencil size={18} />
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteSource(s.id)}
