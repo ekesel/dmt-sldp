@@ -633,8 +633,10 @@ class AzureDevOpsConnector(BaseConnector):
             repo_id = repo['id']
             repo_name = repo['name']
             
-            # Get PRs (Active and Completed) - use $top=1000 to get deep history
-            prs_url = f"{self.api_base}/{quote(project_name)}/_apis/git/repositories/{repo_id}/pullrequests?searchCriteria.status=all&$top=1000&api-version=6.0"
+            # Get PRs (Active and Completed) from last 6 months
+            from datetime import timedelta
+            since = (timezone.now() - timedelta(days=180)).strftime('%Y-%m-%dT%H:%M:%SZ')
+            prs_url = f"{self.api_base}/{quote(project_name)}/_apis/git/repositories/{repo_id}/pullrequests?searchCriteria.status=all&searchCriteria.minTime={since}&$top=500&api-version=6.0"
             prs_resp = requests.get(prs_url, headers=headers)
             if prs_resp.status_code == 200:
                 prs = prs_resp.json().get('value', [])
@@ -723,33 +725,25 @@ class AzureDevOpsConnector(BaseConnector):
         target_ref = pr.get('targetRefName', '').replace('refs/heads/', '')
         pr_url = f"{self.api_base}/{quote(project_name)}/_git/{quote(repo_name)}/pullrequest/{pr_id}"
         
-        # --- NEW: Fetch Diff & AI Usage ---
-        ai_data = None
-        
-        # Check if we already have analysis results for this PR to avoid redundant work
+        # Skip diff fetch if already analyzed — only run for new/unanalyzed PRs
         existing_pr = PullRequest.objects.filter(external_id=pr_id, source_config_id=source_id).first()
-        if existing_pr and existing_pr.diff_analyzed_at:
-            # We already have results, but we might want to skip logic here
-            # For now, let's skip the expensive diff fetch if we have a percent
-            if existing_pr.ai_code_percent is not None:
-                ai_data = {
-                    'ai_lines': existing_pr.ai_generated_lines, 
-                    'total_lines': existing_pr.total_changed_lines, 
-                    'percent': existing_pr.ai_code_percent
-                }
-
-        if not ai_data:
+        if existing_pr and existing_pr.ai_code_percent is not None:
+            ai_data = {
+                'ai_lines': existing_pr.ai_generated_lines,
+                'total_lines': existing_pr.total_changed_lines,
+                'percent': existing_pr.ai_code_percent
+            }
+        else:
             try:
                 diff_text = self._get_pr_diff_text(project_name, repo_id, pr_id, headers)
                 if diff_text:
                     ai_data = PRDiffAnalyzer.calculate_ai_usage(diff_text)
-                    print(f"DEBUG: Analyzed ADO PR {pr_id}: {ai_data['percent']}% AI ({ai_data['ai_lines']}/{ai_data['total_lines']} lines)")
+                    logger.info(f"Analyzed ADO PR {pr_id}: {ai_data['percent']}% AI ({ai_data['ai_lines']}/{ai_data['total_lines']} lines)")
+                else:
+                    ai_data = {'ai_lines': 0, 'total_lines': 0, 'percent': 0.0}
             except Exception as e:
                 logger.error(f"Failed to analyze ADO PR {pr_id} diff: {e}")
                 ai_data = {'ai_lines': 0, 'total_lines': 0, 'percent': 0.0}
-        
-        if not ai_data:
-            ai_data = {'ai_lines': 0, 'total_lines': 0, 'percent': 0.0}
 
         pr_obj, created = PullRequest.objects.update_or_create(
             external_id=pr_id,
@@ -770,10 +764,9 @@ class AzureDevOpsConnector(BaseConnector):
                 'ai_code_percent': ai_data['percent'],
                 'ai_generated_lines': ai_data['ai_lines'],
                 'total_changed_lines': ai_data['total_lines'],
-                'diff_analyzed_at': timezone.now()
+                'diff_analyzed_at': timezone.now(),
             }
         )
-        # --- END NEW ---
         
         reviewers = pr.get('reviewers', [])
         for reviewer in reviewers:
