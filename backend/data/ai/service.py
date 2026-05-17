@@ -198,12 +198,17 @@ class KimiAIProvider:
         if not self.api_key:
             return self._get_fallback_insight()
 
+        def _compact(data):
+            if isinstance(data, list):
+                return [{k: v for k, v in item.items() if v is not None} if isinstance(item, dict) else item for item in data]
+            return data
+
         prompt = TEAM_HEALTH_SYSTEM_PROMPT.format(
             avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
-            velocity_history=json.dumps(metrics.get("velocity_history", [])),
-            developer_history=json.dumps(metrics.get("developer_history", [])),
-            assignee_distribution=json.dumps(metrics.get("assignee_distribution", [])),
-            stagnant_items=json.dumps(metrics.get("stagnant_items", []))
+            velocity_history=json.dumps(_compact(metrics.get("velocity_history", [])), separators=(',', ':')),
+            developer_history=json.dumps(_compact(metrics.get("developer_history", [])), separators=(',', ':')),
+            assignee_distribution=json.dumps(_compact(metrics.get("assignee_distribution", [])), separators=(',', ':')),
+            stagnant_items=json.dumps(_compact(metrics.get("stagnant_items", [])), separators=(',', ':'))
         )
         prompt += "\n\nYou MUST return a single JSON object. Do not wrap in markdown blocks, just return raw JSON."
 
