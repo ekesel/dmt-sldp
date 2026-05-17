@@ -235,7 +235,7 @@ class KimiAIProvider:
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 4096,
+            "max_tokens": 1024,
         }
 
         model_lower = self.model_name.lower()
