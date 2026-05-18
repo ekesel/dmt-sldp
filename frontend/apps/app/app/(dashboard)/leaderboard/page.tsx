@@ -15,6 +15,8 @@ const CategoryCard = ({
     colorClass,
     scoreLabel,
     calculationText,
+    helpId,
+    onHelpClick,
     lowerIsBetter = false,
 }: {
     title: string;
@@ -23,6 +25,8 @@ const CategoryCard = ({
     colorClass: string;
     scoreLabel: string;
     calculationText: string;
+    helpId: string;
+    onHelpClick: (id: string) => void;
     lowerIsBetter?: boolean;
 }) => {
     const topWinner = winners?.[0];
@@ -63,9 +67,18 @@ const CategoryCard = ({
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{calculationText}</p>
                     </div>
                 </div>
-                {lowerIsBetter && (
-                    <span className="text-[10px] bg-muted px-2 py-1 rounded font-bold text-muted-foreground uppercase tracking-wider">Lower = Better</span>
-                )}
+                <div className="flex items-center gap-2">
+                    {lowerIsBetter && (
+                        <span className="text-[10px] bg-muted px-2 py-1 rounded font-bold text-muted-foreground uppercase tracking-wider">Lower = Better</span>
+                    )}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onHelpClick(helpId); }}
+                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                        title={`Learn more about ${title}`}
+                    >
+                        <HelpCircle size={20} />
+                    </button>
+                </div>
             </div>
 
             {topWinner ? (
@@ -136,16 +149,17 @@ const CATEGORIES: Array<{
     colorClass: string;
     scoreLabel: string;
     calculationText: string;
+    helpId: string;
     lowerIsBetter?: boolean;
 }> = [
-    { key: 'velocity',     title: 'Velocity King',          icon: Zap,          colorClass: 'text-blue-500',    scoreLabel: 'Points',       calculationText: 'Highest total Story Points completed' },
-    { key: 'quality',      title: 'Quality Champion',       icon: Shield,       colorClass: 'text-emerald-500', scoreLabel: 'Compliance %', calculationText: 'Highest average DMT Compliance & Coverage' },
-    { key: 'reviewer',     title: 'Top Reviewer',           icon: GitPullRequest, colorClass: 'text-purple-500', scoreLabel: 'PRs',         calculationText: 'Most Pull Requests reviewed' },
-    { key: 'throughput',   title: 'Throughput Champion',    icon: BarChart2,    colorClass: 'text-orange-500',  scoreLabel: 'Items',        calculationText: 'Most work items completed' },
-    { key: 'coverage',     title: 'Coverage Champion',      icon: CheckCircle2, colorClass: 'text-teal-500',    scoreLabel: 'Coverage %',   calculationText: 'Highest average code coverage' },
-    { key: 'ai',           title: 'AI Specialist',          icon: Sparkles,     colorClass: 'text-cyan-500',    scoreLabel: 'Usage %',      calculationText: 'Highest self-reported AI tool usage' },
-    { key: 'objective_ai', title: 'Objective AI Master',    icon: Bot,          colorClass: 'text-indigo-500',  scoreLabel: 'Code AI %',    calculationText: 'Highest PR-analyzed AI code contribution' },
-    { key: 'clean_coder',  title: 'Clean Coder',            icon: Bug,          colorClass: 'text-rose-500',    scoreLabel: 'Defects',      calculationText: 'Fewest defects attributed', lowerIsBetter: true },
+    { key: 'velocity',     title: 'Velocity King',          icon: Zap,          colorClass: 'text-blue-500',    scoreLabel: 'Points',       calculationText: 'Highest total Story Points completed', helpId: 'velocity_king' },
+    { key: 'quality',      title: 'Quality Champion',       icon: Shield,       colorClass: 'text-emerald-500', scoreLabel: 'Compliance %', calculationText: 'Highest average DMT Compliance & Coverage', helpId: 'quality_champion' },
+    { key: 'reviewer',     title: 'Top Reviewer',           icon: GitPullRequest, colorClass: 'text-purple-500', scoreLabel: 'PRs',         calculationText: 'Most Pull Requests reviewed', helpId: 'top_reviewer' },
+    { key: 'throughput',   title: 'Throughput Champion',    icon: BarChart2,    colorClass: 'text-orange-500',  scoreLabel: 'Items',        calculationText: 'Most work items completed', helpId: 'throughput_champion' },
+    { key: 'coverage',     title: 'Coverage Champion',      icon: CheckCircle2, colorClass: 'text-teal-500',    scoreLabel: 'Coverage %',   calculationText: 'Highest average code coverage', helpId: 'coverage_champion' },
+    { key: 'ai',           title: 'AI Specialist',          icon: Sparkles,     colorClass: 'text-cyan-500',    scoreLabel: 'Usage %',      calculationText: 'Highest self-reported AI tool usage', helpId: 'ai_specialist' },
+    { key: 'objective_ai', title: 'Objective AI Master',    icon: Bot,          colorClass: 'text-indigo-500',  scoreLabel: 'Code AI %',    calculationText: 'Highest PR-analyzed AI code contribution', helpId: 'objective_ai_master' },
+    { key: 'clean_coder',  title: 'Clean Coder',            icon: Bug,          colorClass: 'text-rose-500',    scoreLabel: 'Defects',      calculationText: 'Fewest defects attributed', helpId: 'clean_coder', lowerIsBetter: true },
 ];
 
 export default function LeaderboardPage() {
@@ -154,6 +168,11 @@ export default function LeaderboardPage() {
     const [loading, setLoading] = useState(true);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+
+    const handleHelpClick = (id: string) => {
+        setActiveHelpId(id);
+        setIsHelpOpen(true);
+    };
 
     useEffect(() => {
         setLoading(true);
@@ -165,7 +184,7 @@ export default function LeaderboardPage() {
 
     const renderGrid = (monthData: LeaderboardResponse['current_month'] | undefined) => (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            {CATEGORIES.map(({ key, title, icon, colorClass, scoreLabel, calculationText, lowerIsBetter }) => (
+            {CATEGORIES.map(({ key, title, icon, colorClass, scoreLabel, calculationText, helpId, lowerIsBetter }) => (
                 <CategoryCard
                     key={key}
                     title={title}
@@ -174,6 +193,8 @@ export default function LeaderboardPage() {
                     colorClass={colorClass}
                     scoreLabel={scoreLabel}
                     calculationText={calculationText}
+                    helpId={helpId}
+                    onHelpClick={handleHelpClick}
                     lowerIsBetter={lowerIsBetter}
                 />
             ))}
@@ -192,7 +213,7 @@ export default function LeaderboardPage() {
                         <div className="flex items-center gap-3">
                             <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
                             <button
-                                onClick={() => { setActiveHelpId('leaderboard'); setIsHelpOpen(true); }}
+                                onClick={(e) => { e.stopPropagation(); handleHelpClick('leaderboard'); }}
                                 className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
                                 title="Learn more about the leaderboard categories"
                             >

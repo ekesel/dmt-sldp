@@ -106,7 +106,6 @@ export default function DeveloperDetailsPage({
     XLSX.utils.book_append_sheet(wb, ws, "Metrics");
     XLSX.writeFile(wb, fileName("xlsx"));
   };
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (

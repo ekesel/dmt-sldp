@@ -15,7 +15,6 @@ import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
 import { toast } from "react-hot-toast";
 import { HelpSidebar } from "../../components/HelpSidebar";
-
 function fmtDate(d: string) {
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -90,7 +89,6 @@ export default function DashboardPage() {
                 span.textContent = fmtDatePdf(val);
                 clonedInput.parentNode?.replaceChild(span, clonedInput);
             });
-
             // Wrap in parent container to preserve inherited styles
             const parent = element.parentElement;
             const cloneWrapper = document.createElement('div');
