@@ -272,24 +272,24 @@ export const dmtTerms: DMTTerm[] = [
         <div>
           <h4 className="font-bold text-foreground mb-2">Awards and Rules</h4>
           <ul className="space-y-3">
-            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+            <li id="velocity_king" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
               <strong className="text-foreground">Velocity King</strong>
-              <p className="mt-1 text-muted-foreground">Awarded to the person with the highest total Story Points completed.</p>
+              <p className="mt-1 text-primary">Awarded to the person with the highest total Story Points completed.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">Velocity King = max(Σ Story Points Completed)</span>
             </li>
-            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+            <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
               <strong className="text-foreground">Quality Champion</strong>
-              <p className="mt-1 text-muted-foreground">Awarded to the person with the highest compliance rate and best code quality.</p>
+              <p className="mt-1 text-primary">Awarded to the person with the highest compliance rate and best code quality.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average Compliance Rate %)</span>
             </li>
-            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+            <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
               <strong className="text-foreground">Top Reviewer</strong>
-              <p className="mt-1 text-muted-foreground">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
+              <p className="mt-1 text-primary">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Count of PRs Reviewed)</span>
             </li>
-            <li className="bg-muted/30 p-3 rounded-lg border border-border">
+            <li id="ai_specialist" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
               <strong className="text-foreground">AI Specialist</strong>
-              <p className="mt-1 text-muted-foreground">Awarded to the person who uses AI tools most effectively.</p>
+              <p className="mt-1 text-primary">Awarded to the person who uses AI tools most effectively.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">AI Specialist = max(Average AI Usage %)</span>
             </li>
           </ul>

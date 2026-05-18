@@ -14,7 +14,9 @@ const CategoryCard = ({
     winners,
     colorClass,
     scoreLabel,
-    calculationText
+    calculationText,
+    helpId,
+    onHelpClick
 }: {
     title: string;
     icon: React.ElementType;
@@ -22,6 +24,8 @@ const CategoryCard = ({
     colorClass: string;
     scoreLabel: string;
     calculationText: string;
+    helpId: string;
+    onHelpClick: (id: string) => void;
 }) => {
     const topWinner = winners?.[0];
     const contenders = winners?.slice(1) || [];
@@ -67,6 +71,13 @@ const CategoryCard = ({
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{calculationText}</p>
                     </div>
                 </div>
+                <button
+                    onClick={(e) => { e.stopPropagation(); onHelpClick(helpId); }}
+                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                    title={`Learn more about ${title}`}
+                >
+                    <HelpCircle size={20} />
+                </button>
             </div>
 
             {topWinner ? (
@@ -210,6 +221,8 @@ export default function LeaderboardPage() {
                                     colorClass="bg-blue-500 text-blue-500"
                                     scoreLabel="Points"
                                     calculationText="Highest total Story Points completed"
+                                    helpId="velocity_king"
+                                    onHelpClick={handleHelpClick}
                                 />
                                 <CategoryCard
                                     title="Quality Champion"
@@ -218,6 +231,8 @@ export default function LeaderboardPage() {
                                     colorClass="bg-emerald-500 text-emerald-500"
                                     scoreLabel="Compliance %"
                                     calculationText="Highest average DMT Compliance & Coverage"
+                                    helpId="quality_champion"
+                                    onHelpClick={handleHelpClick}
                                 />
                                 <CategoryCard
                                     title="Top Reviewer"
@@ -226,6 +241,8 @@ export default function LeaderboardPage() {
                                     colorClass="bg-purple-500 text-purple-500"
                                     scoreLabel="PRs"
                                     calculationText="Most Pull Requests reviewed"
+                                    helpId="top_reviewer"
+                                    onHelpClick={handleHelpClick}
                                 />
                                 <CategoryCard
                                     title="AI Specialist"
@@ -234,6 +251,8 @@ export default function LeaderboardPage() {
                                     colorClass="bg-cyan-500 text-cyan-500"
                                     scoreLabel="Usage %"
                                     calculationText="Highest Copilot / AI Tool usage correlation"
+                                    helpId="ai_specialist"
+                                    onHelpClick={handleHelpClick}
                                 />
                             </div>
                         </div>
@@ -253,6 +272,8 @@ export default function LeaderboardPage() {
                                         colorClass="bg-blue-500 text-blue-500"
                                         scoreLabel="Points"
                                         calculationText="Highest total Story Points completed"
+                                        helpId="velocity_king"
+                                        onHelpClick={handleHelpClick}
                                     />
                                     <CategoryCard
                                         title="Quality Champion"
@@ -261,6 +282,8 @@ export default function LeaderboardPage() {
                                         colorClass="bg-emerald-500 text-emerald-500"
                                         scoreLabel="Compliance %"
                                         calculationText="Highest average DMT Compliance & Coverage"
+                                        helpId="quality_champion"
+                                        onHelpClick={handleHelpClick}
                                     />
                                     <CategoryCard
                                         title="Top Reviewer"
@@ -269,6 +292,8 @@ export default function LeaderboardPage() {
                                         colorClass="bg-purple-500 text-purple-500"
                                         scoreLabel="PRs"
                                         calculationText="Most Pull Requests reviewed"
+                                        helpId="top_reviewer"
+                                        onHelpClick={handleHelpClick}
                                     />
                                     <CategoryCard
                                         title="AI Specialist"
@@ -277,6 +302,8 @@ export default function LeaderboardPage() {
                                         colorClass="bg-cyan-500 text-cyan-500"
                                         scoreLabel="Usage %"
                                         calculationText="Highest Copilot / AI Tool usage correlation"
+                                        helpId="ai_specialist"
+                                        onHelpClick={handleHelpClick}
                                     />
                                 </div>
                             </div>

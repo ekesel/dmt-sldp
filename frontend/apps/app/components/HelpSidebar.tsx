@@ -8,7 +8,7 @@ type TermId = typeof dmtTerms[number]["id"];
 interface HelpSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTermId: TermId | null;
+  activeTermId: string | null;
 }
 
 export const HelpSidebar = React.memo(({
@@ -17,25 +17,43 @@ export const HelpSidebar = React.memo(({
   activeTermId,
 }: HelpSidebarProps) => {
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const termRefs = useRef<Partial<Record<TermId, HTMLDivElement | null>>>({});
+  const termRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const highlightedSubElementRef = useRef<HTMLElement | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
     let scrollTimeout: any;
     let highlightTimeout: any;
 
+    // Ensure we clean up any previously applied sub-element classes
+    if (highlightedSubElementRef.current) {
+      highlightedSubElementRef.current.classList.remove("bg-primary/20", "ring-2", "ring-primary", "shadow-lg");
+      highlightedSubElementRef.current = null;
+    }
+
     if (isOpen && activeTermId) {
       // Clear any existing highlight immediately when the term changes
       setHighlightedId(null);
       // Small delay to ensure the DOM has rendered the sidebar content
       scrollTimeout = window.setTimeout(() => {
-        const element = termRefs.current[activeTermId];
+        const element = termRefs.current[activeTermId] || document.getElementById(activeTermId);
         if (element) {
-          element.scrollIntoView({ behavior: "auto", block: "start" });
-          setHighlightedId(activeTermId);
+          element.scrollIntoView({ behavior: "auto", block: "center" });
+
+          if (termRefs.current[activeTermId]) {
+            setHighlightedId(activeTermId);
+          } else {
+            element.classList.add("bg-primary/20", "ring-2", "ring-primary", "shadow-lg");
+            highlightedSubElementRef.current = element;
+          }
+
           // Remove highlight after a few seconds
           highlightTimeout = window.setTimeout(() => {
             setHighlightedId(null);
+            if (highlightedSubElementRef.current) {
+              highlightedSubElementRef.current.classList.remove("bg-primary/20", "ring-2", "ring-primary", "shadow-lg");
+              highlightedSubElementRef.current = null;
+            }
           }, 3000);
         }
       }, 300);
@@ -46,6 +64,10 @@ export const HelpSidebar = React.memo(({
     return () => {
       if (scrollTimeout) window.clearTimeout(scrollTimeout);
       if (highlightTimeout) window.clearTimeout(highlightTimeout);
+      if (highlightedSubElementRef.current) {
+        highlightedSubElementRef.current.classList.remove("bg-primary/20", "ring-2", "ring-primary", "shadow-lg");
+        highlightedSubElementRef.current = null;
+      }
     };
   }, [isOpen, activeTermId]);
 
@@ -81,7 +103,13 @@ export const HelpSidebar = React.memo(({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {dmtTerms.map((term) => (
+          {[
+            ...["velocity", "cycle_time", "dmt_compliance", "objective_ai", "bugs_resolved"]
+              .map((id) => dmtTerms.find((t) => t.id === id)),
+            ...dmtTerms.filter(t => !["velocity", "cycle_time", "dmt_compliance", "objective_ai", "bugs_resolved"].includes(t.id))
+          ]
+            .filter((term): term is typeof dmtTerms[0] => term !== undefined)
+            .map((term) => (
             <div
               key={term.id}
               ref={(el) => {
