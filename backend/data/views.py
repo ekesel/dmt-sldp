@@ -640,9 +640,10 @@ class ComplianceFlagListView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        # Return work items that are not compliant
+        # Return root work items that are not compliant (sub-tasks are never compliance targets)
         items = WorkItem.objects.filter(
             dmt_compliant=False,
+            parent__isnull=True,
             status_category__in=['todo', 'in_progress', 'done']
         ).order_by('-updated_at')
 
@@ -764,8 +765,9 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        # --- Live violation counts from WorkItems (filtered by sprint) ---
+        # --- Live violation counts from WorkItems (filtered by sprint, root items only) ---
         items_qs = WorkItem.objects.filter(
+            parent__isnull=True,
             status_category__in=['todo', 'in_progress', 'done']
         )
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -819,6 +821,7 @@ class ComplianceFixedLaterView(APIView):
         items = WorkItem.objects.filter(
             had_violations=True,
             dmt_compliant=True,
+            parent__isnull=True,
         ).order_by('-violations_cleared_at')
 
         if project_id and project_id not in ['null', 'undefined', '']:

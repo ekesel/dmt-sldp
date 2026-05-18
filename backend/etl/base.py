@@ -118,9 +118,13 @@ class BaseConnector(ABC):
             had_violations = True  # permanently set; cleared ≠ never happened
 
         elif not prev_compliant and not new_compliant:
-            # Still failing: keep the open entry but refresh the failure list
+            # Still failing: refresh the open entry, or create one if history is missing
             if history and history[-1].get('cleared_at') is None:
                 history[-1]['failures'] = list(new_failures)
+            elif not history:
+                # Inconsistent state (e.g. cleared by bulk update) — re-open
+                history.append({'failures': list(new_failures), 'detected_at': now.isoformat(), 'cleared_at': None})
+                had_violations = True
 
         return {
             'violation_history': history,
@@ -382,10 +386,43 @@ class BaseConnector(ABC):
                 'pr_links': item.pr_links,
                 'reviewer_dmt_signoff': item.reviewer_dmt_signoff,
             }
+            prev_compliant = item.dmt_compliant
             is_compliant, failures = ComplianceEngine.check_compliance(item_data)
             item.dmt_compliant = is_compliant
             item.compliance_failures = failures
             changed_fields += ['dmt_compliant', 'compliance_failures']
+
+            # Track violation history — _apply_to_item bypasses _track_violation_history so
+            # we mirror the same state-machine logic here for root stories updated via attribution.
+            from django.utils import timezone as tz
+            now = tz.now()
+            history = list(item.violation_history or [])
+
+            if (prev_compliant is None or prev_compliant) and not is_compliant:
+                # New or regression: open a violation entry
+                history.append({'failures': list(failures), 'detected_at': now.isoformat(), 'cleared_at': None})
+                item.had_violations = True
+                item.violation_history = history
+                changed_fields += ['had_violations', 'violation_history']
+            elif prev_compliant is False and is_compliant:
+                # Fixed: close the most recent open entry
+                if history and history[-1].get('cleared_at') is None:
+                    history[-1]['cleared_at'] = now.isoformat()
+                item.violations_cleared_at = now
+                item.had_violations = True
+                item.violation_history = history
+                changed_fields += ['had_violations', 'violation_history', 'violations_cleared_at']
+            elif prev_compliant is False and not is_compliant:
+                # Still failing: refresh the open entry, or create one if history is missing
+                if history and history[-1].get('cleared_at') is None:
+                    history[-1]['failures'] = list(failures)
+                    item.violation_history = history
+                    changed_fields.append('violation_history')
+                elif not history:
+                    history.append({'failures': list(failures), 'detected_at': now.isoformat(), 'cleared_at': None})
+                    item.had_violations = True
+                    item.violation_history = history
+                    changed_fields += ['had_violations', 'violation_history']
 
         if changed_fields:
             item.save(update_fields=list(set(changed_fields)))
