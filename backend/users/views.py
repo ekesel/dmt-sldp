@@ -1,3 +1,5 @@
+from core.permissions import IsAdminUser, IsManager
+from re import I
 from rest_framework_simplejwt import authentication
 import os
 from rest_framework import viewsets, status
@@ -308,19 +310,38 @@ class UploadUserDataView(APIView):
     """
     POST /api/users/upload/
     Accepts a file-like object (Excel) and imports users.
+
+    - Admin users: must pass `tenant_id` in the request body to specify which tenant to upload for.
+    - Manager users: always upload for their own tenant (tenant_id is ignored).
     """
-    permission_classes = []
+    permission_classes = [IsAdminUser | IsManager]
 
     def post(self, request):
-        file_obj = request.FILES.get('file')
+        from tenants.models import Tenant
 
+        file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+        user = request.user
 
-        tenant= request.user.tenant
-        if not tenant:
-            return Response({'error': 'No tenant found for user'}, status=status.HTTP_400_BAD_REQUEST)
+        # Admin can specify any tenant via tenant_id in the request body
+        if user.is_superuser or user.is_platform_admin:
+            tenant_id = request.data.get('tenant_id')
+            if not tenant_id:
+                return Response(
+                    {'error': 'Admin must provide tenant_id to specify which tenant to upload for.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+            except Tenant.DoesNotExist:
+                return Response({'error': f'Tenant with id={tenant_id} not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Manager: use their own tenant
+            tenant = user.tenant
+            if not tenant:
+                return Response({'error': 'No tenant found for your account.'}, status=status.HTTP_400_BAD_REQUEST)
 
         result = import_users_from_excel(file_obj, tenant=tenant)
 
@@ -334,6 +355,6 @@ class UploadUserDataView(APIView):
             )
         else:
             return Response(
-                {'error': result['error'], 'stats': result['stats']},
+                {'error': result.get('error', 'Unknown error occurred'), 'stats': result.get('stats', {})},
                 status=status.HTTP_400_BAD_REQUEST
             )
