@@ -1,0 +1,17 @@
+{
+  "name": "Company Baseline",
+  "description": "Organisation-wide performance standards. Edit these values to reflect your team's targets.",
+  "last_updated": "2026-05-16",
+  "kpis": {
+    "velocity": 400,
+    "compliance_rate": 80,
+    "cycle_time": 4.0,
+    "defect_density": 5.0,
+    "pr_review_speed": 24.0,
+    "ai_usage": 30.0,
+    "item_volume": {
+      "total": 20,
+      "completed": 16
+    }
+  }
+}

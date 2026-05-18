@@ -63,50 +63,79 @@ class TaskHistoryParser:
 class ComplianceEngine:
     """
     Automated rules for DMT compliance. Non-blocking.
+
+    Graduated by status stage:
+      backlog  → fully exempt (violations never raised)
+      todo     → AC Quality only
+      in_progress (basic) → AC Quality + PR link (stories/bugs)
+      advanced (in review, ready for testing, testing, done) → full DMT check
     """
+
+    # Items in any of these raw statuses are completely exempt.
+    _BACKLOG_STATUSES: frozenset = frozenset(['backlog'])
+
+    # Raw statuses that are "beyond basic in-progress" — testing/review phase or done.
+    _ADVANCED_STATUSES: frozenset = frozenset([
+        'in review', 'ready for testing', 'testing in progress', 'testing',
+        'testing done', 'code review', 'qa', 'qa in progress', 'qa done',
+        'reopened',
+        # done variants
+        'done', 'complete', 'closed', 'resolved', 'verified', 'completed', 'verified - dev',
+    ])
+
     @staticmethod
     def check_compliance(work_item_data: Dict[str, Any], coverage_threshold: float = 80.0) -> tuple[bool, List[str]]:
-        # If it's a subtask (has a parent), it is automatically exempt from DMT compliance checks
+        # Sub-tasks are exempt — DMT tracked at parent level only
         if work_item_data.get('parent'):
             return True, []
-            
+
+        raw_status = (work_item_data.get('status') or '').lower().strip()
+        status_category = (work_item_data.get('status_category') or 'todo').lower()
+
+        # Backlog items are fully exempt from DMT compliance
+        if raw_status in ComplianceEngine._BACKLOG_STATUSES:
+            return True, []
+
+        # Determine effective stage
+        is_advanced = (
+            status_category == 'done'
+            or raw_status in ComplianceEngine._ADVANCED_STATUSES
+        )
+        is_todo = status_category == 'todo'
+
         failures = []
-        item_type = work_item_data.get('item_type', '').lower()
+        item_type = (work_item_data.get('item_type') or '').lower()
         unit_testing_status = work_item_data.get('unit_testing_status')
         has_exception = unit_testing_status == 'exception_approved'
-        
-        # 1. AC Quality
+
+        # Exception approved = blanket exemption from all DMT checks
+        if has_exception:
+            return True, []
+
+        # ── Stage: TODO and beyond ───────────────────────────────────────────
+        # AC Quality must be set the moment an item is picked up
         ac_quality = work_item_data.get('ac_quality')
         if not ac_quality or ac_quality == 'incomplete':
             failures.append('missing_ac_quality')
-            
-        # 2. Unit Testing & Coverage
-        if not has_exception:
+
+        if is_todo:
+            # Only AC Quality checked at todo stage
+            return len(failures) == 0, failures
+
+        # ── Stage: Advanced (in review / testing / done) ─────────────────────
+        if is_advanced:
+            if item_type in ['story', 'bug']:
+                pr_links = work_item_data.get('pr_links', [])
+                valid_prs = [l for l in pr_links if isinstance(l, str) and l.startswith('http')]
+                if not valid_prs:
+                    failures.append('missing_pr_link')
+
             if unit_testing_status != 'done':
                 failures.append('unit_testing_not_done')
-            
-            # coverage = work_item_data.get('coverage_percent')
-            # if coverage is None or coverage < coverage_threshold:
-            #     failures.append('low_coverage')
-                
-        # 3. Pull Request Requirements (Stories and Bugs)
-        if item_type in ['story', 'bug']:
-            pr_links = work_item_data.get('pr_links', [])
-            valid_prs = [l for l in pr_links if isinstance(l, str) and l.startswith('http')]
-            if not valid_prs:
-                failures.append('missing_pr_link')
-                
-            # 4. CI Evidence & Signoff
-            # ci_links = work_item_data.get('ci_evidence_links', [])
-            # if not ci_links:
-            #     failures.append('missing_ci_evidence')
-                
-            if not work_item_data.get('reviewer_dmt_signoff'):
-                failures.append('missing_dmt_signoff')
-            
-        # 5. Basic Metadata (Supplemental)
-        # if not work_item_data.get('assignee_email'):
-        #     failures.append('missing_assignee')
-            
+
+            if item_type in ['story', 'bug']:
+                if not work_item_data.get('reviewer_dmt_signoff'):
+                    failures.append('missing_dmt_signoff')
+
         is_compliant = len(failures) == 0
         return is_compliant, failures

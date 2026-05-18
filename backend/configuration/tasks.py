@@ -56,6 +56,7 @@ def perform_sync_task(self, source_id: int):
         
         # 1. Start
         source.last_sync_status = 'in_progress'
+        source.current_task_id = self.request.id
         source.save()
         
         emit_progress(5, "Initializing sync...")
@@ -89,6 +90,7 @@ def perform_sync_task(self, source_id: int):
         source.last_sync_at = timezone.now()
         source.last_error_message = ""
         source.consecutive_failures = 0
+        source.current_task_id = None
         source.save()
         
         emit_progress(100, f"Sync completed. {stats.get('item_count', 0)} items processed.", status='success')
@@ -126,6 +128,7 @@ def perform_sync_task(self, source_id: int):
             source.last_sync_status = 'failed'
             source.last_error_message = str(e)
             source.consecutive_failures += 1
+            source.current_task_id = None
             source.save()
         except Exception as db_err:
             logger.error(f"Failed to update source status after sync failure: {db_err}")

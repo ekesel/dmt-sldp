@@ -44,7 +44,7 @@ export interface AssigneeEntry {
   avg_cycle_time_days: number | null;
 }
 
-export function useDashboardData(projectId?: number | null) {
+export function useDashboardData(projectId?: number | null, startDate?: string | null, endDate?: string | null) {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [velocity, setVelocity] = useState<VelocityData[]>([]);
   const [compliance, setCompliance] = useState<ComplianceData[]>([]);
@@ -62,19 +62,18 @@ export function useDashboardData(projectId?: number | null) {
 
   const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
 
-  const [isFetching, setIsFetching] = useState(false);
-  const fetchingRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   const fetchData = useCallback(async () => {
-    if (!token || fetchingRef.current) return;
+    if (!token) return;
+
+    const requestId = ++requestIdRef.current;
 
     try {
-      fetchingRef.current = true;
-      setIsFetching(true);
       setLoading(true);
-      const params = projectId ? { project_id: projectId } : {};
-
-
+      const params: Record<string, any> = projectId ? { project_id: projectId } : {};
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
 
       const [summaryData, velocityData, complianceData, insightsData, forecastData, assigneeData] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
@@ -85,23 +84,26 @@ export function useDashboardData(projectId?: number | null) {
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
       ]);
 
+      // Discard if a newer request has already started
+      if (requestId !== requestIdRef.current) return;
+
       setSummary(summaryData);
       setVelocity(velocityData);
       setCompliance(complianceData);
       setInsights(insightsData);
       setForecast(forecastData);
       setAssigneeDistribution(assigneeData);
-
       setError(null);
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) return;
       console.error('Dashboard load error:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
-      fetchingRef.current = false;
-      setIsFetching(false);
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [token, projectId]);
+  }, [token, projectId, startDate, endDate]);
 
   useEffect(() => {
     fetchData();

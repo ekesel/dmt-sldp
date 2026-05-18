@@ -95,7 +95,7 @@ def refresh_ai_insights(project_id=None, schema_name=None):
         stagnant_items = work_items.filter(
             status_category='in_progress',
             updated_at__lt=timezone.now() - timedelta(days=5)
-        ).values('external_id', 'title', 'assignee_email', 'assignee_name')
+        ).order_by('updated_at').values('external_id', 'title', 'assignee_email', 'assignee_name')[:25]
 
         # Rich Assignee Distribution (Workload)
         assignee_stats = []
@@ -162,7 +162,7 @@ def refresh_ai_insights(project_id=None, schema_name=None):
             "avg_cycle_time": avg_cycle_time_str,
             "high_risk_count": high_risk_count,
             "stagnant_items": list(stagnant_items),
-            "assignee_distribution": assignee_stats,
+            "assignee_distribution": sorted(assignee_stats, key=lambda x: x['in_progress'], reverse=True)[:25],
             "velocity_history": [
                 {
                     "sprint": m.sprint_name,
@@ -175,7 +175,8 @@ def refresh_ai_insights(project_id=None, schema_name=None):
 
         # Fetch Developer History for the last 5 sprints
         from ..models import DeveloperMetrics
-        relevant_dev_emails = [a['email'] for a in assignee_stats if a['email']]
+        top_assignees = sorted(assignee_stats, key=lambda x: x['in_progress'], reverse=True)[:25]
+        relevant_dev_emails = [a['email'] for a in top_assignees if a['email']]
         dev_metrics = DeveloperMetrics.objects.filter(
             developer_email__in=relevant_dev_emails,
             sprint_name__in=[m.sprint_name for m in last_5]

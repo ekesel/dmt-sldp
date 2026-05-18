@@ -24,13 +24,16 @@ class DeveloperListSerializer(serializers.ModelSerializer):
 class ComplianceFlagSerializer(serializers.ModelSerializer):
     work_item_title = serializers.CharField(source='title', read_only=True)
     work_item_id = serializers.CharField(source='external_id', read_only=True)
-    
+
     class Meta:
         model = WorkItem
         fields = [
-            'id', 'external_id', 'title', 'status', 'assignee_name', 
+            'id', 'external_id', 'title', 'status', 'assignee_name',
             'dmt_compliant', 'compliance_failures', 'updated_at',
-            'work_item_title', 'work_item_id'
+            'work_item_title', 'work_item_id',
+            # Attribution & violation history
+            'assignee_contributions', 'dmt_fields_source',
+            'had_violations', 'violation_history', 'violations_cleared_at',
         ]
 
 class AIInsightSerializer(serializers.ModelSerializer):

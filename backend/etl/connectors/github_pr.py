@@ -129,8 +129,8 @@ class GitHubPRConnector(BaseConnector):
         """
         Fetch PRs, Diffs, and Reviews for a repository.
         """
-        # Fetching top 100 PRs (state=all gets open and closed)
-        url = f"{self.api_base}/repos/{repo}/pulls?state=all&per_page=100"
+        # Fetch 100 most recently updated PRs (open and closed)
+        url = f"{self.api_base}/repos/{repo}/pulls?state=all&per_page=100&sort=updated&direction=desc"
         resp = requests.get(url, headers=headers)
         
         if resp.status_code != 200:
@@ -160,19 +160,22 @@ class GitHubPRConnector(BaseConnector):
             target_ref = pr.get('base', {}).get('ref', '')
             pr_url = pr.get('html_url', '')
             
-            # Fetch Diff & AI Usage if active or recently changed.
-            # To save API calls, we might only do this for new/un-analyzed PRs in a real async task.
-            # Here we do a lightweight fetch.
-            diff_url = pr.get('url')
-            ai_data = {'ai_lines': 0, 'total_lines': 0, 'percent': 0.0}
-            
-            if diff_url:
-                diff_headers = headers.copy()
-                diff_headers['Accept'] = 'application/vnd.github.v3.diff'
-                diff_resp = requests.get(diff_url, headers=diff_headers)
-                
-                if diff_resp.status_code == 200:
-                    ai_data = PRDiffAnalyzer.calculate_ai_usage(diff_resp.text)
+            # Skip diff fetch if already analyzed — only run for new/unanalyzed PRs
+            existing_pr = PullRequest.objects.filter(external_id=pr_id, source_config_id=source_id).first()
+            if existing_pr and existing_pr.ai_code_percent is not None:
+                ai_data = {
+                    'ai_lines': existing_pr.ai_generated_lines,
+                    'total_lines': existing_pr.total_changed_lines,
+                    'percent': existing_pr.ai_code_percent,
+                }
+            else:
+                diff_url = pr.get('url')
+                ai_data = {'ai_lines': 0, 'total_lines': 0, 'percent': 0.0}
+                if diff_url:
+                    diff_headers = {**headers, 'Accept': 'application/vnd.github.v3.diff'}
+                    diff_resp = requests.get(diff_url, headers=diff_headers)
+                    if diff_resp.status_code == 200:
+                        ai_data = PRDiffAnalyzer.calculate_ai_usage(diff_resp.text)
 
             pr_obj, created = PullRequest.objects.update_or_create(
                 external_id=pr_id,
@@ -192,7 +195,7 @@ class GitHubPRConnector(BaseConnector):
                     'ai_code_percent': ai_data['percent'],
                     'ai_generated_lines': ai_data['ai_lines'],
                     'total_changed_lines': ai_data['total_lines'],
-                    'diff_analyzed_at': timezone.now()
+                    'diff_analyzed_at': timezone.now(),
                 }
             )
             

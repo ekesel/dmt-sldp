@@ -17,7 +17,9 @@ import {
   ChevronDown,
   Sparkles,
   HelpCircle,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { developers, Developer } from "@dmt/api";
 import { useRouter } from "next/navigation";
 import { TrendingChart } from "../../../../components/charts/TrendingChart";
@@ -47,6 +49,62 @@ export default function DeveloperDetailsPage({
   const handleHelpClick = (id: string) => {
     setActiveHelpId(id);
     setIsHelpOpen(true);
+  };
+
+  const buildRows = () =>
+    metrics.map((m: any) => ({
+      "Sprint Name":            m.sprint_name ?? "",
+      "Sprint End Date":        m.sprint_end_date ?? "",
+      "Story Points":           m.story_points_completed ?? 0,
+      "Items Completed":        m.items_completed ?? 0,
+      "Commits":                m.commits_count ?? 0,
+      "PRs Authored":           m.prs_authored ?? 0,
+      "PRs Merged":             m.prs_merged ?? 0,
+      "PRs Reviewed":           m.prs_reviewed ?? 0,
+      "Avg Review Time (hrs)":  m.avg_review_time_hours ?? "",
+      "Defects Attributed":     m.defects_attributed ?? 0,
+      "Coverage %":             m.coverage_avg_percent ?? "",
+      "DMT Compliance %":       m.dmt_compliance_rate ?? 0,
+      "AI Usage % (Custom)":    m.ai_usage_percent ?? 0,
+      "Objective AI % (PR)":    m.code_ai_usage_percent ?? 0,
+    }));
+
+  const fileName = (ext: string) => {
+    const name = (developer?.developer_name || developerEmail).replace(/\s+/g, "_");
+    return `${name}_metrics.${ext}`;
+  };
+
+  const exportCSV = () => {
+    const rows = buildRows();
+    if (!rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.join(","),
+      ...rows.map((r) =>
+        headers.map((h) => {
+          const v = String((r as any)[h]).replace(/"/g, '""');
+          return v.includes(",") || v.includes('"') || v.includes("\n") ? `"${v}"` : v;
+        }).join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName("csv");
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = () => {
+    const rows = buildRows();
+    if (!rows.length) return;
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const colWidths = Object.keys(rows[0]).map((h) => ({ wch: Math.max(h.length, 14) }));
+    ws["!cols"] = colWidths;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Metrics");
+    XLSX.writeFile(wb, fileName("xlsx"));
   };
 
   useEffect(() => {
@@ -440,10 +498,28 @@ export default function DeveloperDetailsPage({
               </Card>
             </div>
 
-            <h2 className="text-2xl font-black flex items-center gap-4 pt-4">
-              <Clock className="text-primary" />
-              Sprint History
-            </h2>
+            <div className="flex items-center justify-between pt-4">
+              <h2 className="text-2xl font-black flex items-center gap-4">
+                <Clock className="text-primary" />
+                Sprint History
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportCSV}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-accent text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all"
+                >
+                  <Download size={13} />
+                  CSV
+                </button>
+                <button
+                  onClick={exportExcel}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold uppercase tracking-wider text-emerald-500 hover:text-emerald-400 transition-all"
+                >
+                  <Download size={13} />
+                  Excel
+                </button>
+              </div>
+            </div>
             <Card className="bg-card border-border overflow-hidden rounded-3xl">
               <table className="w-full text-left">
                 <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">

@@ -107,7 +107,27 @@ class WorkItem(SoftDeleteMixin, models.Model):
     # Compliance calculation (denormalized)
     dmt_compliant = models.BooleanField(null=True, blank=True)
     compliance_failures = models.JSONField(default=list, blank=True) # ['missing_pr_link', 'low_coverage']
-    
+
+    # Multi-assignee attribution: [{"email": "...", "name": "...", "story_points": 5.0, "role": "backend"}]
+    assignee_contributions = models.JSONField(default=list, blank=True)
+
+    # Violation tracking
+    violation_history = models.JSONField(default=list, blank=True)
+    had_violations = models.BooleanField(default=False, db_index=True)
+    violations_cleared_at = models.DateTimeField(null=True, blank=True)
+
+    # Responsible parties (pulled from PM tool custom fields)
+    pm_name = models.CharField(max_length=255, blank=True, null=True)
+    pm_email = models.EmailField(blank=True, null=True)
+    tech_lead_name = models.CharField(max_length=255, blank=True, null=True)
+    tech_lead_email = models.EmailField(blank=True, null=True)
+
+    # Where DMT fields were sourced from when bubbled up
+    dmt_fields_source = models.CharField(
+        max_length=20, blank=True,
+        choices=[('self', 'Self'), ('subtask', 'Sub-task'), ('sub_subtask', 'Sub-sub-task')]
+    )
+
     created_in_system_at = models.DateTimeField(auto_now_add=True)
     updated_in_system_at = models.DateTimeField(auto_now=True)
 

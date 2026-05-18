@@ -65,6 +65,7 @@ class SourceConfiguration(models.Model):
         ('never', 'Never')
     ], default='never')
     last_error_message = models.TextField(blank=True)
+    current_task_id = models.CharField(max_length=255, blank=True, null=True)
     consecutive_failures = models.IntegerField(default=0)
     failure_alert_threshold = models.IntegerField(default=3)  # N failures before alert
     

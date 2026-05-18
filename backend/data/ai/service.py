@@ -198,41 +198,56 @@ class KimiAIProvider:
         if not self.api_key:
             return self._get_fallback_insight()
 
+        def _compact(data):
+            if isinstance(data, list):
+                return [{k: v for k, v in item.items() if v is not None} if isinstance(item, dict) else item for item in data]
+            return data
+
         prompt = TEAM_HEALTH_SYSTEM_PROMPT.format(
             avg_cycle_time=metrics.get("avg_cycle_time", "N/A"),
-            velocity_history=json.dumps(metrics.get("velocity_history", [])),
-            developer_history=json.dumps(metrics.get("developer_history", [])),
-            assignee_distribution=json.dumps(metrics.get("assignee_distribution", [])),
-            stagnant_items=json.dumps(metrics.get("stagnant_items", []))
+            velocity_history=json.dumps(_compact(metrics.get("velocity_history", [])), separators=(',', ':')),
+            developer_history=json.dumps(_compact(metrics.get("developer_history", [])), separators=(',', ':')),
+            assignee_distribution=json.dumps(_compact(metrics.get("assignee_distribution", [])), separators=(',', ':')),
+            stagnant_items=json.dumps(_compact(metrics.get("stagnant_items", [])), separators=(',', ':'))
         )
         prompt += "\n\nYou MUST return a single JSON object. Do not wrap in markdown blocks, just return raw JSON."
 
         return self._generate_json(prompt)
+
+    def _build_url(self) -> str:
+        url = (self.base_url or "").rstrip("/")
+        if url.endswith("/chat/completions"):
+            return url
+        # Strip any trailing /v1 so we can append the full path cleanly
+        if url.endswith("/v1"):
+            url = url[:-3]
+        return url.rstrip("/") + "/v1/chat/completions"
 
     def _generate_json(self, prompt: str):
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
-        url = self.base_url
-        if not url.endswith("/chat/completions"):
-            if not url.endswith("/"):
-                url += "/"
-            url += "v1/chat/completions"
+
+        url = self._build_url()
 
         payload = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 4096,
-            "chat_template_kwargs": {"thinking": True}
+            "max_tokens": 1024,
         }
+
+        model_lower = self.model_name.lower()
+        if "kimi" in model_lower or "moonshot" in model_lower:
+            payload["chat_template_kwargs"] = {"thinking": True}
 
 
         for attempt in range(1, 4):
             try:
-                response = requests.post(url, headers=headers, json=payload, timeout=300)
+                response = requests.post(url, headers=headers, json=payload, timeout=240)
+                if not response.ok:
+                    logger.error(f"Kimi API error body (attempt {attempt}): {response.text}")
                 response.raise_for_status()
                 result_text = response.json()['choices'][0]['message']['content']
                 
