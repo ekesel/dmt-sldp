@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional, Callable
 import requests
+import time
 from ..base import BaseConnector
 from data.models import WorkItem, Sprint
 from django.utils import timezone
@@ -168,33 +169,30 @@ class ClickupConnector(BaseConnector):
         for i, lst in enumerate(all_lists):
             list_id = lst['id']
             list_name = lst['name']
-            
+
             report(50 + int((i/total_lists) * 40), f"Syncing tasks from list: {list_name}...")
-            
-            # Use subtasks=true and include_closed=true for completeness
-            # Implement pagination with larger limit
+
             page = 0
             limit = 100
             while True:
                 url = f"{self.base_url}/list/{list_id}/task?subtasks=true&include_closed=true&page={page}&limit={limit}"
-                tasks_resp = requests.get(url, headers=headers)
-                if tasks_resp.status_code != 200:
+                tasks_resp = self._get_with_retry(url, headers)
+                if tasks_resp is None or tasks_resp.status_code != 200:
                     break
-                
+
                 tasks_data = tasks_resp.json()
                 tasks = tasks_data.get('tasks', [])
                 if not tasks:
                     break
-                
+
                 for task in tasks:
                     self._sync_task(task, source_id, sprint_obj=sprint_lists.get(list_id))
                     item_count += 1
-                
-                # Check if we should continue
+
                 if tasks_data.get('last_page') or len(tasks) < limit:
                     break
                 page += 1
-                
+
                 # Memory optimization: Clear query log and collect GC
                 from django.db import connection
                 connection.queries_log.clear()
@@ -215,13 +213,26 @@ class ClickupConnector(BaseConnector):
         report(100, f"Sync complete. Processed {item_count} items.")
         return {'item_count': item_count}
 
+    def _get_with_retry(self, url: str, headers: dict, max_retries: int = 3):
+        """Perform a GET with automatic retry on 429 rate-limit responses."""
+        for attempt in range(max_retries):
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get('Retry-After', 10))
+                wait = retry_after + attempt * 5
+                logger.warning(f"ClickUp rate limit hit, waiting {wait}s before retry {attempt + 1}/{max_retries}")
+                time.sleep(wait)
+                continue
+            return resp
+        logger.error(f"ClickUp request failed after {max_retries} retries: {url}")
+        return None
+
     def _post_sync_linking(self, source_id: int):
         """
         Link subtasks to parents and aggregate story points / AI usage.
         """
         from data.models import WorkItem
-        from django.db.models import Sum, Avg
-        
+
         # Resolve Parent Linkage (for items where parent wasn't synced yet)
         broken_links = WorkItem.objects.filter(source_config_id=source_id, parent__isnull=True, raw_source_data__parent__isnull=False)
         for item in broken_links:
@@ -231,7 +242,15 @@ class ClickupConnector(BaseConnector):
                 item.parent = parent_obj
                 item.save()
 
-        # Avoid artificial rollup of story points to parents, as this leads to 
+        # Sub-tasks must never carry violations — compliance is tracked at root level only.
+        # Some sub-tasks may have been incorrectly flagged on first sync before their parent
+        # was resolved. Bulk-clear them now that all parent links are established.
+        WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=False,
+        ).update(dmt_compliant=True, compliance_failures=[], had_violations=False, violation_history=[])
+
+        # Avoid artificial rollup of story points to parents, as this leads to
         # double-counting during metric aggregations!
         # Points and AI Usage will remain exactly as defined in the source system.
 
@@ -564,14 +583,18 @@ class ClickupConnector(BaseConnector):
         if pr_link:
              work_item_data['pr_links'] = [pr_link]
 
-        # Run non-blocking compliance check
-        threshold = self.config.get('coverage_threshold', 80.0)
-        is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
+        # Sub-tasks are never compliance targets — skip even if parent wasn't resolved yet.
+        # _post_sync_linking will also bulk-clear any stale violations after all links resolve.
+        if parent_id:
+            is_compliant, compliance_failures = True, []
+            violation_tracking = {'violation_history': [], 'had_violations': False, 'violations_cleared_at': None}
+        else:
+            threshold = self.config.get('coverage_threshold', 80.0)
+            is_compliant, compliance_failures = ComplianceEngine.check_compliance(work_item_data, coverage_threshold=threshold)
+            violation_tracking = self._track_violation_history(source_id, external_id, is_compliant, compliance_failures)
+
         work_item_data['dmt_compliant'] = is_compliant
         work_item_data['compliance_failures'] = compliance_failures
-
-        # Track compliance history (must run before update_or_create)
-        violation_tracking = self._track_violation_history(source_id, external_id, is_compliant, compliance_failures)
         work_item_data.update(violation_tracking)
 
         WorkItem.objects.update_or_create(
