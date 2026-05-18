@@ -284,10 +284,19 @@ class ClickupConnector(BaseConnector):
         """
         Map ClickUp statuses to DMT status categories.
         """
-        status = raw_status.lower()
-        if status in ['done', 'complete', 'closed', 'resolved', 'verified', 'completed', 'verified - dev']:
+        status = raw_status.lower().strip()
+        if status in [
+            'done', 'complete', 'closed', 'resolved', 'verified', 'completed',
+            'verified - dev', 'fixed', 'fix', 'ready for release', 'released',
+            'deployed', 'accepted', 'approved', 'won\'t fix', 'wontfix',
+            'duplicate', 'invalid', 'won\'t do', 'not a bug'
+        ]:
             return 'done'
-        elif status in ['in progress', 'active', 'development', 'review', 'in review', 'ready for testing', 'testing in progress', 'testing', 'dev scoping', 'reopened']:
+        elif status in [
+            'in progress', 'active', 'development', 'review', 'in review',
+            'ready for testing', 'testing in progress', 'testing', 'dev scoping',
+            'reopened', 'blocked', 'on hold', 'pending review', 'code review',
+        ]:
             return 'in_progress'
         return 'todo'
 
