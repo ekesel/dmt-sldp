@@ -46,7 +46,6 @@ export default function SprintComparisonPage() {
     const handleHelpClose = useCallback(() => {
         setIsHelpOpen(false);
     }, []);
-
     const handleBaselineModeToggle = useCallback((mode: 'sprint' | 'company') => {
         setUseCompanyBaseline(mode === 'company');
         setSprintAId(null);
@@ -221,13 +220,16 @@ export default function SprintComparisonPage() {
                                             sentiment: determineSentiment(key, vals.variance)
                                         }}
                                         description={
-                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
                                                 {useCompanyBaseline && <Building2 size={10} className="text-primary shrink-0" />}
                                                 <span className="text-muted-foreground font-bold uppercase tracking-tighter text-[10px]">Baseline:</span>
                                                 <span className="text-foreground/80 font-bold">{baseValue}</span>
                                                 <span className="text-muted-foreground font-medium italic opacity-80">({effectiveBaselineName})</span>
                                             </div>
                                         }
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
                                         helpId={key === 'pr_review_speed' ? 'pr_health' : key}
                                         onHelpClick={handleHelpClick}
                                     />

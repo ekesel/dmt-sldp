@@ -56,7 +56,6 @@ export default function CompliancePage() {
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
     }, []);
-
     const handleHelpClick = useCallback((id: string) => {
         setActiveHelpId(id);
         setIsHelpOpen(true);
@@ -160,7 +159,7 @@ export default function CompliancePage() {
 
                 {/* KPI Overview — all data from backend /api/compliance-summary/ */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card className="p-6 bg-card border-border hover:border-emerald-500/30 transition-all duration-300 group">
+                    <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
                                 <ShieldCheck size={20} />
@@ -191,7 +190,7 @@ export default function CompliancePage() {
                     <Card className={`p-6 bg-card transition-all duration-300 group ${
                         activeFilter === 'critical'
                             ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                            : 'border-border hover:border-destructive/50'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                     }`}>
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
@@ -226,7 +225,7 @@ export default function CompliancePage() {
                     <Card className={`p-6 bg-card transition-all duration-300 group ${
                         activeFilter === 'warning'
                             ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                            : 'border-border hover:border-warning/50'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                     }`}>
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
@@ -254,7 +253,7 @@ export default function CompliancePage() {
                     </Card>
                     </div>
 
-                    <Card className="p-6 bg-card border-border hover:border-primary/30 transition-all duration-300 group">
+                    <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                                 <CheckCircle2 size={20} />
@@ -338,7 +337,7 @@ export default function CompliancePage() {
                                 </div>
                             );
                             return visibleFlags.map((flag) => (
-                                <Card key={flag.id} className="p-6 bg-card border-border hover:bg-accent/50 transition-all group rounded-2xl">
+                                <Card key={flag.id} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">
                                             <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
@@ -357,7 +356,7 @@ export default function CompliancePage() {
                                             </span>
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-black text-foreground group-hover:text-primary transition-colors tracking-tight">{flag.work_item_title}</h3>
+                                            <h3 className="text-xl font-black text-primary transition-colors tracking-tight">{flag.work_item_title}</h3>
                                             <p className="text-muted-foreground text-sm mt-1.5 font-medium flex items-center gap-2">
                                                 Violation: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border">{FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}</span>
                                             </p>
