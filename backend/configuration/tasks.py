@@ -56,6 +56,7 @@ def perform_sync_task(self, source_id: int):
         
         # 1. Start
         source.last_sync_status = 'in_progress'
+        source.current_task_id = self.request.id
         source.save()
         
         emit_progress(5, "Initializing sync...")
@@ -84,11 +85,16 @@ def perform_sync_task(self, source_id: int):
         with schema_context(source.project.tenant.schema_name):
             stats = connector.sync(tenant_id, source_id, progress_callback=emit_progress)
         
-        # 4. Success
+        # 4. Backfill PM / Tech Lead names to items missing them
+        with schema_context(source.project.tenant.schema_name):
+            _backfill_pm_tech_lead(source_id)
+
+        # 5. Success
         source.last_sync_status = 'success'
         source.last_sync_at = timezone.now()
         source.last_error_message = ""
         source.consecutive_failures = 0
+        source.current_task_id = None
         source.save()
         
         emit_progress(100, f"Sync completed. {stats.get('item_count', 0)} items processed.", status='success')
@@ -126,8 +132,41 @@ def perform_sync_task(self, source_id: int):
             source.last_sync_status = 'failed'
             source.last_error_message = str(e)
             source.consecutive_failures += 1
+            source.current_task_id = None
             source.save()
         except Exception as db_err:
             logger.error(f"Failed to update source status after sync failure: {db_err}")
             
         emit_progress(0, f"Sync failed: {str(e)}", status='failed')
+
+
+def _backfill_pm_tech_lead(source_id: int):
+    """
+    For each of PM and Tech Lead: find the most recently updated work item in this
+    source that has a value, then fill it into all items that are missing one.
+    """
+    from data.models import WorkItem
+
+    for name_field, email_field in [('pm_name', 'pm_email'), ('tech_lead_name', 'tech_lead_email')]:
+        latest = (
+            WorkItem.objects
+            .filter(source_config_id=source_id)
+            .exclude(**{f'{name_field}__isnull': True})
+            .exclude(**{name_field: ''})
+            .order_by('-updated_at')
+            .values(name_field, email_field)
+            .first()
+        )
+        if not latest:
+            continue
+        updated = WorkItem.objects.filter(
+            source_config_id=source_id
+        ).filter(
+            **{f'{name_field}__isnull': True}
+        ).update(**{name_field: latest[name_field], email_field: latest[email_field]})
+        # also catch empty-string case
+        WorkItem.objects.filter(
+            source_config_id=source_id,
+            **{name_field: ''}
+        ).update(**{name_field: latest[name_field], email_field: latest[email_field]})
+        logger.info(f"Backfilled {name_field} '{latest[name_field]}' to {updated} work items for source {source_id}")

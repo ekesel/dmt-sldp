@@ -4,12 +4,13 @@ import { dashboard, developers } from '@dmt/api';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { SprintSelector } from '../../../components/SprintSelector';
 import { KPICard } from '../../../components/KPISection';
-import { AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, Users, Building2 } from 'lucide-react';
 import { RadarChartComponent } from '../../../components/charts/RadarChartComponent';
 import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChart';
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
 import WorkloadDistributionChart from '../../../components/charts/WorkloadDistributionChart';
 import { HelpSidebar } from '../../../components/HelpSidebar';
+import companyBaseline from '../../../constants/company-baseline.json';
 
 export default function SprintComparisonPage() {
     const [projectId, setProjectId] = useState<number | null>(null);
@@ -19,6 +20,7 @@ export default function SprintComparisonPage() {
     const [sprintBName, setSprintBName] = useState<string>('');
     const [developerId, setDeveloperId] = useState<string | null>(null);
     const [devsList, setDevsList] = useState<any[]>([]);
+    const [useCompanyBaseline, setUseCompanyBaseline] = useState(false);
 
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -44,13 +46,17 @@ export default function SprintComparisonPage() {
     const handleHelpClose = useCallback(() => {
         setIsHelpOpen(false);
     }, []);
+    const handleBaselineModeToggle = useCallback((mode: 'sprint' | 'company') => {
+        setUseCompanyBaseline(mode === 'company');
+        setSprintAId(null);
+        setSprintAName('');
+        setData(null);
+    }, []);
 
-    // Fetch Developers list for the dropdown
     useEffect(() => {
         developers.list(projectId).then(setDevsList).catch(console.error);
     }, [projectId]);
 
-    // Actually fetch the data whenever sprints change
     const [availableSprints, setAvailableSprints] = useState<any[]>([]);
 
     useEffect(() => {
@@ -66,14 +72,29 @@ export default function SprintComparisonPage() {
         setSprintBName(sB?.name || '');
     }, [sprintAId, sprintBId, availableSprints]);
 
+    const baselineReady = useCompanyBaseline ? !!sprintBName : !!sprintAName && !!sprintBName;
+
     useEffect(() => {
-        if (!sprintAName || !sprintBName) return;
+        if (!baselineReady || !sprintBName) return;
+
         setLoading(true);
-        dashboard.getSprintComparison(sprintAName, sprintBName, projectId, developerId)
-            .then(res => setData(res))
+
+        const fetchName = useCompanyBaseline ? sprintBName : sprintAName;
+
+        dashboard.getSprintComparison(fetchName, sprintBName, projectId, developerId)
+            .then(res => {
+                if (useCompanyBaseline) {
+                    setData(applyCompanyBaseline(res, companyBaseline));
+                } else {
+                    setData(res);
+                }
+            })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [sprintAName, sprintBName, projectId, developerId]);
+    }, [sprintAName, sprintBName, projectId, developerId, useCompanyBaseline, baselineReady]);
+
+    const effectiveBaselineName = useCompanyBaseline ? companyBaseline.name : sprintAName;
+    const pendingSelection = useCompanyBaseline ? !sprintBId : (!sprintAId || !sprintBId);
 
     return (
         <div className="flex flex-col gap-8 w-full min-h-screen bg-background pb-10 px-6">
@@ -87,9 +108,43 @@ export default function SprintComparisonPage() {
 
                         <div className="h-6 w-px bg-border hidden md:block" />
 
+                        {/* Baseline selector with mode toggle */}
                         <div className="flex items-center gap-3 bg-muted/50 p-1.5 pr-3 rounded-lg border border-border">
                             <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Baseline:</span>
-                            <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} />
+
+                            {/* Mode toggle pills */}
+                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden">
+                                <button
+                                    onClick={() => handleBaselineModeToggle('sprint')}
+                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                                        !useCompanyBaseline
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Sprint
+                                </button>
+                                <button
+                                    onClick={() => handleBaselineModeToggle('company')}
+                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors flex items-center gap-1 ${
+                                        useCompanyBaseline
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    <Building2 size={11} />
+                                    Company
+                                </button>
+                            </div>
+
+                            {useCompanyBaseline ? (
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20">
+                                    <Building2 size={12} className="text-primary" />
+                                    <span className="text-xs font-bold text-primary">{companyBaseline.name}</span>
+                                </div>
+                            ) : (
+                                <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} />
+                            )}
                         </div>
 
                         <div className="flex items-center gap-3 bg-muted/50 p-1.5 pr-3 rounded-lg border border-border">
@@ -116,13 +171,17 @@ export default function SprintComparisonPage() {
 
             {/* Content Container */}
             <div className="max-w-[1600px] mx-auto w-full flex flex-col gap-10">
-                {!sprintAId || !sprintBId ? (
+                {pendingSelection ? (
                     <div className="flex flex-col items-center justify-center p-24 text-muted-foreground bg-muted/10 rounded-2xl border border-dashed border-border/50 my-10">
                         <div className="p-4 bg-muted/50 rounded-full mb-6 text-muted-foreground">
                             <AlertTriangle size={48} className="opacity-50" />
                         </div>
                         <h2 className="text-xl font-semibold text-foreground/80 mb-2">Comparison Pending</h2>
-                        <p className="max-w-md text-center">Please select both a baseline and target sprint from the filters above to begin your analysis.</p>
+                        <p className="max-w-md text-center">
+                            {useCompanyBaseline
+                                ? 'Please select a target sprint to compare against the Company Baseline.'
+                                : 'Please select both a baseline and target sprint from the filters above to begin your analysis.'}
+                        </p>
                     </div>
                 ) : loading || !data ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
@@ -130,12 +189,18 @@ export default function SprintComparisonPage() {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-12">
+                        {useCompanyBaseline && (
+                            <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border border-primary/20 rounded-xl text-sm text-muted-foreground">
+                                <Building2 size={16} className="text-primary shrink-0" />
+                                <span>Comparing <strong className="text-foreground">{sprintBName}</strong> against the <strong className="text-foreground">{companyBaseline.name}</strong>. {companyBaseline.description}</span>
+                            </div>
+                        )}
+
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
                             {Object.entries(data.kpis).map(([key, vals]: [string, any]) => {
                                 const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-                                // Special formatting for item volume
                                 const displayValue = key === 'item_volume'
                                     ? `${vals.sub_b} / ${vals.b}`
                                     : $(vals.b);
@@ -156,9 +221,10 @@ export default function SprintComparisonPage() {
                                         }}
                                         description={
                                             <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                                {useCompanyBaseline && <Building2 size={10} className="text-primary shrink-0" />}
                                                 <span className="text-muted-foreground font-bold uppercase tracking-tighter text-[10px]">Baseline:</span>
                                                 <span className="text-foreground/80 font-bold">{baseValue}</span>
-                                                <span className="text-muted-foreground font-medium italic opacity-80">({sprintAName})</span>
+                                                <span className="text-muted-foreground font-medium italic opacity-80">({effectiveBaselineName})</span>
                                             </div>
                                         }
                                         valueClassName="text-accent !text-2xl"
@@ -174,7 +240,7 @@ export default function SprintComparisonPage() {
                         {/* Charts Grid */}
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                             <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl">
-                                <RadarChartComponent data={data.charts.radar} sprintA={sprintAName} sprintB={sprintBName} />
+                                <RadarChartComponent data={data.charts.radar} sprintA={effectiveBaselineName} sprintB={sprintBName} />
                             </div>
 
                             <div className="flex flex-col gap-8">
@@ -210,7 +276,7 @@ export default function SprintComparisonPage() {
                                     <WorkloadDistributionChart
                                         data={data.charts.workload_distribution}
                                         type="points"
-                                        sprintAName={sprintAName}
+                                        sprintAName={effectiveBaselineName}
                                         sprintBName={sprintBName}
                                     />
                                 </div>
@@ -223,7 +289,7 @@ export default function SprintComparisonPage() {
                                     <WorkloadDistributionChart
                                         data={data.charts.workload_distribution}
                                         type="items"
-                                        sprintAName={sprintAName}
+                                        sprintAName={effectiveBaselineName}
                                         sprintBName={sprintBName}
                                     />
                                 </div>
@@ -242,11 +308,30 @@ export default function SprintComparisonPage() {
     );
 }
 
-// Utility for formatting
+function applyCompanyBaseline(apiData: any, baseline: typeof companyBaseline): any {
+    const result = { ...apiData, kpis: {} as Record<string, any> };
+
+    for (const [key, vals] of Object.entries(apiData.kpis) as [string, any][]) {
+        const bVal = vals.b ?? vals.a;
+
+        if (key === 'item_volume') {
+            const baseTotal = baseline.kpis.item_volume?.total ?? vals.a;
+            const baseCompleted = baseline.kpis.item_volume?.completed ?? vals.sub_a;
+            const variance = baseCompleted !== 0 ? ((vals.sub_b - baseCompleted) / Math.abs(baseCompleted)) * 100 : 0;
+            result.kpis[key] = { a: baseTotal, sub_a: baseCompleted, b: vals.b, sub_b: vals.sub_b, variance };
+        } else {
+            const baseVal = (baseline.kpis as any)[key] ?? vals.a;
+            const variance = baseVal !== 0 ? ((bVal - baseVal) / Math.abs(baseVal)) * 100 : 0;
+            result.kpis[key] = { a: baseVal, b: bVal, variance };
+        }
+    }
+
+    return result;
+}
+
 function $(val: any) {
     if (typeof val === 'number') {
-        const factor = val >= 1000 ? 1000 : 1;
-        const formatted = factor === 1000 ? (val / 1000).toFixed(1) + 'k' : (Number.isInteger(val) ? val.toString() : val.toFixed(1));
+        const formatted = val >= 1000 ? (val / 1000).toFixed(1) + 'k' : (Number.isInteger(val) ? val.toString() : val.toFixed(1));
         return formatted;
     }
     return val || '0';

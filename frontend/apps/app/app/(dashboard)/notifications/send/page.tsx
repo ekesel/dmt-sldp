@@ -5,7 +5,7 @@ import { users as apiUsers, notifications as apiNotifications, User } from '@dmt
 import {
     Send,
     User as UserIcon,
-    Bell,
+    MessageSquare,
     Info,
     AlertTriangle,
     CheckCircle,
@@ -33,7 +33,6 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
 
     return (
         <span className="relative flex-shrink-0" style={{ display: 'inline-flex' }}>
-            {/* Hidden real input for a11y */}
             <input
                 ref={ref}
                 type="checkbox"
@@ -42,7 +41,6 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                 aria-label={ariaLabel}
                 className="sr-only"
             />
-            {/* Visual box */}
             <span
                 onClick={onChange}
                 aria-hidden="true"
@@ -50,24 +48,16 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                     ${dim} flex items-center justify-center rounded-[5px] cursor-pointer
                     border transition-all duration-150
                     ${checked || indeterminate
-                        ? 'bg-primary border-primary ring-2 ring-primary/20'
-                        : 'bg-accent border-border hover:border-primary/60'
+                        ? 'bg-sky-500 border-sky-500 ring-2 ring-sky-200'
+                        : 'bg-white border-sky-200 hover:border-sky-400'
                     }
                 `}
             >
-                {/* Checkmark */}
                 {checked && !indeterminate && (
                     <svg viewBox="0 0 10 8" fill="none" className="w-[9px] h-[7px]">
-                        <path
-                            d="M1 4l2.5 2.5L9 1"
-                            stroke="white"
-                            strokeWidth="1.6"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
+                        <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 )}
-                {/* Dash for indeterminate */}
                 {indeterminate && (
                     <span className="w-[8px] h-[1.5px] rounded-full bg-white" />
                 )}
@@ -81,7 +71,6 @@ export default function SendNotificationPage() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    /** Set of selected user IDs (numeric) */
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
@@ -91,20 +80,11 @@ export default function SendNotificationPage() {
         message: string;
     } | null>(null);
 
-    // no longer needed — Checkbox component handles indeterminate internally
-
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const data = await apiUsers.list();
-                setUsers(data);
-            } catch (err) {
-                console.error('Failed to fetch users', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUsers();
+        apiUsers.list()
+            .then(setUsers)
+            .catch(console.error)
+            .finally(() => setLoading(false));
     }, []);
 
     const filteredUsers = users.filter(
@@ -115,51 +95,34 @@ export default function SendNotificationPage() {
             (u.last_name && u.last_name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    /* ── Select-all state (scoped to current filter) ── */
     const filteredIds = filteredUsers.map((u) => Number(u.id));
     const selectedFiltered = filteredIds.filter((id) => selectedIds.has(id));
-    const allFilteredSelected =
-        filteredIds.length > 0 && selectedFiltered.length === filteredIds.length;
-    const someFilteredSelected =
-        selectedFiltered.length > 0 && selectedFiltered.length < filteredIds.length;
-
-
+    const allFilteredSelected = filteredIds.length > 0 && selectedFiltered.length === filteredIds.length;
+    const someFilteredSelected = selectedFiltered.length > 0 && selectedFiltered.length < filteredIds.length;
 
     const toggleSelectAll = () => {
-        if (allFilteredSelected) {
-            // Deselect all filtered users
-            setSelectedIds((prev) => {
-                const next = new Set(prev);
-                filteredIds.forEach((id) => next.delete(id));
-                return next;
-            });
-        } else {
-            // Select all filtered users
-            setSelectedIds((prev) => {
-                const next = new Set(prev);
-                filteredIds.forEach((id) => next.add(id));
-                return next;
-            });
-        }
-    };
-
-    const toggleUser = (id: number) => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
+            if (allFilteredSelected) {
+                filteredIds.forEach((id) => next.delete(id));
             } else {
-                next.add(id);
+                filteredIds.forEach((id) => next.add(id));
             }
             return next;
         });
     };
 
-    /* ── Send ── */
+    const toggleUser = (id: number) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedIds.size === 0 || !message) return;
-
         setSending(true);
         setStatus(null);
         try {
@@ -169,284 +132,287 @@ export default function SendNotificationPage() {
                 message,
                 notification_type: type,
             });
-
             if (result.failed && result.failed.length > 0 && result.sent === 0) {
-                setStatus({
-                    kind: 'error',
-                    message: `Failed to send to all ${result.failed.length} recipients.`,
-                });
+                setStatus({ kind: 'error', message: `Failed to send to all ${result.failed.length} recipients.` });
             } else if (result.failed && result.failed.length > 0) {
-                setStatus({
-                    kind: 'partial',
-                    message: `Sent to ${result.sent} user${result.sent !== 1 ? 's' : ''}. ${result.failed.length} failed.`,
-                });
+                setStatus({ kind: 'partial', message: `Sent to ${result.sent} user${result.sent !== 1 ? 's' : ''}. ${result.failed.length} failed.` });
             } else {
-                setStatus({
-                    kind: 'success',
-                    message: `Notification sent to ${result.sent} user${result.sent !== 1 ? 's' : ''} successfully.`,
-                });
+                setStatus({ kind: 'success', message: `Notification sent to ${result.sent} user${result.sent !== 1 ? 's' : ''} successfully.` });
                 setTitle('');
                 setMessage('');
                 setSelectedIds(new Set());
                 setSearchQuery('');
             }
         } catch (err: any) {
-            console.error('Failed to send notification', err);
             setStatus({ kind: 'error', message: err.message || 'Failed to send notification' });
         } finally {
             setSending(false);
         }
     };
 
-    /* ── Helpers ── */
     const displayName = (u: User) =>
         u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.username;
 
     const recipientLabel = () => {
         if (selectedIds.size === 0) return null;
         if (selectedIds.size <= 3) {
-            const names = users
-                .filter((u) => selectedIds.has(Number(u.id)))
-                .map(displayName)
-                .join(', ');
-            return names;
+            return users.filter((u) => selectedIds.has(Number(u.id))).map(displayName).join(', ');
         }
         return `${selectedIds.size} users selected`;
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                    <Bell className="w-8 h-8 text-primary" />
-                    Notification Center
-                </h1>
-                <p className="text-muted-foreground mt-2">
-                    Select one or more users and broadcast an in-app notification.
-                </p>
-            </header>
+        <div className="min-h-screen bg-sky-50 p-8">
+            <div className="max-w-5xl mx-auto">
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* ── User list panel ── */}
-                <div className="lg:col-span-1 bg-card border border-border rounded-xl overflow-hidden flex flex-col h-[600px]">
-
-                    {/* Search */}
-                    <div className="p-4 border-b border-border bg-muted/30 space-y-3">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search users..."
-                                className="w-full pl-10 pr-4 py-2 bg-accent border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary transition"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Select-all row */}
-                        {!loading && filteredUsers.length > 0 && (
-                            <div className="flex items-center gap-3 px-1 select-none">
-                                <Checkbox
-                                    checked={allFilteredSelected}
-                                    indeterminate={someFilteredSelected}
-                                    onChange={toggleSelectAll}
-                                    ariaLabel="Select all visible users"
-                                />
-                                <span
-                                    onClick={toggleSelectAll}
-                                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
-                                >
-                                    {allFilteredSelected ? 'Deselect all' : 'Select all'}{' '}
-                                    <span className="text-muted-foreground">({filteredUsers.length})</span>
-                                </span>
-                                {selectedIds.size > 0 && (
-                                    <span className="ml-auto flex items-center gap-1 bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                        <Users className="w-3 h-3" />
-                                        {selectedIds.size}
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                {/* Header */}
+                <header className="mb-8 bg-white rounded-2xl border border-sky-100 shadow-sm px-8 py-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-sky-500 flex items-center justify-center shadow-md shadow-sky-200">
+                        <MessageSquare className="w-6 h-6 text-white" />
                     </div>
-
-                    {/* User rows */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                        {loading ? (
-                            <div className="p-4 text-center text-muted-foreground italic">Loading users...</div>
-                        ) : filteredUsers.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground italic">No users found</div>
-                        ) : (
-                            filteredUsers.map((u) => {
-                                const uid = Number(u.id);
-                                const selected = selectedIds.has(uid);
-                                return (
-                                    <div
-                                        key={u.id}
-                                        onClick={() => toggleUser(uid)}
-                                        className={`w-full text-left p-3 rounded-lg flex items-center gap-3 cursor-pointer transition select-none ${selected
-                                                ? 'bg-primary/20 border border-primary/30'
-                                                : 'hover:bg-accent border border-transparent'
-                                            }`}
-                                    >
-                                        <Checkbox
-                                            checked={selected}
-                                            onChange={() => toggleUser(uid)}
-                                            ariaLabel={`Select ${displayName(u)}`}
-                                            size="sm"
-                                        />
-                                        <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-primary border border-border flex-shrink-0">
-                                            <UserIcon className="w-4 h-4" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-foreground truncate">
-                                                {displayName(u)}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Messenger</h1>
+                        <p className="text-sky-600 text-sm font-medium mt-0.5">Send in-app notifications to team members</p>
                     </div>
-                </div>
-
-                {/* ── Compose panel ── */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
-                    {selectedIds.size > 0 ? (
-                        <form onSubmit={handleSend} className="space-y-6">
-                            {/* Recipient badge */}
-                            <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                                <div className="p-2 bg-primary/20 rounded-full">
-                                    <Users className="w-6 h-6 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-xs text-primary uppercase font-bold tracking-wider">
-                                        {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
-                                    </p>
-                                    <p className="text-base font-bold text-foreground truncate">
-                                        {recipientLabel()}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedIds(new Set())}
-                                    className="ml-auto text-xs text-muted-foreground hover:text-destructive transition"
-                                    aria-label="Clear selection"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-
-                            {/* Notification type picker */}
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Notification Type
-                                </label>
-                                <div className="grid grid-cols-4 gap-3">
-                                    {[
-                                        { id: 'info', icon: Info, color: 'text-blue-400' },
-                                        { id: 'success', icon: CheckCircle, color: 'text-emerald-400' },
-                                        { id: 'warning', icon: AlertTriangle, color: 'text-amber-400' },
-                                        { id: 'error', icon: XCircle, color: 'text-rose-400' },
-                                    ].map((t) => (
-                                        <button
-                                            key={t.id}
-                                            type="button"
-                                            onClick={() => setType(t.id)}
-                                            className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition ${type === t.id
-                                                ? 'bg-accent border-border ring-2 ring-primary/50'
-                                                : 'bg-card border-border hover:border-border/80'
-                                                }`}
-                                        >
-                                            <t.icon className={`w-6 h-6 ${t.color}`} />
-                                            <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                                                {t.id}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Title */}
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Notification Title
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Brief summary..."
-                                    className="w-full px-4 py-3 bg-accent border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Message */}
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Message Content
-                                </label>
-                                <textarea
-                                    placeholder="Enter your message here..."
-                                    rows={5}
-                                    className="w-full px-4 py-3 bg-accent border border-border rounded-xl text-foreground focus:outline-none focus:border-primary transition resize-none"
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            {/* Status feedback */}
-                            {status && (
-                                <div
-                                    className={`p-4 rounded-xl flex items-center gap-3 ${status.kind === 'success'
-                                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                        : status.kind === 'partial'
-                                            ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
-                                            : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
-                                        }`}
-                                >
-                                    {status.kind === 'success' ? (
-                                        <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                                    ) : status.kind === 'partial' ? (
-                                        <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                                    ) : (
-                                        <XCircle className="w-5 h-5 flex-shrink-0" />
-                                    )}
-                                    <p className="text-sm font-medium">{status.message}</p>
-                                </div>
-                            )}
-
-                            {/* Submit */}
-                            <button
-                                type="submit"
-                                disabled={sending || !message}
-                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed group"
-                            >
-                                {sending ? (
-                                    'Sending...'
-                                ) : (
-                                    <>
-                                        <span>
-                                            Dispatch to {selectedIds.size} {selectedIds.size === 1 ? 'User' : 'Users'}
-                                        </span>
-                                        <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition duration-300" />
-                                    </>
-                                )}
-                            </button>
-                        </form>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-12 text-muted-foreground">
-                            <div className="w-20 h-20 bg-accent rounded-full flex items-center justify-center mb-6 border border-border">
-                                <Users className="w-10 h-10 opacity-20" />
-                            </div>
-                            <h3 className="text-xl font-bold text-foreground/80 mb-2">No Recipients Selected</h3>
-                            <p className="max-w-xs mx-auto">
-                                Check one or more users from the list on the left. Use{' '}
-                                <span className="text-foreground/80 font-medium">Select all</span> to target everyone at once.
-                            </p>
+                    {selectedIds.size > 0 && (
+                        <div className="ml-auto flex items-center gap-2 bg-sky-100 text-sky-700 text-sm font-bold px-4 py-2 rounded-full">
+                            <Users className="w-4 h-4" />
+                            {selectedIds.size} selected
                         </div>
                     )}
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* ── User list panel ── */}
+                    <div className="lg:col-span-1 bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+
+                        {/* Panel header */}
+                        <div className="px-4 py-3 bg-sky-500 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-white/80" />
+                            <span className="text-white font-semibold text-sm">Team Members</span>
+                            {!loading && (
+                                <span className="ml-auto text-white/70 text-xs">{filteredUsers.length} users</span>
+                            )}
+                        </div>
+
+                        {/* Search */}
+                        <div className="p-3 border-b border-sky-100 bg-sky-50 space-y-2">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-sky-200 rounded-lg text-sm text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            {!loading && filteredUsers.length > 0 && (
+                                <div className="flex items-center gap-3 px-1 select-none">
+                                    <Checkbox
+                                        checked={allFilteredSelected}
+                                        indeterminate={someFilteredSelected}
+                                        onChange={toggleSelectAll}
+                                        ariaLabel="Select all visible users"
+                                    />
+                                    <span
+                                        onClick={toggleSelectAll}
+                                        className="text-xs font-semibold text-sky-600 hover:text-sky-800 transition cursor-pointer"
+                                    >
+                                        {allFilteredSelected ? 'Deselect all' : 'Select all'}
+                                        <span className="text-sky-400 ml-1">({filteredUsers.length})</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* User rows */}
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                            {loading ? (
+                                <div className="p-6 text-center text-sky-400 text-sm">Loading users...</div>
+                            ) : filteredUsers.length === 0 ? (
+                                <div className="p-6 text-center text-sky-400 text-sm">No users found</div>
+                            ) : (
+                                filteredUsers.map((u) => {
+                                    const uid = Number(u.id);
+                                    const selected = selectedIds.has(uid);
+                                    return (
+                                        <div
+                                            key={u.id}
+                                            onClick={() => toggleUser(uid)}
+                                            className={`w-full text-left p-3 rounded-xl flex items-center gap-3 cursor-pointer transition select-none ${
+                                                selected
+                                                    ? 'bg-sky-50 border border-sky-300 shadow-sm'
+                                                    : 'hover:bg-sky-50 border border-transparent'
+                                            }`}
+                                        >
+                                            <Checkbox
+                                                checked={selected}
+                                                onChange={() => toggleUser(uid)}
+                                                ariaLabel={`Select ${displayName(u)}`}
+                                                size="sm"
+                                            />
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition ${
+                                                selected ? 'bg-sky-500 border-sky-400' : 'bg-sky-100 border-sky-200'
+                                            }`}>
+                                                <UserIcon className={`w-4 h-4 ${selected ? 'text-white' : 'text-sky-500'}`} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">{displayName(u)}</p>
+                                                <p className="text-xs text-sky-400 truncate">{u.email}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── Compose panel ── */}
+                    <div className="lg:col-span-2 bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+
+                        {/* Panel header */}
+                        <div className="px-6 py-3 bg-sky-500 flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-white/80" />
+                            <span className="text-white font-semibold text-sm">Compose Message</span>
+                        </div>
+
+                        <div className="flex-1 p-6">
+                            {selectedIds.size > 0 ? (
+                                <form onSubmit={handleSend} className="space-y-5 h-full flex flex-col">
+
+                                    {/* Recipient badge */}
+                                    <div className="flex items-center gap-4 p-4 bg-sky-50 rounded-xl border border-sky-200">
+                                        <div className="p-2 bg-sky-500 rounded-full shadow shadow-sky-200">
+                                            <Users className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] text-sky-500 uppercase font-bold tracking-wider">
+                                                {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-800 truncate">{recipientLabel()}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedIds(new Set())}
+                                            className="ml-auto text-xs text-sky-400 hover:text-rose-500 transition font-medium"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+
+                                    {/* Notification type picker */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                            Notification Type
+                                        </label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {[
+                                                { id: 'info',    icon: Info,          color: 'text-sky-500',     bg: 'bg-sky-50 border-sky-200',    ring: 'ring-sky-300' },
+                                                { id: 'success', icon: CheckCircle,   color: 'text-emerald-500', bg: 'bg-emerald-50 border-emerald-200', ring: 'ring-emerald-300' },
+                                                { id: 'warning', icon: AlertTriangle, color: 'text-amber-500',   bg: 'bg-amber-50 border-amber-200',  ring: 'ring-amber-300' },
+                                                { id: 'error',   icon: XCircle,       color: 'text-rose-500',    bg: 'bg-rose-50 border-rose-200',    ring: 'ring-rose-300' },
+                                            ].map((t) => (
+                                                <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => setType(t.id)}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+                                                        type === t.id
+                                                            ? `${t.bg} ring-2 ${t.ring} shadow-sm`
+                                                            : 'bg-white border-sky-100 hover:border-sky-200'
+                                                    }`}
+                                                >
+                                                    <t.icon className={`w-5 h-5 ${t.color}`} />
+                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">{t.id}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Title */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                            Title
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Brief summary..."
+                                            className="w-full px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Message */}
+                                    <div className="flex-1 flex flex-col">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                            Message
+                                        </label>
+                                        <textarea
+                                            placeholder="Type your message here..."
+                                            rows={5}
+                                            className="flex-1 w-full px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition resize-none"
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    {/* Status feedback */}
+                                    {status && (
+                                        <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
+                                            status.kind === 'success'
+                                                ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                                : status.kind === 'partial'
+                                                    ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                                                    : 'bg-rose-50 border border-rose-200 text-rose-700'
+                                        }`}>
+                                            {status.kind === 'success' ? (
+                                                <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                                            ) : status.kind === 'partial' ? (
+                                                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                                            ) : (
+                                                <XCircle className="w-5 h-5 flex-shrink-0" />
+                                            )}
+                                            {status.message}
+                                        </div>
+                                    )}
+
+                                    {/* Send button */}
+                                    <button
+                                        type="submit"
+                                        disabled={sending || !message}
+                                        className="w-full bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white font-bold py-4 rounded-xl shadow-md shadow-sky-200 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
+                                    >
+                                        {sending ? (
+                                            <span className="flex items-center gap-2">
+                                                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                                Sending...
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <span>Send to {selectedIds.size} {selectedIds.size === 1 ? 'User' : 'Users'}</span>
+                                                <Send className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                                    <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mb-5 border-2 border-sky-200">
+                                        <MessageSquare className="w-9 h-9 text-sky-400" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-700 mb-2">No Recipients Yet</h3>
+                                    <p className="text-sky-500 text-sm max-w-xs">
+                                        Select one or more team members from the list on the left to start composing your message.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

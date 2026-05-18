@@ -8,6 +8,7 @@ import { useUsers } from '@/features/knowledge-base/hooks/useUsers';
 import { useMetadata } from '@/features/knowledge-base/hooks/useMetadata';
 import { useRecordVersions } from '@/features/knowledge-base/hooks/useKnowledgeRecords';
 import { knowledgeRecords } from '@dmt/api';
+import { toast } from 'react-hot-toast';
 
 // Mock hooks
 vi.mock('@tanstack/react-query', () => ({
@@ -34,6 +35,12 @@ vi.mock('@dmt/api', () => ({
     uploadVersion: vi.fn(),
   },
 }));
+vi.mock('react-hot-toast', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 // Factory function for generating mock record data
 const createMockRecord = (overrides = {}) => ({
@@ -50,25 +57,25 @@ const createMockRecord = (overrides = {}) => ({
 describe('RecordEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useTags as any).mockReturnValue({
+    vi.mocked(useTags).mockReturnValue({
       tags: [{ id: 100, name: 'TECH' }],
       createTag: vi.fn(),
       isLoading: false,
       isCreating: false,
-    });
-    (useUsers as any).mockReturnValue({
+    } as any);
+    vi.mocked(useUsers).mockReturnValue({
       managers: [{ id: '1', username: 'User1' }],
       isLoading: false,
-    });
-    (useMetadata as any).mockReturnValue({
+    } as any);
+    vi.mocked(useMetadata).mockReturnValue({
       categories: [{ id: 1, name: 'Team' }],
       allValues: [{ id: 10, category: 1, value: 'Alpha' }],
       isLoading: false,
-    });
-    (useRecordVersions as any).mockReturnValue({
+    } as any);
+    vi.mocked(useRecordVersions).mockReturnValue({
       versions: [],
       isLoading: false,
-    });
+    } as any);
   });
 
   describe('initialization', () => {
@@ -145,7 +152,6 @@ describe('RecordEditor', () => {
 
     it('shows a validation alert when trying to publish without a file in create mode', () => {
       // ARRANGE
-      window.alert = vi.fn();
       render(<RecordEditor mode="create" onBack={vi.fn()} />);
 
       // ACT
@@ -153,7 +159,7 @@ describe('RecordEditor', () => {
       fireEvent.click(saveBtn);
 
       // ASSERT
-      expect(window.alert).toHaveBeenCalledWith("Please select a file to upload.");
+      expect(toast.error).toHaveBeenCalledWith("Please select a file to upload.");
       expect(knowledgeRecords.create).not.toHaveBeenCalled();
     });
   });

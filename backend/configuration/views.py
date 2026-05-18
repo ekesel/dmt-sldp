@@ -4,6 +4,9 @@ from .serializers import ProjectSerializer, SourceConfigurationSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -153,6 +156,21 @@ class SourceConfigurationViewSet(viewsets.ModelViewSet):
             'message': f'Sync triggered for {source.name}',
             'task_id': task.id
         })
+
+    @action(detail=True, methods=['post'])
+    def reset_sync(self, request, pk=None):
+        source = self.get_object()
+        if source.current_task_id:
+            try:
+                from celery import current_app
+                current_app.control.revoke(source.current_task_id, terminate=True, signal='SIGTERM')
+            except Exception as e:
+                logger.warning(f"Could not revoke task {source.current_task_id}: {e}")
+        source.last_sync_status = 'failed'
+        source.last_error_message = 'Manually cancelled by admin.'
+        source.current_task_id = None
+        source.save()
+        return Response({'status': 'success', 'message': f'Sync for {source.name} has been reset.'})
 
     @action(detail=True, methods=['get'])
     def remote_folders(self, request, pk=None):

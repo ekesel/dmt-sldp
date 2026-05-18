@@ -31,7 +31,6 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 const createMockRecord = (overrides = {}) => ({
   id: '1',
   title: 'Test Record',
-  status: 'Approved',
   ...overrides,
 });
 

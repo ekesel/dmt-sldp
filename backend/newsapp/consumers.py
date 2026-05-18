@@ -27,6 +27,15 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
             return "public"
 
 
+    @sync_to_async
+    def get_tenant_slug(self):
+        try:
+            from tenants.models import Tenant
+            tenant = Tenant.objects.get(schema_name=self.schema_name)
+            return tenant.slug
+        except Exception:
+            return None
+
     #  Connection Setup
     async def connect(self):
 
@@ -38,10 +47,19 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
         # Here store the  tenanat schema_name to the schema_
         self.schema_name = await self.get_schema_name()
         self.group_name = f"news_{self.schema_name}"
-        
+
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+
+        # Also subscribe to the telemetry group so AI insight and metrics
+        # events reach this connection (TelemetryConsumer is a separate endpoint
+        # the dashboard does not connect to separately).
+        tenant_slug = await self.get_tenant_slug()
+        self.telemetry_group = f"telemetry_{tenant_slug}" if tenant_slug else None
+        if self.telemetry_group:
+            await self.channel_layer.group_add(self.telemetry_group, self.channel_name)
+
         await self.accept()
-        
+
         await self.send_json({"status": "news app websocket is connected", "group": self.group_name})
 
     def is_manager(self):
@@ -71,6 +89,12 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        if hasattr(self, 'telemetry_group') and self.telemetry_group:
+            await self.channel_layer.group_discard(self.telemetry_group, self.channel_name)
+
+    async def telemetry_update(self, event):
+        """Forward telemetry events (AI insights, metrics updates) to the client."""
+        await self.send(text_data=json.dumps(event['message']))
 
 
     #  Handle Incoming action from client side like post creation , update , delete and get posts

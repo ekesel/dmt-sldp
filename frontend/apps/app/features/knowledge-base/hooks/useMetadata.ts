@@ -3,7 +3,7 @@ import { categoriesOptions, metadataOptions, metadataValuesOptions } from "../ap
 import { addMetadataValueMutationOptions, createMetadataCategoryMutationOptions } from "../api/mutation-options";
 import { METADATA_QUERY_KEYS } from "../api/query-keys";
 
-const STABLE_EMPTY_ARRAY: any[] = [];
+const STABLE_EMPTY_ARRAY: never[] = [];
 
 export const useMetadata = (activeCategory?: number) => {
   const queryClient = useQueryClient();

@@ -94,6 +94,41 @@ def sync_tenant_data(source_id, schema_name=None):
         log.save()
 
 @shared_task
+def nightly_sync_all_projects():
+    """
+    Daily at midnight: sync every active source across every active tenant,
+    one by one. A failed source is logged and skipped; processing continues.
+    """
+    from tenants.models import Tenant
+    from configuration.models import SourceConfiguration
+    from configuration.tasks import perform_sync_task
+
+    tenants = Tenant.objects.exclude(schema_name='public').filter(status=Tenant.STATUS_ACTIVE)
+    total_ok = 0
+    total_fail = 0
+
+    for tenant in tenants:
+        projects = tenant.project_set.filter(is_active=True)
+        for project in projects:
+            sources = SourceConfiguration.objects.filter(project=project, is_active=True)
+            for source in sources:
+                logger.info(
+                    f"[nightly_sync] tenant={tenant.schema_name} "
+                    f"project={project.name} source={source.name} (id={source.id})"
+                )
+                try:
+                    # .apply() runs synchronously — guarantees one-at-a-time execution
+                    perform_sync_task.apply(args=[source.id])
+                    total_ok += 1
+                    logger.info(f"[nightly_sync] OK source_id={source.id}")
+                except Exception as e:
+                    total_fail += 1
+                    logger.error(f"[nightly_sync] FAILED source_id={source.id}: {e}")
+
+    return f"Nightly sync done. ok={total_ok} failed={total_fail}"
+
+
+@shared_task
 def run_all_integrations_sync():
     """Trigger sync for all active sources across all tenants."""
     from configuration.models import SourceConfiguration

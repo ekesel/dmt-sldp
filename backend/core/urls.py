@@ -8,7 +8,7 @@ from data.views import (
     DashboardSummaryView, VelocityView, ThroughputView, DefectDensityView,
     ComplianceView, BlockedItemsView, PRHealthView,
     DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
-    ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, SprintListView, AIInsightListView,
+    ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, ComplianceFixedLaterView, SprintListView, AIInsightListView,
     AssigneeDistributionView, AIInsightRefreshView
 )
 from data.sprint_comparison_views import SprintComparisonView
@@ -71,6 +71,7 @@ urlpatterns = [
     path('api/compliance-flags/', ComplianceFlagListView.as_view(), name='compliance_flags'),
     path('api/compliance-flags/<str:id>/resolve/', ComplianceFlagResolveView.as_view(), name='compliance_resolve'),
     path('api/compliance-summary/', ComplianceSummaryView.as_view(), name='compliance_summary'),
+    path('api/compliance-fixed-later/', ComplianceFixedLaterView.as_view(), name='compliance_fixed_later'),
     path('api/sprints/', SprintListView.as_view(), name='sprint_list'),
     
     # AI Insights
@@ -108,6 +109,9 @@ urlpatterns = [
 
     # Centralize Knowledge Base 
     path('api/kb/', include('knowledge_base.urls')),
+
+    # Homepage
+    path('api/homepage/', include('homepage.urls')),
 ]
 
 if settings.DEBUG:

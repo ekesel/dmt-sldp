@@ -8,6 +8,7 @@ interface SyncProgressModalProps {
     sourceId: number;
     sourceName: string;
     tenantId: string;
+    alreadyRunning?: boolean;
 }
 
 interface SyncState {
@@ -20,16 +21,16 @@ interface SyncState {
     };
 }
 
-const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, sourceId, sourceName, tenantId }) => {
-    const [syncState, setSyncState] = useState<SyncState>({
-        progress: 0,
-        status: 'pending',
-        message: 'Initializing...',
-    });
+const SyncProgressModal: React.FC<SyncProgressModalProps> = ({ isOpen, onClose, sourceId, sourceName, tenantId, alreadyRunning = false }) => {
+    const getInitialState = (): SyncState => alreadyRunning
+        ? { progress: 0, status: 'in_progress', message: 'Sync is running — listening for updates...' }
+        : { progress: 0, status: 'pending', message: 'Initializing...' };
+
+    const [syncState, setSyncState] = useState<SyncState>(getInitialState);
 
     useEffect(() => {
         if (!isOpen) {
-            setSyncState({ progress: 0, status: 'pending', message: 'Initializing...' });
+            setSyncState(getInitialState());
             return;
         }
 

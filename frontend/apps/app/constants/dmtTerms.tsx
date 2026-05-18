@@ -9,12 +9,52 @@ export interface DMTTerm {
 export const dmtTerms: DMTTerm[] = [
   {
     id: "velocity",
-    title: "Velocity",
+    title: "Sprint Velocity",
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Shows how much work a team finishes in one sprint (for example, 2 weeks). It helps answer: <em>How fast is the team working?</em></p>
         <p><strong>How it is calculated:</strong> Each task is given <strong>Story Points</strong> based on effort or difficulty. At the end of the sprint, only fully completed tasks are counted.</p>
         <p><strong>Formula:</strong> Velocity = ∑(Story Points of all Done Work Items)</p>
+      </div>
+    )
+  },
+  {
+    id: "cycle_time",
+    title: "Cycle Time",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Shows how long it takes to complete a task after work has started. It answers: <em>Once we start a task, how quickly is it finished?</em></p>
+        <p><strong>How it is calculated:</strong> Finds the difference between the start date and the finish date for each completed task, then calculates the average.</p>
+      </div>
+    )
+  },
+  {
+    id: "compliance",
+    title: "DMT Compliance",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Shows how well a person follows the company's process rules and standards (like filling ticket descriptions, linking code, updating status).</p>
+        <p><strong>Formula:</strong> (Number of Compliant Tasks / Total Number of Tasks) × 100</p>
+      </div>
+    )
+  },
+  {
+    id: "objective_ai",
+    title: "Objective AI",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> A smart, automated system that directly reads the code written by the developer and automatically figures out how much of that code was actually written by AI (like ChatGPT or Copilot).</p>
+        <p><strong>How it is calculated:</strong> Code is scanned via PRDiffAnalyzer which identifies patterns to assign an AI percentage score for the new code submitted.</p>
+      </div>
+    )
+  },
+  {
+    id: "bugs_resolved",
+    title: "Bugs Resolved",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> Indicates the exact number of defects the team has successfully fixed in recent sprints.</p>
+        <p><strong>How it is calculated:</strong> Counts all tickets labeled as "Bug" that were moved to "Done" in the last 5 sprints.</p>
       </div>
     )
   },
@@ -58,16 +98,6 @@ export const dmtTerms: DMTTerm[] = [
     )
   },
   {
-    id: "cycle_time",
-    title: "Cycle Time",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Shows how long it takes to complete a task after work has started. It answers: <em>Once we start a task, how quickly is it finished?</em></p>
-        <p><strong>How it is calculated:</strong> Finds the difference between the start date and the finish date for each completed task, then calculates the average.</p>
-      </div>
-    )
-  },
-  {
     id: "forecast",
     title: "Delivery Forecast (Monte Carlo Simulation)",
     description: (
@@ -94,37 +124,6 @@ export const dmtTerms: DMTTerm[] = [
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Represents the self-reported (or custom-tracked) percentage of AI assistance the developer used to complete their tasks.</p>
         <p><strong>How it is calculated:</strong> Extracts values from work items and averages the percentages of all completed Work Items during the sprint.</p>
-      </div>
-    )
-  },
-  {
-    id: "objective_ai",
-    title: "Objective AI",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> A smart, automated system that directly reads the code written by the developer and automatically figures out how much of that code was actually written by AI (like ChatGPT or Copilot).</p>
-        <p><strong>How it is calculated:</strong> Code is scanned via PRDiffAnalyzer which identifies patterns to assign an AI percentage score for the new code submitted.</p>
-      </div>
-    )
-  },
-
-  {
-    id: "compliance",
-    title: "Compliance",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Shows how well a person follows the company's process rules and standards (like filling ticket descriptions, linking code, updating status).</p>
-        <p><strong>Formula:</strong> (Number of Compliant Tasks / Total Number of Tasks) × 100</p>
-      </div>
-    )
-  },
-  {
-    id: "bugs_resolved",
-    title: "Bugs Resolved",
-    description: (
-      <div className="space-y-2">
-        <p><strong>Meaning:</strong> Indicates the exact number of defects the team has successfully fixed in recent sprints.</p>
-        <p><strong>How it is calculated:</strong> Counts all tickets labeled as "Bug" that were moved to "Done" in the last 5 sprints.</p>
       </div>
     )
   },
@@ -266,31 +265,51 @@ export const dmtTerms: DMTTerm[] = [
 
         <div>
           <h4 className="font-bold text-foreground">How it is calculated</h4>
-          <p className="mt-1">The system checks each team member’s performance and compares their scores using different metrics like Story Points, Compliance Rate, PR Reviews, and AI Usage.</p>
+          <p className="mt-1">All scores are calculated from sprints whose end date falls within the <strong>current calendar month</strong>. The past month section shows the same calculation for the previous calendar month.</p>
         </div>
 
         <div>
           <h4 className="font-bold text-foreground mb-2">Awards and Rules</h4>
           <ul className="space-y-3">
-            <li id="velocity_king" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
+            <li id="velocity_king" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-foreground">Velocity King</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest total Story Points completed.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">Velocity King = max(Σ Story Points Completed)</span>
             </li>
-            <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
+            <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-foreground">Quality Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest compliance rate and best code quality.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average Compliance Rate %)</span>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average DMT Compliance Rate %)</span>
             </li>
-            <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
+            <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-foreground">Top Reviewer</strong>
               <p className="mt-1 text-primary">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Count of PRs Reviewed)</span>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Σ PRs Reviewed)</span>
             </li>
-            <li id="ai_specialist" className="bg-muted/30 p-3 rounded-lg transition-all duration-500">
+            <li id="throughput_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+              <strong className="text-foreground">Throughput Champion</strong>
+              <p className="mt-1 text-primary">Awarded to the person who completed the most work items (tickets) regardless of size.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Throughput Champion = max(Σ Items Completed)</span>
+            </li>
+            <li id="coverage_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+              <strong className="text-foreground">Coverage Champion</strong>
+              <p className="mt-1 text-primary">Awarded to the person with the highest average code coverage across their completed work items.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Coverage Champion = max(Average Code Coverage %)</span>
+            </li>
+            <li id="ai_specialist" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-foreground">AI Specialist</strong>
-              <p className="mt-1 text-primary">Awarded to the person who uses AI tools most effectively.</p>
+              <p className="mt-1 text-primary">Awarded to the person with the highest self-reported AI tool usage across their work items.</p>
               <span className="text-xs font-mono mt-2 block text-muted-foreground">AI Specialist = max(Average AI Usage %)</span>
+            </li>
+            <li id="objective_ai_master" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+              <strong className="text-foreground">Objective AI Master</strong>
+              <p className="mt-1 text-primary">Awarded to the person with the highest PR-analyzed AI code contribution, measured automatically by scanning submitted code.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Objective AI Master = max(Average Code AI % from PR Analysis)</span>
+            </li>
+            <li id="clean_coder" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+              <strong className="text-foreground">Clean Coder</strong>
+              <p className="mt-1 text-primary">Awarded to the person with the fewest defects attributed to their work. Lower is better.</p>
+              <span className="text-xs font-mono mt-2 block text-muted-foreground">Clean Coder = min(Σ Defects Attributed)</span>
             </li>
           </ul>
         </div>
