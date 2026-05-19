@@ -18,7 +18,7 @@ from data.identity_views import UserIdentityMappingViewSet
 from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
 from users.views import (
     RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, 
-    UserViewSet, InviteUserView, PasswordResetRequestView, ResetPasswordConfirmView
+    UserViewSet, InviteUserView, PasswordResetRequestView,ResetPasswordConfirmView,UploadUserDataView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/auth/password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('api/auth/password-reset/confirm/', ResetPasswordConfirmView.as_view(), name='password_reset_confirm'),
+    path('api/users/upload/', UploadUserDataView.as_view(), name='upload_user_data'),
     
     # Analytics & Dashboard
     path('api/analytics/metrics/', MetricDashboardView.as_view(), name='metrics_dashboard'),

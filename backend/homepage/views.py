@@ -11,8 +11,13 @@ from data.models import DeveloperMetrics
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from users.models import User
+from users.serializers import UserSerializer 
+from homepage.utils import get_birthday_info, get_anniversary_info, upcoming_birthday_info, upcoming_anniversary_info  
 
 logger = logging.getLogger(__name__)
+
+
 
 # Organization Chart Api
 class OrgChartAPIView(APIView):
@@ -403,65 +408,215 @@ class OnboardingAPIView(APIView):
 
 
 # star Profomer -
-class LeaderDashboardAPIView(APIView):
-    permission_classes = [IsUser]
+class StarPerformerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_winner(self, queryset, category, metric_name, field_name, agg, project_id, request):
+        """
+        Convert queryset first result into formatted response
+        """
+        w = queryset.first()
+
+        if not w:
+            return None
+
+        email = w['developer_email']
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user:
+            ser = UserSerializer(user, context={'request': request})
+            name = user.get_full_name() or user.username
+            title = user.custom_title or category
+
+            if user.profile_picture:
+                avatar = request.build_absolute_uri(user.profile_picture.url)
+            else:
+                avatar = ser.data.get('avatar_url')
+
+            full_reason = getattr(user, 'competitive_title_reason', None)
+            reason = full_reason if full_reason and user.competitive_title == category else f"Top performer in {metric_name}."
+        else:
+            import hashlib
+            name = w['developer_name'] or email
+            title = category
+            email_hash = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+            avatar = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon"
+            reason = f"Top performer in {metric_name}."
+
+        history_qs = DeveloperMetrics.objects.filter(developer_email=email)
+        if project_id:
+            history_qs = history_qs.filter(project_id=project_id)
+
+        if agg == 'avg':
+            history_qs = history_qs.values('sprint_end_date').annotate(
+                aggregated_score=Avg(field_name)
+            ).order_by('-sprint_end_date')[:5]
+        else:
+            history_qs = history_qs.values('sprint_end_date').annotate(
+                aggregated_score=Sum(field_name)
+            ).order_by('-sprint_end_date')[:5]
+
+        history = [
+            {"date": str(h['sprint_end_date']), "score": round(h['aggregated_score'] or 0, 1)}
+            for h in history_qs
+        ][::-1]
+
+        return {
+            "name": name,
+            "email": email,
+            "title": title,
+            "avatar": avatar,
+            "score": round(w['score'], 1) if w['score'] is not None else 0,
+            "reason": reason,
+            "history": history
+        }
+
+    def _get_winners_from_qs(self, base_qs, project_id, request):
+        if project_id:
+            base_qs = base_qs.filter(project_id=project_id)
+
+        # 1. Highest Compliance
+        quality_qs = (
+            base_qs.filter(items_completed__gt=0)
+            .values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('dmt_compliance_rate'),
+                coverage=Avg('coverage_avg_percent')
+            )
+            .order_by('-score', '-coverage')
+        )
+
+        # 2. Most Points
+        velocity_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('story_points_completed')
+            )
+            .order_by('-score')
+        )
+
+        # 3. Top Reviewer
+        reviewer_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('prs_reviewed')
+            )
+            .order_by('-score')
+        )
+
+        # 4. AI Specialist
+        ai_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('ai_usage_percent')
+            )
+            .order_by('-score')
+        )
+
+        # 5. Highest Objective (PR-Analyzed) AI Usage
+        objective_ai_qs = (
+            base_qs.filter(code_ai_usage_percent__gt=0)
+            .values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('code_ai_usage_percent')
+            )
+            .order_by('-score')
+        )
+
+        # 6. Most Items Completed (Throughput)
+        throughput_qs = (
+            base_qs.values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('items_completed')
+            )
+            .order_by('-score')
+        )
+
+        # 7. Highest Code Coverage
+        coverage_qs = (
+            base_qs.filter(coverage_avg_percent__isnull=False)
+            .values('developer_email', 'developer_name')
+            .annotate(
+                score=Avg('coverage_avg_percent')
+            )
+            .order_by('-score')
+        )
+
+        # 8. Fewest Defects Attributed (Clean Coder) — must have completed work
+        clean_coder_qs = (
+            base_qs.filter(items_completed__gt=0)
+            .values('developer_email', 'developer_name')
+            .annotate(
+                score=Sum('defects_attributed')
+            )
+            .order_by('score')  # ascending: fewer defects = better
+        )
+
+        return {
+            "quality": self._get_winner(quality_qs, "Code Quality Champion", "DMT Compliance", "dmt_compliance_rate", "avg", project_id, request),
+            "velocity": self._get_winner(velocity_qs, "Velocity King", "Sprint Velocity", "story_points_completed", "sum", project_id, request),
+            "reviewer": self._get_winner(reviewer_qs, "Top Reviewer", "PR Reviews", "prs_reviewed", "sum", project_id, request),
+            "ai": self._get_winner(ai_qs, "AI Specialist", "AI Usage", "ai_usage_percent", "avg", project_id, request),
+            "objective_ai": self._get_winner(objective_ai_qs, "Objective AI Master", "Objective AI Code", "code_ai_usage_percent", "avg", project_id, request),
+            "throughput": self._get_winner(throughput_qs, "Throughput Champion", "Items Completed", "items_completed", "sum", project_id, request),
+            "coverage": self._get_winner(coverage_qs, "Coverage Champion", "Code Coverage", "coverage_avg_percent", "avg", project_id, request),
+            "clean_coder": self._get_winner(clean_coder_qs, "Clean Coder", "Defect-Free Work", "defects_attributed", "sum", project_id, request),
+        }
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+
         now = timezone.now()
+        current_month = now.month
+        current_year = now.year
 
-        # Try to get data for the current month
-        base_qs = DeveloperMetrics.objects.filter(
-            sprint_end_date__year=now.year,
-            sprint_end_date__month=now.month
+        current_qs = DeveloperMetrics.objects.filter(
+            sprint_end_date__year=current_year,
+            sprint_end_date__month=current_month
         )
-
-        if project_id:
-            try:
-                project_id = int(project_id)
-            except ValueError:
-                return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
-            base_qs = base_qs.filter(project_id=project_id)
-            
-        # 1. Highest Compliance
-        quality_winner = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
-            score=Avg('dmt_compliance_rate'),
-            coverage=Avg('coverage_avg_percent')
-        ).order_by('-score', '-coverage').first()
-
-        # 2. Most Points
-        velocity_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('story_points_completed')
-        ).order_by('-score').first()
-
-        # 3. Top Reviewer
-        reviewer_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('prs_reviewed')
-        ).order_by('-score').first()
-
-        # 4. AI Specialist
-        ai_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Avg('ai_usage_percent')
-        ).order_by('-score').first()
-
-        def attach_avatar(winner):
-            from users.models import User
-            if not winner:
-                return winner
-            email = winner.get('developer_email')
-            winner['profile_picture'] = None
-            if email:
-                user = User.objects.filter(email=email).first()
-                if user and user.profile_picture:
-                    winner['profile_picture'] = request.build_absolute_uri(user.profile_picture.url)
-            return winner
+        current_data = self._get_winners_from_qs(current_qs, project_id, request)
 
         return Response({
-            'message': 'Leaderboard data',
-            'top_performers': {
-                'quality': attach_avatar(quality_winner),
-                'velocity': attach_avatar(velocity_winner),
-                'reviewer': attach_avatar(reviewer_winner),
-                'ai': attach_avatar(ai_winner)
-            }
-        }, status=200)
+            "message": "Current month top performers",
+            "top_performers": current_data
+        })
+
+
+class EventsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today_birthdays = get_birthday_info(request.tenant)
+        logger.info("today_birthdays", today_birthdays)
+        TodayBirthdayList = []
+        for obj in today_birthdays:
+            TodayBirthdayList.append({
+                "user": obj.first_name + " " + obj.last_name
+            })
+
+        upcoming_birthdays_raw = upcoming_birthday_info(request.tenant)
+        logger.info("upcoming_birthdays_raw", upcoming_birthdays_raw)
+        UpcomingBirthdayList = []
+        for obj in upcoming_birthdays_raw:
+            UpcomingBirthdayList.append({
+                "user": obj["user"].first_name + " " + obj["user"].last_name,
+                "days_left": obj["days_left"],
+                "next_birthday": obj["next_birthday"]
+            })
+        
+        upcoming_anniversaries_raw = upcoming_anniversary_info(request.tenant)
+        logger.info("upcoming_anniversaries_raw", upcoming_anniversaries_raw)
+        UpcomingAnniversaryList = []
+        for obj in upcoming_anniversaries_raw:
+            UpcomingAnniversaryList.append({
+                "user": obj["user"].first_name + " " + obj["user"].last_name,
+                "days_left": obj["days_left"],
+                "next_anniversary": obj["next_anniversary"]
+            })
+
+        return Response({
+            "today_birthdays": TodayBirthdayList,
+            "today_anniversaries": get_anniversary_info(request.tenant),
+            "upcoming_birthdays": UpcomingBirthdayList,
+            "upcoming_anniversaries": UpcomingAnniversaryList,
+        })
