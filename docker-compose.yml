@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   db:
@@ -72,6 +72,13 @@ services:
       - redis
     command: [ "celery", "-A", "core", "beat", "-l", "info" ]
 
+  frontend-setup:
+    image: node:20-slim
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: [ "sh", "-c", "npm install --force" ]
+
   admin-portal:
     image: node:20-slim
     working_dir: /app/apps/admin
@@ -81,16 +88,20 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api
-      - NEXT_PUBLIC_WS_URL=ws://127.0.0.1:8000/ws/admin/health/
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws/admin/health/
       - NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL=.localhost:3000
+      - NEXT_PUBLIC_DEV_DOMAINS=localhost,127.0.0.1
     restart: always
+    depends_on:
+      frontend-setup:
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
           cpus: '0.50'
           memory: 1536M
-    command: [ "sh", "-c", "cd /app && npm install --force && cd /app/apps/admin && npm run dev" ]
+    command: [ "sh", "-c", "npm run dev" ]
 
   company-portal:
     image: node:20-slim
@@ -102,13 +113,21 @@ services:
     environment:
       - NODE_ENV=development
       - NODE_OPTIONS=--max-old-space-size=1536
+      - NEXT_PUBLIC_API_URL=https://api.elevate.samta.ai/api/
+      - NEXT_PUBLIC_WS_HOST=wss://api.elevate.samta.ai
+      - NEXT_PUBLIC_WS_TELEMETRY_URL_TEMPLATE=wss://api.elevate.samta.ai/ws/telemetry/{tenant_id}/
+      - NEXT_PUBLIC_MEDIA_BASE_URL=https://api.elevate.samta.ai
+      - NEXT_PUBLIC_DEV_DOMAINS=localhost,127.0.0.1,api.elevate.samta.ai,admin.elevate.samta.ai,elevate.samta.ai
     restart: always
+    depends_on:
+      frontend-setup:
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 2048M
-    command: [ "sh", "-c", "cd /app && npm install && cd /app/apps/app && npm run dev" ]
+    command: [ "sh", "-c", "npm run dev" ]
 
 volumes:
   postgres_data:
