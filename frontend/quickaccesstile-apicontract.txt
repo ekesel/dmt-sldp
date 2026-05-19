@@ -1,0 +1,422 @@
+Holiday Calendar API
+
+Permissions
+
+· POST / PATCH → Only manager
+
+· GET (all / single) → Any authenticated user
+
+---
+
+1.Upload Holiday Calendar (POST)
+
+Endpoint
+
+POST https://api.elevate.samta.ai/api/homepage/holiday-calendar/
+
+Headers
+
+Authorization: Bearer <access_token> Content-Type: multipart/form-data
+
+Body (form-data)
+
+holiday_calendar_file: <file>
+
+Permission
+
+· Non-manager → Error
+
+· Manager → Allowed
+
+Success Response
+
+{ "message": "Holiday calendar uploaded successfully" }
+
+Error Example
+
+{ "error": "Only manager can perform this action" }
+
+
+2. Update Holiday Calendar (PATCH)
+
+Endpoint
+
+PATCH https://api.elevate.samta.ai/api/homepage/holiday-calendar/{id}/
+
+Body
+
+holiday_calendar_file: <file>
+
+Permission
+
+· Only manager
+
+3. Get All Holiday Calendars
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/holiday-calendar/
+
+Access
+
+· Any user
+
+Response
+
+[ {
+
+"id": 1, "holiday_calendar_file": "/media/Samta/holiday_calendar/dmt_terms_version_2.pdf" } ]
+
+
+
+4. Get Single Holiday Calendar
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/holiday-calendar/{id}/
+
+Example
+
+GET https://api.elevate.samta.ai/api/homepage/holiday-calendar/1/
+
+Response
+
+{ "id": 1, "holiday_calendar_file": "/media/Samta/holiday_calendar/dmt_terms_version_2.pdf" }
+
+
+
+
+
+
+
+Employee Engagement Calendar API
+
+Permissions
+
+· POST / PATCH → Only manager
+
+· GET (all / single) → Any authenticated user
+
+---
+
+1. Upload (POST)
+
+Endpoint
+
+POST https://api.elevate.samta.ai/api/homepage/employee-engagement/
+
+Headers
+
+Authorization: Bearer <access_token> Content-Type: multipart/form-data
+
+Body (form-data)
+
+employee_engagement_calendar_file: <file>
+
+
+Success Response
+
+{ "message": "Employee engagement calendar uploaded successfully" }
+
+
+2. Update (PATCH)
+
+Endpoint
+
+PATCH https://api.elevate.samta.ai/api/homepage/employee-engagement/{id}/
+
+Body
+
+employee_engagement_calendar_file: <file>
+
+
+3. Get All
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/employee-engagement/
+
+Response
+
+[ { "id": 1, "employee_engagement_calendar_file": "/media/Samta/employee_engagement/file.pdf" } ]
+
+---
+
+4. Get Single
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/employee-engagement/{id}/
+
+Response
+
+{ "id": 1, "employee_engagement_calendar_file": "/media/Samta/employee_engagement/file.pdf" }
+
+
+
+
+Policy API
+
+Permissions
+
+· POST / PATCH → Only manager
+
+· GET (all / single) → Any authenticated user
+
+---
+
+1. Upload Policy (POST)
+
+Endpoint
+
+POST https://api.elevate.samta.ai/api/homepage/policy/
+
+Headers
+
+Authorization: Bearer <access_token> Content-Type: multipart/form-data
+
+Body (form-data)
+
+policy_file: <file>
+
+Success Response
+
+{ "message": "Policy uploaded successfully" }
+
+Error (Non-manager)
+
+{ "error": "Only manager can perform this action" }
+
+
+
+2. Update Policy (PATCH)
+
+Endpoint
+
+PATCH https://api.elevate.samta.ai/api/homepage/policy/{id}/
+
+Body
+
+policy_file: <file>
+
+Permission
+
+· Only manager
+
+
+3. Get All Policies
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/policy/
+
+Response
+
+[ { "id": 1, "policy_file": "/media/Samta/policy/file.pdf" } ]
+
+
+4. Get Single Policy
+
+Endpoint
+
+GET https://api.elevate.samta.ai/api/homepage/policy/{id}/
+
+Example
+
+GET https://api.elevate.samta.ai/api/homepage/policy/1/
+
+Response
+
+{ "id": 1,
+
+"policy_file": "/media/Samta/policy/file.pdf" }
+
+
+Common Rule for DELETE
+
+· Only manager can delete
+
+· Non-manager → return:
+
+{ "error": "Only manager can perform this action" }
+
+
+
+1. Holiday Calendar DELETE API
+
+Endpoint
+
+DELETE /api/homepage/holiday-calendar/{id}/
+
+Permission
+
+· Only manager
+
+Success Response
+
+{ "message": "Holiday calendar deleted successfully" }
+
+
+2. Employee Engagement Calendar DELETE API
+
+Endpoint
+
+DELETE /api/homepage/employee-engagement/{id}/
+
+Permission
+
+· Only manager
+
+Success Response
+
+{ "message": "Employee engagement calendar deleted successfully" }
+
+
+3. Policy DELETE API
+
+Endpoint
+
+DELETE /api/homepage/policy/{id}/
+
+Permission
+
+· Only manager
+
+Success Response
+
+{ "message": "Policy deleted successfully" }
+
+
+1. Onboarding API 
+
+Base URL: /api/homepage/onboarding/  
+
+Detail URL: /api/homepage/onboarding/<id>/  
+
+Permission: IsManagerOrReadOnly  
+
+Content-Type: multipart/form-data  
+
+Managers can create, update, and delete records. Other users have read-only access. 
+
+Shape 
+
+A. List Onboarding Documents 
+
+Method: GET  
+
+URL: /api/homepage/onboarding/  
+
+Request Body: None  
+
+Response — 200 OK 
+
+[ 
+  { 
+    "id": 1, 
+    "title": "Employee Handbook", 
+    "onboarding_file": "http://example.com/media/tenant/onboarding/handbook.pdf" 
+  }, 
+  { 
+    "id": 2, 
+    "title": "IT Policy", 
+    "onboarding_file": "http://example.com/media/tenant/onboarding/it_policy.pdf" 
+  } 
+] 
+
+Shape 
+
+B. Retrieve Single Onboarding Document 
+
+Method: GET  
+
+URL: /api/onboarding/<id>/  
+
+Request Body: None  
+
+Response — 200 OK 
+
+{ 
+  "id": 1, 
+  "title": "Employee Handbook", 
+  "onboarding_file": "http://example.com/media/tenant/onboarding/handbook.pdf" 
+} 
+
+Response — 404 Not Found 
+
+{ 
+  "message": "Onboarding document not found" 
+} 
+
+Shape 
+
+C. Create Onboarding Document 
+
+Method: POST  
+
+URL: /api/homepage/onboarding/  
+
+Request Body (FormData) 
+
+Field                 Type          Required 
+
+title               String          Yes 
+
+onboarding_file      File          Yes 
+
+Example 
+
+title: Welcome Kit 
+onboarding_file: (Binary File) 
+
+Response — 201 Created 
+
+{ 
+  "message": "Onboarding document uploaded successfully" 
+} 
+
+Response — 400 Bad Request 
+
+{ 
+  "title": ["This field is required."], 
+  "onboarding_file": ["No file was submitted."] 
+} 
+
+Shape 
+
+D. Update Onboarding Document (Partial Update) 
+
+Method: PATCH  
+
+URL: /api/homepage/onboarding/<id>/  
+
+Request Body (FormData) 
+
+Field               Type    Required 
+
+title               String     No 
+
+onboarding_file     File      No 
+
+Response — 200 OK 
+
+{ 
+  "message": "Onboarding document updated successfully" 
+} 
+
+Shape 
+
+E. Delete Onboarding Document 
+
+Method: DELETE  
+
+URL: /api/homepage/onboarding/<id>/  
+
+Request Body: None  
+
+Response — 200 OK 
+
+{ 
+  "message": "Onboarding document deleted successfully" 
+} 
+

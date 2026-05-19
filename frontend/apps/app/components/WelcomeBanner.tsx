@@ -25,13 +25,13 @@ export const WelcomeBanner: React.FC = () => {
 
           {/* Illustration Section below Greeting */}
           <div className="flex-1 flex justify-center items-end relative overflow-hidden">
-            <div className="relative max-w-[26.25rem] w-full h-[11.25rem] md:h-[17.5rem] lg:h-[13rem] xl:h-[11.25rem] mix-blend-multiply flex justify-center items-end">
+            <div className="relative max-w-[34rem] w-full h-[12.5rem] md:h-[19rem] lg:h-[14.5rem] xl:h-[13rem] mix-blend-multiply flex justify-center items-end [mask-image:linear-gradient(to_right,black_55%,transparent_95%)] [webkit-mask-image:linear-gradient(to_right,black_55%,transparent_95%)]">
               <Image
-                src="/assets/welcome.png"
+                src="/assets/welcome2.png"
                 alt="Welcome Illustration"
-                width={420}
+                width={540} 
                 height={280}
-                className="object-contain object-bottom scale-100 transition-transform duration-500"
+                className="w-[125%] max-w-none h-full object-cover object-bottom scale-100 transition-transform duration-500"
                 priority
               />
             </div>

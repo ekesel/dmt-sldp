@@ -404,6 +404,34 @@ export const dashboard = {
     get<LeaderboardResponse>(`/dashboard/leaderboard/${projectId ? `?project_id=${projectId}` : ''}`),
   getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
     get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
+
+  
+  getStarPerformer: () => get<any>('/homepage/star-performer/'),
+  getPolicies: () => get<any[]>('/homepage/policy/'),
+  uploadPolicy: (formData: FormData) => post<any, FormData>('/homepage/policy/', formData),
+  updatePolicy: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/policy/${id}/`, formData),
+  deletePolicy: (id: number) => del<any>(`/homepage/policy/${id}/`),
+  
+  getHolidayCalendars: () => get<any[]>('/homepage/holiday-calendar/'),
+  uploadHolidayCalendar: (formData: FormData) => post<any, FormData>('/homepage/holiday-calendar/', formData),
+  updateHolidayCalendar: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/holiday-calendar/${id}/`, formData),
+  deleteHolidayCalendar: (id: number) => del<any>(`/homepage/holiday-calendar/${id}/`),
+
+  getEmployeeEngagements: () => get<any[]>('/homepage/employee-engagement/'),
+  uploadEmployeeEngagement: (formData: FormData) => post<any, FormData>('/homepage/employee-engagement/', formData),
+  updateEmployeeEngagement: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/employee-engagement/${id}/`, formData),
+  deleteEmployeeEngagement: (id: number) => del<any>(`/homepage/employee-engagement/${id}/`),
+
+  getLearningAndDevelopment: () => get<any[]>('/homepage/learning-and-development/'),
+  uploadLearningAndDevelopment: (formData: FormData) => post<any, FormData>('/homepage/learning-and-development/', formData),
+  updateLearningAndDevelopment: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/learning-and-development/${id}/`, formData),
+  deleteLearningAndDevelopment: (id: number) => del<any>(`/homepage/learning-and-development/${id}/`),
+
+
+  getOnboarding: () => get<any[]>('/homepage/onboarding/'),
+  uploadOnboarding: (formData: FormData) => post<any, FormData>('/homepage/onboarding/', formData),
+  updateOnboarding: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/onboarding/${id}/`, formData),
+  deleteOnboarding: (id: number) => del<any>(`/homepage/onboarding/${id}/`),
 };
 
 export interface LeaderboardWinner {

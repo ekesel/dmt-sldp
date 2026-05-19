@@ -37,10 +37,27 @@ const PostCard = ({
   const { totalComments } = useComments(post.post_id);
   const displayCommentCount = totalComments || initialComments;
 
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const openCommentsPostId = params.get("openComments");
+      if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) {
+        setShowComments(true);
+        setTimeout(() => {
+          const element = document.getElementById(`post-${post.post_id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 150);
+      }
+    }
+  }, [post.post_id]);
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div 
+      id={`post-${post.post_id}`}
+      className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
+    >
       {/* Post Header */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">

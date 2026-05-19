@@ -1,11 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { reactions as reactionsApi, ReactionSummary, ReactionType } from '@dmt/api';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 export function useReactions(postId: number) {
   const [reactions, setReactions] = useState<Record<number, ReactionSummary>>({});
   const [loading, setLoading] = useState(false);
   const pendingFetches = useRef<Set<number>>(new Set());
+  
+  const { user } = useAuth();
+  const userId = user?.id;
+  const prevUserIdRef = useRef<number | string | undefined>(userId);
 
   const fetchReactions = useCallback(async (id: number, force = false) => {
     if (id > 1e11) return; // Skip optimistic IDs
@@ -21,7 +26,13 @@ export function useReactions(postId: number) {
     try {
       const data = await reactionsApi.getSummary(id);
 
-
+      const loggedInUserReaction = data.reactions?.find(
+        (r: any) => {
+          const rUserId = typeof r.user === 'object' && r.user !== null ? r.user.id : r.user;
+          return Number(rUserId) === Number(userId);
+        }
+      );
+      const userReaction = loggedInUserReaction?.reaction_type;
 
       setReactions(prev => {
         const current = prev[id];
@@ -40,6 +51,7 @@ export function useReactions(postId: number) {
             types: { like: 0, love: 0, haha: 0, sad: 0 }, // fallback defaults
             reactions: [], // fallback defaults
             ...data, // overwrite with actual API data
+            user_reaction: userReaction
           }
         };
       });
@@ -49,16 +61,22 @@ export function useReactions(postId: number) {
       pendingFetches.current.delete(id);
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    // Only fetch if not already present in state
-    if (!reactions[postId]) {
-      fetchReactions(postId);
-    } else {
+    if (postId === 0) return;
 
+    const userSwitched = prevUserIdRef.current !== userId;
+    prevUserIdRef.current = userId;
+
+    if (userSwitched) {
+      // Clear the local reactions state to ensure clean switch, then force fetch
+      setReactions({});
+      fetchReactions(postId, true);
+    } else if (!reactions[postId]) {
+      fetchReactions(postId);
     }
-  }, [postId, fetchReactions, reactions[postId]]);
+  }, [postId, fetchReactions, reactions, userId]);
 
   // Log reactions state after update
   useEffect(() => {

@@ -57,16 +57,26 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
         }
     };
 
+    React.useEffect(() => {
+        if (highlightUsers.length <= 1) return;
+
+        const timer = setInterval(() => {
+            setCurrentIndex((prev) => (prev === highlightUsers.length - 1 ? 0 : prev + 1));
+        }, 4000); // cycles every 4 seconds
+
+        return () => clearInterval(timer);
+    }, [highlightUsers.length]);
+
     const currentUser = highlightUsers[currentIndex];
 
     return (
         <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full xl:max-h-[20rem] overflow-hidden flex flex-col">
             {/* Festive Header Section */}
-            <div className="relative h-[6rem] sm:h-[6.875rem] w-full flex flex-col items-center justify-start pt-3 flex-shrink-0">
+            <div className="relative h-[5.5rem] sm:h-[6.25rem] w-full flex flex-col items-center justify-start flex-shrink-0">
                 {/* Background Illustration */}
                 <div className="absolute inset-0 z-0 opacity-100">
                     <Image
-                        src="/assets/celebration.png"
+                        src={currentUser.type === "Work Anniversary" ? "/assets/celebrationani.png" : "/assets/celebration.png"}
                         alt="Festive Background"
                         fill
                         className="object-cover object-top"
@@ -76,64 +86,20 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
 
                 {/* Fade-out Gradient at Bottom */}
                 <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent z-[5]" />
-
-                {/* Playful Title at Bottom of Header */}
-                <div className="absolute bottom-2 inset-x-0 z-10 text-center select-none">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={currentUser.type}
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -5 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            {currentUser.type === "Birthday" ? (
-                                <>
-                                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black leading-none flex gap-1 justify-center mb-0.5 drop-shadow-sm">
-                                        <span className="text-[#56C3B1]">H</span>
-                                        <span className="text-[#FFAB40]">a</span>
-                                        <span className="text-[#FF808B]">p</span>
-                                        <span className="text-[#7CB9E8]">p</span>
-                                        <span className="text-[#6FCF97]">y</span>
-                                    </h2>
-                                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-accent leading-tight drop-shadow-sm">
-                                        Birthday!
-                                    </h2>
-                                </>
-                            ) : (
-                                <>
-                                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black leading-none flex gap-1 justify-center mb-0.5 drop-shadow-sm">
-                                        <span className="text-[#56C3B1]">C</span>
-                                        <span className="text-accent">o</span>
-                                        <span className="text-[#FF808B]">n</span>
-                                        <span className="text-[#7CB9E8]">g</span>
-                                        <span className="text-[#6FCF97]">r</span>
-                                        <span className="text-accent">a</span>
-                                        <span className="text-[#FF808B]">t</span>
-                                        <span className="text-[#7CB9E8]">s</span>
-                                    </h2>
-                                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-[#6FCF97] leading-tight drop-shadow-sm">
-                                        Work Anniversary!
-                                    </h2>
-                                </>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
             </div>
 
             {/* Main Highlight Section Overlapping Header */}
-            <div className="relative z-20 px-4 sm:px-6 pt-0 pb-2 flex items-end justify-between -mt-10 sm:-mt-12 flex-shrink-0">
+            <div className="relative z-20 px-4 sm:px-6 pt-0 pb-3 flex items-center justify-between -mt-9 sm:-mt-11 flex-shrink-0">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentIndex}
-                        initial={{ opacity: 0, x: -10 }}
+                        initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
+                        exit={{ opacity: 0, x: -30 }}
                         transition={{ duration: 0.4, ease: "easeOut" }}
-                        className="flex flex-col items-start gap-1.5 sm:gap-2"
+                        className="flex items-center gap-3 sm:gap-4"
                     >
-                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.3125rem] sm:h-[5.3125rem] rounded-full overflow-hidden border-4 border-card shadow-lg flex-shrink-0 bg-secondary">
+                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[3.5px] border-card shadow-lg flex-shrink-0 bg-secondary">
                             <Image
                                 src={currentUser.avatar}
                                 alt={currentUser.name}
@@ -142,11 +108,11 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
                                 unoptimized
                             />
                         </div>
-                        <div className="flex flex-col items-start text-left">
-                            <h3 className="text-[1.0625rem] sm:text-[1.1875rem] font-bold text-card-foreground leading-tight">
+                        <div className="flex flex-col items-start text-left mt-3 sm:mt-4">
+                            <h3 className="text-[1.125rem] sm:text-[1.25rem] font-bold text-card-foreground leading-tight">
                                 {currentUser.name}
                             </h3>
-                            <p className="text-[0.75rem] sm:text-[0.8125rem] font-medium text-muted-foreground">
+                            <p className="text-[0.8125rem] sm:text-[0.875rem] font-medium text-muted-foreground">
                                 {currentUser.type}
                             </p>
                         </div>
@@ -155,30 +121,27 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
 
                 {/* Navigation Controls */}
                 {highlightUsers.length > 1 && (
-                    <div className="flex flex-col items-end gap-3 mb-2">
-                        {/* Chevron Buttons */}
-                        <div className="flex gap-1.5">
-                            <button
-                                onClick={prevSlide}
-                                disabled={currentIndex === 0}
-                                className="p-1.5 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground transition-colors border border-border disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-secondary disabled:hover:text-muted-foreground"
-                                aria-label="Previous celebration"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={nextSlide}
-                                disabled={currentIndex === highlightUsers.length - 1}
-                                className="p-1.5 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground transition-colors border border-border disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-secondary disabled:hover:text-muted-foreground"
-                                aria-label="Next celebration"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
+                    <div className="flex gap-1.5 mt-3 sm:mt-4">
+                        <button
+                            onClick={prevSlide}
+                            disabled={currentIndex === 0}
+                            className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Previous celebration"
+                        >
+                            <svg className="w-3.5 h-3.5 sm:w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            disabled={currentIndex === highlightUsers.length - 1}
+                            className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Next celebration"
+                        >
+                            <svg className="w-3.5 h-3.5 sm:w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
                     </div>
                 )}
             </div>
