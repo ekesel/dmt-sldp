@@ -16,6 +16,7 @@ interface UpcomingCelebration {
     name: string;
     date: string;
     avatar: string;
+    type: 'birthday' | 'anniversary';
 }
 
 interface BirthdayEvent {
@@ -99,19 +100,20 @@ export const CelebrationsCard: React.FC = () => {
                     name: b.user,
                     date: formatDate(b.next_birthday ?? ''),
                     days_left: b.days_left,
-                    avatar: getInitialsAvatar(b.user)
+                    avatar: getInitialsAvatar(b.user),
+                    type: 'birthday' as const
                 }));
 
                 const upcomingAnniversaries = (res.upcoming_anniversaries || []).map((a) => ({
                     name: a.user,
                     date: formatDate(a.next_anniversary ?? ''),
                     days_left: a.days_left,
-                    avatar: getInitialsAvatar(a.user)
+                    avatar: getInitialsAvatar(a.user),
+                    type: 'anniversary' as const
                 }));
 
                 const combinedUpcoming = [...upcomingBirthdays, ...upcomingAnniversaries]
-                    .sort((a, b) => a.days_left - b.days_left)
-                    .slice(0, 3); // Display top 3 upcoming
+                    .sort((a, b) => a.days_left - b.days_left); // Display all upcoming events returned by API
 
                 setUpcoming(combinedUpcoming);
             }
@@ -275,12 +277,12 @@ export const CelebrationsCard: React.FC = () => {
                     Upcoming:
                 </h4>
 
-                <div className="space-y-2.5 sm:space-y-3.5 overflow-hidden">
+                <div className="space-y-2 sm:space-y-2.5 overflow-y-auto max-h-[7.5rem] pr-1 scrollbar-thin">
                     {upcoming.length > 0 ? (
                         upcoming.map((item, index) => (
                             <div key={index} className="flex items-center justify-between group animate-fade-in">
-                                <div className="flex items-center gap-2 sm:gap-2.5">
-                                    <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden border border-border group-hover:scale-105 transition-transform">
+                                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                    <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden border border-border group-hover:scale-105 transition-transform flex-shrink-0">
                                         <Image
                                             src={item.avatar}
                                             alt={item.name}
@@ -289,11 +291,22 @@ export const CelebrationsCard: React.FC = () => {
                                             unoptimized
                                         />
                                     </div>
-                                    <span className="text-[0.875rem] sm:text-[0.9375rem] font-bold text-card-foreground truncate max-w-[5rem] sm:max-w-none">
-                                        {item.name}
-                                    </span>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="text-[0.875rem] sm:text-[0.9375rem] font-bold text-card-foreground truncate max-w-[7rem] sm:max-w-[12rem] md:max-w-[16rem]">
+                                            {item.name}
+                                        </span>
+                                        {item.type === 'anniversary' ? (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-primary/10 text-primary border border-primary/20 flex-shrink-0">
+                                                🎉work Anniversary 
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20 flex-shrink-0">
+                                                🎂 Birthday
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <span className="text-[0.75rem] sm:text-[0.875rem] font-medium text-card-foreground flex-shrink-0">
+                                <span className="text-[0.75rem] sm:text-[0.875rem] font-medium text-muted-foreground flex-shrink-0">
                                     ({item.date})
                                 </span>
                             </div>
