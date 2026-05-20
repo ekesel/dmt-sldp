@@ -17,6 +17,7 @@ urlpatterns = [
     path('onboarding/', OnboardingAPIView.as_view(), name='onboarding'),
     path('onboarding/<int:id>/', OnboardingAPIView.as_view(), name='onboarding-detail'),
     path('star-performer/', StarPerformerAPIView.as_view(), name='star-performer'),
-    path('events/', EventsAPIView.as_view(), name='events')
-    
+    path('events/', EventsAPIView.as_view(), name='events'),
+    path('upload-holiday/',UploadHolidayDataAPIView.as_view(),name='upload-holiday'),
+    path('holidays/',GetHolidayDataAPIView.as_view(),name='holidays')
 ]

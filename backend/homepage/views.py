@@ -13,8 +13,9 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from users.models import User
 from users.serializers import UserSerializer 
-from homepage.utils import get_birthday_info, get_anniversary_info, upcoming_birthday_info, upcoming_anniversary_info  
-
+from homepage.utils import get_birthday_info, get_anniversary_info, upcoming_birthday_info, upcoming_anniversary_info ,import_holidays_from_excel
+from core.permissions import IsAdminUser, IsManager
+from django_tenants.utils import schema_context
 logger = logging.getLogger(__name__)
 
 
@@ -620,3 +621,64 @@ class EventsAPIView(APIView):
             "upcoming_birthdays": UpcomingBirthdayList,
             "upcoming_anniversaries": UpcomingAnniversaryList,
         })
+
+class UploadHolidayDataAPIView(APIView):
+    permission_classes = [IsAdminUser | IsManager]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        from tenants.models import Tenant
+
+        file_obj = request.data.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided. Send the Excel file with key "file".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        # Admin can specify any tenant via tenant_id in the request body
+        if user.is_superuser or user.is_platform_admin:
+            tenant_id = request.data.get('tenant_id')
+            if not tenant_id:
+                return Response(
+                    {'error': 'Admin must provide tenant_id to specify which tenant to upload for.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+            except Tenant.DoesNotExist:
+                return Response({'error': f'Tenant with id={tenant_id} not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Manager: use their own tenant
+            tenant = user.tenant
+            if not tenant:
+                return Response({'error': 'No tenant found for your account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        result = import_holidays_from_excel(file_obj, tenant_id=tenant)
+
+        if result['success']:
+            return Response(
+                {
+                    'message': 'Upload completed',
+                    'stats': result['stats']
+                },
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {'error': result.get('error', 'Unknown error occurred'), 'stats': result.get('stats', {})},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class GetHolidayDataAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        with schema_context(request.tenant.schema_name):
+            holidays = Holiday.objects.filter(tenant_id=request.tenant.id)
+            holiday_list = []
+            for holiday in holidays:
+                holiday_list.append({
+                    "name": holiday.name,
+                    "date": holiday.date
+                })
+        return Response({"holidays": holiday_list}, status=200)
+        

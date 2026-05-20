@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from users.models import User
-
+import pandas as pd
+from .models import Holiday
+from django_tenants.utils import schema_context
 # Checking today is any one birthday or not
 def get_birthday_info(tenant):
     today = date.today()
@@ -89,3 +91,49 @@ def upcoming_anniversary_info(tenant):
                 "days_left": days_left
             })
     return upcoming
+
+
+
+
+def import_holidays_from_excel(file, tenant_id):
+
+    try:
+        # Read Excel file
+        df = pd.read_excel(file)
+
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower()
+
+        if "date" not in df.columns or "holiday name" not in df.columns:
+            return {
+                'success': False,
+                'error': f"Required columns 'date' and 'holiday name' not found. Found columns: {list(df.columns)}",
+                'stats': {'created': 0}
+            }
+
+        created_count = 0
+        with schema_context(tenant_id.schema_name):
+            # Delete old holidays for this tenant
+            Holiday.objects.filter(tenant_id=tenant_id).delete()
+
+            # Insert new holidays
+            for _, row in df.iterrows():
+                if pd.isna(row["date"]) or pd.isna(row["holiday name"]):
+                    continue
+                Holiday.objects.create(
+                    date=row["date"],
+                    name=row["holiday name"],
+                    tenant_id=tenant_id
+                )
+                created_count += 1
+
+        return {
+            'success': True,
+            'stats': {'created': created_count}
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'stats': {'created': 0}
+        }
