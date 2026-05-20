@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dashboard } from '@dmt/api';
@@ -18,10 +18,31 @@ interface UpcomingCelebration {
     avatar: string;
 }
 
+interface BirthdayEvent {
+    user: string;
+    next_birthday?: string | null;
+    days_left: number;
+}
+
+interface AnniversaryEvent {
+    user: string;
+    next_anniversary?: string | null;
+    days_left: number;
+    anniversary_count?: number | null;
+}
+
+interface DashboardEventsResponse {
+    today_birthdays?: BirthdayEvent[] | null;
+    today_anniversaries?: AnniversaryEvent[] | null;
+    upcoming_birthdays?: BirthdayEvent[] | null;
+    upcoming_anniversaries?: AnniversaryEvent[] | null;
+}
+
 export const CelebrationsCard: React.FC = () => {
     const [highlightUsers, setHighlightUsers] = useState<HighlightUser[]>([]);
     const [upcoming, setUpcoming] = useState<UpcomingCelebration[]>([]);
     const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const getInitialsAvatar = (name: string) => {
@@ -38,68 +59,76 @@ export const CelebrationsCard: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        const fetchEvents = async () => {
-            try {
-                const res = await dashboard.getEvents();
-                if (res) {
-                    // 1. Process today's celebrations
-                    const todayBirthdays = res.today_birthdays || [];
-                    const todayAnniversaries = res.today_anniversaries || [];
+    const fetchEvents = useCallback(async () => {
+        setLoading(true);
+        setErrorMessage(null);
 
-                    const todayCelebrations: HighlightUser[] = [
-                        ...todayBirthdays.map((b: any) => ({
-                            name: b.user,
-                            type: 'Birthday 🎂',
-                            avatar: getInitialsAvatar(b.user)
-                        })),
-                        ...todayAnniversaries.map((a: any) => ({
-                            name: a.user,
-                            type: `${a.anniversary_count || 1} Year Work Anniversary 🎉`,
-                            avatar: getInitialsAvatar(a.user)
-                        }))
-                    ];
+        try {
+            const res = (await dashboard.getEvents()) as DashboardEventsResponse | null | undefined;
+            if (res) {
+                // 1. Process today's celebrations
+                const todayBirthdays = res.today_birthdays || [];
+                const todayAnniversaries = res.today_anniversaries || [];
 
-                    if (todayCelebrations.length === 0) {
-                        // Fallback slide when no celebrations today
-                        todayCelebrations.push({
-                            name: 'No Celebrations Today',
-                            type: 'Stay tuned for upcoming events! ✨',
-                            avatar: 'https://ui-avatars.com/api/?name=DMT&background=0D8ABC&color=fff&size=128&bold=true'
-                        });
-                    }
-                    setHighlightUsers(todayCelebrations);
-
-                    // 2. Process upcoming list, combine and sort by days_left
-                    const upcomingBirthdays = (res.upcoming_birthdays || []).map((b: any) => ({
+                const todayCelebrations: HighlightUser[] = [
+                    ...todayBirthdays.map((b) => ({
                         name: b.user,
-                        date: formatDate(b.next_birthday),
-                        days_left: b.days_left,
+                        type: 'Birthday 🎂',
                         avatar: getInitialsAvatar(b.user)
-                    }));
-
-                    const upcomingAnniversaries = (res.upcoming_anniversaries || []).map((a: any) => ({
+                    })),
+                    ...todayAnniversaries.map((a) => ({
                         name: a.user,
-                        date: formatDate(a.next_anniversary),
-                        days_left: a.days_left,
+                        type: `${a.anniversary_count || 1} Year Work Anniversary 🎉`,
                         avatar: getInitialsAvatar(a.user)
-                    }));
+                    }))
+                ];
 
-                    const combinedUpcoming = [...upcomingBirthdays, ...upcomingAnniversaries]
-                        .sort((a, b) => a.days_left - b.days_left)
-                        .slice(0, 3); // Display top 3 upcoming
-
-                    setUpcoming(combinedUpcoming);
+                if (todayCelebrations.length === 0) {
+                    // Fallback slide when no celebrations today
+                    todayCelebrations.push({
+                        name: 'No Celebrations Today',
+                        type: 'Stay tuned for upcoming events! ✨',
+                        avatar: 'https://ui-avatars.com/api/?name=DMT&background=0D8ABC&color=fff&size=128&bold=true'
+                    });
                 }
-            } catch (err) {
-                console.error('Failed to load events celebrations:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+                setHighlightUsers(todayCelebrations);
+                setCurrentIndex(0);
 
-        fetchEvents();
+                // 2. Process upcoming list, combine and sort by days_left
+                const upcomingBirthdays = (res.upcoming_birthdays || []).map((b) => ({
+                    name: b.user,
+                    date: formatDate(b.next_birthday ?? ''),
+                    days_left: b.days_left,
+                    avatar: getInitialsAvatar(b.user)
+                }));
+
+                const upcomingAnniversaries = (res.upcoming_anniversaries || []).map((a) => ({
+                    name: a.user,
+                    date: formatDate(a.next_anniversary ?? ''),
+                    days_left: a.days_left,
+                    avatar: getInitialsAvatar(a.user)
+                }));
+
+                const combinedUpcoming = [...upcomingBirthdays, ...upcomingAnniversaries]
+                    .sort((a, b) => a.days_left - b.days_left)
+                    .slice(0, 3); // Display top 3 upcoming
+
+                setUpcoming(combinedUpcoming);
+            }
+        } catch (err) {
+            console.error('Failed to load events celebrations:', err);
+            setHighlightUsers([]);
+            setUpcoming([]);
+            setCurrentIndex(0);
+            setErrorMessage('Couldn’t load celebrations right now. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchEvents();
+    }, [fetchEvents]);
 
     const nextSlide = () => {
         if (currentIndex < highlightUsers.length - 1) {
@@ -128,6 +157,21 @@ export const CelebrationsCard: React.FC = () => {
             <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-[20rem] overflow-hidden flex flex-col items-center justify-center">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
                 <p className="text-muted-foreground font-semibold text-sm mt-3">Loading Celebrations...</p>
+            </div>
+        );
+    }
+
+    if (errorMessage) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-[20rem] overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+                <p className="text-card-foreground font-semibold text-sm">{errorMessage}</p>
+                <button
+                    type="button"
+                    onClick={fetchEvents}
+                    className="mt-4 inline-flex items-center justify-center rounded-xl border border-border bg-secondary px-4 py-2 text-sm font-semibold text-card-foreground hover:bg-muted transition-colors"
+                >
+                    Retry
+                </button>
             </div>
         );
     }

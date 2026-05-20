@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactFlow, {
     MiniMap,
@@ -8,11 +8,12 @@ import ReactFlow, {
     Background,
     useNodesState,
     useEdgesState,
-    addEdge,
+
     Connection,
     Edge,
     MarkerType,
     Node,
+    NodeChange,
     Position,
     ReactFlowProvider,
     useReactFlow,
@@ -29,22 +30,36 @@ import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
 import OrgChartControls from '@/components/org-chart/OrgChartControls';
 import EmployeeModal from '@/components/org-chart/EmployeeModal';
 
+/**
+ * Represents a single employee record in the org chart dataset.
+ * avatarColor is intentionally excluded — node colour is derived from
+ * the department string at render time via getDeptStyles.
+ */
+interface IEmployee {
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    department: string;
+    parentId: string;
+}
+
 // Initial dummy organizational data
 const INITIAL_EMPLOYEES = [
-    { id: '1', name: 'Sarah Jenkins', role: 'Chief Executive Officer (CEO)', email: 'sarah.jenkins@company.com', department: 'Executive', avatarColor: '#6366f1', parentId: '' },
+    { id: '1', name: 'Sarah Jenkins', role: 'Chief Executive Officer (CEO)', email: 'sarah.jenkins@company.com', department: 'Executive', parentId: '' },
     
-    { id: '2', name: 'Marcus Chen', role: 'Chief Technology Officer (CTO)', email: 'marcus.chen@company.com', department: 'Engineering', avatarColor: '#0d9488', parentId: '1' },
-    { id: '3', name: 'Elena Rostova', role: 'Head of HR & People', email: 'elena.rostova@company.com', department: 'HR', avatarColor: '#ec4899', parentId: '1' },
-    { id: '4', name: 'David Miller', role: 'VP of Sales & Marketing', email: 'david.miller@company.com', department: 'Sales', avatarColor: '#f59e0b', parentId: '1' },
+    { id: '2', name: 'Marcus Chen', role: 'Chief Technology Officer (CTO)', email: 'marcus.chen@company.com', department: 'Engineering', parentId: '1' },
+    { id: '3', name: 'Elena Rostova', role: 'Head of HR & People', email: 'elena.rostova@company.com', department: 'HR', parentId: '1' },
+    { id: '4', name: 'David Miller', role: 'VP of Sales & Marketing', email: 'david.miller@company.com', department: 'Sales', parentId: '1' },
     
-    { id: '5', name: 'Sophia Lin', role: 'Engineering Tech Lead', email: 'sophia.lin@company.com', department: 'Engineering', avatarColor: '#06b6d4', parentId: '2' },
-    { id: '6', name: 'Alex Rivera', role: 'QA Lead Analyst', email: 'alex.rivera@company.com', department: 'Engineering', avatarColor: '#10b981', parentId: '2' },
-    { id: '7', name: 'Liam Carter', role: 'Lead Product Manager', email: 'liam.carter@company.com', department: 'Product', avatarColor: '#a855f7', parentId: '2' },
+    { id: '5', name: 'Sophia Lin', role: 'Engineering Tech Lead', email: 'sophia.lin@company.com', department: 'Engineering', parentId: '2' },
+    { id: '6', name: 'Alex Rivera', role: 'QA Lead Analyst', email: 'alex.rivera@company.com', department: 'Engineering', parentId: '2' },
+    { id: '7', name: 'Liam Carter', role: 'Lead Product Manager', email: 'liam.carter@company.com', department: 'Product', parentId: '2' },
     
-    { id: '8', name: 'Chloe Zhao', role: 'AI-ML Solutions Engineer', email: 'chloe.zhao@company.com', department: 'Engineering', avatarColor: '#8b5cf6', parentId: '5' },
-    { id: '9', name: 'Jack Vance', role: 'Senior Backend Developer', email: 'jack.vance@company.com', department: 'Engineering', avatarColor: '#3b82f6', parentId: '5' },
-    { id: '10', name: 'Chloe Vance', role: 'Senior Frontend Developer', email: 'chloe.vance@company.com', department: 'Engineering', avatarColor: '#14b8a6', parentId: '5' },
-    { id: '11', name: 'Jordan Lee', role: 'Associate PM', email: 'jordan.lee@company.com', department: 'Product', avatarColor: '#d946ef', parentId: '7' }
+    { id: '8', name: 'Chloe Zhao', role: 'AI-ML Solutions Engineer', email: 'chloe.zhao@company.com', department: 'Engineering', parentId: '5' },
+    { id: '9', name: 'Jack Vance', role: 'Senior Backend Developer', email: 'jack.vance@company.com', department: 'Engineering', parentId: '5' },
+    { id: '10', name: 'Chloe Vance', role: 'Senior Frontend Developer', email: 'chloe.vance@company.com', department: 'Engineering', parentId: '5' },
+    { id: '11', name: 'Jordan Lee', role: 'Associate PM', email: 'jordan.lee@company.com', department: 'Product', parentId: '7' }
 ];
 
 
@@ -73,16 +88,15 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 
     const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
-
-        node.targetPosition = isHorizontal ? Position.Left : Position.Top;
-        node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
-
-        node.position = {
-            x: nodeWithPosition.x - 130,
-            y: nodeWithPosition.y - 48
+        return {
+            ...node,
+            targetPosition: isHorizontal ? Position.Left : Position.Top,
+            sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+            position: {
+                x: nodeWithPosition.x - 130,
+                y: nodeWithPosition.y - 48
+            }
         };
-
-        return node;
     });
 
     return { nodes: layoutedNodes, edges };
@@ -101,12 +115,12 @@ function OrgChartPageContent() {
     const { fitView } = useReactFlow();
 
     // Employees list holds the underlying raw dataset for easy CRUD
-    const [employees, setEmployees] = useState(() => {
+    const [employees, setEmployees] = useState<IEmployee[]>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('dmt_org_chart_employees');
             if (saved) {
                 try {
-                    return JSON.parse(saved);
+                    return JSON.parse(saved) as IEmployee[];
                 } catch (e) {
                     console.error('Failed to parse org chart local storage', e);
                 }
@@ -124,11 +138,36 @@ function OrgChartPageContent() {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('TB');
+    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    const shouldAutoLayoutRef = useRef(true);
+
+    const handleNodesChange = useCallback(
+        (changes: NodeChange[]) => {
+            onNodesChange(changes);
+            changes.forEach((change) => {
+                if (change.type !== 'position') return;
+                if (change.dragging) return;
+                if (!change.position) return;
+                nodePositionsRef.current.set(change.id, change.position);
+            });
+        },
+        [onNodesChange]
+    );
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingEmployee, setEditingEmployee] = useState<any>(null);
+    const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(null);
     const [defaultParentId, setDefaultParentId] = useState('');
+
+    const handleAddClick = useCallback(() => {
+        if (!isManager) {
+            toast.error('Only Managers can add new employees.');
+            return;
+        }
+        setEditingEmployee(null);
+        setDefaultParentId('');
+        setIsModalOpen(true);
+    }, [isManager]);
 
     // Trigger editing modal
     const handleEditNode = useCallback((id: string) => {
@@ -162,26 +201,40 @@ function OrgChartPageContent() {
         }
 
         if (confirm('Are you sure you want to delete this employee? This will reset reporting lines for their subordinates.')) {
-            // Delete employee and re-parent their direct reports to their own parent (skip a level) or set to none
-            const deletedEmp = employees.find(e => e.id === id);
-            const newParentId = deletedEmp ? deletedEmp.parentId : '';
+            // Delete employee and re-parent their direct reports to their own parent (skip a level) or set to none.
+            // Use the functional updater so the lookup is always based on the latest employees state.
+            setEmployees((prev) => {
+                const deletedEmp = prev.find((e) => e.id === id);
+                const newParentId = deletedEmp?.parentId ?? '';
 
-            setEmployees(prev => prev
-                .filter(e => e.id !== id)
-                .map(e => e.parentId === id ? { ...e, parentId: newParentId } : e)
-            );
+                return prev
+                    .filter((e) => e.id !== id)
+                    .map((e) => (e.parentId === id ? { ...e, parentId: newParentId } : e));
+            });
             toast.success('Employee deleted and organization re-routed successfully.');
         }
-    }, [employees, isManager]);
+    }, [isManager]);
 
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
         // Build React Flow nodes
         const rfNodes: Node[] = employees.map((emp) => {
+            const existingPos = nodePositionsRef.current.get(emp.id);
+
+            // Preserve manual positions; for new nodes, place near parent if possible.
+            const fallbackPos = (() => {
+                if (existingPos) return existingPos;
+                const parentPos = emp.parentId ? nodePositionsRef.current.get(emp.parentId) : undefined;
+                if (parentPos) return { x: parentPos.x, y: parentPos.y + 150 };
+                return { x: 0, y: 0 };
+            })();
+
             return {
                 id: emp.id,
                 type: 'customOrgNode',
-                position: { x: 0, y: 0 }, // position will be resolved by Dagre layout
+                position: fallbackPos,
+                targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
+                sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -214,15 +267,24 @@ function OrgChartPageContent() {
                 }
             }));
 
-        // Apply Dagre layout
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-            rfNodes,
-            rfEdges,
-            layoutDirection
-        );
+        if (shouldAutoLayoutRef.current || nodes.length === 0) {
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+                rfNodes,
+                rfEdges,
+                layoutDirection
+            );
 
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
+            layoutedNodes.forEach((n) => nodePositionsRef.current.set(n.id, n.position));
+            shouldAutoLayoutRef.current = false;
+
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
+            return;
+        }
+
+        // Preserve existing positions and only update node data + edges
+        setNodes(rfNodes);
+        setEdges(rfEdges);
     }, [employees, layoutDirection, isManager, handleEditNode, handleDeleteNode, handleAddReportNode, setNodes, setEdges]);
 
     // Recalculate graph whenever employees dataset or filters/layouts update
@@ -241,6 +303,7 @@ function OrgChartPageContent() {
 
     // Layout arrangement reset trigger
     const handleAutoArrange = (dir: 'TB' | 'LR') => {
+        shouldAutoLayoutRef.current = true;
         setLayoutDirection(dir);
         toast.success(`Chart rearranged ${dir === 'TB' ? 'Vertically' : 'Horizontally'}!`);
     };
@@ -256,27 +319,34 @@ function OrgChartPageContent() {
         const { source, target } = params;
         if (!source || !target || source === target) return;
 
-        // Prevent circular relationship loops (source cannot be reporting to target, directly or indirectly)
-        const isCircular = (parentToCheck: string, childToCheck: string): boolean => {
-            let current = employees.find(e => e.id === parentToCheck);
-            while (current) {
-                if (current.parentId === childToCheck) return true;
-                current = employees.find(e => e.id === current.parentId);
-            }
-            return false;
-        };
+        // Prevent circular relationship loops (source cannot be reporting to target, directly or indirectly).
+        // Use the functional updater so the check always uses the latest employees state.
+        let circular = false;
+        setEmployees((prev) => {
+            const byId = new Map(prev.map((e) => [e.id, e] as const));
 
-        if (isCircular(source, target)) {
+            let currentId = source;
+            while (true) {
+                const current = byId.get(currentId);
+                if (!current) break;
+                if (current.parentId === target) {
+                    circular = true;
+                    return prev;
+                }
+                if (!current.parentId) break;
+                currentId = current.parentId;
+            }
+
+            return prev.map((emp) => (emp.id === target ? { ...emp, parentId: source } : emp));
+        });
+
+        if (circular) {
             toast.error('Cannot establish reporting connection: this would create a circular reporting structure!');
             return;
         }
 
-        // Update parentId of the target employee to the source employee
-        setEmployees(prev => prev.map(emp => 
-            emp.id === target ? { ...emp, parentId: source } : emp
-        ));
         toast.success('Reporting line updated successfully.');
-    }, [employees, isManager]);
+    }, [isManager]);
 
     // Modal Create / Save Changes
     const handleSaveEmployee = (empData: {
@@ -309,7 +379,12 @@ function OrgChartPageContent() {
             toast.success('Employee details updated successfully!');
         } else {
             // Creating new
-            const newId = (Math.max(...employees.map(e => parseInt(e.id) || 0)) + 1).toString();
+            // IDs must not assume numeric strings (parseInt → NaN can corrupt the sequence).
+            // Generate a unique, stable string id.
+            const newId =
+                typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                    ? crypto.randomUUID()
+                    : `emp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
             const newEmp = {
                 id: newId,
                 name: empData.name,
@@ -333,6 +408,8 @@ function OrgChartPageContent() {
             return;
         }
         if (confirm('Are you sure you want to reset the chart back to initial seed corporate structure? Your current changes will be overwritten.')) {
+            shouldAutoLayoutRef.current = true;
+            nodePositionsRef.current.clear();
             setEmployees(INITIAL_EMPLOYEES);
             toast.success('Chart reset successfully.');
         }
@@ -430,11 +507,7 @@ function OrgChartPageContent() {
             <OrgChartControls
                 currentDirection={layoutDirection}
                 onAutoArrange={handleAutoArrange}
-                onAddClick={() => {
-                    setEditingEmployee(null);
-                    setDefaultParentId('');
-                    setIsModalOpen(true);
-                }}
+                onAddClick={handleAddClick}
                 onExportPNG={handleExportPNG}
                 isManager={isManager}
             />
@@ -448,7 +521,7 @@ function OrgChartPageContent() {
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
-                    onNodesChange={onNodesChange}
+                    onNodesChange={handleNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
                     nodeTypes={nodeTypes}

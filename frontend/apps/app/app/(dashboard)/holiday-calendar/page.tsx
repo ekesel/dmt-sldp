@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { dashboard } from '@dmt/api';
 import { Palmtree, ArrowLeft, Plus, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -68,7 +68,7 @@ export default function HolidayCalendarPage() {
         }
     };
 
-    const fetchCalendars = async () => {
+    const fetchCalendars = useCallback(async () => {
         setLoading(true);
         try {
             const data = await dashboard.getHolidayCalendars();
@@ -83,11 +83,11 @@ export default function HolidayCalendarPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchCalendars();
-    }, []);
+    }, [fetchCalendars]);
 
     // Extract filename from URL
     const getFileName = (url: string) => {

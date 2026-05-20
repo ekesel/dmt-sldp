@@ -11,9 +11,11 @@ export const WelcomeBanner: React.FC = () => {
     ? `${user.first_name} ${user.last_name || ""}`.trim() 
     : (user?.username || "Guest User");
 
-  const [greeting, setGreeting] = React.useState("Good Morning");
+  const [mounted, setMounted] = React.useState(false);
+  const [greeting, setGreeting] = React.useState("");
 
   React.useEffect(() => {
+    setMounted(true);
     const hours = new Date().getHours();
     if (hours < 12) {
       setGreeting("Good Morning");
@@ -32,8 +34,11 @@ export const WelcomeBanner: React.FC = () => {
         {/* Left Section: Greeting + Illustration */}
         <div className="flex-1 flex flex-col pt-3 pb-0 items-center xl:items-start text-center xl:text-left">
           <div className="flex-shrink-0 px-4 xl:pl-6 xl:pr-4">
-            <h1 className="text-[1.25rem] lg:text-[1.375rem] xl:text-[1.5rem] font-black text-card-foreground leading-[1.1] tracking-tight mb-2">
-              {greeting}, <span className="text-accent">{greetingName}!</span>
+            <h1
+              suppressHydrationWarning
+              className="text-[1.25rem] lg:text-[1.375rem] xl:text-[1.5rem] font-black text-card-foreground leading-[1.1] tracking-tight mb-2"
+            >
+              {mounted ? greeting : "Welcome"}, <span className="text-accent">{mounted ? greetingName : "User"}!</span>
             </h1>
           </div>
 
