@@ -176,11 +176,16 @@ export const CelebrationsCard: React.FC = () => {
         );
     }
 
-    const currentUser = highlightUsers[currentIndex] || {
-        name: 'No Celebrations Today',
-        type: 'Stay tuned for upcoming events! ✨',
-        avatar: 'https://ui-avatars.com/api/?name=DMT&background=0D8ABC&color=fff&size=128&bold=true'
-    };
+    if (!highlightUsers || highlightUsers.length === 0) {
+        return null;
+    }
+
+    const safeIndex = Math.max(0, Math.min(currentIndex, highlightUsers.length - 1));
+    const currentUser = highlightUsers[safeIndex] || null;
+
+    if (!currentUser) {
+        return null;
+    }
 
     return (
         <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full xl:max-h-[20rem] overflow-hidden flex flex-col">
@@ -189,7 +194,7 @@ export const CelebrationsCard: React.FC = () => {
                 {/* Background Illustration */}
                 <div className="absolute inset-0 z-0 opacity-100">
                     <Image
-                        src={currentUser.type.includes("Anniversary") ? "/assets/celebrationani.png" : "/assets/celebration.png"}
+                        src={currentUser.type && currentUser.type.includes("Anniversary") ? "/assets/celebrationani.png" : "/assets/celebration.png"}
                         alt="Festive Background"
                         fill
                         className="object-cover object-top"
@@ -205,7 +210,7 @@ export const CelebrationsCard: React.FC = () => {
             <div className="relative z-20 px-4 sm:px-6 pt-0 pb-3 flex items-center justify-between -mt-9 sm:-mt-11 flex-shrink-0">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={currentIndex}
+                        key={safeIndex}
                         initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -30 }}
@@ -237,7 +242,7 @@ export const CelebrationsCard: React.FC = () => {
                     <div className="flex gap-1.5 mt-3 sm:mt-4">
                         <button
                             onClick={prevSlide}
-                            disabled={currentIndex === 0}
+                            disabled={safeIndex === 0}
                             className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Previous celebration"
                         >
@@ -247,7 +252,7 @@ export const CelebrationsCard: React.FC = () => {
                         </button>
                         <button
                             onClick={nextSlide}
-                            disabled={currentIndex === highlightUsers.length - 1}
+                            disabled={safeIndex === highlightUsers.length - 1}
                             className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Next celebration"
                         >

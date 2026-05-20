@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { dashboard } from '@dmt/api';
+import { dashboard, getFileUrl } from '@dmt/api';
 import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
@@ -28,52 +28,6 @@ export default function OnboardingPage() {
     const [submitting, setSubmitting] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Resolve absolute URL for the file to prevent routing to localhost frontend
-    const getFileUrl = (path: string) => {
-        if (!path) return '#';
-        if (path.startsWith('http://') || path.startsWith('https://')) {
-            return path;
-        }
-        
-        let apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.elevate.samta.ai/api/';
-        
-        try {
-            const urlObj = new URL(apiBase);
-            
-            if (typeof window !== 'undefined') {
-                const hostname = window.location.hostname;
-                const currentParts = hostname.split('.');
-                const currentSubdomain = currentParts[0]; // e.g. "samta"
-                
-                // If it's a multi-tenant URL on the deployed server (e.g. *.elevate.samta.ai)
-                if (urlObj.host.includes('elevate.samta.ai')) {
-                    return `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                }
-                
-                // Local development
-                const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
-                if (isLocal) {
-                    if (urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1')) {
-                        const backendPort = '8000';
-                        return `${window.location.protocol}//${hostname}:${backendPort}${path}`;
-                    } else {
-                        // Hybrid: local frontend connected to deployed backend
-                        return `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                    }
-                }
-                
-                // Fallback to active window origin
-                const cleanPort = window.location.port ? `:${window.location.port}` : '';
-                return `${window.location.protocol}//${hostname}${cleanPort}${path}`;
-            }
-            
-            const cleanHost = urlObj.host;
-            return `${urlObj.protocol}//${cleanHost}${path}`;
-        } catch (e) {
-            return path;
-        }
-    };
 
     const fetchOnboarding = async () => {
         setLoading(true);
@@ -351,6 +305,15 @@ export default function OnboardingPage() {
                                 
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label="Choose a document file to upload"
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            fileInputRef.current?.click();
+                                        }
+                                    }}
                                     className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-6 text-center cursor-pointer transition-all hover:bg-primary/[0.02] flex flex-col items-center justify-center gap-2 group"
                                 >
                                     <input

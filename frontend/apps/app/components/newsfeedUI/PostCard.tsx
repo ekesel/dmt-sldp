@@ -38,12 +38,14 @@ const PostCard = ({
   const displayCommentCount = totalComments || initialComments;
 
   useEffect(() => {
+    let timeoutId: number | null = null;
+
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const openCommentsPostId = params.get("openComments");
       if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) {
         setShowComments(true);
-        setTimeout(() => {
+        timeoutId = window.setTimeout(() => {
           const element = document.getElementById(`post-${post.post_id}`);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -51,6 +53,12 @@ const PostCard = ({
         }, 150);
       }
     }
+
+    return () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [post.post_id]);
 
   return (
