@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --warning: rgb(249, 156, 62);
+  --warning: rgb(253, 144, 46);
   --warning-foreground: rgb(17, 24, 39);
 }
 
@@ -24,7 +24,7 @@
   --color-border: rgb(229, 231, 235);
 
   /* Primary */
-  --color-primary: rgb(42, 130, 198);
+  --color-primary: rgb(40, 138, 198);
   --color-primary-foreground: rgb(255, 255, 255);
 
   /* Secondary */
@@ -36,9 +36,9 @@
   --color-muted-foreground: rgb(107, 114, 128);
 
   /* Accent */
-  --color-accent: rgb(255, 140, 0);
+  --color-accent: rgb(253, 144, 46);
   --color-accent-foreground: rgb(255, 255, 255);
-  --color-accent-dark: rgb(217, 119, 6);
+  --color-accent-dark: rgb(225, 120, 25);
 
 
   /* Destructive */

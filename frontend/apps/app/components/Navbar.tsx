@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { Menu, LogOut, User, ChevronDown, Search, Plus } from "lucide-react";
+import { Menu, LogOut, User, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { NotificationBell } from "./NotificationBell";
 
@@ -85,57 +85,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
             />
           </div>
         </div>
-
-        {/* Center Section: Search Bar (Responsive) */}
-        <div className="flex-1 max-w-[36rem] hidden min-[1366px]:flex items-center">
-          <div className="relative w-full group">
-            <input
-              type="text"
-              placeholder="Search people, documents..."
-              className="w-full bg-primary-foreground/10 backdrop-blur-md border border-primary-foreground/20 rounded-[0.375rem] py-[0.5rem] pl-[1rem] pr-[2.5rem] text-[0.875rem] text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary-foreground/30 transition-all font-medium"
-            />
-            <Search className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] text-primary-foreground/60 group-hover:text-primary-foreground transition-colors" />
-          </div>
-        </div>
-
-        {/* Right Section: Time, Notifications, Avatars, Actions */}
+        {/* Right Section: Time, Notifications, Actions */}
         <div className="flex items-center gap-[0.5rem] md:gap-[1rem]">
           {/* Time Display */}
           <div className="hidden lg:block text-[0.875rem] font-semibold text-primary-foreground/90 whitespace-nowrap">
             {currentTime}
           </div>
 
-          {/* Search Icon: Visible only on screens < 1366px */}
-          <button className="flex min-[1366px]:hidden p-[0.5rem] hover:bg-primary-foreground/10 rounded-[0.5rem] transition">
-            <Search className="w-[1rem] h-[1rem] md:w-[1.25rem] md:h-[1.25rem] text-primary-foreground" />
-          </button>
-
           {/* Notifications */}
           <NotificationBell />
 
-          {/* Avatar Group */}
-          <div className="hidden xl:flex items-center -space-x-[0.5rem] mr-[0.5rem]">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-[2rem] h-[2rem] rounded-full border-2 border-primary bg-muted overflow-hidden ring-1 ring-black/5">
-                <Image
-                  src={`https://i.pravatar.cc/150?u=${i + 10}`}
-                  alt={`Team Member ${i}`}
-                  width={32}
-                  height={32}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              </div>
-            ))}
-            <div className="w-[2rem] h-[2rem] rounded-full bg-primary border-2 border-primary flex items-center justify-center text-[0.625rem] font-bold text-primary-foreground ring-1 ring-black/5">
-              +12
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <button className="bg-accent hover:bg-accent/90 text-accent-foreground p-[0.5rem] rounded-[0.5rem] shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0">
-            <Plus className="w-[1.25rem] h-[1.25rem]" />
-          </button>
 
           {/* User Profile */}
           <div className="relative flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20">
