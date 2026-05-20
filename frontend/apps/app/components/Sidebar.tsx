@@ -73,11 +73,6 @@ const menuItems: MenuItem[] = [
     label: "Newsfeed",
     href: "/newsfeed",
   },
-  {
-    icon: Radio,
-    label: "Latest News",
-    href: "/latest-news",
-  },
 
   {
     icon: Trophy,

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { Menu, LogOut, User, ChevronDown, Plus } from "lucide-react";
+import { Menu, LogOut, User, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { NotificationBell } from "./NotificationBell";
 
@@ -95,10 +95,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
           {/* Notifications */}
           <NotificationBell />
 
-          {/* Action Button */}
-          <button className="bg-accent hover:bg-accent/90 text-accent-foreground p-[0.5rem] rounded-[0.5rem] shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0">
-            <Plus className="w-[1.25rem] h-[1.25rem]" />
-          </button>
 
           {/* User Profile */}
           <div className="relative flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20">

@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { dashboard } from '@dmt/api';
+import { Loader2 } from 'lucide-react';
 
 interface HighlightUser {
     name: string;
@@ -16,34 +18,88 @@ interface UpcomingCelebration {
     avatar: string;
 }
 
-interface CelebrationsCardProps {
-    highlightUsers?: HighlightUser[];
-    upcoming?: UpcomingCelebration[];
-}
+export const CelebrationsCard: React.FC = () => {
+    const [highlightUsers, setHighlightUsers] = useState<HighlightUser[]>([]);
+    const [upcoming, setUpcoming] = useState<UpcomingCelebration[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
-/**
- * CelebrationsCard component matching the reference image.
- * Features a festive header, main work anniversary highlight, and upcoming list.
- */
-export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
-    highlightUsers = [
-        {
-            name: "Jessica",
-            type: "Work Anniversary",
-            avatar: "https://i.pravatar.cc/150?u=jessica"
-        },
-        {
-            name: "Riya",
-            type: "Birthday",
-            avatar: "https://i.pravatar.cc/150?u=rahul"
+    const getInitialsAvatar = (name: string) => {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128&bold=true`;
+    };
+
+    const formatDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        try {
+            const dateObj = new Date(dateStr);
+            return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch (e) {
+            return dateStr;
         }
-    ],
-    upcoming = [
-        { name: "John Doe", date: "Oct 28", avatar: "https://i.pravatar.cc/150?u=john" },
-        { name: "Maria G.", date: "Nov 1", avatar: "https://i.pravatar.cc/150?u=maria" }
-    ]
-}) => {
-    const [currentIndex, setCurrentIndex] = React.useState(0);
+    };
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const res = await dashboard.getEvents();
+                if (res) {
+                    // 1. Process today's celebrations
+                    const todayBirthdays = res.today_birthdays || [];
+                    const todayAnniversaries = res.today_anniversaries || [];
+
+                    const todayCelebrations: HighlightUser[] = [
+                        ...todayBirthdays.map((b: any) => ({
+                            name: b.user,
+                            type: 'Birthday 🎂',
+                            avatar: getInitialsAvatar(b.user)
+                        })),
+                        ...todayAnniversaries.map((a: any) => ({
+                            name: a.user,
+                            type: `${a.anniversary_count || 1} Year Work Anniversary 🎉`,
+                            avatar: getInitialsAvatar(a.user)
+                        }))
+                    ];
+
+                    if (todayCelebrations.length === 0) {
+                        // Fallback slide when no celebrations today
+                        todayCelebrations.push({
+                            name: 'No Celebrations Today',
+                            type: 'Stay tuned for upcoming events! ✨',
+                            avatar: 'https://ui-avatars.com/api/?name=DMT&background=0D8ABC&color=fff&size=128&bold=true'
+                        });
+                    }
+                    setHighlightUsers(todayCelebrations);
+
+                    // 2. Process upcoming list, combine and sort by days_left
+                    const upcomingBirthdays = (res.upcoming_birthdays || []).map((b: any) => ({
+                        name: b.user,
+                        date: formatDate(b.next_birthday),
+                        days_left: b.days_left,
+                        avatar: getInitialsAvatar(b.user)
+                    }));
+
+                    const upcomingAnniversaries = (res.upcoming_anniversaries || []).map((a: any) => ({
+                        name: a.user,
+                        date: formatDate(a.next_anniversary),
+                        days_left: a.days_left,
+                        avatar: getInitialsAvatar(a.user)
+                    }));
+
+                    const combinedUpcoming = [...upcomingBirthdays, ...upcomingAnniversaries]
+                        .sort((a, b) => a.days_left - b.days_left)
+                        .slice(0, 3); // Display top 3 upcoming
+
+                    setUpcoming(combinedUpcoming);
+                }
+            } catch (err) {
+                console.error('Failed to load events celebrations:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, []);
 
     const nextSlide = () => {
         if (currentIndex < highlightUsers.length - 1) {
@@ -57,7 +113,7 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (highlightUsers.length <= 1) return;
 
         const timer = setInterval(() => {
@@ -67,7 +123,20 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
         return () => clearInterval(timer);
     }, [highlightUsers.length]);
 
-    const currentUser = highlightUsers[currentIndex];
+    if (loading) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-[20rem] overflow-hidden flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <p className="text-muted-foreground font-semibold text-sm mt-3">Loading Celebrations...</p>
+            </div>
+        );
+    }
+
+    const currentUser = highlightUsers[currentIndex] || {
+        name: 'No Celebrations Today',
+        type: 'Stay tuned for upcoming events! ✨',
+        avatar: 'https://ui-avatars.com/api/?name=DMT&background=0D8ABC&color=fff&size=128&bold=true'
+    };
 
     return (
         <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full xl:max-h-[20rem] overflow-hidden flex flex-col">
@@ -76,7 +145,7 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
                 {/* Background Illustration */}
                 <div className="absolute inset-0 z-0 opacity-100">
                     <Image
-                        src={currentUser.type === "Work Anniversary" ? "/assets/celebrationani.png" : "/assets/celebration.png"}
+                        src={currentUser.type.includes("Anniversary") ? "/assets/celebrationani.png" : "/assets/celebration.png"}
                         alt="Festive Background"
                         fill
                         className="object-cover object-top"
@@ -158,27 +227,33 @@ export const CelebrationsCard: React.FC<CelebrationsCardProps> = ({
                 </h4>
 
                 <div className="space-y-2.5 sm:space-y-3.5 overflow-hidden">
-                    {upcoming.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between group">
-                            <div className="flex items-center gap-2 sm:gap-2.5">
-                                <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden border border-border group-hover:scale-105 transition-transform">
-                                    <Image
-                                        src={item.avatar}
-                                        alt={item.name}
-                                        fill
-                                        className="object-cover"
-                                        unoptimized
-                                    />
+                    {upcoming.length > 0 ? (
+                        upcoming.map((item, index) => (
+                            <div key={index} className="flex items-center justify-between group animate-fade-in">
+                                <div className="flex items-center gap-2 sm:gap-2.5">
+                                    <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden border border-border group-hover:scale-105 transition-transform">
+                                        <Image
+                                            src={item.avatar}
+                                            alt={item.name}
+                                            fill
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                    </div>
+                                    <span className="text-[0.875rem] sm:text-[0.9375rem] font-bold text-card-foreground truncate max-w-[5rem] sm:max-w-none">
+                                        {item.name}
+                                    </span>
                                 </div>
-                                <span className="text-[0.875rem] sm:text-[0.9375rem] font-bold text-card-foreground truncate max-w-[5rem] sm:max-w-none">
-                                    {item.name}
+                                <span className="text-[0.75rem] sm:text-[0.875rem] font-medium text-card-foreground flex-shrink-0">
+                                    ({item.date})
                                 </span>
                             </div>
-                            <span className="text-[0.75rem] sm:text-[0.875rem] font-medium text-card-foreground flex-shrink-0">
-                                ({item.date})
-                            </span>
+                        ))
+                    ) : (
+                        <div className="text-center py-4 text-xs font-medium text-muted-foreground">
+                            No upcoming birthdays or anniversaries this month.
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>

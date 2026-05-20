@@ -432,6 +432,7 @@ export const dashboard = {
   uploadOnboarding: (formData: FormData) => post<any, FormData>('/homepage/onboarding/', formData),
   updateOnboarding: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/onboarding/${id}/`, formData),
   deleteOnboarding: (id: number) => del<any>(`/homepage/onboarding/${id}/`),
+  getEvents: () => get<any>('/homepage/events/'),
 };
 
 export interface LeaderboardWinner {
