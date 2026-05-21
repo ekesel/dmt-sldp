@@ -3,6 +3,9 @@
     "version": "0.0.1",
     "main": "./index.ts",
     "types": "./index.ts",
+    "scripts": {
+        "build": "echo 'No build step required'"
+    },
     "dependencies": {
         "axios": "^1.6.7"
     }
