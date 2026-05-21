@@ -16,15 +16,9 @@ class PostSerializer(serializers.ModelSerializer):
             return obj.media_file.url
         return None
 
-class ReplySerializer(serializers.ModelSerializer):
-    """Simplified Comment Serializer for nested replies."""
-    class Meta:
-        model = Comment
-        fields = ["comment_id", "user", "comment_text", "created_at"]
-
 class CommentSerializer(serializers.ModelSerializer):
     """Comment Serializer with nested replies."""
-    replies = ReplySerializer(many=True, read_only=True)
+    replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -38,6 +32,10 @@ class CommentSerializer(serializers.ModelSerializer):
             "replies"
         ]
         read_only_fields = ["user"]
+
+    def get_replies(self, obj):
+        replies = obj.replies.all().order_by('created_at')
+        return CommentSerializer(replies, many=True).data
 
 class ReactionSerializer(serializers.ModelSerializer):
     """Serializer for Post reactions."""
