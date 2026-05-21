@@ -4,6 +4,24 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def populate_tenant(apps, schema_editor):
+    from django.db import connection
+    Holiday = apps.get_model('homepage', 'Holiday')
+    Tenant = apps.get_model('tenants', 'Tenant')
+    
+    current_tenant = getattr(connection, 'tenant', None)
+    if current_tenant and getattr(current_tenant, 'id', None):
+        Holiday.objects.filter(tenant_id__isnull=True).update(tenant_id=current_tenant.id)
+    else:
+        schema_name = connection.schema_name
+        if schema_name != 'public':
+            try:
+                tenant = Tenant.objects.get(schema_name=schema_name)
+                Holiday.objects.filter(tenant_id__isnull=True).update(tenant_id=tenant.id)
+            except Tenant.DoesNotExist:
+                pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -15,7 +33,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='holiday',
             name='tenant_id',
-            field=models.ForeignKey(default=1, help_text='Tenant ID', on_delete=django.db.models.deletion.CASCADE, to='tenants.tenant'),
-            preserve_default=False,
+            field=models.ForeignKey(blank=True, help_text='Tenant ID', null=True, on_delete=django.db.models.deletion.CASCADE, to='tenants.tenant'),
+        ),
+        migrations.RunPython(populate_tenant, reverse_code=migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name='holiday',
+            name='tenant_id',
+            field=models.ForeignKey(help_text='Tenant ID', on_delete=django.db.models.deletion.CASCADE, to='tenants.tenant'),
         ),
     ]

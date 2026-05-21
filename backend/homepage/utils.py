@@ -3,6 +3,11 @@ from users.models import User
 import pandas as pd
 from .models import Holiday
 from django_tenants.utils import schema_context
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Checking today is any one birthday or not
 def get_birthday_info(tenant):
     today = date.today()
@@ -113,27 +118,29 @@ def import_holidays_from_excel(file, tenant_id):
 
         created_count = 0
         with schema_context(tenant_id.schema_name):
-            # Delete old holidays for this tenant
-            Holiday.objects.filter(tenant_id=tenant_id).delete()
+            with transaction.atomic():
+                # Delete old holidays for this tenant
+                Holiday.objects.filter(tenant_id=tenant_id).delete()
 
-            # Insert new holidays
-            for _, row in df.iterrows():
-                if pd.isna(row["date"]) or pd.isna(row["holiday name"]):
-                    continue
-                Holiday.objects.create(
-                    date=row["date"],
-                    name=row["holiday name"],
-                    tenant_id=tenant_id
-                )
-                created_count += 1
+                # Insert new holidays
+                for _, row in df.iterrows():
+                    if pd.isna(row["date"]) or pd.isna(row["holiday name"]):
+                        continue
+                    Holiday.objects.create(
+                        date=row["date"],
+                        name=row["holiday name"],
+                        tenant_id=tenant_id
+                    )
+                    created_count += 1
 
         return {
             'success': True,
             'stats': {'created': created_count}
         }
     except Exception as e:
+        logger.error(f"Error importing holidays from excel: {e}", exc_info=True)
         return {
             'success': False,
-            'error': str(e),
+            'error': "An error occurred while importing holidays. Please check the file format and try again.",
             'stats': {'created': 0}
         }

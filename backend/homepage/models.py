@@ -72,7 +72,7 @@ class Onboarding(BaseDocument):
 class Holiday(models.Model):
     name = models.CharField(max_length=255, help_text="Name of the holiday")
     date = models.DateField(help_text="Date of the holiday")
-    tenant_id = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, help_text="Tenant ID",null=True,blank=True)
+    tenant_id = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, help_text="Tenant ID")
     
     class Meta:
         ordering = ['date']
