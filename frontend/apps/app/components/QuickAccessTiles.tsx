@@ -14,9 +14,9 @@ interface TileProps {
 const Tile: React.FC<TileProps> = ({ title, Icon, bgColor, textColor }) => (
     <div className={`${bgColor} w-full aspect-square rounded-[1.25rem] flex flex-col items-center justify-center p-2.5 sm:p-3.5 text-center cursor-pointer hover:opacity-95 transition-all shadow-sm group active:scale-95 saturate-[1.15]`}>
         <div className={`${textColor} mb-1.5 sm:mb-2 transform group-hover:scale-110 transition-transform duration-300`}>
-            <Icon 
-                className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" 
-                strokeWidth={2.5} 
+            <Icon
+                className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8"
+                strokeWidth={2.5}
             />
         </div>
         <span className={`${textColor} text-[0.55rem] sm:text-[0.625rem] lg:text-[0.75rem] font-[900] leading-[1.1] px-0.5 overflow-hidden text-ellipsis line-clamp-2`}>

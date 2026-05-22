@@ -542,6 +542,7 @@ export const dashboard = {
   updateOnboarding: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/onboarding/${id}/`, formData),
   deleteOnboarding: (id: number) => del<any>(`/homepage/onboarding/${id}/`),
   getEvents: () => get<any>('/homepage/events/'),
+  getHolidays: () => get<any>('/homepage/holidays/'),
 };
 
 export interface LeaderboardWinner {
