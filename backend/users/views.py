@@ -16,6 +16,21 @@ from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
 from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer
 from users.utils import import_users_from_excel
+from rest_framework import viewsets
+from .models import RoleTable
+from .serializers import RoleSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import User
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from homepage.permissions import IsManagerOrReadOnly
+
+
+
+from .models import User, RoleTable
 User = get_user_model()
 
 
@@ -358,3 +373,344 @@ class UploadUserDataView(APIView):
                 {'error': result.get('error', 'Unknown error occurred'), 'stats': result.get('stats', {})},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsManagerOrReadOnly]
+    queryset = RoleTable.objects.all().order_by('-id')
+    serializer_class = RoleSerializer
+
+
+
+
+
+# ORG CHART API
+class UserHierarchyAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    # BUILD HIERARCHY (Recursive Function)
+    def build_hierarchy(self, users, parent_id=None):
+
+        tree = []
+
+        for user in users:
+
+            # Skip inactive users
+            if not user.is_active:
+                continue
+
+            # Find child users
+            if user.parent_id == parent_id:
+
+                tree.append({
+                    "id": user.id,
+                    "full_name": f"{user.first_name} {user.last_name}".strip(),
+                    "email": user.email,
+                    "username": user.username,
+                    "role_id": user.role.id if user.role else None,
+                    "role": user.role.role_name if user.role else None,
+                    "department": user.role.dep_name if user.role else None,
+                    "parent_id": user.parent_id,
+                    "is_active": user.is_active,
+
+                    # Recursive children
+                    "children": self.build_hierarchy(users, user.id)
+                })
+
+        return tree
+
+
+    # GET -> FULL HIERARCHY
+    def get(self, request):
+
+        users = User.objects.select_related('role').filter(
+            tenant=request.user.tenant
+        )
+
+        hierarchy = self.build_hierarchy(users)
+
+        return Response({
+            "status": True,
+            "message": "Hierarchy fetched successfully",
+            "data": hierarchy
+        }, status=status.HTTP_200_OK)
+
+    # POST -> CREATE USER / UPDATE EXISTING USER
+    def post(self, request):
+
+        data = request.data
+        tenant = request.user.tenant
+
+        email = data.get("email")
+
+        # Email required
+        if not email:
+            return Response({
+                "status": False,
+                "message": "Email is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # GET ROLE  (frontend sends role ID)
+        role_obj = None
+
+        designation = data.get("designation")  # expects RoleTable pk (integer)
+
+        if designation:
+            role_obj = RoleTable.objects.filter(
+                id=designation
+            ).first()
+
+            if not role_obj:
+                return Response({
+                    "status": False,
+                    "message": f"Role with id={designation} not found"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update dep_name if frontend sends it
+            dep_name = data.get("dep_name")
+            if dep_name:
+                role_obj.dep_name = dep_name
+                role_obj.save(update_fields=['dep_name'])
+
+        # GET PARENT USER
+        parent_user = None
+
+        parent_id = data.get("parent")
+
+        if parent_id:
+
+            parent_user = User.objects.filter(
+                id=parent_id,
+                tenant=tenant,
+                is_active=True
+            ).first()
+
+            if not parent_user:
+                return Response({
+                    "status": False,
+                    "message": "Parent user not found"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # CHECK EXISTING USER
+        existing_user = User.objects.filter(
+            email=email,
+            tenant=tenant
+        ).first()
+
+        # UPDATE EXISTING USER
+        if existing_user:
+
+            if role_obj:
+                existing_user.role = role_obj
+
+            existing_user.parent = parent_user
+
+            existing_user.save()
+
+            return Response({
+                "status": True,
+                "message": "Existing user updated successfully",
+                "data": {
+                    "id": existing_user.id,
+                    "full_name": f"{existing_user.first_name} {existing_user.last_name}".strip(),
+                    "email": existing_user.email,
+                    "role": existing_user.role.role_name if existing_user.role else None,
+                    "department": existing_user.role.dep_name if existing_user.role else None,
+                }
+            }, status=status.HTTP_200_OK)
+
+        #   CREATE NEW USER
+        try:
+
+            user = User.objects.create_user(
+                tenant=tenant,
+                username=email,
+                email=email,
+                first_name=data.get("first_name", ""),
+                last_name=data.get("last_name", ""),
+                role=role_obj,
+                parent=parent_user,
+                is_active=True
+            )
+
+            # Disable password login initially
+            user.set_unusable_password()
+            user.save(update_fields=['password'])
+
+            return Response({
+                "status": True,
+                "message": "Employee created successfully",
+                "data": {
+                    "id": user.id,
+                    "full_name": f"{user.first_name} {user.last_name}".strip(),
+                    "email": user.email,
+                    "role": user.role.role_name if user.role else None,
+                    "department": user.role.dep_name if user.role else None,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+
+            return Response({
+                "status": False,
+                "message": "Could not create user"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT -> UPDATE USER
+    def put(self, request, pk):
+
+        try:
+            user = User.objects.get(
+                id=pk,
+                tenant=request.user.tenant
+            )
+
+        except User.DoesNotExist:
+
+            return Response({
+                "status": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+
+        # Update first name
+        if "first_name" in data:
+            user.first_name = data.get("first_name")
+
+        # Update last name
+        if "last_name" in data:
+            user.last_name = data.get("last_name")
+
+        # Update role  (frontend sends role ID)
+        if "designation" in data:
+
+            designation = data.get("designation")
+            role_obj = None
+
+            if designation:
+                role_obj = RoleTable.objects.filter(
+                    id=designation
+                ).first()
+
+                if not role_obj:
+                    return Response({
+                        "status": False,
+                        "message": f"Role with id={designation} not found"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Update dep_name if frontend sends it
+                dep_name = data.get("dep_name")
+                if dep_name:
+                    role_obj.dep_name = dep_name
+                    role_obj.save(update_fields=['dep_name'])
+
+            user.role = role_obj
+
+        # Update parent
+        if "parent" in data:
+
+            parent_id = data.get("parent")
+
+            # Prevent self-parenting
+            if parent_id == user.id:
+                return Response({
+                    "status": False,
+                    "message": "User cannot be parent of itself"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate parent
+            if parent_id:
+
+                parent_exists = User.objects.filter(
+                    id=parent_id,
+                    tenant=request.user.tenant,
+                    is_active=True
+                ).exists()
+
+                if not parent_exists:
+                    return Response({
+                        "status": False,
+                        "message": "Parent user not found"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            user.parent_id = parent_id
+
+        # Update active status
+        if "is_active" in data:
+            user.is_active = data.get("is_active")
+
+        user.save()
+
+        user.refresh_from_db()
+
+        return Response({
+            "status": True,
+            "message": "User updated successfully",
+            "data": {
+                "id": user.id,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "email": user.email,
+                "role": user.role.role_name if user.role else None,
+                "department": user.role.dep_name if user.role else None,
+            }
+        }, status=status.HTTP_200_OK)
+
+    #   DELETE -> SOFT DELETE
+    def delete(self, request, pk):
+
+        try:
+            user = User.objects.get(
+                id=pk,
+                tenant=request.user.tenant
+            )
+
+        except User.DoesNotExist:
+
+            return Response({
+                "status": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_active = False
+        user.save()
+
+        return Response({
+            "status": True,
+            "message": "User soft deleted successfully"
+        }, status=status.HTTP_200_OK)
+
+
+
+# USER DROPDOWN API
+
+class GetAllUsersDropdown(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        users = User.objects.select_related('role').filter(
+            tenant=request.user.tenant,
+            is_active=True
+        )
+
+        list_data = []
+
+        for user in users:
+
+            list_data.append({
+                "id": user.id,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "email": user.email,
+                "role": user.role.role_name if user.role else None,
+                "department": user.role.dep_name if user.role else None,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
