@@ -40,17 +40,19 @@ export const QuickAccessTiles: React.FC = () => {
     ];
 
     return (
-        <div className="w-full flex flex-col justify-start">
-            <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-foreground mb-2.5 tracking-tight px-0.5 flex-shrink-0">
-                Quick Links
-            </h2>
-            {/* Grid Container */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-[25rem] sm:max-w-[35rem] md:max-w-[45rem] lg:max-w-none mx-auto overflow-hidden">
-                {tiles.map((tile, i) => (
-                    <Link key={i} href={tile.href} className="w-full block">
-                        <Tile title={tile.title} Icon={tile.Icon} bgColor={tile.bgColor} textColor={tile.textColor} />
-                    </Link>
-                ))}
+        <div className="w-full h-full flex flex-col">
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-4 sm:p-5 w-full h-full flex flex-col">
+                <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-foreground mb-3 tracking-tight flex-shrink-0">
+                    Quick Links
+                </h2>
+                {/* Grid Container */}
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-[25rem] sm:max-w-[35rem] md:max-w-[45rem] lg:max-w-none mx-auto overflow-hidden">
+                    {tiles.map((tile, i) => (
+                        <Link key={i} href={tile.href} className="w-full block">
+                            <Tile title={tile.title} Icon={tile.Icon} bgColor={tile.bgColor} textColor={tile.textColor} />
+                        </Link>
+                    ))}
+                </div>
             </div>
         </div>
     );

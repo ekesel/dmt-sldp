@@ -45,7 +45,7 @@ export const SocialNewsFeed: React.FC = () => {
     if (loading && !latestPost) {
         return (
             <div className="w-full h-full flex flex-col">
-                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex items-center justify-center mx-auto overflow-hidden">
+                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full flex items-center justify-center overflow-hidden">
                     <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
                         <span className="text-xs text-muted-foreground font-semibold">Loading feed...</span>
@@ -58,7 +58,7 @@ export const SocialNewsFeed: React.FC = () => {
     if (!latestPost) {
         return (
             <div className="w-full h-full flex flex-col">
-                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex items-center justify-center mx-auto overflow-hidden">
+                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full flex items-center justify-center overflow-hidden">
                     <span className="text-sm text-muted-foreground font-semibold">No posts available</span>
                 </div>
             </div>
@@ -68,7 +68,7 @@ export const SocialNewsFeed: React.FC = () => {
     return (
         <div className="w-full h-full flex flex-col">
             {/* Main Card Container */}
-            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex flex-col overflow-hidden">
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full flex flex-col overflow-hidden">
                 {/* Fixed Title Header */}
                 <div className="flex justify-between items-center mb-2.5 flex-shrink-0">
                     <h2 className="text-[1rem] sm:text-[1.125rem] md:text-[1.25rem] font-black text-foreground tracking-tight">
