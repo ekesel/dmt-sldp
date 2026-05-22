@@ -3,6 +3,9 @@
     "version": "0.0.1",
     "main": "./index.tsx",
     "types": "./index.tsx",
+    "scripts": {
+        "build": "echo 'No build step required'"
+    },
     "dependencies": {
         "react": "^18",
         "lucide-react": "^0.330.0",

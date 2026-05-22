@@ -156,7 +156,7 @@ export default function EngagementCalendarPage() {
                                         <div className="p-3.5 rounded-xl bg-primary/10 text-primary shrink-0 border border-primary/20">
                                             <CalendarHeart className="w-7 h-7" strokeWidth={2.2} />
                                         </div>
-                                        
+
                                         <div className="space-y-1.5 min-w-0 flex-1">
                                             <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
                                                 {fileName}

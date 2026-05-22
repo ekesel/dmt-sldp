@@ -19,8 +19,7 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
     isManager
 }) => {
     return (
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-4 flex items-center justify-end gap-4 w-full">
-
+        <div className="flex items-center justify-end gap-4">
             {/* Right: Layout & Actions */}
             <div className="flex flex-wrap items-center gap-3.5 shrink-0 justify-end">
                 {/* Direction auto-arrange */}

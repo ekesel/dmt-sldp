@@ -453,7 +453,7 @@ function OrgChartPageContent() {
             <Toaster position="top-center" reverseOrder={false} />
             
             {/* Header section matching calendar page layout */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
                     {/* Go Back button */}
                     <button
@@ -477,40 +477,17 @@ function OrgChartPageContent() {
                     </div>
                 </div>
 
-                {/* Right: Permission Status & Reset button */}
-                <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
-                    {isManager ? (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.75rem] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <Shield className="w-4 h-4 text-emerald-600" />
-                            Manager Mode Active
-                        </div>
-                    ) : (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.75rem] font-black bg-blue-50 text-blue-700 border border-blue-200">
-                            <ShieldAlert className="w-4 h-4 text-blue-600" />
-                            Viewer Only Access
-                        </div>
-                    )}
-
-                    {isManager && (
-                        <button
-                            onClick={handleResetChart}
-                            className="p-2 rounded-xl hover:bg-muted text-gray-500 hover:text-gray-800 transition-colors border border-border bg-card shadow-sm flex items-center justify-center cursor-pointer"
-                            title="Reset seed data"
-                        >
-                            <RefreshCw className="w-4.5 h-4.5" />
-                        </button>
-                    )}
+                {/* Float Settings / Controls Panel */}
+                <div className="shrink-0">
+                    <OrgChartControls
+                        currentDirection={layoutDirection}
+                        onAutoArrange={handleAutoArrange}
+                        onAddClick={handleAddClick}
+                        onExportPNG={handleExportPNG}
+                        isManager={isManager}
+                    />
                 </div>
             </div>
-
-            {/* Float Settings / Controls Panel */}
-            <OrgChartControls
-                currentDirection={layoutDirection}
-                onAutoArrange={handleAutoArrange}
-                onAddClick={handleAddClick}
-                onExportPNG={handleExportPNG}
-                isManager={isManager}
-            />
 
             {/* Core Canvas Wrapper Container */}
             <div 

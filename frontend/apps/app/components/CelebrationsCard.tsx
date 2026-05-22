@@ -297,7 +297,7 @@ export const CelebrationsCard: React.FC = () => {
                                         </span>
                                         {item.type === 'anniversary' ? (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-primary/10 text-primary border border-primary/20 flex-shrink-0">
-                                                🎉work Anniversary 
+                                                🎉work Anniversary
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20 flex-shrink-0">

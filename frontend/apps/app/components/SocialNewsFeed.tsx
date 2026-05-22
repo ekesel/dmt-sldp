@@ -7,8 +7,8 @@ import { Heart, MessageSquare } from 'lucide-react';
 import { useNewsfeedData } from '../hooks/useNewsfeedData';
 import { useReactions } from '../hooks/useReactions';
 import { useComments } from '../hooks/useComments';
-import { getMediaUrl } from '@/lib/media';
-import { formatTimestamp } from '@/lib/utils';
+import { getMediaUrl } from '../lib/media';
+import { formatTimestamp } from '../lib/utils';
 
 /**
  * SocialNewsFeed component styled exactly like the user's reference theme screenshot.
