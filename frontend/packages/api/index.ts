@@ -139,97 +139,112 @@ function buildQuery(params: Record<string, string | number | null | undefined>):
 }
 
 export const getFileUrl = (path: string) => {
-    if (!path) return '#';
-    
-    let resultUrl = path;
-    
-    if (!path.startsWith('http://') && !path.startsWith('https://')) {
-        let apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.elevate.samta.ai/api/';
-        
-        try {
-            const urlObj = new URL(apiBase);
-            
-            if (typeof window !== 'undefined') {
-                const hostname = window.location.hostname;
-                const currentParts = hostname.split('.');
-                const currentSubdomain = currentParts[0]; // e.g. "samta"
-                
-                // If it's a multi-tenant URL on the deployed server (e.g. *.elevate.samta.ai)
-                if (urlObj.host.includes('elevate.samta.ai')) {
-                    const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
-                    if (isUrlObjLocal) {
-                        const port = urlObj.port || '8000';
-                        resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
-                    } else {
-                        const origin = urlObj.origin || window.location.origin;
-                        if (!origin && currentSubdomain) {
-                            resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                        } else {
-                            resultUrl = `${origin}${path}`;
-                        }
-                    }
-                } else {
-                    // Local development
-                    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
-                    if (isLocal) {
-                        if (urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1')) {
-                            const backendPort = urlObj.port || '8000';
-                            const baseOrigin = urlObj.origin || window.location.origin;
-                            const finalHost = urlObj.hostname || hostname;
-                            const finalProtocol = urlObj.protocol || window.location.protocol;
-                            resultUrl = `${finalProtocol}//${finalHost}:${backendPort}${path}`;
-                        } else {
-                            // Hybrid: local frontend connected to deployed backend
-                            const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
-                            if (isUrlObjLocal) {
-                                const port = urlObj.port || '8000';
-                                resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
-                            } else {
-                                const origin = urlObj.origin || window.location.origin;
-                                if (!origin && currentSubdomain) {
-                                    resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                                } else {
-                                    resultUrl = `${origin}${path}`;
-                                }
-                            }
-                        }
-                    } else {
-                        // Fallback to active window origin
-                        const cleanPort = window.location.port ? `:${window.location.port}` : '';
-                        resultUrl = `${window.location.protocol}//${hostname}${cleanPort}${path}`;
-                    }
-                }
-            } else {
-                const cleanHost = urlObj.host;
-                resultUrl = `${urlObj.protocol}//${cleanHost}${path}`;
-            }
-        } catch (e) {
-            resultUrl = path;
-        }
+  if (!path) return '#';
+
+  let resultUrl = path;
+
+  if (resultUrl.startsWith('http://') || resultUrl.startsWith('https://')) {
+    try {
+      const urlObj = new URL(resultUrl);
+      if (
+        urlObj.host.includes('backend:8000') ||
+        urlObj.host.includes('localhost:8000') ||
+        urlObj.host.includes('127.0.0.1:8000')
+      ) {
+        resultUrl = urlObj.pathname + urlObj.search + urlObj.hash;
+      }
+    } catch (e) {
+      // Ignore parsing errors
     }
-    
-    // --- Domain Swapping Logic ---
-    // If the constructed or input URL includes api.elevate.samta.ai, swap it with the correct tenant domain
-    if (typeof window !== 'undefined' && resultUrl.includes('api.elevate.samta.ai')) {
+  }
+
+  if (!resultUrl.startsWith('http://') && !resultUrl.startsWith('https://')) {
+    let apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.elevate.samta.ai/api/';
+
+    try {
+      const urlObj = new URL(apiBase);
+
+      if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        const parts = hostname.split('.');
-        
-        const devDomains = (process.env.NEXT_PUBLIC_DEV_DOMAINS || "localhost,127.0.0.1").split(',');
-        const isLocal = devDomains.includes(parts[0]);
-        
-        let tenant = null;
-        if (!isLocal && parts.length > 2) {
-            tenant = parts[0];
+        const currentParts = hostname.split('.');
+        const currentSubdomain = currentParts[0]; // e.g. "samta"
+
+        // If it's a multi-tenant URL on the deployed server (e.g. *.elevate.samta.ai)
+        if (urlObj.host.includes('elevate.samta.ai')) {
+          const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
+          if (isUrlObjLocal) {
+            const port = urlObj.port || '8000';
+            resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
+          } else {
+            const origin = urlObj.origin || window.location.origin;
+            if (!origin && currentSubdomain) {
+              resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
+            } else {
+              resultUrl = `${origin}${path}`;
+            }
+          }
         } else {
-            tenant = localStorage.getItem('dmt-tenant');
+          // Local development
+          const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+          if (isLocal) {
+            if (urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1')) {
+              const backendPort = urlObj.port || '8000';
+              const baseOrigin = urlObj.origin || window.location.origin;
+              const finalHost = urlObj.hostname || hostname;
+              const finalProtocol = urlObj.protocol || window.location.protocol;
+              resultUrl = `${finalProtocol}//${finalHost}:${backendPort}${path}`;
+            } else {
+              // Hybrid: local frontend connected to deployed backend
+              const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
+              if (isUrlObjLocal) {
+                const port = urlObj.port || '8000';
+                resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
+              } else {
+                const origin = urlObj.origin || window.location.origin;
+                if (!origin && currentSubdomain) {
+                  resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
+                } else {
+                  resultUrl = `${origin}${path}`;
+                }
+              }
+            }
+          } else {
+            // Fallback to active window origin
+            const cleanPort = window.location.port ? `:${window.location.port}` : '';
+            resultUrl = `${window.location.protocol}//${hostname}${cleanPort}${path}`;
+          }
         }
-        
-        if (tenant) {
-            resultUrl = resultUrl.replace('api.elevate.samta.ai', `${tenant}.elevate.samta.ai`);
-        }
+      } else {
+        const cleanHost = urlObj.host;
+        resultUrl = `${urlObj.protocol}//${cleanHost}${path}`;
+      }
+    } catch (e) {
+      resultUrl = path;
     }
-    
-    return resultUrl;
+  }
+
+  // --- Domain Swapping Logic ---
+  // If the constructed or input URL includes api.elevate.samta.ai, swap it with the correct tenant domain
+  if (typeof window !== 'undefined' && resultUrl.includes('api.elevate.samta.ai')) {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+
+    const devDomains = (process.env.NEXT_PUBLIC_DEV_DOMAINS || "localhost,127.0.0.1").split(',');
+    const isLocal = devDomains.includes(parts[0]);
+
+    let tenant = null;
+    if (!isLocal && parts.length > 2) {
+      tenant = parts[0];
+    } else {
+      tenant = localStorage.getItem('dmt-tenant');
+    }
+
+    if (tenant) {
+      resultUrl = resultUrl.replace('api.elevate.samta.ai', `${tenant}.elevate.samta.ai`);
+    }
+  }
+
+  return resultUrl;
 };
 
 function handleApiError(error: unknown): never {
@@ -499,13 +514,13 @@ export const dashboard = {
   getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
     get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 
-  
+
   getStarPerformer: () => get<any>('/homepage/star-performer/'),
   getPolicies: () => get<any[]>('/homepage/policy/'),
   uploadPolicy: (formData: FormData) => post<any, FormData>('/homepage/policy/', formData),
   updatePolicy: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/policy/${id}/`, formData),
   deletePolicy: (id: number) => del<any>(`/homepage/policy/${id}/`),
-  
+
   getHolidayCalendars: () => get<any[]>('/homepage/holiday-calendar/'),
   uploadHolidayCalendar: (formData: FormData) => post<any, FormData>('/homepage/holiday-calendar/', formData),
   updateHolidayCalendar: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/holiday-calendar/${id}/`, formData),

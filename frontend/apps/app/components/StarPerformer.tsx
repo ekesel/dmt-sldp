@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { dashboard } from '@dmt/api';
+import { dashboard, getFileUrl } from '@dmt/api';
 
 interface Performer {
     name: string;
@@ -59,7 +59,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                                 role: p.title || 'Top Performer',
                                 message: p.reason || 'Outstanding performance',
                                 rating: Math.min(5, Math.max(3.5, rating)),
-                                avatar: p.avatar || 'https://i.pravatar.cc/150?u=star'
+                                avatar: p.avatar ? getFileUrl(p.avatar) : 'https://i.pravatar.cc/150?u=star'
                             };
                         })
                         .filter((p): p is Performer => p !== null);

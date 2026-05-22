@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 
 import { Author, Post } from "../../hooks/useNewsfeedData";
+import { getFileUrl } from "@dmt/api";
 
 interface StaticPostModalProps {
   isOpen: boolean;
@@ -215,7 +216,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
           <div className="flex items-center gap-3">
             {userProfile?.avatar_url ? (
               <img
-                src={userProfile.avatar_url}
+                src={getFileUrl(userProfile.avatar_url)}
                 alt={userProfile.username}
                 className="w-10 h-10 rounded-full object-cover border border-border"
               />

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Author } from '../../hooks/useNewsfeedData';
+import { getFileUrl } from '@dmt/api';
 
 export interface NavItem {
     icon: string;
@@ -90,7 +91,7 @@ const StaticNavbar = ({
                 >
                     {userProfile?.avatar_url ? (
                         <img 
-                            src={userProfile.avatar_url} 
+                            src={getFileUrl(userProfile.avatar_url)} 
                             alt="Profile" 
                             className="w-7 h-7 rounded-full object-cover"
                         />

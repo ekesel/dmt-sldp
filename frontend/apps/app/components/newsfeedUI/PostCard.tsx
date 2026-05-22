@@ -8,6 +8,7 @@ import { cn, formatTimestamp } from "@/lib/utils";
 import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
+import { getFileUrl } from "@dmt/api";
 
 
 const PostCard = ({
@@ -62,7 +63,7 @@ const PostCard = ({
   }, [post.post_id]);
 
   return (
-    <div 
+    <div
       id={`post-${post.post_id}`}
       className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
     >
@@ -71,8 +72,9 @@ const PostCard = ({
         <div className="flex items-center gap-3">
           <img
             src={
-              author?.avatar_url ||
-              "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
+              author?.avatar_url
+                ? getFileUrl(author.avatar_url)
+                : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
             }
             alt={author?.username}
             className="w-10 h-10 rounded-full object-cover border border-border cursor-pointer"
