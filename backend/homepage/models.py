@@ -66,3 +66,18 @@ class Onboarding(BaseDocument):
     
     def __str__(self):
         return f"{self.org_name} - {self.title}"
+
+
+# Model for Holiday Data
+class Holiday(models.Model):
+    name = models.CharField(max_length=255, help_text="Name of the holiday")
+    date = models.DateField(help_text="Date of the holiday")
+    tenant_id = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, help_text="Tenant ID")
+    
+    class Meta:
+        ordering = ['date']
+        verbose_name = 'Holiday'
+        verbose_name_plural = 'Holidays'
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
