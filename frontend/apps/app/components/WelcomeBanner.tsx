@@ -3,6 +3,20 @@ import React from "react";
 import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
 
+const formatJoinDate = (dateStr?: string) => {
+  if (!dateStr) return "";
+  try {
+    const dateObj = new Date(dateStr);
+    return dateObj.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 export const WelcomeBanner: React.FC = () => {
   const { user } = useAuth();
   
@@ -73,8 +87,26 @@ export const WelcomeBanner: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
               <h3 className="text-[1rem] md:text-[1.125rem] font-black text-card-foreground leading-tight">{fullName}</h3>
+              {user?.date_of_join && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[0.75rem] font-bold text-muted-foreground bg-secondary/60 px-2.5 py-0.5 rounded-full border border-border/40 hover:bg-secondary transition-all duration-300">
+                  <svg
+                    className="w-3.5 h-3.5 text-accent"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>Joined: {formatJoinDate(user.date_of_join)}</span>
+                </div>
+              )}
             </div>
           </div>
 

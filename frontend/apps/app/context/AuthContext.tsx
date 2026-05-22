@@ -17,6 +17,7 @@ interface User {
     tenant_name?: string;
     custom_title?: string;
     avatar_url?: string;
+    date_of_join?: string;
 }
 
 interface AuthContextType {

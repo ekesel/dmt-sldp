@@ -33,7 +33,7 @@ export const QuickAccessTiles: React.FC = () => {
     const tiles = [
         { title: "Org Chart", Icon: Network, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/org-chart" },
         { title: "Holiday Calendar", Icon: Palmtree, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/holiday-calendar" },
-        { title: "Employee Engagement Calendar", Icon: CalendarHeart, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/engagement-calendar" },
+        { title: "Engagement Calendar", Icon: CalendarHeart, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/engagement-calendar" },
         { title: "Policies", Icon: FileText, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/policies" },
         { title: "Learning & Development", Icon: GraduationCap, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/learning-and-development" },
         { title: "Onboarding", Icon: Rocket, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/onboarding" },
