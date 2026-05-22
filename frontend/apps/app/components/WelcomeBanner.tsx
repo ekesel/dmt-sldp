@@ -7,6 +7,9 @@ const formatJoinDate = (dateStr?: string) => {
   if (!dateStr) return "";
   try {
     const dateObj = new Date(dateStr);
+    if (Number.isNaN(dateObj.getTime()) || !Number.isFinite(dateObj.getTime())) {
+      return dateStr || "";
+    }
     return dateObj.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",

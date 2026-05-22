@@ -30,11 +30,30 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
+        // Skip network fetch entirely when performers are injected via props
+        if (performers && performers.length > 0) {
+            setLoading(false);
+            return;
+        }
+
         const fetchPerformers = async () => {
+            setLoading(true);
             try {
                 const data = await dashboard.getStarPerformer();
                
                 if (data && data.top_performers) {
+                    // Derive score bounds from the actual data for monotonic normalization
+                    const rawVals = Object.values(data.top_performers)
+                        .filter((val: any) => val !== null && val !== undefined)
+                        .map((val: any) => {
+                            const p = Array.isArray(val) ? val[0] : val;
+                            return p ? Number(p.score) : NaN;
+                        })
+                        .filter((n) => Number.isFinite(n));
+
+                    const scoreMin = rawVals.length > 0 ? Math.min(...rawVals) : 0;
+                    const scoreMax = rawVals.length > 0 ? Math.max(...rawVals) : 1;
+
                     const mapped: Performer[] = Object.values(data.top_performers)
                         .filter((val: any) => val !== null && val !== undefined)
                         .map((val: any) => {
@@ -42,23 +61,28 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             const p = Array.isArray(val) ? val[0] : val;
                             if (!p) return null;
 
-                            
-
-                            // Compute a clean 3.5 - 5 star rating based on score
-                            let rating = 5;
+                            // Monotonic linear normalization: map score → [4, 5] stars
+                            const RATING_MIN = 4;
+                            const RATING_MAX = 5;
+                            const DEFAULT_RATING = 4.5;
+                            let rating = DEFAULT_RATING;
                             if (p.score !== undefined && p.score !== null) {
-                                // If the score is a raw number (like compliance, velocity points, etc.), scale it nicely
                                 const valScore = Number(p.score);
-                                if (valScore > 0) {
-                                    // Map to a premium 4 to 5 range
-                                    rating = 4 + (valScore % 2 === 0 ? 0.5 : 1) * 0.5;
+                                if (Number.isFinite(valScore)) {
+                                    const range = scoreMax - scoreMin;
+                                    const normalized = range > 0
+                                        ? (valScore - scoreMin) / range  // 0..1
+                                        : 0.5;                           // all equal → mid
+                                    // Linearly interpolate and clamp to [RATING_MIN, RATING_MAX]
+                                    rating = RATING_MIN + normalized * (RATING_MAX - RATING_MIN);
+                                    rating = Math.min(RATING_MAX, Math.max(RATING_MIN, rating));
                                 }
                             }
                             return {
                                 name: p.name || 'Performer',
                                 role: p.title || 'Top Performer',
                                 message: p.reason || 'Outstanding performance',
-                                rating: Math.min(5, Math.max(3.5, rating)),
+                                rating,
                                 avatar: p.avatar ? getFileUrl(p.avatar) : 'https://i.pravatar.cc/150?u=star'
                             };
                         })
@@ -73,7 +97,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             }
         };
         fetchPerformers();
-    }, []);
+    }, [performers, dashboard]);
 
     // Resolve final data list
     const dataList = performers && performers.length > 0
