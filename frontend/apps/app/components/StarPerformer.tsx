@@ -29,39 +29,29 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
     const [apiPerformers, setApiPerformers] = React.useState<Performer[]>([]);
     const [loading, setLoading] = React.useState(true);
 
-    const defaultPerformers = [
-        {
-            name: "David Chen",
-            role: "Sales",
-            message: "For outstanding performance in Q3",
-            rating: 5,
-            avatar: "https://i.pravatar.cc/150?u=david"
-        },
-        {
-            name: "Sarah Miller",
-            role: "Marketing",
-            message: "Exceeded all campaign targets in October",
-            rating: 5,
-            avatar: "https://i.pravatar.cc/150?u=sarah"
-        }
-    ];
-
     React.useEffect(() => {
         const fetchPerformers = async () => {
             try {
                 const data = await dashboard.getStarPerformer();
+               
                 if (data && data.top_performers) {
                     const mapped: Performer[] = Object.values(data.top_performers)
-                        .filter((p: any) => p !== null && p !== undefined)
-                        .map((p: any) => {
+                        .filter((val: any) => val !== null && val !== undefined)
+                        .map((val: any) => {
+                            // Extract single performer object if it is wrapped in an array
+                            const p = Array.isArray(val) ? val[0] : val;
+                            if (!p) return null;
+
+                            
+
                             // Compute a clean 3.5 - 5 star rating based on score
                             let rating = 5;
                             if (p.score !== undefined && p.score !== null) {
                                 // If the score is a raw number (like compliance, velocity points, etc.), scale it nicely
-                                const val = Number(p.score);
-                                if (val > 0) {
+                                const valScore = Number(p.score);
+                                if (valScore > 0) {
                                     // Map to a premium 4 to 5 range
-                                    rating = 4 + (val % 2 === 0 ? 0.5 : 1) * 0.5;
+                                    rating = 4 + (valScore % 2 === 0 ? 0.5 : 1) * 0.5;
                                 }
                             }
                             return {
@@ -71,7 +61,9 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                                 rating: Math.min(5, Math.max(3.5, rating)),
                                 avatar: p.avatar || 'https://i.pravatar.cc/150?u=star'
                             };
-                        });
+                        })
+                        .filter((p): p is Performer => p !== null);
+                    console.log("RESOLVED API PERFORMERS FOR UI:", mapped);
                     setApiPerformers(mapped);
                 }
             } catch (error) {
@@ -84,9 +76,9 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
     }, []);
 
     // Resolve final data list
-    const dataList = performers && performers.length > 0 
-        ? performers 
-        : (apiPerformers.length > 0 ? apiPerformers : defaultPerformers);
+    const dataList = performers && performers.length > 0
+        ? performers
+        : apiPerformers;
 
     const nextSlide = () => {
         if (currentIndex < dataList.length - 1) {
@@ -110,6 +102,61 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
         return () => clearInterval(timer);
     }, [dataList.length]);
 
+    if (loading) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col justify-between animate-pulse">
+                <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
+                    <div className="flex flex-col gap-2">
+                        <div className="h-4 w-28 bg-muted rounded" />
+                        <div className="h-3 w-16 bg-muted rounded" />
+                    </div>
+                    <div className="w-12 h-12 bg-muted rounded-full" />
+                </div>
+                <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
+                <div className="flex gap-3 sm:gap-5 items-center flex-1">
+                    <div className="w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] bg-muted flex-shrink-0" />
+                    <div className="flex flex-col justify-center py-0.5 flex-1 gap-2">
+                        <div className="h-4 w-3/4 bg-muted rounded" />
+                        <div className="h-3 w-1/2 bg-muted rounded" />
+                        <div className="h-3 w-5/6 bg-muted rounded" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (dataList.length === 0) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col">
+                <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
+                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
+                        Star Performer
+                    </h2>
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16 -mr-1 -mt-1 opacity-40">
+                        <Image
+                            src="/assets/trophy.png"
+                            alt="Trophy"
+                            fill
+                            className="object-contain grayscale"
+                            priority
+                        />
+                    </div>
+                </div>
+
+                <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
+
+                <div className="flex flex-col items-center justify-center flex-1 text-center py-2 px-4">
+                    <p className="text-[0.875rem] font-bold text-muted-foreground mb-1">
+                        No star performers yet
+                    </p>
+                    <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground/70 font-medium max-w-[15rem] leading-snug">
+                        Keep pushing boundaries to claim the trophy next month!
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     const currentPerformer = dataList[currentIndex];
 
     return (
@@ -120,7 +167,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                     <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
                         Star Performer
                     </h2>
-                    
+
                     {/* Navigation Controls */}
                     {dataList.length > 1 && (
                         <div className="flex gap-1.5">

@@ -41,7 +41,7 @@ describe("StarPerformer Component", () => {
     cleanup();
   });
 
-  it("renders default performers if API returns no data", async () => {
+  it("renders empty state if API returns no data", async () => {
     (dashboard.getStarPerformer as any).mockResolvedValue({});
 
     render(<StarPerformer />);
@@ -52,9 +52,8 @@ describe("StarPerformer Component", () => {
     });
 
     expect(screen.getByText("Star Performer")).toBeDefined();
-    // Default performer
-    expect(screen.getByText("David Chen")).toBeDefined();
-    expect(screen.getByText("Sales")).toBeDefined();
+    // Empty state fallback text
+    expect(screen.getByText("No star performers yet")).toBeDefined();
   });
 
   it("renders API data correctly", async () => {
