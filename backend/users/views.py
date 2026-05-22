@@ -33,6 +33,9 @@ from homepage.permissions import IsManagerOrReadOnly
 from .models import User, RoleTable
 User = get_user_model()
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -391,21 +394,32 @@ class UserHierarchyAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    # BUILD HIERARCHY (Recursive Function)
+    # CYCLE DETECTION — prevents circular chains (e.g. A→B→C→A)
+    def would_create_cycle(self, user_id, new_parent_id):
+        current_id = new_parent_id
+        visited = set()
+        while current_id is not None:
+            if current_id in visited:
+                break
+            if current_id == user_id:
+                return True
+            visited.add(current_id)
+            current_id = User.objects.filter(id=current_id).values_list('parent_id', flat=True).first()
+        return False
+
+    # BUILD HIERARCHY — O(n) using pre-grouped dict (Fix #3)
     def build_hierarchy(self, users, parent_id=None):
 
-        tree = []
-
+        # Group all users by their parent_id in one pass
+        children_map = {}
         for user in users:
+            pid = user.parent_id
+            children_map.setdefault(pid, []).append(user)
 
-            # Skip inactive users
-            if not user.is_active:
-                continue
-
-            # Find child users
-            if user.parent_id == parent_id:
-
-                tree.append({
+        def build(pid):
+            result = []
+            for user in children_map.get(pid, []):
+                result.append({
                     "id": user.id,
                     "full_name": f"{user.first_name} {user.last_name}".strip(),
                     "email": user.email,
@@ -415,19 +429,20 @@ class UserHierarchyAPIView(APIView):
                     "department": user.role.dep_name if user.role else None,
                     "parent_id": user.parent_id,
                     "is_active": user.is_active,
-
-                    # Recursive children
-                    "children": self.build_hierarchy(users, user.id)
+                    "children": build(user.id)
                 })
+            return result
 
-        return tree
+        return build(parent_id)
 
 
     # GET -> FULL HIERARCHY
     def get(self, request):
 
+        # Fix #4: filter active users at DB level — avoid loading inactive users
         users = User.objects.select_related('role').filter(
-            tenant=request.user.tenant
+            tenant=request.user.tenant,
+            is_active=True
         )
 
         hierarchy = self.build_hierarchy(users)
@@ -472,6 +487,13 @@ class UserHierarchyAPIView(APIView):
             # Update dep_name if frontend sends it
             dep_name = data.get("dep_name")
             if dep_name:
+                # Fix #2: validate against allowed choices before saving
+                valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
+                if dep_name not in valid_choices:
+                    return Response({
+                        "status": False,
+                        "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
+                    }, status=status.HTTP_400_BAD_REQUEST)
                 role_obj.dep_name = dep_name
                 role_obj.save(update_fields=['dep_name'])
 
@@ -506,7 +528,9 @@ class UserHierarchyAPIView(APIView):
             if role_obj:
                 existing_user.role = role_obj
 
-            existing_user.parent = parent_user
+            # Fix #5: only update parent if explicitly sent — prevent silent wipe
+            if "parent" in data:
+                existing_user.parent = parent_user
 
             existing_user.save()
 
@@ -547,13 +571,15 @@ class UserHierarchyAPIView(APIView):
                     "id": user.id,
                     "full_name": f"{user.first_name} {user.last_name}".strip(),
                     "email": user.email,
-                    "role": user.role.role_name if user.role else None,
-                    "department": user.role.dep_name if user.role else None,
+                    # Fix #1: use role_obj directly (already in memory) to avoid null department
+                    "role": role_obj.role_name if role_obj else None,
+                    "department": role_obj.dep_name if role_obj else None,
                 }
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-
+            # Fix #7: log the real error instead of swallowing it
+            logger.exception("User creation failed for email=%s: %s", email, str(e))
             return Response({
                 "status": False,
                 "message": "Could not create user"
@@ -602,9 +628,15 @@ class UserHierarchyAPIView(APIView):
                         "message": f"Role with id={designation} not found"
                     }, status=status.HTTP_400_BAD_REQUEST)
 
-                # Update dep_name if frontend sends it
+                # Update dep_name if frontend sends it — validate choices (Fix #2)
                 dep_name = data.get("dep_name")
                 if dep_name:
+                    valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
+                    if dep_name not in valid_choices:
+                        return Response({
+                            "status": False,
+                            "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
+                        }, status=status.HTTP_400_BAD_REQUEST)
                     role_obj.dep_name = dep_name
                     role_obj.save(update_fields=['dep_name'])
 
@@ -622,7 +654,7 @@ class UserHierarchyAPIView(APIView):
                     "message": "User cannot be parent of itself"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Validate parent
+            # Validate parent exists and check for circular chains (Fix #6)
             if parent_id:
 
                 parent_exists = User.objects.filter(
@@ -635,6 +667,13 @@ class UserHierarchyAPIView(APIView):
                     return Response({
                         "status": False,
                         "message": "Parent user not found"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Fix #6: detect circular hierarchy (e.g. A→B→C→A)
+                if self.would_create_cycle(user.id, parent_id):
+                    return Response({
+                        "status": False,
+                        "message": "This parent assignment would create a circular hierarchy"
                     }, status=status.HTTP_400_BAD_REQUEST)
 
             user.parent_id = parent_id
