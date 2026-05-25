@@ -487,17 +487,19 @@ class UserHierarchyAPIView(APIView):
                     "message": f"Role with id={designation} not found"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Validate dep_name if frontend sends it
-            dep_name = data.get("dep_name")
+            # Validate and update dep_name if frontend sends it
+            dep_name = data.get("dep_name") or data.get("department")
             if dep_name:
-                # Fix #2: validate against allowed choices before saving
+                dep_name = str(dep_name).lower()
                 valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
                 if dep_name not in valid_choices:
                     return Response({
                         "status": False,
                         "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
                     }, status=status.HTTP_400_BAD_REQUEST)
-                # keep dep_name immutable here; role metadata should be changed only via role-management endpoint
+                # Update the role's department
+                role_obj.dep_name = dep_name
+                role_obj.save()
 
         # GET PARENT USER
         parent_user = None
@@ -642,16 +644,19 @@ class UserHierarchyAPIView(APIView):
                         "message": f"Role with id={designation} not found"
                     }, status=status.HTTP_400_BAD_REQUEST)
 
-                # Validate dep_name if frontend sends it — validate choices (Fix #2)
-                dep_name = data.get("dep_name")
+                # Validate and update dep_name if frontend sends it
+                dep_name = data.get("dep_name") or data.get("department")
                 if dep_name:
+                    dep_name = str(dep_name).lower()
                     valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
                     if dep_name not in valid_choices:
                         return Response({
                             "status": False,
                             "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
                         }, status=status.HTTP_400_BAD_REQUEST)
-                    # keep dep_name immutable here; role metadata should be changed only via role-management endpoint
+                    # Update the role's department
+                    role_obj.dep_name = dep_name
+                    role_obj.save()
 
             user.role = role_obj
 
@@ -760,6 +765,30 @@ class GetAllUsersDropdown(APIView):
                 "email": user.email,
                 "role": user.role.role_name if user.role else None,
                 "department": user.role.dep_name if user.role else None,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+
+# ROLE DROPDOWN API
+
+class GetAllRolesDropdown(APIView):
+    """
+    Returns a flat list of all roles (for dropdowns).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        roles = RoleTable.objects.all().order_by('role_name')
+        list_data = []
+
+        for role in roles:
+            list_data.append({
+                "id": role.id,
+                "role_name": role.role_name,
             })
 
         return Response({

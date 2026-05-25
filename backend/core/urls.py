@@ -26,7 +26,7 @@ from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
 from users.views import RoleViewSet
-from users.views import UserHierarchyAPIView, GetAllUsersDropdown
+from users.views import UserHierarchyAPIView, GetAllUsersDropdown, GetAllRolesDropdown
 
 router = DefaultRouter()
 
@@ -132,7 +132,10 @@ urlpatterns = [
     ),
 
     # get_all_user_data - 
-    path('api/org-users/', GetAllUsersDropdown.as_view())
+    path('api/org-users/', GetAllUsersDropdown.as_view()),
+
+    # get all roles data -
+    path('api/org-roles/', GetAllRolesDropdown.as_view())
 
 ]
 
