@@ -392,7 +392,10 @@ class RoleViewSet(viewsets.ModelViewSet):
 # ORG CHART API
 class UserHierarchyAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsAuthenticated()]
+        return [IsManagerOrReadOnly()]
 
     # CYCLE DETECTION — prevents circular chains (e.g. A→B→C→A)
     def would_create_cycle(self, user_id, new_parent_id):
@@ -484,7 +487,7 @@ class UserHierarchyAPIView(APIView):
                     "message": f"Role with id={designation} not found"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Update dep_name if frontend sends it
+            # Validate dep_name if frontend sends it
             dep_name = data.get("dep_name")
             if dep_name:
                 # Fix #2: validate against allowed choices before saving
@@ -494,8 +497,7 @@ class UserHierarchyAPIView(APIView):
                         "status": False,
                         "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
                     }, status=status.HTTP_400_BAD_REQUEST)
-                role_obj.dep_name = dep_name
-                role_obj.save(update_fields=['dep_name'])
+                # keep dep_name immutable here; role metadata should be changed only via role-management endpoint
 
         # GET PARENT USER
         parent_user = None
@@ -530,6 +532,18 @@ class UserHierarchyAPIView(APIView):
 
             # Fix #5: only update parent if explicitly sent — prevent silent wipe
             if "parent" in data:
+                if parent_id == existing_user.id:
+                    return Response({
+                        "status": False,
+                        "message": "User cannot be parent of itself"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                if parent_id and self.would_create_cycle(existing_user.id, parent_id):
+                    return Response({
+                        "status": False,
+                        "message": "This parent assignment would create a circular hierarchy"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
                 existing_user.parent = parent_user
 
             existing_user.save()
@@ -628,7 +642,7 @@ class UserHierarchyAPIView(APIView):
                         "message": f"Role with id={designation} not found"
                     }, status=status.HTTP_400_BAD_REQUEST)
 
-                # Update dep_name if frontend sends it — validate choices (Fix #2)
+                # Validate dep_name if frontend sends it — validate choices (Fix #2)
                 dep_name = data.get("dep_name")
                 if dep_name:
                     valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
@@ -637,8 +651,7 @@ class UserHierarchyAPIView(APIView):
                             "status": False,
                             "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
                         }, status=status.HTTP_400_BAD_REQUEST)
-                    role_obj.dep_name = dep_name
-                    role_obj.save(update_fields=['dep_name'])
+                    # keep dep_name immutable here; role metadata should be changed only via role-management endpoint
 
             user.role = role_obj
 

@@ -120,19 +120,19 @@ urlpatterns = [
 
     # org chart - 
     path(
-        'org-chart/',
+        'api/org-chart/',
         UserHierarchyAPIView.as_view()
     ),
 
     # PUT update user
     # DELETE soft delete
     path(
-        'org-chart/<int:pk>/',
+        'api/org-chart/<int:pk>/',
         UserHierarchyAPIView.as_view()
     ),
 
     # get_all_user_data - 
-    path('org-users/', GetAllUsersDropdown.as_view())
+    path('api/org-users/', GetAllUsersDropdown.as_view())
 
 ]
 
