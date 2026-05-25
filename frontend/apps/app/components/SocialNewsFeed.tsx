@@ -9,6 +9,7 @@ import { useReactions } from '../hooks/useReactions';
 import { useComments } from '../hooks/useComments';
 import { getMediaUrl } from '../lib/media';
 import { formatTimestamp } from '../lib/utils';
+import { getFileUrl } from '@dmt/api';
 
 /**
  * SocialNewsFeed component styled exactly like the user's reference theme screenshot.
@@ -44,7 +45,7 @@ export const SocialNewsFeed: React.FC = () => {
     if (loading && !latestPost) {
         return (
             <div className="w-full h-full flex flex-col">
-                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex items-center justify-center mx-auto overflow-hidden">
+                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full flex items-center justify-center overflow-hidden">
                     <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
                         <span className="text-xs text-muted-foreground font-semibold">Loading feed...</span>
@@ -57,7 +58,7 @@ export const SocialNewsFeed: React.FC = () => {
     if (!latestPost) {
         return (
             <div className="w-full h-full flex flex-col">
-                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex items-center justify-center mx-auto overflow-hidden">
+                <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full h-full flex items-center justify-center overflow-hidden">
                     <span className="text-sm text-muted-foreground font-semibold">No posts available</span>
                 </div>
             </div>
@@ -67,7 +68,7 @@ export const SocialNewsFeed: React.FC = () => {
     return (
         <div className="w-full h-full flex flex-col">
             {/* Main Card Container */}
-            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full xl:max-h-[20rem] xl:h-[20rem] flex flex-col overflow-hidden">
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full flex flex-col overflow-hidden">
                 {/* Fixed Title Header */}
                 <div className="flex justify-between items-center mb-2.5 flex-shrink-0">
                     <h2 className="text-[1rem] sm:text-[1.125rem] md:text-[1.25rem] font-black text-foreground tracking-tight">
@@ -76,7 +77,7 @@ export const SocialNewsFeed: React.FC = () => {
                 </div>
 
                 {/* Scrollable Post Content */}
-                <div 
+                <div
                     className="flex-1 overflow-y-auto pr-1 cursor-pointer select-none [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-track]:bg-muted/10 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:rounded-full"
                     onClick={() => router.push(`/newsfeed?openComments=${postId}`)}
                 >
@@ -84,7 +85,7 @@ export const SocialNewsFeed: React.FC = () => {
                     <div className="flex items-center gap-2.5">
                         <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border flex-shrink-0">
                             <Image
-                                src={latestPost.author?.avatar_url || `https://i.pravatar.cc/150?u=${latestPost.author?.id || 'user'}`}
+                                src={latestPost.author?.avatar_url ? getFileUrl(latestPost.author.avatar_url) : `https://i.pravatar.cc/150?u=${latestPost.author?.id || 'user'}`}
                                 alt={latestPost.author?.username || "Author"}
                                 fill
                                 className="object-cover"
@@ -94,8 +95,8 @@ export const SocialNewsFeed: React.FC = () => {
                         <div className="flex flex-col overflow-hidden">
                             <span className="text-[0.75rem] sm:text-[0.8125rem] font-black text-card-foreground leading-tight truncate hover:underline">
                                 {latestPost.author ? (
-                                    `${latestPost.author.first_name || ''} ${latestPost.author.last_name || ''}`.trim() || 
-                                    latestPost.author.email || 
+                                    `${latestPost.author.first_name || ''} ${latestPost.author.last_name || ''}`.trim() ||
+                                    latestPost.author.email ||
                                     latestPost.author.username
                                 ) : "Unknown User"}
                             </span>
@@ -133,16 +134,16 @@ export const SocialNewsFeed: React.FC = () => {
 
                 {/* Fixed Interaction Buttons */}
                 <div className="flex gap-4 pt-2.5 border-t border-border/40 mt-2.5 flex-shrink-0">
-                    <button 
+                    <button
                         onClick={handleLikeClick}
                         className={`flex items-center gap-1 transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] ${isLiked ? 'text-rose-600' : 'text-muted-foreground hover:text-rose-600'}`}
                     >
-                        <Heart 
-                            className={`w-4 h-4 transition-all ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-muted-foreground'}`} 
+                        <Heart
+                            className={`w-4 h-4 transition-all ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-muted-foreground'}`}
                         />
                         <span>Like{likeCount > 0 ? ` (${likeCount})` : ''}</span>
                     </button>
-                    <button 
+                    <button
                         onClick={handleCommentsClick}
                         className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] group"
                     >
