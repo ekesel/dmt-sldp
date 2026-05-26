@@ -57,6 +57,7 @@ class RoleTable(models.Model):
         SALES     = 'sales',     'Sales'
         MARKETING = 'marketing', 'Marketing'
         OTHER     = 'other',     'Other'
+        AIML      = 'aiml',      'AI & ML'
 
     role_name = models.CharField(max_length=50)   # ceo, cto, backend tl …
     dep_name  = models.CharField(
