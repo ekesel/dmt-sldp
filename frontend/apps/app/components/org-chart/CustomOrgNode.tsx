@@ -27,7 +27,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
     // Map department to nice Tailwind CSS classes
     const getDeptStyles = (dept: string) => {
         const d = dept.toLowerCase();
-        if (d.includes('exec') || d.includes('ceo')) {
+        if (d === 'other' || d === 'exec' || d === 'ceo') {
             return {
                 bg: 'bg-indigo-50/90 hover:bg-indigo-100/90',
                 border: 'border-indigo-500',
@@ -36,7 +36,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 accentColor: '#6366f1'
             };
         }
-        if (d.includes('eng') || d.includes('cto') || d.includes('tech') || d.includes('dev') || d.includes('qa') || d.includes('ai')) {
+        if (['backend', 'frontend', 'mobile', 'devops', 'qa', 'tech', 'eng', 'engineering'].includes(d)) {
             return {
                 bg: 'bg-teal-50/90 hover:bg-teal-100/90',
                 border: 'border-teal-500',
@@ -45,7 +45,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 accentColor: '#0d9488'
             };
         }
-        if (d.includes('hr') || d.includes('people') || d.includes('talent')) {
+        if (['hr', 'people'].includes(d)) {
             return {
                 bg: 'bg-rose-50/90 hover:bg-rose-100/90',
                 border: 'border-rose-500',
@@ -54,7 +54,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 accentColor: '#ec4899'
             };
         }
-        if (d.includes('sales') || d.includes('market')) {
+        if (['sales', 'marketing', 'market'].includes(d)) {
             return {
                 bg: 'bg-amber-50/90 hover:bg-amber-100/90',
                 border: 'border-amber-500',
@@ -63,7 +63,16 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 accentColor: '#f59e0b'
             };
         }
-        // Product, PM or general
+        if (['data', 'finance'].includes(d)) {
+            return {
+                bg: 'bg-emerald-50/90 hover:bg-emerald-100/90',
+                border: 'border-emerald-500',
+                text: 'text-emerald-700',
+                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                accentColor: '#10b981'
+            };
+        }
+        // Product, Design, or general
         return {
             bg: 'bg-purple-50/90 hover:bg-purple-100/90',
             border: 'border-purple-500',
@@ -71,6 +80,25 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             badgeBg: 'bg-purple-100 text-purple-800 border-purple-200',
             accentColor: '#a855f7'
         };
+    };
+
+    const formatDeptName = (dept: string) => {
+        const labels: Record<string, string> = {
+            'backend': 'Backend',
+            'frontend': 'Frontend',
+            'mobile': 'Mobile',
+            'devops': 'DevOps',
+            'qa': 'QA / Testing',
+            'data': 'Data & Analytics',
+            'design': 'Design / UX',
+            'product': 'Product',
+            'hr': 'HR',
+            'finance': 'Finance',
+            'sales': 'Sales',
+            'marketing': 'Marketing',
+            'other': 'Other'
+        };
+        return labels[dept.toLowerCase()] || dept;
     };
 
     const styles = getDeptStyles(department);
@@ -90,7 +118,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
             {/* Custom Node Panel */}
             <div 
-                className={`w-[260px] p-4 rounded-2xl bg-white border-2 ${styles.border} shadow-[0_4px_20px_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
+                className={`w-[260px] p-4 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_4px_20px_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
             >
                 {/* Visual Top Highlight Strip */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${styles.badgeBg.split(' ')[0]}`} />
@@ -106,27 +134,27 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
                     {/* Node Text Content */}
                     <div className="min-w-0 flex-1">
-                        <h4 className="text-[0.925rem] font-[800] text-gray-900 truncate leading-snug">
+                        <h4 className="text-[0.925rem] font-[800] text-card-foreground truncate leading-snug">
                             {name}
                         </h4>
-                        <p className="text-[0.725rem] text-gray-500 font-semibold truncate mt-0.5 leading-normal">
+                        <p className="text-[0.725rem] text-muted-foreground font-semibold truncate mt-0.5 leading-normal">
                             {role}
                         </p>
                         {email && (
-                            <p className="flex items-center gap-1 text-[0.675rem] text-gray-400 font-medium truncate mt-0.5">
+                            <p className="flex items-center gap-1 text-[0.675rem] text-muted-foreground/70 font-medium truncate mt-0.5">
                                 <Mail className="w-3 h-3 shrink-0" />
                                 {email}
                             </p>
                         )}
                         <span className={`inline-block mt-1.5 px-2.5 py-0.5 text-[0.625rem] font-bold rounded-lg border uppercase tracking-wider ${styles.badgeBg}`}>
-                            {department}
+                            {formatDeptName(department)}
                         </span>
                     </div>
                 </div>
 
                 {/* Direct Action Overlay (Shown for managers on hover) */}
                 {isManager && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-opacity duration-300 bg-white/95 backdrop-blur-sm p-1 rounded-lg shadow-sm border border-gray-100">
+                    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-opacity duration-300 bg-card/95 backdrop-blur-sm p-1 rounded-lg shadow-sm border border-border">
                         {onEdit && (
                             <button
                                 onClick={(e) => {

@@ -954,4 +954,30 @@ export const reactions = {
 export { getWebSocketManager } from './websocket';
 export type { TelemetryMessage } from './websocket';
 
+/** ---------- orgChart ---------- */
+
+export interface OrgChartUser {
+  id: number;
+  full_name: string;
+  email: string;
+  username: string;
+  role_id: number;
+  role: string;
+  department: string;
+  parent_id: number | null;
+  is_active: boolean;
+  children: OrgChartUser[];
+}
+
+export const orgChart = {
+  getHierarchy: () => get<{ status: boolean; message: string; data: OrgChartUser[] }>('/org-chart/'),
+  createOrUpdateUser: (data: { email: string; first_name?: string; last_name?: string; designation?: number | string; department?: string; parent?: number | string }) => 
+    post<any, any>('/org-chart/', data),
+  updateUser: (id: number | string, data: { first_name?: string; last_name?: string; designation?: number | string; department?: string; parent?: number | string; is_active?: boolean }) => 
+    api.put<any>(`/org-chart/${id}/`, data).then(res => res.data),
+  deleteUser: (id: number | string) => del<any>(`/org-chart/${id}/`),
+  getUsersDropdown: () => get<any>('/org-users/'),
+  getRolesDropdown: () => get<any>('/org-roles/'),
+};
+
 export default api;

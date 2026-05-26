@@ -1,0 +1,321 @@
+1. Get Organization Hierarchy (GET)
+
+Retrieves the full, hierarchical structure of users for the current tenant.
+
+Endpoint: GET /api/org-chart/
+
+Headers:
+
+http
+
+Authorization: Bearer <your_access_token>
+
+Request Body: None
+
+Response: 200 OK
+
+json
+
+{
+
+"status": true,
+
+"message": "Hierarchy fetched successfully",
+
+"data": [
+
+{
+
+"id": 1,
+
+"full_name": "John Doe",
+
+"email": "john@example.com",
+
+"username": "john@example.com",
+
+"role_id": 2,
+
+"role": "Engineering Manager",
+
+"department": "engineering",
+
+"parent_id": null,
+
+"is_active": true,
+
+"children": [
+
+{
+
+"id": 2,
+
+"full_name": "Jane Smith",
+
+"email": "jane@example.com",
+
+"username": "jane@example.com",
+
+"role_id": 5,
+
+"role": "Developer",
+
+"department": "engineering",
+
+"parent_id": 1,
+
+"is_active": true,
+
+"children": []
+
+}
+
+]
+
+}
+
+]
+
+}
+
+---
+
+2. Create or Update User (POST)
+
+Creates a new user or updates an existing user based on the provided email address. This is the primary endpoint for adding users to the org chart.
+
+Endpoint: POST /api/org-chart/
+
+Headers:
+
+http
+
+Authorization: Bearer <your_access_token>
+
+Content-Type: application/json
+
+Request Body:
+
+json
+
+{
+
+"email": "new.employee@example.com", // Required
+
+"first_name": "New", // Optional
+
+"last_name": "Employee", // Optional
+
+"designation": 5, // Optional (ID of the Role)
+
+"department": "engineering", // Optional
+
+"parent": 1 // Optional (ID of the Parent User)
+
+}
+
+Response (New User Created): 201 Created
+
+json
+
+{
+
+"status": true,
+
+"message": "Employee created successfully",
+
+"data": {
+
+"id": 3,
+
+"full_name": "New Employee",
+
+"email": "new.employee@example.com",
+
+"role": "Developer",
+
+"department": "engineering"
+
+}
+
+}
+
+Response (Existing User Updated): 200 OK
+
+json
+
+{
+
+"status": true,
+
+"message": "Existing user updated successfully",
+
+"data": {
+
+"id": 2,
+
+"full_name": "Jane Smith",
+
+"email": "jane@example.com",
+
+"role": "Senior Developer",
+
+"department": "engineering"
+
+}
+
+}
+
+---
+
+3. Update User (PUT)
+
+Updates specific details of an existing user using their user ID.
+
+Endpoint: PUT /api/org-chart/<user_id>/
+
+Headers:
+
+http
+
+Authorization: Bearer <your_access_token>
+
+Content-Type: application/json
+
+Request Body: (All fields are optional, only include what needs to be updated)
+
+json
+
+{
+
+"first_name": "Jane",
+
+"last_name": "Doe",
+
+"designation": 6, // Role ID
+
+"department": "sales",
+
+"parent": 3, // ID of the new manager/parent user
+
+"is_active": true // Boolean to activate or deactivate the user
+
+}
+
+Response: 200 OK
+
+json
+
+{
+
+"status": true,
+
+"message": "User updated successfully",
+
+"data": {
+
+"id": 2,
+
+"full_name": "Jane Doe",
+
+"email": "jane@example.com",
+
+"role": "Sales Lead",
+
+"department": "sales"
+
+}
+
+}
+
+Note: The API detects if the new parent assignment would result in a circular hierarchy (e.g., A reports to B, and B reports to A) and will return a 400 Bad Request if a cycle is found.
+
+---
+
+4. Delete/Deactivate User (DELETE)
+
+Soft-deletes a user from the organization by setting their is_active status to false.
+
+Endpoint: DELETE /api/org-chart/<user_id>/
+
+Headers:
+
+http
+
+Authorization: Bearer <your_access_token>
+
+Request Body: None
+
+Response: 200 OK
+
+json
+
+{
+
+"status": true,
+
+"message": "User soft deleted successfully"
+
+}
+
+---
+
+5. Helper Endpoints for Dropdowns
+
+If you are building the UI, you may need these additional endpoints to populate select dropdowns for users and roles.
+
+Get All Users Dropdown (GET)
+
+Endpoint: GET /api/org-users/ Response: 200 OK
+
+json
+
+{
+
+"status": true,
+
+"data": [
+
+{
+
+"id": 1,
+
+"full_name": "John Doe",
+
+"email": "john@example.com",
+
+"role": "Engineering Manager",
+
+"department": "engineering"
+
+}
+
+]
+
+}
+
+Get All Roles Dropdown (GET)
+
+Endpoint: GET /api/org-roles/ Response: 200 OK
+
+json
+
+{
+
+"status": true,
+
+"data": [
+
+{
+
+"id": 1,
+
+"role_name": "Admin"
+
+},
+
+{
+
+"id": 2,
+
+"rol

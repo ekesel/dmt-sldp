@@ -23,13 +23,13 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
             {/* Right: Layout & Actions */}
             <div className="flex flex-wrap items-center gap-3.5 shrink-0 justify-end">
                 {/* Direction auto-arrange */}
-                <div className="flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200/40 shrink-0">
+                <div className="flex items-center bg-muted/80 p-1 rounded-xl border border-border/40 shrink-0">
                     <button
                         onClick={() => onAutoArrange('TB')}
                         className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                             currentDirection === 'TB'
-                                ? 'bg-white text-primary shadow-sm'
-                                : 'text-gray-500 hover:text-gray-800'
+                                ? 'bg-background text-primary shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
                         }`}
                         title="Top to Bottom Layout"
                     >
@@ -40,8 +40,8 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                         onClick={() => onAutoArrange('LR')}
                         className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                             currentDirection === 'LR'
-                                ? 'bg-white text-primary shadow-sm'
-                                : 'text-gray-500 hover:text-gray-800'
+                                ? 'bg-background text-primary shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
                         }`}
                         title="Left to Right Layout"
                     >
@@ -53,10 +53,10 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                 {/* Export Button */}
                 <button
                     onClick={onExportPNG}
-                    className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 rounded-xl text-[0.875rem] font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all cursor-pointer active:scale-95 shadow-sm"
+                    className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 rounded-xl text-[0.875rem] font-bold text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-border transition-all cursor-pointer active:scale-95 shadow-sm"
                     title="Export Org Chart as Image"
                 >
-                    <Download className="w-4 h-4 text-gray-500" />
+                    <Download className="w-4 h-4 text-muted-foreground" />
                     <span className="hidden sm:inline">Export</span>
                 </button>
 
