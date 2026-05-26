@@ -46,7 +46,7 @@ export const QuickAccessTiles: React.FC = () => {
                     Quick Links
                 </h2>
                 {/* Grid Container */}
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-[25rem] sm:max-w-[35rem] md:max-w-[45rem] lg:max-w-none mx-auto overflow-hidden">
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-[25rem] sm:max-w-[35rem] md:max-w-[45rem] lg:max-w-none mx-auto overflow-y-auto pr-1 pb-1 flex-1 min-h-0 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-muted/10 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {tiles.map((tile, i) => (
                         <Link key={i} href={tile.href} className="w-full block">
                             <Tile title={tile.title} Icon={tile.Icon} bgColor={tile.bgColor} textColor={tile.textColor} />

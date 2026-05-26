@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { dashboard, getFileUrl } from '@dmt/api';
 import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -23,7 +23,7 @@ export default function PoliciesPage() {
     const createFileInputRef = useRef<HTMLInputElement>(null);
     const updateFileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
-    const fetchPolicies = async () => {
+    const fetchPolicies = useCallback(async () => {
         setLoading(true);
         try {
             const data = await dashboard.getPolicies();
@@ -38,11 +38,11 @@ export default function PoliciesPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchPolicies();
-    }, []);
+    }, [fetchPolicies]);
 
     // Extract filename from URL
     const getFileName = (url: string) => {

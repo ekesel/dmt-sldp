@@ -497,6 +497,15 @@ export interface DashboardForecast {
 
 export type InsightFeedbackStatus = 'accepted' | 'rejected';
 
+export interface StarPerformerData { id?: number; [key: string]: unknown; }
+export interface PolicyData { id: number; policy_file: string; [key: string]: unknown; }
+export interface HolidayCalendarData { id: number; calendar_file?: string; [key: string]: unknown; }
+export interface EmployeeEngagementData { id: number; engagement_file?: string; [key: string]: unknown; }
+export interface LearningAndDevelopmentData { id: number; document_file?: string; [key: string]: unknown; }
+export interface OnboardingData { id: number; document_file?: string; [key: string]: unknown; }
+export interface EventData { id?: number; [key: string]: unknown; }
+export interface HolidayData { id?: number; [key: string]: unknown; }
+
 export const dashboard = {
   getMetrics: () => get<DashboardMetrics>('/analytics/metrics/'),
   getForecast: (integrationId: string, remainingItems = 10) =>
@@ -515,34 +524,34 @@ export const dashboard = {
     get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 
 
-  getStarPerformer: () => get<any>('/homepage/star-performer/'),
-  getPolicies: () => get<any[]>('/homepage/policy/'),
-  uploadPolicy: (formData: FormData) => post<any, FormData>('/homepage/policy/', formData),
-  updatePolicy: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/policy/${id}/`, formData),
-  deletePolicy: (id: number) => del<any>(`/homepage/policy/${id}/`),
+  getStarPerformer: () => get<StarPerformerData>('/homepage/star-performer/'),
+  getPolicies: () => get<PolicyData[]>('/homepage/policy/'),
+  uploadPolicy: (formData: FormData) => post<PolicyData, FormData>('/homepage/policy/', formData),
+  updatePolicy: (id: number, formData: FormData) => patch<PolicyData, FormData>(`/homepage/policy/${id}/`, formData),
+  deletePolicy: (id: number) => del<{ success?: boolean }>(`/homepage/policy/${id}/`),
 
-  getHolidayCalendars: () => get<any[]>('/homepage/holiday-calendar/'),
-  uploadHolidayCalendar: (formData: FormData) => post<any, FormData>('/homepage/holiday-calendar/', formData),
-  updateHolidayCalendar: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/holiday-calendar/${id}/`, formData),
-  deleteHolidayCalendar: (id: number) => del<any>(`/homepage/holiday-calendar/${id}/`),
+  getHolidayCalendars: () => get<HolidayCalendarData[]>('/homepage/holiday-calendar/'),
+  uploadHolidayCalendar: (formData: FormData) => post<HolidayCalendarData, FormData>('/homepage/holiday-calendar/', formData),
+  updateHolidayCalendar: (id: number, formData: FormData) => patch<HolidayCalendarData, FormData>(`/homepage/holiday-calendar/${id}/`, formData),
+  deleteHolidayCalendar: (id: number) => del<{ success?: boolean }>(`/homepage/holiday-calendar/${id}/`),
 
-  getEmployeeEngagements: () => get<any[]>('/homepage/employee-engagement/'),
-  uploadEmployeeEngagement: (formData: FormData) => post<any, FormData>('/homepage/employee-engagement/', formData),
-  updateEmployeeEngagement: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/employee-engagement/${id}/`, formData),
-  deleteEmployeeEngagement: (id: number) => del<any>(`/homepage/employee-engagement/${id}/`),
+  getEmployeeEngagements: () => get<EmployeeEngagementData[]>('/homepage/employee-engagement/'),
+  uploadEmployeeEngagement: (formData: FormData) => post<EmployeeEngagementData, FormData>('/homepage/employee-engagement/', formData),
+  updateEmployeeEngagement: (id: number, formData: FormData) => patch<EmployeeEngagementData, FormData>(`/homepage/employee-engagement/${id}/`, formData),
+  deleteEmployeeEngagement: (id: number) => del<{ success?: boolean }>(`/homepage/employee-engagement/${id}/`),
 
-  getLearningAndDevelopment: () => get<any[]>('/homepage/learning-and-development/'),
-  uploadLearningAndDevelopment: (formData: FormData) => post<any, FormData>('/homepage/learning-and-development/', formData),
-  updateLearningAndDevelopment: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/learning-and-development/${id}/`, formData),
-  deleteLearningAndDevelopment: (id: number) => del<any>(`/homepage/learning-and-development/${id}/`),
+  getLearningAndDevelopment: () => get<LearningAndDevelopmentData[]>('/homepage/learning-and-development/'),
+  uploadLearningAndDevelopment: (formData: FormData) => post<LearningAndDevelopmentData, FormData>('/homepage/learning-and-development/', formData),
+  updateLearningAndDevelopment: (id: number, formData: FormData) => patch<LearningAndDevelopmentData, FormData>(`/homepage/learning-and-development/${id}/`, formData),
+  deleteLearningAndDevelopment: (id: number) => del<{ success?: boolean }>(`/homepage/learning-and-development/${id}/`),
 
 
-  getOnboarding: () => get<any[]>('/homepage/onboarding/'),
-  uploadOnboarding: (formData: FormData) => post<any, FormData>('/homepage/onboarding/', formData),
-  updateOnboarding: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/onboarding/${id}/`, formData),
-  deleteOnboarding: (id: number) => del<any>(`/homepage/onboarding/${id}/`),
-  getEvents: () => get<any>('/homepage/events/'),
-  getHolidays: () => get<any>('/homepage/holidays/'),
+  getOnboarding: () => get<OnboardingData[]>('/homepage/onboarding/'),
+  uploadOnboarding: (formData: FormData) => post<OnboardingData, FormData>('/homepage/onboarding/', formData),
+  updateOnboarding: (id: number, formData: FormData) => patch<OnboardingData, FormData>(`/homepage/onboarding/${id}/`, formData),
+  deleteOnboarding: (id: number) => del<{ success?: boolean }>(`/homepage/onboarding/${id}/`),
+  getEvents: () => get<EventData[]>('/homepage/events/'),
+  getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
 };
 
 export interface LeaderboardWinner {
@@ -969,15 +978,46 @@ export interface OrgChartUser {
   children: OrgChartUser[];
 }
 
+export interface OrgChartCreatePayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  designation?: number | string;
+  department?: string;
+  parent?: number | string;
+}
+
+export interface OrgChartUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  designation?: number | string;
+  department?: string;
+  parent?: number | string;
+  is_active?: boolean;
+}
+
+export interface OrgChartActionResponse {
+  status: boolean;
+  message: string;
+  data?: OrgChartUser;
+  [key: string]: unknown;
+}
+
+export interface OrgDropdownItem {
+  id: number | string;
+  name?: string;
+  [key: string]: unknown;
+}
+
 export const orgChart = {
   getHierarchy: () => get<{ status: boolean; message: string; data: OrgChartUser[] }>('/org-chart/'),
-  createOrUpdateUser: (data: { email: string; first_name?: string; last_name?: string; designation?: number | string; department?: string; parent?: number | string }) => 
-    post<any, any>('/org-chart/', data),
-  updateUser: (id: number | string, data: { first_name?: string; last_name?: string; designation?: number | string; department?: string; parent?: number | string; is_active?: boolean }) => 
-    api.put<any>(`/org-chart/${id}/`, data).then(res => res.data),
-  deleteUser: (id: number | string) => del<any>(`/org-chart/${id}/`),
-  getUsersDropdown: () => get<any>('/org-users/'),
-  getRolesDropdown: () => get<any>('/org-roles/'),
+  createOrUpdateUser: (data: OrgChartCreatePayload) => 
+    post<OrgChartActionResponse, OrgChartCreatePayload>('/org-chart/', data),
+  updateUser: (id: number | string, data: OrgChartUpdatePayload) => 
+    api.put<OrgChartActionResponse>(`/org-chart/${id}/`, data).then(res => res.data),
+  deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
+  getUsersDropdown: () => get<OrgDropdownItem[]>('/org-users/'),
+  getRolesDropdown: () => get<OrgDropdownItem[]>('/org-roles/'),
 };
 
 export default api;

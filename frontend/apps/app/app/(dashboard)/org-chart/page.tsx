@@ -117,16 +117,25 @@ function OrgChartPageContent() {
 
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
 
     const fetchOrgChart = useCallback(async () => {
+        setIsLoading(true);
+        setIsError(false);
         try {
             const response = await orgChart.getHierarchy();
             if (response?.status && response.data) {
                 setEmployees(flattenHierarchy(response.data));
+            } else {
+                setIsError(true);
             }
         } catch (error) {
             console.error('Failed to fetch org chart', error);
             toast.error('Failed to load organizational chart');
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
@@ -344,7 +353,7 @@ function OrgChartPageContent() {
             const nameParts = empData.name.trim().split(' ');
             const first_name = nameParts[0];
             const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
-            
+
             if (empData.id) {
                 await orgChart.updateUser(empData.id, {
                     first_name,
@@ -434,7 +443,7 @@ function OrgChartPageContent() {
                         <div className="flex items-center gap-2">
                             <Network className="w-7 h-7 text-primary" strokeWidth={2.5} />
                             <h1 className="text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
-                                Company Org Chart
+                                Organization Chart
                             </h1>
                         </div>
                         <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
@@ -461,7 +470,30 @@ function OrgChartPageContent() {
                 className="w-full bg-card rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
                 style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
             >
-                <ReactFlow
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground font-medium">Loading organization chart...</p>
+                    </div>
+                ) : isError ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4 text-center px-4">
+                        <div className="bg-destructive/10 p-4 rounded-full">
+                            <ShieldAlert className="w-8 h-8 text-destructive" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-semibold text-foreground">Failed to Load Data</h3>
+                            <p className="text-muted-foreground text-sm max-w-sm">We couldn't retrieve the organizational chart. Please check your connection and try again.</p>
+                        </div>
+                        <button
+                            onClick={fetchOrgChart}
+                            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Retry
+                        </button>
+                    </div>
+                ) : (
+                    <ReactFlow
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={handleNodesChange}
@@ -480,6 +512,8 @@ function OrgChartPageContent() {
                     connectOnClick={isManager}
                     nodesConnectable={isManager}
                     nodesDraggable={true}
+                    zoomOnScroll={false}
+                    panOnScroll={true}
                 >
                     <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
                     <MiniMap
@@ -497,6 +531,7 @@ function OrgChartPageContent() {
                         className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !bottom-4 overflow-hidden"
                     />
                 </ReactFlow>
+                )}
             </div>
 
             {/* Node Edit / Add Modal */}
