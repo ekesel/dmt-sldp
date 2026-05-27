@@ -27,6 +27,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from homepage.permissions import IsManagerOrReadOnly
+from django.db.models import Q
 
 
 
@@ -415,8 +416,13 @@ class UserHierarchyAPIView(APIView):
 
         # Group all users by their parent_id in one pass
         children_map = {}
+        user_ids = {u.id for u in users}
+        
         for user in users:
             pid = user.parent_id
+            # If the parent is hidden or not in the list, attach the user to the root
+            if pid not in user_ids and pid is not None:
+                pid = None
             children_map.setdefault(pid, []).append(user)
 
         def build(pid):
@@ -432,6 +438,7 @@ class UserHierarchyAPIView(APIView):
                     "department": user.role.dep_name if user.role else None,
                     "parent_id": user.parent_id,
                     "is_active": user.is_active,
+                    "org_chart_visibility": user.org_chart_visibility,
                     "children": build(user.id)
                 })
             return result
@@ -445,7 +452,7 @@ class UserHierarchyAPIView(APIView):
         # Fix #4: filter active users at DB level — avoid loading inactive users
         users = User.objects.select_related('role').filter(
             tenant=request.user.tenant,
-            is_active=True
+            org_chart_visibility=True
         )
 
         hierarchy = self.build_hierarchy(users)
@@ -511,7 +518,7 @@ class UserHierarchyAPIView(APIView):
             parent_user = User.objects.filter(
                 id=parent_id,
                 tenant=tenant,
-                is_active=True
+                org_chart_visibility=True
             ).first()
 
             if not parent_user:
@@ -678,7 +685,7 @@ class UserHierarchyAPIView(APIView):
                 parent_exists = User.objects.filter(
                     id=parent_id,
                     tenant=request.user.tenant,
-                    is_active=True
+                    org_chart_visibility=True
                 ).exists()
 
                 if not parent_exists:
@@ -716,7 +723,7 @@ class UserHierarchyAPIView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
-    #   DELETE -> SOFT DELETE
+    #  DELETE -> SOFT DELETE
     def delete(self, request, pk):
 
         try:
@@ -732,49 +739,17 @@ class UserHierarchyAPIView(APIView):
                 "message": "User not found"
             }, status=status.HTTP_404_NOT_FOUND)
 
-        user.is_active = False
+        user.org_chart_visibility = False
         user.save()
 
         return Response({
             "status": True,
-            "message": "User soft deleted successfully"
+            "message": "User hidden from organization successfully"
         }, status=status.HTTP_200_OK)
 
-
-
-# USER DROPDOWN API
-
-class GetAllUsersDropdown(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-
-        users = User.objects.select_related('role').filter(
-            tenant=request.user.tenant,
-            is_active=True
-        )
-
-        list_data = []
-
-        for user in users:
-
-            list_data.append({
-                "id": user.id,
-                "full_name": f"{user.first_name} {user.last_name}".strip(),
-                "email": user.email,
-                "role": user.role.role_name if user.role else None,
-                "department": user.role.dep_name if user.role else None,
-            })
-
-        return Response({
-            "status": True,
-            "data": list_data
-        }, status=status.HTTP_200_OK)
 
 
 # ROLE DROPDOWN API
-
 class GetAllRolesDropdown(APIView):
     """
     Returns a flat list of all roles (for dropdowns).
@@ -789,6 +764,48 @@ class GetAllRolesDropdown(APIView):
             list_data.append({
                 "id": role.id,
                 "role_name": role.role_name,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+
+# User Autocomplete API for search/autofill
+class UserAutocompleteAPIView(APIView):
+    """
+    Search API for autofill/populate data.
+    Takes a 'q' parameter and returns matching active users.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        
+        users = User.objects.select_related('role').filter(
+            tenant=request.user.tenant
+        )
+
+        if query:
+            
+            users = users.filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query)
+            )
+
+        # Limit to 10 results for autocomplete performance
+        users = users[:10]
+
+        list_data = []
+        for user in users:
+            list_data.append({
+                "id": user.id,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "email": user.email,
+                "role": user.role.role_name if user.role else None,
+                "department": user.role.dep_name if user.role else None,
             })
 
         return Response({

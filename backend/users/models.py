@@ -22,6 +22,7 @@ class User(AbstractUser):
     role = models.ForeignKey('RoleTable', on_delete=models.SET_NULL, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     parent = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    org_chart_visibility = models.BooleanField(default=False) 
     
     
 
