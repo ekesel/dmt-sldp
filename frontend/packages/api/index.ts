@@ -500,7 +500,7 @@ export type InsightFeedbackStatus = 'accepted' | 'rejected';
 export interface StarPerformerData { id?: number; [key: string]: unknown; }
 export interface PolicyData { id: number; policy_file: string; [key: string]: unknown; }
 export interface HolidayCalendarData { id: number; calendar_file?: string; [key: string]: unknown; }
-export interface EmployeeEngagementData { id: number; engagement_file?: string; [key: string]: unknown; }
+export interface EmployeeEngagementData { id: number; employee_engagement_calendar_file: string; [key: string]: unknown; }
 export interface LearningAndDevelopmentData { id: number; document_file?: string; [key: string]: unknown; }
 export interface OnboardingData { id: number; document_file?: string; [key: string]: unknown; }
 export interface EventData { id?: number; [key: string]: unknown; }
