@@ -21,7 +21,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
-import html2canvas from 'html2canvas-pro';
+
 import toast, { Toaster } from 'react-hot-toast';
 import { Network, ArrowLeft, Shield, ShieldAlert, RefreshCw } from 'lucide-react';
 
@@ -29,7 +29,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
 import OrgChartControls from '@/components/org-chart/OrgChartControls';
 import EmployeeModal from '@/components/org-chart/EmployeeModal';
-import { orgChart, OrgChartUser } from '@dmt/api';
 
 /**
  * Represents a single employee record in the org chart dataset.
@@ -44,25 +43,6 @@ interface IEmployee {
     department: string;
     parentId: string;
 }
-
-const flattenHierarchy = (users: OrgChartUser[], parentId: string = ''): IEmployee[] => {
-    let result: IEmployee[] = [];
-    for (const user of users) {
-        result.push({
-            id: String(user.id),
-            name: user.full_name || '',
-            role: user.role || '',
-            email: user.email || '',
-            department: user.department || '',
-            parentId: user.parent_id ? String(user.parent_id) : parentId
-        });
-        if (user.children && user.children.length > 0) {
-            result = result.concat(flattenHierarchy(user.children, String(user.id)));
-        }
-    }
-    return result;
-};
-
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
     const isHorizontal = direction === 'LR';
@@ -124,11 +104,12 @@ function OrgChartPageContent() {
         setIsLoading(true);
         setIsError(false);
         try {
-            const response = await orgChart.getHierarchy();
-            if (response?.status && response.data) {
-                setEmployees(flattenHierarchy(response.data));
+            // Load from localStorage to persist mock data
+            const saved = localStorage.getItem('dmt-org-chart');
+            if (saved) {
+                setEmployees(JSON.parse(saved));
             } else {
-                setIsError(true);
+                setEmployees([]);
             }
         } catch (error) {
             console.error('Failed to fetch org chart', error);
@@ -138,6 +119,13 @@ function OrgChartPageContent() {
             setIsLoading(false);
         }
     }, []);
+
+    // Save to local storage whenever employees change
+    useEffect(() => {
+        if (!isLoading) {
+            localStorage.setItem('dmt-org-chart', JSON.stringify(employees));
+        }
+    }, [employees, isLoading]);
 
     useEffect(() => {
         fetchOrgChart();
@@ -211,15 +199,14 @@ function OrgChartPageContent() {
 
         if (confirm('Are you sure you want to delete this employee?')) {
             try {
-                await orgChart.deleteUser(id);
+                setEmployees(prev => prev.filter(emp => emp.id !== id));
                 toast.success('Employee deleted successfully.');
-                fetchOrgChart();
             } catch (error) {
                 console.error('Failed to delete employee', error);
                 toast.error('Failed to delete employee.');
             }
         }
-    }, [isManager, fetchOrgChart]);
+    }, [isManager]);
 
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
@@ -241,6 +228,8 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
+                width: 260,
+                height: 96,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -302,10 +291,10 @@ function OrgChartPageContent() {
     useEffect(() => {
         if (nodes.length === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.3, duration: 500 });
-        }, 50);
+            fitView({ padding: 0.3, duration: 600, minZoom: 0.5, maxZoom: 1 });
+        }, 150);
         return () => clearTimeout(timer);
-    }, [nodes.length, fitView]);
+    }, [nodes.length, fitView, layoutDirection]);
 
     // Layout arrangement reset trigger
     const handleAutoArrange = (dir: 'TB' | 'LR') => {
@@ -326,14 +315,13 @@ function OrgChartPageContent() {
         if (!source || !target || source === target) return;
 
         try {
-            await orgChart.updateUser(target, { parent: source });
+            setEmployees(prev => prev.map(emp => emp.id === target ? { ...emp, parentId: source } : emp));
             toast.success('Reporting line updated successfully.');
-            fetchOrgChart();
         } catch (error) {
             console.error('Failed to update reporting line', error);
             toast.error('Failed to update reporting line. It might create a circular dependency.');
         }
-    }, [isManager, fetchOrgChart]);
+    }, [isManager]);
 
     // Modal Create / Save Changes
     const handleSaveEmployee = async (empData: {
@@ -350,32 +338,17 @@ function OrgChartPageContent() {
         }
 
         try {
-            const nameParts = empData.name.trim().split(' ');
-            const first_name = nameParts[0];
-            const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
-
             if (empData.id) {
-                await orgChart.updateUser(empData.id, {
-                    first_name,
-                    last_name,
-                    department: empData.department,
-                    parent: empData.parentId ? empData.parentId : undefined
-                });
+                setEmployees(prev => prev.map(emp => emp.id === empData.id ? { ...emp, ...empData, parentId: empData.parentId || '' } : emp));
                 toast.success('Employee details updated successfully!');
             } else {
-                await orgChart.createOrUpdateUser({
-                    email: empData.email,
-                    first_name,
-                    last_name,
-                    department: empData.department,
-                    parent: empData.parentId ? empData.parentId : undefined
-                });
+                const newId = Math.random().toString(36).substr(2, 9);
+                setEmployees(prev => [...prev, { ...empData, id: newId, parentId: empData.parentId || '' }]);
                 toast.success('New employee successfully added to org-chart!');
             }
             setIsModalOpen(false);
             setEditingEmployee(null);
             setDefaultParentId('');
-            fetchOrgChart();
         } catch (error) {
             console.error('Failed to save employee', error);
             toast.error('Failed to save employee details.');
@@ -387,41 +360,11 @@ function OrgChartPageContent() {
         shouldAutoLayoutRef.current = true;
         nodePositionsRef.current.clear();
         fetchOrgChart();
+        setTimeout(() => fitView({ padding: 0.3, duration: 600 }), 150);
         toast.success('Chart layout reset successfully.');
     };
 
-    // Export current chart layout as PNG using html2canvas
-    const handleExportPNG = async () => {
-        if (!reactFlowWrapper.current) return;
-        const toastId = toast.loading('Generating high-res PNG export...');
 
-        try {
-            // Momentarily hide graph controllers/minimap overlay lines in Canvas if needed
-            const flowContainer = reactFlowWrapper.current.querySelector('.react-flow__viewport') as HTMLElement;
-            if (!flowContainer) {
-                toast.error('Failed to locate chart viewport', { id: toastId });
-                return;
-            }
-
-            // Perform html2canvas rendering
-            const canvas = await html2canvas(reactFlowWrapper.current, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#f9fafb',
-                logging: false,
-                scale: 2 // Make it higher resolution
-            });
-
-            const link = document.createElement('a');
-            link.download = `Org_Chart_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            toast.success('PNG exported successfully!', { id: toastId });
-        } catch (e) {
-            console.error('Export failed', e);
-            toast.error('Failed to export image', { id: toastId });
-        }
-    };
 
     return (
         <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-6">
@@ -458,7 +401,7 @@ function OrgChartPageContent() {
                         currentDirection={layoutDirection}
                         onAutoArrange={handleAutoArrange}
                         onAddClick={handleAddClick}
-                        onExportPNG={handleExportPNG}
+
                         isManager={isManager}
                     />
                 </div>
@@ -490,6 +433,24 @@ function OrgChartPageContent() {
                         >
                             <RefreshCw className="w-4 h-4" />
                             Retry
+                        </button>
+                    </div>
+                ) : employees.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-6 text-center px-4 bg-muted/10">
+                        <div className="bg-primary/10 p-6 rounded-full">
+                            <Network className="w-10 h-10 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-[800] text-foreground tracking-tight">Empty Organization Chart</h3>
+                            <p className="text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
+                                Your organization chart is currently empty. Start by adding the very first employee to build out the hierarchy.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleAddClick}
+                            className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[0.925rem] font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer active:scale-95 shadow-md hover:shadow-lg"
+                        >
+                            <span>+ Create First Employee</span>
                         </button>
                     </div>
                 ) : (

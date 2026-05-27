@@ -167,18 +167,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                                 <Edit2 className="w-3.5 h-3.5" />
                             </button>
                         )}
-                        {onAddChild && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddChild(id);
-                                }}
-                                className="p-1 rounded text-teal-600 hover:bg-teal-50 transition-colors cursor-pointer"
-                                title="Add Direct Report"
-                            >
-                                <Plus className="w-3.5 h-3.5 font-bold" />
-                            </button>
-                        )}
+
                         {onDelete && (
                             <button
                                 onClick={(e) => {
@@ -199,9 +188,24 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             <Handle
                 type="source"
                 position={Position.Bottom}
-                style={{ background: styles.accentColor, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid white' }}
+                className="flex items-center justify-center !bg-transparent !border-none z-10"
+                style={{ width: '22px', height: '22px', bottom: '-11px' }}
                 isConnectable={isConnectable}
-            />
+            >
+                <div 
+                    onClick={(e) => {
+                        if (isManager && onAddChild) {
+                            e.stopPropagation();
+                            onAddChild(id);
+                        }
+                    }}
+                    className={`w-full h-full rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm transition-transform ${isManager ? 'hover:scale-110 cursor-pointer' : ''}`}
+                    style={{ backgroundColor: styles.accentColor }}
+                    title={isManager ? "Add Child Node" : undefined}
+                >
+                    <Plus size={12} strokeWidth={3.5} />
+                </div>
+            </Handle>
         </div>
     );
 };

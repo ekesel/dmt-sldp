@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Plus, Download, Grid, Layers } from 'lucide-react';
+import { Plus, Grid, Layers } from 'lucide-react';
 
 interface OrgChartControlsProps {
     currentDirection: 'TB' | 'LR';
     onAutoArrange: (direction: 'TB' | 'LR') => void;
     onAddClick: () => void;
-    onExportPNG: () => void;
+
     isManager: boolean;
 }
 
@@ -15,7 +15,7 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
     currentDirection,
     onAutoArrange,
     onAddClick,
-    onExportPNG,
+
     isManager
 }) => {
     return (
@@ -50,15 +50,7 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                     </button>
                 </div>
 
-                {/* Export Button */}
-                <button
-                    onClick={onExportPNG}
-                    className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 rounded-xl text-[0.875rem] font-bold text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-border transition-all cursor-pointer active:scale-95 shadow-sm"
-                    title="Export Org Chart as Image"
-                >
-                    <Download className="w-4 h-4 text-muted-foreground" />
-                    <span className="hidden sm:inline">Export</span>
-                </button>
+
 
                 {/* Add Employee Button - Visible to Managers Only */}
                 {isManager && (
