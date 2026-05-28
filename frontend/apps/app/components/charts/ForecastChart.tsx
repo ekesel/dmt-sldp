@@ -21,7 +21,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
         .sort((a, b) => a.percentile - b.percentile);
 
     return (
-        <div className="w-full h-full min-h-[300px]">
+        <div className="w-full h-full min-h-[18.75rem]">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 25, right: 30, left: 0, bottom: 0 }}>
                     <defs>
@@ -46,8 +46,8 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ data }) => {
                         contentStyle={{
                             backgroundColor: 'var(--color-popover)',
                             border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
-                            fontSize: '12px'
+                            borderRadius: '0.5rem',
+                            fontSize: '0.75rem'
                         }}
                         itemStyle={{ color: 'var(--color-primary)' }}
                         formatter={(value: any, name: string, props: any) => [`${props.payload.percentile}% Confidence`, 'Probability']}

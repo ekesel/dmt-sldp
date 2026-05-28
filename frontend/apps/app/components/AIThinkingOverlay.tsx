@@ -9,7 +9,7 @@ interface AIThinkingOverlayProps {
 
 export const AIThinkingOverlay: React.FC<AIThinkingOverlayProps> = ({ progress, status }) => {
     return (
-        <div className="relative overflow-hidden rounded-xl bg-card/60 border border-primary/20 p-8 flex flex-col items-center justify-center min-h-[200px] animate-pulse">
+        <div className="relative overflow-hidden rounded-xl bg-card/60 border border-primary/20 p-8 flex flex-col items-center justify-center min-h-[12.5rem] animate-pulse">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center gap-4 text-center">
@@ -29,7 +29,7 @@ export const AIThinkingOverlay: React.FC<AIThinkingOverlayProps> = ({ progress, 
                     />
                 </div>
 
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{progress}% Complete</p>
+                <p className="text-[0.625rem] text-muted-foreground font-bold uppercase tracking-widest">{progress}% Complete</p>
             </div>
         </div>
     );

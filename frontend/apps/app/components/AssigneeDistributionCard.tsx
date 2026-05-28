@@ -59,7 +59,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 <Users className="text-primary w-5 h-5" />
                 <div className="flex items-baseline gap-2">
                     <h2 className="text-xl font-bold text-foreground">Team Workload</h2>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
+                    <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
                 </div>
                 <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>

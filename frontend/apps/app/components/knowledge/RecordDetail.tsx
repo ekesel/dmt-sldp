@@ -59,12 +59,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
   if (!record) {
     return (
-      <div className="hidden xl:flex w-[300px] flex-shrink-0 bg-background/40 backdrop-blur-sm border-l border-border/40 p-8 flex-col items-center justify-center text-center">
+      <div className="hidden xl:flex w-[18.75rem] flex-shrink-0 bg-background/40 backdrop-blur-sm border-l border-border/40 p-8 flex-col items-center justify-center text-center">
         <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6">
           <FileText className="w-10 h-10 text-primary/20" />
         </div>
         <h3 className="text-lg font-bold text-foreground">Select a record</h3>
-        <p className="text-sm text-muted-foreground mt-2 max-w-[200px]">
+        <p className="text-sm text-muted-foreground mt-2 max-w-[12.5rem]">
           Select a record from the list to view its details and version history.
         </p>
       </div>
@@ -83,7 +83,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
       />
 
       <aside className={cn(
-        "fixed inset-y-0 right-0 z-50 w-full sm:w-[300px] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0 relative",
+        "fixed inset-y-0 right-0 z-50 w-full sm:w-[18.75rem] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0 relative",
         record || isLoading ? "translate-x-0" : "translate-x-full"
       )}>
         {isLoading && (
@@ -106,7 +106,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
           {/* Top Label and Action Buttons */}
           <div className="flex items-center justify-between mb-6">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
+            <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
               Document
             </span>
             <div className="flex gap-2">
@@ -128,7 +128,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             <h3 className="text-xl font-semibold text-foreground leading-tight mb-2">
               {record.title}
             </h3>
-            <p className="text-[13px] text-muted-foreground leading-snug">
+            <p className="text-[0.8125rem] text-muted-foreground leading-snug">
               {record.description}
             </p>
           </div>
@@ -136,7 +136,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           {/* Info Grid (Status, Updated, Type, Versions) */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">
                 {record.updatedAt ? "Updated" : "Created"}
               </h3>
               <span className="text-sm font-semibold text-foreground">
@@ -144,37 +144,37 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               </span>
             </div>
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Author</h3>
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Author</h3>
               <span className="text-sm font-semibold text-foreground block break-all">
                 {authorName}
               </span>
             </div>
             <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Versions</h3>
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Versions</h3>
               <span className="text-sm font-semibold text-foreground">{record.versionCount}</span>
             </div>
           </div>
 
           {/* Metadata Section */}
           <div className="pt-6 border-t border-border/40">
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Metadata</h3>
+            <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Metadata</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Document ID</span>
+                <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Document ID</span>
                 <span className="text-sm font-semibold text-foreground text-right">{record.uid}</span>
               </div>
 
               {/* Dynamically render all metadata entries from production */}
               {record.metadata.map((item, index) => (
                 <div key={`${item.category}-${index}`} className="flex items-center justify-between pt-3 border-t border-border/20">
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">{item.category_name}</span>
+                  <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">{item.category_name}</span>
                   <span className="text-sm font-semibold text-foreground text-right">{item.value}</span>
                 </div>
               ))}
 
               {record.metadata.length === 0 && (
                 <div className="pt-3 border-t border-border/20">
-                  <p className="text-[10px] font-medium text-muted-foreground italic">No additional metadata specified.</p>
+                  <p className="text-[0.625rem] font-medium text-muted-foreground italic">No additional metadata specified.</p>
                 </div>
               )}
             </div>
@@ -182,13 +182,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
           {/* Tags Section */}
           <div className="mt-8 pt-6 border-t border-border/40">
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Tags</h3>
+            <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Tags</h3>
             <div className="flex flex-wrap gap-2">
               {record.tags.map(tag => (
                 <button
                   key={tag}
                   onClick={() => onTagClick?.({ id: tag, name: tag })}
-                  className="px-3 py-1 bg-background hover:bg-primary/5 hover:border-primary/40 text-[12px] font-medium text-foreground hover:text-primary rounded-lg border border-border/60 transition-all active:scale-95 shadow-sm"
+                  className="px-3 py-1 bg-background hover:bg-primary/5 hover:border-primary/40 text-[0.75rem] font-medium text-foreground hover:text-primary rounded-lg border border-border/60 transition-all active:scale-95 shadow-sm"
                 >
                   {tag}
                 </button>
@@ -199,7 +199,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           {/* Assets Section */}
           <div className="mt-8 pt-6 border-t border-border/40">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">Assets</h3>
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">Assets</h3>
             </div>
 
             <div className="space-y-3">
@@ -240,10 +240,10 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                             )}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-semibold text-foreground truncate max-w-[180px]">
+                            <span className="text-[0.8125rem] font-semibold text-foreground truncate max-w-[11.25rem]">
                               {asset.name}
                             </span>
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">
+                            <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-tight">
                               {asset.size}
                             </span>
                           </div>
@@ -312,7 +312,7 @@ const VersionHistoryList: React.FC<{
   if (isError) {
     return (
       <div className="mt-8 pt-6 border-t border-border/40">
-        <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40 mb-4">
+        <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40 mb-4">
           Version History
         </h3>
         <p className="text-sm text-destructive italic">Failed to load version history.</p>
@@ -323,7 +323,7 @@ const VersionHistoryList: React.FC<{
   return (
     <div className="mt-8 pt-6 border-t border-border/40">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">
+        <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">
           Version History
         </h3>
         {isLoading && (
@@ -368,7 +368,7 @@ const VersionHistoryList: React.FC<{
                       );
                     })()}
                   </div>
-                  <div className="flex flex-wrap items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-1 text-[0.6875rem] font-medium text-muted-foreground">
                     <span className="break-all">{authorName}</span>
                     <span className="shrink-0">• {item.date}</span>
                   </div>

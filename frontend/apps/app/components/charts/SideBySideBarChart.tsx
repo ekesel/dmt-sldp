@@ -24,7 +24,7 @@ export const SideBySideBarChart: React.FC<SideBySideBarChartProps> = ({ title, d
     return (
         <div className="flex flex-col gap-6 w-full h-full">
             <h3 className="font-bold text-foreground text-lg uppercase tracking-wider border-b border-border pb-4">{title}</h3>
-            <div className="h-[300px] w-full mt-4">
+            <div className="h-[18.75rem] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
@@ -44,10 +44,10 @@ export const SideBySideBarChart: React.FC<SideBySideBarChartProps> = ({ title, d
                         />
                         <Tooltip
                             cursor={{ fill: 'var(--color-muted)' }}
-                            contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', color: 'var(--color-popover-foreground)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}
+                            contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', color: 'var(--color-popover-foreground)', borderRadius: '0.75rem', boxShadow: '0 0.625rem 0.9375rem -0.1875rem rgba(0,0,0,0.3)' }}
                             itemStyle={{ color: 'var(--color-popover-foreground)' }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: '25px' }} />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: '1.5625rem' }} />
                         <Bar dataKey={keyA} name="Planned" fill="var(--color-primary)" radius={[6, 6, 0, 0]} barSize={32} />
                         <Bar dataKey={keyB} name="Completed" fill="var(--color-accent)" radius={[6, 6, 0, 0]} barSize={32} />
                     </BarChart>

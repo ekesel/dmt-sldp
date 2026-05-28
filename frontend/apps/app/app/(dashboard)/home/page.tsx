@@ -28,20 +28,20 @@ export default function HomePage() {
         </div>
 
         {/* ── Row 2: stretches to fill remaining viewport height ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[250px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[11.25rem] lg:min-h-[15.625rem]">
 
           {/* Quick Access Tiles */}
-          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[250px]">
+          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
             <QuickAccessTiles />
           </div>
 
           {/* Social News Feed */}
-          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[250px]">
+          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
             <SocialNewsFeed />
           </div>
 
           {/* Celebrations Card */}
-          <div className="lg:col-span-12 xl:col-span-4 flex flex-col min-h-[250px]">
+          <div className="lg:col-span-12 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
             <CelebrationsCard />
           </div>
         </div>

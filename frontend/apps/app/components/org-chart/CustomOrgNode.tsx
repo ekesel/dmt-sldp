@@ -50,7 +50,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             'finance': 'Finance',
             'sales': 'Sales',
             'marketing': 'Marketing',
-            'AIML'      :    'AI & ML', 
+            'aiml'      :    'AI & ML', 
             'other': 'Other'
         };
         return labels[dept.toLowerCase()] || dept;
@@ -67,13 +67,13 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             <Handle
                 type="target"
                 position={Position.Top}
-                style={{ background: styles.accentColor, width: '10px', height: '10px', borderRadius: '50%', border: '2px solid white' }}
+                style={{ background: styles.accentColor, width: '0.625rem', height: '0.625rem', borderRadius: '50%', border: '0.125rem solid white' }}
                 isConnectable={isConnectable}
             />
 
             {/* Custom Node Panel */}
             <div 
-                className={`w-[180px] p-2.5 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_4px_20px_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
+                className={`w-[11.25rem] p-2.5 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_0.5rem_1.875rem_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
             >
                 {/* Visual Top Highlight Strip */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${styles.badgeBg.split(' ')[0]}`} />
@@ -81,7 +81,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 <div className="flex items-center gap-3.5 mt-1">
                     {/* Colored Avatar */}
                     <div 
-                        className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-[0.65rem] border-[1.5px] border-white shrink-0"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-[0.65rem] border-[0.09375rem] border-white shrink-0"
                         style={{ backgroundColor: 'var(--color-accent)' }}
                     >
                         {initials}
@@ -144,7 +144,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 type="source"
                 position={Position.Bottom}
                 className="flex items-center justify-center !bg-transparent !border-none z-10"
-                style={{ width: '22px', height: '22px', bottom: '-11px' }}
+                style={{ width: '1.375rem', height: '1.375rem', bottom: '-0.6875rem' }}
                 isConnectable={isConnectable}
             >
                 <div 

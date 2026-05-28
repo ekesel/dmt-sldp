@@ -100,14 +100,14 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoadingFolders || isSaving}
-                className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px] text-left"
+                className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[15rem] text-left"
                 title="Select a specific Team or Folder to scope all metrics"
             >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Target size={18} className={currentFolderId ? 'text-accent' : 'text-primary'} />}
                 </div>
                 <div className="flex flex-col flex-1 truncate">
-                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">Scope</span>
+                    <span className="text-[0.625rem] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">Scope</span>
                     <span className="font-bold text-sm text-foreground truncate leading-none">
                         {isLoadingFolders ? 'Loading...' : (currentFolderName || 'All Folders (Whole Project)')}
                     </span>
@@ -116,7 +116,7 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-2 w-full min-w-[15rem] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_1.25rem_3.75rem_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         <button
                             onClick={() => handleSelectFolder('', '')}
@@ -125,7 +125,7 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
                                 : 'text-muted-foreground hover:bg-muted/10 hover:text-foreground'
                                 }`}
                         >
-                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${!currentFolderId ? 'bg-primary shadow-[0_0_6px_var(--color-primary)]' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground'
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${!currentFolderId ? 'bg-primary shadow-[0_0_0.375rem_var(--color-primary)]' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground'
                                 }`} />
                             <span className="font-semibold text-sm truncate">All Folders (Whole Project)</span>
                         </button>
@@ -141,7 +141,7 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
                                         : 'text-muted-foreground hover:bg-muted/10 hover:text-foreground'
                                         }`}
                                 >
-                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-primary shadow-[0_0_6px_var(--color-primary)]' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground'
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive ? 'bg-primary shadow-[0_0_0.375rem_var(--color-primary)]' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground'
                                         }`} />
                                     <span className="font-semibold text-sm truncate">{f.name}</span>
                                 </button>

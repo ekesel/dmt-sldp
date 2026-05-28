@@ -31,6 +31,17 @@ import OrgChartControls from '@/components/org-chart/OrgChartControls';
 import EmployeeModal from '@/components/org-chart/EmployeeModal';
 import { orgChart } from '@dmt/api';
 
+export interface OrgChartUser {
+    id: number | string;
+    full_name: string;
+    role: string;
+    role_id: number | string;
+    email: string;
+    department: string;
+    parent_id?: number | string | null;
+    children?: OrgChartUser[];
+}
+
 /**
  * Represents a single employee record in the org chart dataset.
  * avatarColor is intentionally excluded — node colour is derived from
@@ -103,7 +114,7 @@ function OrgChartPageContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
 
-    const flattenHierarchy = (nodes: any[]): IEmployee[] => {
+    const flattenHierarchy = (nodes: OrgChartUser[]): IEmployee[] => {
         let flat: IEmployee[] = [];
         nodes.forEach(node => {
             flat.push({

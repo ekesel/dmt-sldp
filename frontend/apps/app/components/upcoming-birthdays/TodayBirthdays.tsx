@@ -15,7 +15,7 @@ export default function TodayBirthdays({ birthdays }: TodayBirthdaysProps) {
             <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--color-accent-foreground)_45%,transparent)_0%,transparent_60%)] pointer-events-none" />
 
             {/* Dotted Pattern Overlay */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-foreground)_45%,transparent)_1.2px,transparent_1.2px)] bg-[length:18px_18px] opacity-40" />
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-foreground)_45%,transparent)_0.075rem,transparent_0.075rem)] bg-[length:1.125rem_1.125rem] opacity-40" />
 
             {/* Moon-like Circular Shape (Top Left) */}
             <div className="absolute -top-4 -left-3 h-[4.5rem] w-[4.5rem] rounded-full bg-accent-foreground/20 shadow-[1.2rem_1rem_0_0_color-mix(in_srgb,var(--color-accent-foreground)_30%,transparent),2.2rem_2rem_0_-0.2rem_color-mix(in_srgb,var(--color-accent-foreground)_15%,transparent)]" />
@@ -25,7 +25,7 @@ export default function TodayBirthdays({ birthdays }: TodayBirthdaysProps) {
 
             <div className="relative z-10">
                 <div className="flex justify-between items-center mb-10">
-                    <div className="flex items-center gap-3 bg-accent-foreground/10 backdrop-blur-md border border-accent-foreground/10 px-6 py-2 rounded-full text-[11px] uppercase font-bold tracking-widest text-accent-foreground transition-all duration-300 hover:bg-accent-foreground/20 hover:scale-105 cursor-default group/badge">
+                    <div className="flex items-center gap-3 bg-accent-foreground/10 backdrop-blur-md border border-accent-foreground/10 px-6 py-2 rounded-full text-[0.6875rem] uppercase font-bold tracking-widest text-accent-foreground transition-all duration-300 hover:bg-accent-foreground/20 hover:scale-105 cursor-default group/badge">
                         <Sparkles size={14} className="text-accent-foreground/80 group-hover/badge:scale-110 transition-transform" />
                         Today’s Celebration
                     </div>

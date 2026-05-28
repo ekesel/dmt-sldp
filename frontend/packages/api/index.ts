@@ -1006,6 +1006,7 @@ export interface OrgChartActionResponse {
 export interface OrgDropdownItem {
   id: number | string;
   name?: string;
+  role_name?: string;
   [key: string]: unknown;
 }
 
@@ -1026,8 +1027,8 @@ export const orgChart = {
   updateUser: (id: number | string, data: OrgChartUpdatePayload) =>
     api.put<OrgChartActionResponse>(`/org-chart/${id}/`, data).then(res => res.data),
   deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
-  getUsersDropdown: () => get<OrgDropdownItem[]>('/org-users/'),
-  getRolesDropdown: () => get<OrgDropdownItem[]>('/org-roles/'),
+  getUsersDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-users/'),
+  getRolesDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-roles/'),
   searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
 };
 

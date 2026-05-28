@@ -149,7 +149,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <span className="text-sm font-bold text-foreground">
               {displayUser.username}
             </span>
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+            <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
               {formatTimestamp(comment.created_at, 'Just now', false)}
             </span>
           </div>

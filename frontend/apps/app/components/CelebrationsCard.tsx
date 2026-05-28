@@ -219,7 +219,7 @@ export const CelebrationsCard: React.FC = () => {
                         transition={{ duration: 0.4, ease: "easeOut" }}
                         className="flex items-center gap-3 sm:gap-4"
                     >
-                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[3.5px] border-card shadow-lg flex-shrink-0 bg-secondary">
+                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[0.21875rem] border-card shadow-lg flex-shrink-0 bg-secondary">
                             <Image
                                 src={currentUser.avatar}
                                 alt={currentUser.name}

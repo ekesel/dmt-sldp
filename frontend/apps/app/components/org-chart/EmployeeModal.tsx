@@ -100,7 +100,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         }
     }, [isOpen, employeeData, defaultParentId, rolesList]);
 
-    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         return () => {
@@ -252,7 +252,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             />
 
             {/* Modal Box */}
-            <div className="relative bg-card rounded-3xl w-full max-w-[460px] p-6 sm:p-7 shadow-[0_10px_40px_rgba(0,0,0,0.12)] border border-border z-10 scale-100 transform transition-all duration-300">
+            <div className="relative bg-card rounded-3xl w-full max-w-[28.75rem] p-6 sm:p-7 shadow-[0_0.625rem_2.5rem_rgba(0,0,0,0.12)] border border-border z-10 scale-100 transform transition-all duration-300">
                 
                 {/* Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-border mb-5">

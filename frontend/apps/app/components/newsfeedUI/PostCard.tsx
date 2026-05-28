@@ -89,7 +89,7 @@ const PostCard = ({
               {post.category && (
                 <>
                   <span className={cn(
-                    "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider",
+                    "px-2 py-0.5 rounded-full text-[0.625rem] font-medium uppercase tracking-wider",
                     post.category.toLowerCase() === 'tech' && "bg-primary/10 text-primary border border-primary/20",
                     post.category.toLowerCase() === 'news' && "bg-accent/10 text-accent border border-accent/20",
                     post.category.toLowerCase() === 'general' && "bg-secondary text-secondary-foreground border border-border",
@@ -151,7 +151,7 @@ const PostCard = ({
         <h2 className="text-lg font-bold text-foreground leading-tight">
           {title || "No Title Available"}
         </h2>
-        <p className="text-foreground text-[15px] leading-relaxed">{content}</p>
+        <p className="text-foreground text-[0.9375rem] leading-relaxed">{content}</p>
       </div>
 
       {image && (
