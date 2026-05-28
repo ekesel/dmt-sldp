@@ -9,7 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 
 interface OnboardingData {
     id: number;
-    title: string;
+    title?: string;
     onboarding_file: string;
 }
 
