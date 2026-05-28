@@ -9,7 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 
 interface OnboardingData {
     id: number;
-    title: string;
+    title?: string;
     onboarding_file: string;
 }
 
@@ -60,9 +60,9 @@ export default function OnboardingPage() {
     };
 
     // Open Modal for Update
-    const openUpdateModal = (id: number, currentTitle: string) => {
+    const openUpdateModal = (id: number, currentTitle?: string) => {
         setModalType('update');
-        setTitleInput(currentTitle);
+        setTitleInput(currentTitle || '');
         setSelectedFile(null);
         setEditingId(id);
         setModalOpen(true);
@@ -187,7 +187,7 @@ export default function OnboardingPage() {
                         {guides.map((guide) => (
                             <div
                                 key={guide.id}
-                                className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
+                                className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_0.25rem_0.75rem_rgba(0,0,0,0.03)] hover:shadow-[0_0.375rem_1rem_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
                             >
                                 {/* Top right actions (Delete) - restricted to MANAGER only */}
                                 {isManager && (

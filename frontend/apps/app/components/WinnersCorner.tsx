@@ -84,7 +84,7 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
             </div>
 
             <div className="hidden md:flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground uppercase">Score</span>
+                <span className="text-[0.625rem] text-muted-foreground uppercase">Score</span>
                 <span className="text-sm font-mono font-bold text-primary">{current.score}</span>
             </div>
 

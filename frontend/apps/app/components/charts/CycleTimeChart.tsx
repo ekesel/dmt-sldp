@@ -11,7 +11,7 @@ const data = [
 
 export default function CycleTimeChart() {
   return (
-    <div className="bg-card border border-border p-6 rounded-xl min-h-[300px]">
+    <div className="bg-card border border-border p-6 rounded-xl min-h-[18.75rem]">
       <h3 className="font-semibold text-foreground mb-4">Avg Cycle Time (Weekly)</h3>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">

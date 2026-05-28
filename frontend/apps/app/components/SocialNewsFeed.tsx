@@ -78,7 +78,7 @@ export const SocialNewsFeed: React.FC = () => {
 
                 {/* Scrollable Post Content */}
                 <div
-                    className="flex-1 overflow-y-auto pr-1 cursor-pointer select-none [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-track]:bg-muted/10 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:rounded-full"
+                    className="flex-1 overflow-y-auto pr-1 cursor-pointer select-none [&::-webkit-scrollbar]:w-[0.375rem] [&::-webkit-scrollbar-track]:bg-muted/10 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:rounded-full"
                     onClick={() => router.push(`/newsfeed?openComments=${postId}`)}
                 >
                     {/* Post Author Header */}

@@ -62,7 +62,7 @@ export const DeepSprintAnalysisContent: React.FC<
                         {insight.assignee_name}
                       </span>
                       <span
-                        className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
+                        className={`text-[0.625rem] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
                           insight.load_assessment
                             .toLowerCase()
                             .includes("overload")
@@ -86,7 +86,7 @@ export const DeepSprintAnalysisContent: React.FC<
                         className="text-primary mt-0.5 shrink-0"
                       />
                       <div>
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-0.5">
+                        <span className="text-[0.625rem] font-bold text-primary uppercase tracking-wider block mb-0.5">
                           Recommended Action
                         </span>
                         <p className="text-xs text-foreground/80 font-medium">

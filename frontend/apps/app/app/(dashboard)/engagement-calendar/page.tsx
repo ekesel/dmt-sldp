@@ -1,21 +1,16 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
+import { dashboard, getFileUrl, EmployeeEngagementData } from '@dmt/api';
 import { CalendarHeart, ArrowLeft, Plus, ShieldAlert, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
 
-interface EngagementData {
-    id: number;
-    employee_engagement_calendar_file: string;
-}
-
 export default function EngagementCalendarPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [calendars, setCalendars] = useState<EngagementData[]>([]);
+    const [calendars, setCalendars] = useState<EmployeeEngagementData[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
 
@@ -189,13 +184,12 @@ export default function EngagementCalendarPage() {
                                     {/* Bottom row actions (Download PDF) */}
                                     <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                         <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            href={`/api/download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(fileName)}`}
+                                            download={fileName}
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
                                             <CalendarHeart className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            View / Download Calendar PDF
+                                             Download Engagement Calendar
                                         </a>
                                     </div>
                                 </div>

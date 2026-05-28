@@ -118,7 +118,7 @@ export const HelpSidebar = React.memo(({
               className={cn(
                 "p-4 transition-all duration-500",
                 highlightedId === term.id
-                  ? "bg-primary/10 rounded-xl ring-2 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]"
+                  ? "bg-primary/10 rounded-xl ring-2 ring-primary/20 shadow-[0_0_0.9375rem_rgba(var(--primary),0.2)]"
                   : ""
               )}
             >

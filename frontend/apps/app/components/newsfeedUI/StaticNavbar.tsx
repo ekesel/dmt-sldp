@@ -64,7 +64,7 @@ const StaticNavbar = ({
             </div>
 
             {/* Middle Section - Navigation Icons */}
-            <div className="hidden md:flex items-center justify-center flex-grow max-w-[600px] h-full">
+            <div className="hidden md:flex items-center justify-center flex-grow max-w-[37.5rem] h-full">
                 <div className="flex items-center h-full">
                     {navItems.map((item, idx) => (
                         <div 

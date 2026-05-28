@@ -21,7 +21,7 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
     }
 
     return (
-        <div className="w-full h-full min-h-[300px]">
+        <div className="w-full h-full min-h-[18.75rem]">
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 30 }}>
                     <defs>
@@ -53,7 +53,7 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
                         contentStyle={{
                             backgroundColor: 'var(--color-popover)',
                             border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
+                            borderRadius: '0.5rem',
                             color: 'var(--color-popover-foreground)'
                         }}
                     />

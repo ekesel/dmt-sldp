@@ -12,7 +12,7 @@ interface TileProps {
 }
 
 const Tile: React.FC<TileProps> = ({ title, Icon, bgColor, textColor }) => (
-    <div className={`${bgColor} w-full aspect-square rounded-[1.25rem] flex flex-col items-center justify-center p-2.5 sm:p-3.5 text-center cursor-pointer hover:opacity-95 transition-all shadow-sm group active:scale-95 saturate-[1.15]`}>
+    <div className={`${bgColor} w-full h-full rounded-[1.25rem] flex flex-col items-center justify-center p-2.5 sm:p-3.5 text-center cursor-pointer hover:opacity-95 transition-all shadow-sm group active:scale-95 saturate-[1.15]`}>
         <div className={`${textColor} mb-1.5 sm:mb-2 transform group-hover:scale-110 transition-transform duration-300`}>
             <Icon
                 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8"
@@ -46,9 +46,9 @@ export const QuickAccessTiles: React.FC = () => {
                     Quick Links
                 </h2>
                 {/* Grid Container */}
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-[25rem] sm:max-w-[35rem] md:max-w-[45rem] lg:max-w-none mx-auto overflow-hidden">
+                <div className="grid grid-cols-3 [@media(min-height:800px)]:grid-cols-2 gap-3 w-full h-full overflow-y-auto pr-1 pb-1 flex-1 min-h-0 [&::-webkit-scrollbar]:w-[0.25rem] [&::-webkit-scrollbar-track]:bg-muted/10 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full">
                     {tiles.map((tile, i) => (
-                        <Link key={i} href={tile.href} className="w-full block">
+                        <Link key={i} href={tile.href} className="w-full h-full block">
                             <Tile title={tile.title} Icon={tile.Icon} bgColor={tile.bgColor} textColor={tile.textColor} />
                         </Link>
                     ))}
