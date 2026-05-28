@@ -392,6 +392,7 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 # ORG CHART API
 class UserHierarchyAPIView(APIView):
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -554,6 +555,7 @@ class UserHierarchyAPIView(APIView):
                     }, status=status.HTTP_400_BAD_REQUEST)
 
                 existing_user.parent = parent_user
+                existing_user.org_chart_visibility = True
 
             existing_user.save()
 
@@ -580,7 +582,8 @@ class UserHierarchyAPIView(APIView):
                 last_name=data.get("last_name", ""),
                 role=role_obj,
                 parent=parent_user,
-                is_active=True
+                is_active=True,
+                org_chart_visibility = True
             )
 
             # Disable password login initially
@@ -723,7 +726,7 @@ class UserHierarchyAPIView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
-    #  DELETE -> SOFT DELETE
+    #  DELETE ->Org_chart_visibility= False
     def delete(self, request, pk):
 
         try:
