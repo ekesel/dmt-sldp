@@ -18,67 +18,6 @@ from core.permissions import IsAdminUser, IsManager
 from django_tenants.utils import schema_context
 logger = logging.getLogger(__name__)
 
-
-
-# Organization Chart Api
-class OrgChartAPIView(APIView):
-    permission_classes = [IsManagerOrReadOnly]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        serializer = OrgChartSerializer(data=request.data)
-        logger.info("Received request to upload organization chart")
-
-        if serializer.is_valid():
-            with transaction.atomic():
-                queryset = Org_chart.objects.filter(org_name=request.tenant.name)
-                for obj in queryset:
-                    if obj.org_chart_file:
-                        obj.org_chart_file.delete(save=False)
-                    obj.delete()
-
-                obj = serializer.save(org_name=request.tenant.name,is_active=True)
-        
-            return Response(
-                {'message': 'Organization chart uploaded successfully'},
-                status=201
-            )
-
-        logger.error("Validation failed for organization chart upload")   
-        return Response(serializer.errors, status=400)
-
-    def get(self, request, id=None):
-        if id:
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
-            if not queryset:
-                return Response({'message': 'Organization chart not found'}, status=404)
-            serializer = OrgChartSerializer(queryset)
-        else:
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name, is_active=True)
-            serializer = OrgChartSerializer(queryset, many=True)
-        return Response(serializer.data, status=200)
-
-    def patch(self, request, id=None):
-        if not id:
-            return Response({'message': 'ID is required'}, status=400)
-        queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
-        if not queryset:
-            return Response(
-                {'message': 'Organization chart not found'},
-                status=404
-            )
-        serializer = OrgChartSerializer(queryset, data=request.data, partial=True)
-        if serializer.is_valid():
-            if 'org_chart_file' in serializer.validated_data and queryset.org_chart_file:
-                queryset.org_chart_file.delete(save=False)
-            serializer.save()
-            return Response(
-                {'message': 'Organization chart updated successfully'},
-                status=200
-            )
-        logger.error("Validation failed for organization chart update")   
-        return Response(serializer.errors, status=400)
-
 # Holiday Calendar API
 class HolidayCalendarAPIView(APIView):
     permission_classes = [IsManagerOrReadOnly]

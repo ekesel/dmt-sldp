@@ -1,10 +1,7 @@
 from homepage.models import *
 from rest_framework import serializers
 
-class OrgChartSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Org_chart
-        fields = ['id','org_chart_file']
+
        
 class HolidayCalendarSerializer(serializers.ModelSerializer):
     class Meta:
