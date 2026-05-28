@@ -497,14 +497,14 @@ export interface DashboardForecast {
 
 export type InsightFeedbackStatus = 'accepted' | 'rejected';
 
-export interface StarPerformerData { id?: number; [key: string]: unknown; }
-export interface PolicyData { id: number; policy_file: string; [key: string]: unknown; }
-export interface HolidayCalendarData { id: number; calendar_file?: string; [key: string]: unknown; }
-export interface EmployeeEngagementData { id: number; employee_engagement_calendar_file: string; [key: string]: unknown; }
-export interface LearningAndDevelopmentData { id: number; document_file?: string; [key: string]: unknown; }
-export interface OnboardingData { id: number; document_file?: string; [key: string]: unknown; }
-export interface EventData { id?: number; [key: string]: unknown; }
-export interface HolidayData { id?: number; [key: string]: unknown; }
+export interface StarPerformerData { id?: number;[key: string]: unknown; }
+export interface PolicyData { id: number; policy_file: string;[key: string]: unknown; }
+export interface HolidayCalendarData { id: number; holiday_calendar_file: string;[key: string]: unknown; }
+export interface EmployeeEngagementData { id: number; employee_engagement_calendar_file: string;[key: string]: unknown; }
+export interface LearningAndDevelopmentData { id: number; learning_and_development_file: string;[key: string]: unknown; }
+export interface OnboardingData { id: number; onboarding_file: string; title?: string;[key: string]: unknown; }
+export interface EventData { id?: number;[key: string]: unknown; }
+export interface HolidayData { id?: number;[key: string]: unknown; }
 
 export const dashboard = {
   getMetrics: () => get<DashboardMetrics>('/analytics/metrics/'),
@@ -1011,9 +1011,9 @@ export interface OrgDropdownItem {
 
 export const orgChart = {
   getHierarchy: () => get<{ status: boolean; message: string; data: OrgChartUser[] }>('/org-chart/'),
-  createOrUpdateUser: (data: OrgChartCreatePayload) => 
+  createOrUpdateUser: (data: OrgChartCreatePayload) =>
     post<OrgChartActionResponse, OrgChartCreatePayload>('/org-chart/', data),
-  updateUser: (id: number | string, data: OrgChartUpdatePayload) => 
+  updateUser: (id: number | string, data: OrgChartUpdatePayload) =>
     api.put<OrgChartActionResponse>(`/org-chart/${id}/`, data).then(res => res.data),
   deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
   getUsersDropdown: () => get<OrgDropdownItem[]>('/org-users/'),

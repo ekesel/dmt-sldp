@@ -26,59 +26,12 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
     // Map department to nice Tailwind CSS classes
     const getDeptStyles = (dept: string) => {
-        const d = dept.toLowerCase();
-        if (d === 'other' || d === 'exec' || d === 'ceo') {
-            return {
-                bg: 'bg-indigo-50/90 hover:bg-indigo-100/90',
-                border: 'border-indigo-500',
-                text: 'text-indigo-700',
-                badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-                accentColor: '#6366f1'
-            };
-        }
-        if (['backend', 'frontend', 'mobile', 'devops', 'qa', 'tech', 'eng', 'engineering'].includes(d)) {
-            return {
-                bg: 'bg-teal-50/90 hover:bg-teal-100/90',
-                border: 'border-teal-500',
-                text: 'text-teal-700',
-                badgeBg: 'bg-teal-100 text-teal-800 border-teal-200',
-                accentColor: '#0d9488'
-            };
-        }
-        if (['hr', 'people'].includes(d)) {
-            return {
-                bg: 'bg-rose-50/90 hover:bg-rose-100/90',
-                border: 'border-rose-500',
-                text: 'text-rose-700',
-                badgeBg: 'bg-rose-100 text-rose-800 border-rose-200',
-                accentColor: '#ec4899'
-            };
-        }
-        if (['sales', 'marketing', 'market'].includes(d)) {
-            return {
-                bg: 'bg-amber-50/90 hover:bg-amber-100/90',
-                border: 'border-amber-500',
-                text: 'text-amber-700',
-                badgeBg: 'bg-amber-100 text-amber-800 border-amber-200',
-                accentColor: '#f59e0b'
-            };
-        }
-        if (['data', 'finance'].includes(d)) {
-            return {
-                bg: 'bg-emerald-50/90 hover:bg-emerald-100/90',
-                border: 'border-emerald-500',
-                text: 'text-emerald-700',
-                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                accentColor: '#10b981'
-            };
-        }
-        // Product, Design, or general
         return {
-            bg: 'bg-purple-50/90 hover:bg-purple-100/90',
-            border: 'border-purple-500',
-            text: 'text-purple-700',
-            badgeBg: 'bg-purple-100 text-purple-800 border-purple-200',
-            accentColor: '#a855f7'
+            bg: 'bg-primary/5 hover:bg-primary/10',
+            border: 'border-primary/60',
+            text: 'text-primary',
+            badgeBg: 'bg-primary/10 text-primary border-primary/20',
+            accentColor: 'var(--color-primary)'
         };
     };
 
@@ -127,7 +80,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                     {/* Colored Avatar */}
                     <div 
                         className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-sm border-2 border-white shrink-0"
-                        style={{ backgroundColor: styles.accentColor }}
+                        style={{ backgroundColor: 'var(--color-accent)' }}
                     >
                         {initials}
                     </div>

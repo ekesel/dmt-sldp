@@ -79,13 +79,13 @@ export const WelcomeBanner: React.FC = () => {
           <div className="flex flex-col items-center">
             <div className="relative w-16 h-16 md:w-20 md:h-20 mb-2.5">
               <div className="absolute inset-0 rounded-full border-[0.125rem] border-border shadow-md" />
-              <div className="w-full h-full rounded-full overflow-hidden">
+              <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
                 <Image
                   src={user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(greetingName)}&background=random&color=fff&size=128&bold=true`}
                   alt="Profile"
                   width={80}
                   height={80}
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                   unoptimized
                 />
               </div>

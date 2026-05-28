@@ -253,12 +253,12 @@ function OrgChartPageContent() {
                 target: emp.id,
                 type: 'smoothstep',
                 animated: true,
-                style: { stroke: '#94a3b8', strokeWidth: 2 },
+                style: { stroke: 'var(--color-primary)', strokeWidth: 2 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
                     width: 20,
                     height: 20,
-                    color: '#94a3b8'
+                    color: 'var(--color-primary)'
                 }
             }));
 
@@ -478,15 +478,7 @@ function OrgChartPageContent() {
                 >
                     <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
                     <MiniMap
-                        nodeColor={(node) => {
-                            const dept = (node.data?.department || '').toLowerCase();
-                            if (dept === 'other' || dept.includes('exec') || dept.includes('ceo')) return '#6366f1'; // indigo
-                            if (['backend', 'frontend', 'mobile', 'devops', 'qa', 'tech', 'eng', 'engineering'].includes(dept)) return '#0d9488'; // teal
-                            if (['hr', 'people'].includes(dept)) return '#ec4899'; // rose
-                            if (['sales', 'marketing', 'market'].includes(dept)) return '#f59e0b'; // amber
-                            if (['data', 'finance'].includes(dept)) return '#10b981'; // emerald
-                            return '#a855f7'; // purple (product, design, etc)
-                        }}
+                        nodeColor={(node) => 'var(--color-primary)'}
                         nodeStrokeWidth={3}
                         maskColor="rgba(241, 245, 249, 0.4)"
                         className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !bottom-4 overflow-hidden"
