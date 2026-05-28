@@ -1009,6 +1009,16 @@ export interface OrgDropdownItem {
   [key: string]: unknown;
 }
 
+export interface AutocompleteItem {
+  id?: number | string;
+  name?: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
+  department?: string;
+  [key: string]: unknown;
+}
+
 export const orgChart = {
   getHierarchy: () => get<{ status: boolean; message: string; data: OrgChartUser[] }>('/org-chart/'),
   createOrUpdateUser: (data: OrgChartCreatePayload) =>
@@ -1018,7 +1028,7 @@ export const orgChart = {
   deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
   getUsersDropdown: () => get<OrgDropdownItem[]>('/org-users/'),
   getRolesDropdown: () => get<OrgDropdownItem[]>('/org-roles/'),
-  searchAutocomplete: (query: string) => get<{ status: boolean; data: any[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
+  searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
 };
 
 export default api;

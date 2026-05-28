@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Mail } from 'lucide-react';
-import { orgChart } from '@dmt/api';
+import { orgChart, AutocompleteItem } from '@dmt/api';
 
 interface EmployeeModalProps {
     isOpen: boolean;
@@ -61,6 +61,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const [department, setDepartment] = useState('backend');
     const [parentId, setParentId] = useState('');
     const [isNotFound, setIsNotFound] = useState(false);
+    const [autocompleteError, setAutocompleteError] = useState(false);
     const lastMatchedRef = useRef<{
         name: string, 
         email: string, 
@@ -83,6 +84,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setDepartment(employeeData.department);
                 setParentId(employeeData.parentId || '');
                 setIsNotFound(false);
+                setAutocompleteError(false);
                 lastMatchedRef.current = null;
             } else {
                 // Creating new
@@ -92,12 +94,21 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setDepartment('backend');
                 setParentId(defaultParentId || '');
                 setIsNotFound(false);
+                setAutocompleteError(false);
                 lastMatchedRef.current = null;
             }
         }
     }, [isOpen, employeeData, defaultParentId, rolesList]);
 
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const triggerAutocomplete = (currentName: string, currentEmail: string) => {
         if (employeeData) return;
@@ -137,14 +148,15 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
         if (query) {
             debounceTimeoutRef.current = setTimeout(async () => {
+                setAutocompleteError(false);
                 try {
                     const response = await orgChart.searchAutocomplete(query);
                     // The API returns a flat array directly
-                    const responseData = (response as any).data || (Array.isArray(response) ? response : null);
+                    const responseData = response.data || (Array.isArray(response) ? response : null);
                     
                     if (responseData && Array.isArray(responseData) && responseData.length > 0) {
                         let matchedBy: 'name' | 'email' | null = null;
-                        let bestMatch: any = null;
+                        let bestMatch: AutocompleteItem | null = null;
 
                         for (const item of responseData) {
                             const mName = item.full_name || item.name || '';
@@ -201,11 +213,14 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                     }
                 } catch (error) {
                     console.error('Autocomplete search failed', error);
+                    setAutocompleteError(true);
+                    setIsNotFound(false);
                 }
             }, 300); // 300ms debounce
         } else {
             lastMatchedRef.current = null;
             setIsNotFound(false);
+            setAutocompleteError(false);
         }
     };
 
@@ -328,9 +343,15 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         </select>
                     </div>
 
-                    {isNotFound && !employeeData && (
+                    {isNotFound && !employeeData && !autocompleteError && (
                         <p className="text-[0.75rem] font-semibold text-amber-600 bg-amber-50/50 p-2.5 rounded-lg border border-amber-200">
                             Employee not found in directory. Please enter details manually.
+                        </p>
+                    )}
+
+                    {autocompleteError && !employeeData && (
+                        <p className="text-[0.75rem] font-semibold text-red-600 bg-red-50/50 p-2.5 rounded-lg border border-red-200">
+                            Failed to fetch employee details. Please enter details manually.
                         </p>
                     )}
 
