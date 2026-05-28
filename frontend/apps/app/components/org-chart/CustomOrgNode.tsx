@@ -35,7 +35,8 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
         };
     };
 
-    const formatDeptName = (dept: string) => {
+    const formatDeptName = (dept: string | null | undefined) => {
+        if (!dept) return 'Other';
         const labels: Record<string, string> = {
             'backend': 'Backend',
             'frontend': 'Frontend',
@@ -49,6 +50,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             'finance': 'Finance',
             'sales': 'Sales',
             'marketing': 'Marketing',
+            'AIML'      :    'AI & ML', 
             'other': 'Other'
         };
         return labels[dept.toLowerCase()] || dept;
@@ -71,7 +73,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
             {/* Custom Node Panel */}
             <div 
-                className={`w-[260px] p-4 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_4px_20px_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
+                className={`w-[180px] p-2.5 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_4px_20px_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
             >
                 {/* Visual Top Highlight Strip */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${styles.badgeBg.split(' ')[0]}`} />
@@ -79,7 +81,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 <div className="flex items-center gap-3.5 mt-1">
                     {/* Colored Avatar */}
                     <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-sm border-2 border-white shrink-0"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-[0.65rem] border-[1.5px] border-white shrink-0"
                         style={{ backgroundColor: 'var(--color-accent)' }}
                     >
                         {initials}
@@ -87,19 +89,19 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
                     {/* Node Text Content */}
                     <div className="min-w-0 flex-1">
-                        <h4 className="text-[0.925rem] font-[800] text-card-foreground truncate leading-snug">
+                        <h4 className="text-[0.8rem] font-[800] text-card-foreground leading-snug break-words">
                             {name}
                         </h4>
-                        <p className="text-[0.725rem] text-muted-foreground font-semibold truncate mt-0.5 leading-normal">
+                        <p className="text-[0.65rem] text-muted-foreground font-semibold truncate mt-0.5 leading-normal">
                             {role}
                         </p>
                         {email && (
-                            <p className="flex items-center gap-1 text-[0.675rem] text-muted-foreground/70 font-medium truncate mt-0.5">
-                                <Mail className="w-3 h-3 shrink-0" />
+                            <p className="flex items-center gap-1 text-[0.6rem] text-muted-foreground/70 font-medium truncate mt-0.5">
+                                <Mail className="w-2.5 h-2.5 shrink-0" />
                                 {email}
                             </p>
                         )}
-                        <span className={`inline-block mt-1.5 px-2.5 py-0.5 text-[0.625rem] font-bold rounded-lg border uppercase tracking-wider ${styles.badgeBg}`}>
+                        <span className={`inline-block mt-1.5 px-2 py-0.5 text-[0.55rem] font-bold rounded-md border uppercase tracking-wider ${styles.badgeBg}`}>
                             {formatDeptName(department)}
                         </span>
                     </div>

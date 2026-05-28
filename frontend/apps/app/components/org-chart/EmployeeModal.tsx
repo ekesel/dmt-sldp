@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Mail } from 'lucide-react';
+import { orgChart } from '@dmt/api';
 
 interface EmployeeModalProps {
     isOpen: boolean;
@@ -18,11 +19,13 @@ interface EmployeeModalProps {
         id: string;
         name: string;
         role: string;
+        roleId: string;
         email: string;
         department: string;
         parentId: string;
     } | null;
     employeesList: Array<{ id: string; name: string; role: string }>;
+    rolesList: Array<{ id: string | number; name: string }>;
     defaultParentId?: string;
 }
 
@@ -39,15 +42,8 @@ const DEPARTMENTS = [
     { value: 'finance', label: 'Finance' },
     { value: 'sales', label: 'Sales' },
     { value: 'marketing', label: 'Marketing' },
+    { value: 'AIML', label: 'AI & ML' },
     { value: 'other', label: 'Other' }
-];
-
-const MOCK_DB = [
-    { name: 'Liam Carter', role: 'CEO', email: 'liam.carter@company.com', department: 'ceo' },
-    { name: 'Emma Smith', role: 'VP of Engineering', email: 'emma.smith@company.com', department: 'engineering' },
-    { name: 'Noah Johnson', role: 'Backend Lead', email: 'noah.johnson@company.com', department: 'backend' },
-    { name: 'Olivia Williams', role: 'Frontend Lead', email: 'olivia.williams@company.com', department: 'frontend' },
-    { name: 'Ava Brown', role: 'HR Manager', email: 'ava.brown@company.com', department: 'hr' }
 ];
 
 export const EmployeeModal: React.FC<EmployeeModalProps> = ({
@@ -56,6 +52,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     onSave,
     employeeData,
     employeesList,
+    rolesList,
     defaultParentId = ''
 }) => {
     const [name, setName] = useState('');
@@ -64,7 +61,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const [department, setDepartment] = useState('backend');
     const [parentId, setParentId] = useState('');
     const [isNotFound, setIsNotFound] = useState(false);
-    const lastMatchedRef = React.useRef<{
+    const lastMatchedRef = useRef<{
         name: string, 
         email: string, 
         role: string, 
@@ -72,11 +69,16 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         matchedBy: 'name' | 'email'
     } | null>(null);
 
+    const rolesListRef = useRef(rolesList);
+    useEffect(() => {
+        rolesListRef.current = rolesList;
+    }, [rolesList]);
+
     useEffect(() => {
         if (isOpen) {
             if (employeeData) {
                 setName(employeeData.name);
-                setRole(employeeData.role);
+                setRole(employeeData.roleId);
                 setEmail(employeeData.email || '');
                 setDepartment(employeeData.department);
                 setParentId(employeeData.parentId || '');
@@ -85,7 +87,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             } else {
                 // Creating new
                 setName('');
-                setRole('');
+                setRole(rolesList.length > 0 ? String(rolesList[0].id) : '');
                 setEmail('');
                 setDepartment('backend');
                 setParentId(defaultParentId || '');
@@ -93,15 +95,13 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 lastMatchedRef.current = null;
             }
         }
-    }, [isOpen, employeeData, defaultParentId]);
+    }, [isOpen, employeeData, defaultParentId, rolesList]);
 
-    // Mock DB Lookup Effect
-    useEffect(() => {
-        // Only run lookup if we are creating a new employee
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const triggerAutocomplete = (currentName: string, currentEmail: string) => {
         if (employeeData) return;
 
-        const currentName = name;
-        const currentEmail = email;
         const trimmedName = currentName.trim().toLowerCase();
         const trimmedEmail = currentEmail.trim().toLowerCase();
 
@@ -112,7 +112,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             const emailChanged = trimmedEmail !== prev.email.toLowerCase();
 
             if (nameChanged || emailChanged) {
-                setRole(r => r === prev.role ? '' : r);
+                setRole(r => r === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : r);
                 setDepartment(d => d === prev.department ? 'backend' : d);
                 
                 if (prev.matchedBy === 'name' && nameChanged) {
@@ -128,44 +128,86 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             }
         }
 
-        if (trimmedName.length > 2 || trimmedEmail.length > 4) {
-            let matchedBy: 'name' | 'email' | null = null;
-            const match = MOCK_DB.find((emp) => {
-                if (trimmedEmail && emp.email.toLowerCase() === trimmedEmail) {
-                    matchedBy = 'email';
-                    return true;
-                }
-                if (trimmedName && emp.name.toLowerCase() === trimmedName) {
-                    matchedBy = 'name';
-                    return true;
-                }
-                return false;
-            });
+        const nameQuery = trimmedName.split(' ')[0]; // Only send first word to API to bypass strict first/last name backend matching
+        const query = nameQuery.length > 2 ? nameQuery : (trimmedEmail.length > 4 ? trimmedEmail : null);
 
-            if (match && matchedBy) {
-                if (lastMatchedRef.current?.email !== match.email) {
-                    setRole(match.role);
-                    setDepartment(match.department);
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        if (query) {
+            debounceTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const response = await orgChart.searchAutocomplete(query);
+                    // The API returns a flat array directly
+                    const responseData = (response as any).data || (Array.isArray(response) ? response : null);
                     
-                    if (matchedBy === 'email' && trimmedName !== match.name.toLowerCase()) {
-                        setName(match.name);
+                    if (responseData && Array.isArray(responseData) && responseData.length > 0) {
+                        let matchedBy: 'name' | 'email' | null = null;
+                        let bestMatch: any = null;
+
+                        for (const item of responseData) {
+                            const mName = item.full_name || item.name || '';
+                            const mEmail = item.email || '';
+
+                            if (trimmedEmail && mEmail.toLowerCase().includes(trimmedEmail)) {
+                                matchedBy = 'email';
+                                bestMatch = item;
+                                break;
+                            } else if (trimmedName && mName.toLowerCase().includes(trimmedName)) {
+                                matchedBy = 'name';
+                                bestMatch = item;
+                                break;
+                            }
+                        }
+
+                        if (matchedBy && bestMatch) {
+                            const matchName = bestMatch.full_name || bestMatch.name || '';
+                            const matchEmail = bestMatch.email || '';
+                            const matchRoleName = bestMatch.role || '';
+                            const matchDept = bestMatch.department || 'backend';
+
+                            if (lastMatchedRef.current?.email !== matchEmail) {
+                                const rList = rolesListRef.current;
+                                const foundRole = rList.find(r => r.name.toLowerCase() === matchRoleName.toLowerCase());
+                                const roleIdToSet = foundRole ? String(foundRole.id) : (rList.length > 0 ? String(rList[0].id) : '');
+
+                                setRole(roleIdToSet);
+                                setDepartment(matchDept);
+                                
+                                if (matchedBy === 'email' && trimmedName !== matchName.toLowerCase()) {
+                                    setName(matchName);
+                                }
+                                if (matchedBy === 'name' && trimmedEmail !== matchEmail.toLowerCase()) {
+                                    setEmail(matchEmail);
+                                }
+                                
+                                lastMatchedRef.current = { 
+                                    name: matchName, 
+                                    email: matchEmail, 
+                                    role: roleIdToSet, 
+                                    department: matchDept, 
+                                    matchedBy 
+                                };
+                            }
+                            setIsNotFound(false);
+                        } else {
+                            lastMatchedRef.current = null;
+                            setIsNotFound(true);
+                        }
+                    } else {
+                        lastMatchedRef.current = null;
+                        setIsNotFound(true);
                     }
-                    if (matchedBy === 'name' && trimmedEmail !== match.email.toLowerCase()) {
-                        setEmail(match.email);
-                    }
-                    
-                    lastMatchedRef.current = { ...match, matchedBy };
+                } catch (error) {
+                    console.error('Autocomplete search failed', error);
                 }
-                setIsNotFound(false);
-            } else {
-                lastMatchedRef.current = null;
-                setIsNotFound(true);
-            }
+            }, 300); // 300ms debounce
         } else {
             lastMatchedRef.current = null;
             setIsNotFound(false);
         }
-    }, [name, email, employeeData]);
+    };
 
     if (!isOpen) return null;
 
@@ -222,7 +264,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                             required
                             placeholder="e.g. Liam Carter"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                triggerAutocomplete(e.target.value, email);
+                            }}
                             className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
                         />
                     </div>
@@ -232,14 +277,17 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <label className="text-[0.75rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Designation / Role
                         </label>
-                        <input
-                            type="text"
-                            required
-                            placeholder="e.g. AI-ML Tech Lead"
+                        <select
                             value={role}
                             onChange={(e) => setRole(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
-                        />
+                            className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
+                        >
+                            {rolesList.map((r) => (
+                                <option key={r.id} value={String(r.id)}>
+                                    {r.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Email Address */}
@@ -253,7 +301,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                 type="email"
                                 placeholder="e.g. liam.carter@company.com"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    triggerAutocomplete(name, e.target.value);
+                                }}
                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
                             />
                         </div>

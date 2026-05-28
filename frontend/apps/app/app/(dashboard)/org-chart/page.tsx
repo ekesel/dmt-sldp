@@ -29,6 +29,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
 import OrgChartControls from '@/components/org-chart/OrgChartControls';
 import EmployeeModal from '@/components/org-chart/EmployeeModal';
+import { orgChart } from '@dmt/api';
 
 /**
  * Represents a single employee record in the org chart dataset.
@@ -39,6 +40,7 @@ interface IEmployee {
     id: string;
     name: string;
     role: string;
+    roleId: string;
     email: string;
     department: string;
     parentId: string;
@@ -97,19 +99,50 @@ function OrgChartPageContent() {
 
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
+    const [rolesList, setRolesList] = useState<Array<{ id: string | number; name: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
+
+    const flattenHierarchy = (nodes: any[]): IEmployee[] => {
+        let flat: IEmployee[] = [];
+        nodes.forEach(node => {
+            flat.push({
+                id: String(node.id),
+                name: node.full_name,
+                role: node.role,
+                roleId: String(node.role_id),
+                email: node.email,
+                department: node.department,
+                parentId: node.parent_id ? String(node.parent_id) : '',
+            });
+            if (node.children && node.children.length > 0) {
+                flat = flat.concat(flattenHierarchy(node.children));
+            }
+        });
+        return flat;
+    };
 
     const fetchOrgChart = useCallback(async () => {
         setIsLoading(true);
         setIsError(false);
         try {
-            // Load from localStorage to persist mock data
-            const saved = localStorage.getItem('dmt-org-chart');
-            if (saved) {
-                setEmployees(JSON.parse(saved));
+            const [hierarchyRes, rolesRes] = await Promise.all([
+                orgChart.getHierarchy(),
+                orgChart.getRolesDropdown()
+            ]);
+            
+            if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
+                const flatData = flattenHierarchy(hierarchyRes.data);
+                setEmployees(flatData);
             } else {
                 setEmployees([]);
+            }
+
+            if (rolesRes) {
+                const rolesData = (rolesRes as any).data || rolesRes;
+                if (Array.isArray(rolesData)) {
+                    setRolesList(rolesData.map((r: any) => ({ id: r.id, name: r.role_name || r.name })));
+                }
             }
         } catch (error) {
             console.error('Failed to fetch org chart', error);
@@ -119,13 +152,6 @@ function OrgChartPageContent() {
             setIsLoading(false);
         }
     }, []);
-
-    // Save to local storage whenever employees change
-    useEffect(() => {
-        if (!isLoading) {
-            localStorage.setItem('dmt-org-chart', JSON.stringify(employees));
-        }
-    }, [employees, isLoading]);
 
     useEffect(() => {
         fetchOrgChart();
@@ -193,20 +219,21 @@ function OrgChartPageContent() {
     // Handle delete employee node
     const handleDeleteNode = useCallback(async (id: string) => {
         if (!isManager) {
-            toast.error('Only Managers can delete employees.');
+            toast.error('Only Managers can delete employees.'); 
             return;
         }
 
         if (confirm('Are you sure you want to delete this employee?')) {
             try {
-                setEmployees(prev => prev.filter(emp => emp.id !== id));
-                toast.success('Employee deleted successfully.');
+                await orgChart.deleteUser(id);
+                toast.success('Employee removed successfully.');
+                fetchOrgChart();
             } catch (error) {
                 console.error('Failed to delete employee', error);
                 toast.error('Failed to delete employee.');
             }
         }
-    }, [isManager]);
+    }, [isManager, fetchOrgChart]);
 
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
@@ -228,7 +255,7 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
-                width: 260,
+                width: 180,
                 height: 96,
                 data: {
                     id: emp.id,
@@ -315,13 +342,15 @@ function OrgChartPageContent() {
         if (!source || !target || source === target) return;
 
         try {
-            setEmployees(prev => prev.map(emp => emp.id === target ? { ...emp, parentId: source } : emp));
+            await orgChart.updateUser(target, { parent: Number(source) });
             toast.success('Reporting line updated successfully.');
-        } catch (error) {
+            fetchOrgChart();
+        } catch (error: any) {
             console.error('Failed to update reporting line', error);
-            toast.error('Failed to update reporting line. It might create a circular dependency.');
+            const msg = error.data?.message || 'Failed to update reporting line. It might create a circular dependency.';
+            toast.error(msg);
         }
-    }, [isManager]);
+    }, [isManager, fetchOrgChart]);
 
     // Modal Create / Save Changes
     const handleSaveEmployee = async (empData: {
@@ -338,20 +367,38 @@ function OrgChartPageContent() {
         }
 
         try {
+            const nameParts = empData.name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+
             if (empData.id) {
-                setEmployees(prev => prev.map(emp => emp.id === empData.id ? { ...emp, ...empData, parentId: empData.parentId || '' } : emp));
+                await orgChart.updateUser(empData.id, {
+                    first_name: firstName,
+                    last_name: lastName,
+                    designation: Number(empData.role),
+                    department: empData.department,
+                    parent: empData.parentId ? Number(empData.parentId) : null,
+                });
                 toast.success('Employee details updated successfully!');
             } else {
-                const newId = Math.random().toString(36).substr(2, 9);
-                setEmployees(prev => [...prev, { ...empData, id: newId, parentId: empData.parentId || '' }]);
+                await orgChart.createOrUpdateUser({
+                    email: empData.email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    designation: Number(empData.role),
+                    department: empData.department,
+                    parent: empData.parentId ? Number(empData.parentId) : null,
+                });
                 toast.success('New employee successfully added to org-chart!');
             }
+            fetchOrgChart();
             setIsModalOpen(false);
             setEditingEmployee(null);
             setDefaultParentId('');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to save employee', error);
-            toast.error('Failed to save employee details.');
+            const msg = error.data?.message || 'Failed to save employee details.';
+            toast.error(msg);
         }
     };
 
@@ -481,7 +528,8 @@ function OrgChartPageContent() {
                         nodeColor={(node) => 'var(--color-primary)'}
                         nodeStrokeWidth={3}
                         maskColor="rgba(241, 245, 249, 0.4)"
-                        className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !bottom-4 overflow-hidden"
+                        className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                        style={{ height: 90, width: 140 }}
                     />
                 </ReactFlow>
                 )}
@@ -498,6 +546,7 @@ function OrgChartPageContent() {
                 onSave={handleSaveEmployee}
                 employeeData={editingEmployee}
                 employeesList={employees.map(e => ({ id: e.id, name: e.name, role: e.role }))}
+                rolesList={rolesList}
                 defaultParentId={defaultParentId}
             />
         </main>

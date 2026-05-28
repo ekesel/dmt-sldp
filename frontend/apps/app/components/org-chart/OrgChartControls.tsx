@@ -52,16 +52,7 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
 
 
 
-                {/* Add Employee Button - Visible to Managers Only */}
-                {isManager && (
-                    <button
-                        onClick={onAddClick}
-                        className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[0.875rem] font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer active:scale-95 shadow-md hover:shadow-lg"
-                    >
-                        <Plus className="w-4 h-4 stroke-[3]" />
-                        <span>Add Employee</span>
-                    </button>
-                )}
+
             </div>
         </div>
     );

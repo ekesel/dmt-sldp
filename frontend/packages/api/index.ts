@@ -1018,6 +1018,7 @@ export const orgChart = {
   deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
   getUsersDropdown: () => get<OrgDropdownItem[]>('/org-users/'),
   getRolesDropdown: () => get<OrgDropdownItem[]>('/org-roles/'),
+  searchAutocomplete: (query: string) => get<{ status: boolean; data: any[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
 };
 
 export default api;

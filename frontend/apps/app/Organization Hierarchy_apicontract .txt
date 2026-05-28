@@ -1,321 +1,142 @@
-1. Get Organization Hierarchy (GET)
+1. Organization Chart — GET & POST
 
-Retrieves the full, hierarchical structure of users for the current tenant.
+Base path: api/org-chart/
 
-Endpoint: GET /api/org-chart/
+GET api/org-chart/
 
-Headers:
+Fetch the full hierarchical user tree for the current tenant. Only active users with org_chart_visibility = True are returned.
 
-http
 
-Authorization: Bearer <your_access_token>
+Permission IsAuthenticated (any logged-in user)
 
-Request Body: None
+Auth Header Authorization: Bearer <token>
 
-Response: 200 OK
+Request Body None
 
-json
 
-{
+Response 200 OK
 
-"status": true,
+{ "status": true, "message": "Hierarchy fetched successfully", "data": [ { "id": 1, "full_name": "Jane Doe", "email": "jane.doe@example.com", "username": "jane.doe@example.com", "role_id": 2, "role": "CEO", "department": "management", "parent_id": null, "is_active": true, "org_chart_visibility": true, "children": [ { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role_id": 3, "role": "Engineering Manager", "department": "engineering", "parent_id": 1, "is_active": true, "org_chart_visibility": true, "children": [] } ] } ] }
 
-"message": "Hierarchy fetched successfully",
 
-"data": [
 
-{
+POST api/org-chart/
 
-"id": 1,
+Create a new user, or update the role and parent of an existing user when the email already exists. Assigning a parent automatically sets org_chart_visibility = True.
 
-"full_name": "John Doe",
 
-"email": "john@example.com",
+Permission IsManagerOrReadOnly (Managers or Admins only)
 
-"username": "john@example.com",
+Auth Header Authorization: Bearer <token>
 
-"role_id": 2,
+Request Body JSON (see below)
 
-"role": "Engineering Manager",
 
-"department": "engineering",
+Request Body
 
-"parent_id": null,
+{ "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith", "designation": 3, "department": "engineering", "parent": 1 }
 
-"is_active": true,
+designation — integer Role ID. department / dep_name — string matching predefined department choices.
 
-"children": [
 
-{
+Response 201 Created
 
-"id": 2,
+{ "status": true, "message": "Employee created successfully", "data": { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role": "Engineering Manager", "department": "engineering" } }
 
-"full_name": "Jane Smith",
 
-"email": "jane@example.com",
+Response 200 OK (existing user updated)
 
-"username": "jane@example.com",
+{ "status": true, "message": "Existing user updated successfully", "data": { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role": "Engineering Manager", "department": "engineering" } }
 
-"role_id": 5,
 
-"role": "Developer",
 
-"department": "engineering",
 
-"parent_id": 1,
+2. Organization Chart Details — PUT & DELETE
 
-"is_active": true,
+Base path: api/org-chart/<int:pk>/
 
-"children": []
+PUT api/org-chart/<int:pk>/
 
-}
+Update one or more properties for the user identified by <pk>. All request fields are optional. The endpoint guards against circular hierarchies and self-parenting.
 
-]
 
-}
+Permission IsManagerOrReadOnly (Managers or Admins only)
 
-]
+Auth Header Authorization: Bearer <token>
 
-}
+Request Body JSON (all fields optional)
 
----
 
-2. Create or Update User (POST)
+Request Body
 
-Creates a new user or updates an existing user based on the provided email address. This is the primary endpoint for adding users to the org chart.
+{ "first_name": "Johnny", "last_name": "Smith", "designation": 4, "department": "engineering", "parent": 1, "is_active": true }
 
-Endpoint: POST /api/org-chart/
 
-Headers:
+Response 200 OK
 
-http
+{ "status": true, "message": "User updated successfully", "data": { "id": 2, "full_name": "Johnny Smith", "email": "john.smith@example.com", "role": "Senior Engineer", "department": "engineering" } }
 
-Authorization: Bearer <your_access_token>
 
-Content-Type: application/json
+Error 400 Bad Request — Circular Hierarchy
 
-Request Body:
+{ "status": false, "message": "This parent assignment would create a circular hierarchy" }
 
-json
+DELETE api/org-chart/<int:pk>/
 
-{
+Hides the user from the org chart by setting org_chart_visibility = False. The underlying user record is not deleted.
 
-"email": "new.employee@example.com", // Required
 
-"first_name": "New", // Optional
+Permission IsManagerOrReadOnly (Managers or Admins only)
 
-"last_name": "Employee", // Optional
+Auth Header Authorization: Bearer <token>
 
-"designation": 5, // Optional (ID of the Role)
+Request Body None
 
-"department": "engineering", // Optional
 
-"parent": 1 // Optional (ID of the Parent User)
+Response 200 OK
 
-}
+{ "status": true, "message": "User hidden from organization successfully" }
 
-Response (New User Created): 201 Created
 
-json
+3. User Autocomplete
 
-{
+Base path: api/org-users/autocomplete/?q=<search_string>
 
-"status": true,
+GET api/org-users/autocomplete/
 
-"message": "Employee created successfully",
+Returns a flat list of up to 10 active users whose first name, last name, or email matches the query string. Useful for parent-selection dropdowns.
 
-"data": {
 
-"id": 3,
+Permission IsAuthenticated (any logged-in user)
 
-"full_name": "New Employee",
+Auth Header Authorization: Bearer <token>
 
-"email": "new.employee@example.com",
+Query Parameter q (string) — e.g. ?q=john
 
-"role": "Developer",
+Request Body None
 
-"department": "engineering"
 
-}
+Response 200 OK
 
-}
+{ "status": true, "data": [ { "id": 2, "full_name": "Johnny Smith", "email": "john.smith@example.com", "role": "Senior Engineer", "department": "engineering" } ] }
 
-Response (Existing User Updated): 200 OK
 
-json
+4. Roles Dropdown
 
-{
+Base path: api/org-roles/
 
-"status": true,
+GET api/org-roles/
 
-"message": "Existing user updated successfully",
+Returns all available roles as a flat list. Intended to populate role dropdowns when creating or editing users.
 
-"data": {
 
-"id": 2,
+Permission IsAuthenticated (any logged-in user)
 
-"full_name": "Jane Smith",
+Auth Header Authorization: Bearer <token>
 
-"email": "jane@example.com",
+Request Body None
 
-"role": "Senior Developer",
 
-"department": "engineering"
+Response 200 OK
 
-}
-
-}
-
----
-
-3. Update User (PUT)
-
-Updates specific details of an existing user using their user ID.
-
-Endpoint: PUT /api/org-chart/<user_id>/
-
-Headers:
-
-http
-
-Authorization: Bearer <your_access_token>
-
-Content-Type: application/json
-
-Request Body: (All fields are optional, only include what needs to be updated)
-
-json
-
-{
-
-"first_name": "Jane",
-
-"last_name": "Doe",
-
-"designation": 6, // Role ID
-
-"department": "sales",
-
-"parent": 3, // ID of the new manager/parent user
-
-"is_active": true // Boolean to activate or deactivate the user
-
-}
-
-Response: 200 OK
-
-json
-
-{
-
-"status": true,
-
-"message": "User updated successfully",
-
-"data": {
-
-"id": 2,
-
-"full_name": "Jane Doe",
-
-"email": "jane@example.com",
-
-"role": "Sales Lead",
-
-"department": "sales"
-
-}
-
-}
-
-Note: The API detects if the new parent assignment would result in a circular hierarchy (e.g., A reports to B, and B reports to A) and will return a 400 Bad Request if a cycle is found.
-
----
-
-4. Delete/Deactivate User (DELETE)
-
-Soft-deletes a user from the organization by setting their is_active status to false.
-
-Endpoint: DELETE /api/org-chart/<user_id>/
-
-Headers:
-
-http
-
-Authorization: Bearer <your_access_token>
-
-Request Body: None
-
-Response: 200 OK
-
-json
-
-{
-
-"status": true,
-
-"message": "User soft deleted successfully"
-
-}
-
----
-
-5. Helper Endpoints for Dropdowns
-
-If you are building the UI, you may need these additional endpoints to populate select dropdowns for users and roles.
-
-Get All Users Dropdown (GET)
-
-Endpoint: GET /api/org-users/ Response: 200 OK
-
-json
-
-{
-
-"status": true,
-
-"data": [
-
-{
-
-"id": 1,
-
-"full_name": "John Doe",
-
-"email": "john@example.com",
-
-"role": "Engineering Manager",
-
-"department": "engineering"
-
-}
-
-]
-
-}
-
-Get All Roles Dropdown (GET)
-
-Endpoint: GET /api/org-roles/ Response: 200 OK
-
-json
-
-{
-
-"status": true,
-
-"data": [
-
-{
-
-"id": 1,
-
-"role_name": "Admin"
-
-},
-
-{
-
-"id": 2,
-
-"rol
+{ "status": true, "data": [ { "id": 1, "role_name": "Platform Admin" }, { "id": 2, "role_name": "CEO" }, { "id": 3, "role_name": "Engineering Manager" }
