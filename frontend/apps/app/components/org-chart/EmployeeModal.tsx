@@ -251,7 +251,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             setIsSubmitting(true);
             try {
                 const res = await orgChart.createRole(newRoleName.trim());
-                finalRoleId = String(res?.data?.id || res?.id);
+                finalRoleId = String(res?.id);
                 if (!finalRoleId || finalRoleId === 'undefined') {
                     throw new Error('Failed to get new role ID');
                 }
@@ -259,10 +259,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             } catch (error) {
                 console.error('Failed to create role', error);
                 toast.error('Failed to create new role. Please try again.');
-                setIsSubmitting(false);
                 return;
+            } finally {
+                setIsSubmitting(false);
             }
-            setIsSubmitting(false);
         } else {
             if (!role.trim()) return;
         }
