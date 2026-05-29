@@ -56,16 +56,19 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     rolesList,
     defaultParentId = ''
 }) => {
-    const [name, setName] = useState('');
-    const [role, setRole] = useState('');
-    const [email, setEmail] = useState('');
-    const [department, setDepartment] = useState('backend');
-    const [parentId, setParentId] = useState('');
-    const [isNotFound, setIsNotFound] = useState(false);
-    const [autocompleteError, setAutocompleteError] = useState(false);
-    const [isCreatingRole, setIsCreatingRole] = useState(false);
-    const [newRoleName, setNewRoleName] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [state, setState] = useState({
+        name: '',
+        role: '',
+        email: '',
+        department: 'backend',
+        parentId: '',
+        isNotFound: false,
+        autocompleteError: false,
+        isCreatingRole: false,
+        newRoleName: '',
+        isSubmitting: false
+    });
+    const { name, role, email, department, parentId, isNotFound, autocompleteError, isCreatingRole, newRoleName, isSubmitting } = state;
     const lastMatchedRef = useRef<{
         name: string, 
         email: string, 
@@ -82,28 +85,19 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
     useEffect(() => {
         if (isOpen) {
-            if (employeeData) {
-                setName(employeeData.name);
-                setRole(employeeData.roleId);
-                setEmail(employeeData.email || '');
-                setDepartment(employeeData.department);
-                setParentId(employeeData.parentId || '');
-                setIsNotFound(false);
-                setAutocompleteError(false);
-                lastMatchedRef.current = null;
-            } else {
-                // Creating new
-                setName('');
-                setRole(rolesList.length > 0 ? String(rolesList[0].id) : '');
-                setEmail('');
-                setDepartment('backend');
-                setParentId(defaultParentId || '');
-                setIsNotFound(false);
-                setAutocompleteError(false);
-                lastMatchedRef.current = null;
-            }
-            setIsCreatingRole(false);
-            setNewRoleName('');
+            setState(prev => ({
+                ...prev,
+                name: employeeData ? employeeData.name : '',
+                role: employeeData ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
+                email: employeeData ? (employeeData.email || '') : '',
+                department: employeeData ? employeeData.department : 'backend',
+                parentId: employeeData ? (employeeData.parentId || '') : (defaultParentId || ''),
+                isNotFound: false,
+                autocompleteError: false,
+                isCreatingRole: false,
+                newRoleName: ''
+            }));
+            lastMatchedRef.current = null;
             rejectedMatchesRef.current.clear();
         }
     }, [isOpen, employeeData, defaultParentId, rolesList]);
@@ -132,18 +126,21 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
             if (nameChanged || emailChanged) {
                 rejectedMatchesRef.current.add(prev.email);
-                setRole(r => r === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : r);
-                setDepartment(d => d === prev.department ? 'backend' : d);
-                
-                if (prev.matchedBy === 'name' && nameChanged) {
-                    setEmail(e => e === prev.email ? '' : e);
-                }
-                if (prev.matchedBy === 'email' && emailChanged) {
-                    setName(n => n === prev.name ? '' : n);
-                }
-
+                setState(s => {
+                    const newRole = s.role === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : s.role;
+                    const newDepartment = s.department === prev.department ? 'backend' : s.department;
+                    const newEmail = (prev.matchedBy === 'name' && nameChanged && s.email === prev.email) ? '' : s.email;
+                    const newName = (prev.matchedBy === 'email' && emailChanged && s.name === prev.name) ? '' : s.name;
+                    return {
+                        ...s,
+                        role: newRole,
+                        department: newDepartment,
+                        email: newEmail,
+                        name: newName,
+                        isNotFound: true
+                    };
+                });
                 lastMatchedRef.current = null;
-                setIsNotFound(true);
                 return;
             }
         }
@@ -161,7 +158,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
         if (query) {
             debounceTimeoutRef.current = setTimeout(async () => {
-                setAutocompleteError(false);
+                setState(s => ({ ...s, autocompleteError: false }));
                 try {
                     const response = await orgChart.searchAutocomplete(query);
                     // The API returns a flat array directly
@@ -199,11 +196,14 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                 const foundRole = rList.find(r => r.name.toLowerCase() === matchRoleName.toLowerCase());
                                 const roleIdToSet = foundRole ? String(foundRole.id) : (rList.length > 0 ? String(rList[0].id) : '');
 
-                                setRole(roleIdToSet);
-                                setDepartment(matchDept);
-                                
-                                setName(matchName);
-                                setEmail(matchEmail);
+                                setState(s => ({
+                                    ...s,
+                                    role: roleIdToSet,
+                                    department: matchDept,
+                                    name: matchName,
+                                    email: matchEmail,
+                                    isNotFound: false
+                                }));
                                 
                                 lastMatchedRef.current = { 
                                     name: matchName, 
@@ -212,26 +212,25 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     department: matchDept, 
                                     matchedBy 
                                 };
+                            } else {
+                                setState(s => ({ ...s, isNotFound: false }));
                             }
-                            setIsNotFound(false);
                         } else {
                             lastMatchedRef.current = null;
-                            setIsNotFound(true);
+                            setState(s => ({ ...s, isNotFound: true }));
                         }
                     } else {
                         lastMatchedRef.current = null;
-                        setIsNotFound(true);
+                        setState(s => ({ ...s, isNotFound: true }));
                     }
                 } catch (error) {
                     console.error('Autocomplete search failed', error);
-                    setAutocompleteError(true);
-                    setIsNotFound(false);
+                    setState(s => ({ ...s, autocompleteError: true, isNotFound: false }));
                 }
             }, 300); // 300ms debounce
         } else {
             lastMatchedRef.current = null;
-            setIsNotFound(false);
-            setAutocompleteError(false);
+            setState(s => ({ ...s, isNotFound: false, autocompleteError: false }));
         }
     };
 
@@ -248,7 +247,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 toast.error('Please enter a role name.');
                 return;
             }
-            setIsSubmitting(true);
+            setState(s => ({ ...s, isSubmitting: true }));
             try {
                 const res = await orgChart.createRole(newRoleName.trim());
                 finalRoleId = String(res?.id);
@@ -259,9 +258,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             } catch (error) {
                 console.error('Failed to create role', error);
                 toast.error('Failed to create new role. Please try again.');
+                setState(s => ({ ...s, isSubmitting: false }));
                 return;
             } finally {
-                setIsSubmitting(false);
+                setState(s => ({ ...s, isSubmitting: false }));
             }
         } else {
             if (!role.trim()) return;
@@ -317,7 +317,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                             placeholder="e.g. Liam Carter"
                             value={name}
                             onChange={(e) => {
-                                setName(e.target.value);
+                                setState(s => ({ ...s, name: e.target.value }));
                                 triggerAutocomplete(e.target.value, email);
                             }}
                             className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
@@ -336,15 +336,18 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     required
                                     placeholder="e.g. Senior Developer"
                                     value={newRoleName}
-                                    onChange={(e) => setNewRoleName(e.target.value)}
+                                    onChange={(e) => setState(s => ({ ...s, newRoleName: e.target.value }))}
                                     className="flex-1 px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
                                     autoFocus
                                 />
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setIsCreatingRole(false);
-                                        setRole(rolesList.length > 0 ? String(rolesList[0].id) : '');
+                                        setState(s => ({
+                                            ...s,
+                                            isCreatingRole: false,
+                                            role: rolesList.length > 0 ? String(rolesList[0].id) : ''
+                                        }));
                                     }}
                                     className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
                                 >
@@ -357,10 +360,9 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     value={role}
                                     onChange={(e) => {
                                         if (e.target.value === 'CREATE_NEW') {
-                                            setIsCreatingRole(true);
-                                            setNewRoleName('');
+                                            setState(s => ({ ...s, isCreatingRole: true, newRoleName: '' }));
                                         } else {
-                                            setRole(e.target.value);
+                                            setState(s => ({ ...s, role: e.target.value }));
                                         }
                                     }}
                                     className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
@@ -391,7 +393,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                 placeholder="e.g. liam.carter@company.com"
                                 value={email}
                                 onChange={(e) => {
-                                    setEmail(e.target.value);
+                                    setState(s => ({ ...s, email: e.target.value }));
                                     triggerAutocomplete(name, e.target.value);
                                 }}
                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
@@ -407,7 +409,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <div className="relative">
                             <select
                                 value={department}
-                                onChange={(e) => setDepartment(e.target.value)}
+                                onChange={(e) => setState(s => ({ ...s, department: e.target.value }))}
                                 className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
                             >
                                 {DEPARTMENTS.map((dept) => (
@@ -440,7 +442,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <div className="relative">
                             <select
                                 value={parentId}
-                                onChange={(e) => setParentId(e.target.value)}
+                                onChange={(e) => setState(s => ({ ...s, parentId: e.target.value }))}
                                 disabled={employeesList.length === 0 || (!!defaultParentId && !employeeData)}
                                 className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                             >
