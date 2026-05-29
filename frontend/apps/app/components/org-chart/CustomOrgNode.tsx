@@ -147,19 +147,21 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 style={{ width: '1.375rem', height: '1.375rem', bottom: '-0.6875rem' }}
                 isConnectable={isConnectable}
             >
-                <div 
-                    onClick={(e) => {
-                        if (isManager && onAddChild) {
-                            e.stopPropagation();
-                            onAddChild(id);
-                        }
-                    }}
-                    className={`w-full h-full rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm transition-transform ${isManager ? 'hover:scale-110 cursor-pointer' : ''}`}
-                    style={{ backgroundColor: styles.accentColor }}
-                    title={isManager ? "Add Child Node" : undefined}
-                >
-                    <Plus size={12} strokeWidth={3.5} />
-                </div>
+                {isManager && (
+                    <div 
+                        onClick={(e) => {
+                            if (onAddChild) {
+                                e.stopPropagation();
+                                onAddChild(id);
+                            }
+                        }}
+                        className="w-full h-full rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                        style={{ backgroundColor: styles.accentColor }}
+                        title="Add Child Node"
+                    >
+                        <Plus size={12} strokeWidth={3.5} />
+                    </div>
+                )}
             </Handle>
         </div>
     );
