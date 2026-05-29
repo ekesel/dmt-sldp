@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail } from 'lucide-react';
+import { X, Mail, ChevronDown } from 'lucide-react';
 import { orgChart, AutocompleteItem } from '@dmt/api';
+import toast from 'react-hot-toast';
 
 interface EmployeeModalProps {
     isOpen: boolean;
@@ -62,6 +63,9 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const [parentId, setParentId] = useState('');
     const [isNotFound, setIsNotFound] = useState(false);
     const [autocompleteError, setAutocompleteError] = useState(false);
+    const [isCreatingRole, setIsCreatingRole] = useState(false);
+    const [newRoleName, setNewRoleName] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const lastMatchedRef = useRef<{
         name: string, 
         email: string, 
@@ -69,6 +73,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         department: string,
         matchedBy: 'name' | 'email'
     } | null>(null);
+    const rejectedMatchesRef = useRef<Set<string>>(new Set());
 
     const rolesListRef = useRef(rolesList);
     useEffect(() => {
@@ -97,6 +102,9 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setAutocompleteError(false);
                 lastMatchedRef.current = null;
             }
+            setIsCreatingRole(false);
+            setNewRoleName('');
+            rejectedMatchesRef.current.clear();
         }
     }, [isOpen, employeeData, defaultParentId, rolesList]);
 
@@ -123,6 +131,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             const emailChanged = trimmedEmail !== prev.email.toLowerCase();
 
             if (nameChanged || emailChanged) {
+                rejectedMatchesRef.current.add(prev.email);
                 setRole(r => r === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : r);
                 setDepartment(d => d === prev.department ? 'backend' : d);
                 
@@ -137,6 +146,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setIsNotFound(true);
                 return;
             }
+        }
+
+        if (!trimmedName && !trimmedEmail) {
+            rejectedMatchesRef.current.clear();
         }
 
         const nameQuery = trimmedName.split(' ')[0]; // Only send first word to API to bypass strict first/last name backend matching
@@ -159,6 +172,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         let bestMatch: AutocompleteItem | null = null;
 
                         for (const item of responseData) {
+                            if (item.email && rejectedMatchesRef.current.has(item.email)) continue;
+
                             const mName = item.full_name || item.name || '';
                             const mEmail = item.email || '';
 
@@ -187,12 +202,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                 setRole(roleIdToSet);
                                 setDepartment(matchDept);
                                 
-                                if (matchedBy === 'email' && trimmedName !== matchName.toLowerCase()) {
-                                    setName(matchName);
-                                }
-                                if (matchedBy === 'name' && trimmedEmail !== matchEmail.toLowerCase()) {
-                                    setEmail(matchEmail);
-                                }
+                                setName(matchName);
+                                setEmail(matchEmail);
                                 
                                 lastMatchedRef.current = { 
                                     name: matchName, 
@@ -226,14 +237,40 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !role.trim()) return;
+        if (!name.trim()) return;
+
+        let finalRoleId = role;
+
+        if (isCreatingRole) {
+            if (!newRoleName.trim()) {
+                toast.error('Please enter a role name.');
+                return;
+            }
+            setIsSubmitting(true);
+            try {
+                const res = await orgChart.createRole(newRoleName.trim());
+                finalRoleId = String(res?.data?.id || res?.id);
+                if (!finalRoleId || finalRoleId === 'undefined') {
+                    throw new Error('Failed to get new role ID');
+                }
+                toast.success('New role created successfully!');
+            } catch (error) {
+                console.error('Failed to create role', error);
+                toast.error('Failed to create new role. Please try again.');
+                setIsSubmitting(false);
+                return;
+            }
+            setIsSubmitting(false);
+        } else {
+            if (!role.trim()) return;
+        }
 
         onSave({
             id: employeeData?.id,
             name: name.trim(),
-            role: role.trim(),
+            role: finalRoleId,
             email: email.trim(),
             department,
             parentId
@@ -292,17 +329,54 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <label className="text-[0.75rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Designation / Role
                         </label>
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
-                        >
-                            {rolesList.map((r) => (
-                                <option key={r.id} value={String(r.id)}>
-                                    {r.name}
-                                </option>
-                            ))}
-                        </select>
+                        {isCreatingRole ? (
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Senior Developer"
+                                    value={newRoleName}
+                                    onChange={(e) => setNewRoleName(e.target.value)}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsCreatingRole(false);
+                                        setRole(rolesList.length > 0 ? String(rolesList[0].id) : '');
+                                    }}
+                                    className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <select
+                                    value={role}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'CREATE_NEW') {
+                                            setIsCreatingRole(true);
+                                            setNewRoleName('');
+                                        } else {
+                                            setRole(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
+                                >
+                                    {rolesList.map((r) => (
+                                        <option key={r.id} value={String(r.id)}>
+                                            {r.name}
+                                        </option>
+                                    ))}
+                                    <option value="CREATE_NEW" className="font-bold text-primary">
+                                        + Create New Role
+                                    </option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            </div>
+                        )}
                     </div>
 
                     {/* Email Address */}
@@ -330,17 +404,20 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <label className="text-[0.75rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Department
                         </label>
-                        <select
-                            value={department}
-                            onChange={(e) => setDepartment(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
-                        >
-                            {DEPARTMENTS.map((dept) => (
-                                <option key={dept.value} value={dept.value}>
-                                    {dept.label}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={department}
+                                onChange={(e) => setDepartment(e.target.value)}
+                                className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
+                            >
+                                {DEPARTMENTS.map((dept) => (
+                                    <option key={dept.value} value={dept.value}>
+                                        {dept.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        </div>
                     </div>
 
                     {isNotFound && !employeeData && !autocompleteError && (
@@ -360,19 +437,22 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <label className="text-[0.75rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Reporting Manager / Supervisor
                         </label>
-                        <select
-                            value={parentId}
-                            onChange={(e) => setParentId(e.target.value)}
-                            disabled={employeesList.length === 0 || (!!defaultParentId && !employeeData)}
-                            className="w-full px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                            <option value="">None (Top Level / CEO)</option>
-                            {eligibleParents.map((emp) => (
-                                <option key={emp.id} value={emp.id}>
-                                    {emp.name} ({emp.role})
-                                </option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={parentId}
+                                onChange={(e) => setParentId(e.target.value)}
+                                disabled={employeesList.length === 0 || (!!defaultParentId && !employeeData)}
+                                className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                <option value="">None (Top Level / CEO)</option>
+                                {eligibleParents.map((emp) => (
+                                    <option key={emp.id} value={emp.id}>
+                                        {emp.name} ({emp.role})
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        </div>
                     </div>
 
 
@@ -387,9 +467,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer text-center shadow-md active:scale-95"
+                            disabled={isSubmitting}
+                            className="flex-1 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer text-center shadow-md active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            {employeeData ? 'Save Changes' : 'Create Employee'}
+                            {isSubmitting ? 'Saving...' : employeeData ? 'Save Changes' : 'Create Employee'}
                         </button>
                     </div>
                 </form>
