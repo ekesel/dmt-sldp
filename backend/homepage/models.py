@@ -10,15 +10,6 @@ class BaseDocument(models.Model):
 def image_upload_path(instance, filename):
     return f'{instance.org_name}/{instance.folder_name}/{filename}'
 
-# Model for Organization Chart
-class Org_chart(BaseDocument):
-    folder_name = "org_chart"
-    org_chart_file = models.FileField(upload_to=image_upload_path)
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return f"{self.org_name} - {self.org_chart_file.name}"
-
 
 # Model for Holiday Calendar
 class Holidaycalendar(BaseDocument):
@@ -66,3 +57,18 @@ class Onboarding(BaseDocument):
     
     def __str__(self):
         return f"{self.org_name} - {self.title}"
+
+
+# Model for Holiday Data
+class Holiday(models.Model):
+    name = models.CharField(max_length=255, help_text="Name of the holiday")
+    date = models.DateField(help_text="Date of the holiday")
+    tenant_id = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, help_text="Tenant ID")
+    
+    class Meta:
+        ordering = ['date']
+        verbose_name = 'Holiday'
+        verbose_name_plural = 'Holidays'
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"

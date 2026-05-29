@@ -3,6 +3,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.exceptions import ValidationError
+from rest_framework import serializers
+from .models import RoleTable
 
 User = get_user_model()
 
@@ -128,3 +130,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             # For now, we just ensure they HAVE a tenant.
                 
         return data
+
+
+
+
+# roletable serlizer
+
+class RoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RoleTable
+        fields = '__all__'

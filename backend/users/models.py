@@ -19,6 +19,12 @@ class User(AbstractUser):
     competitive_title_reason = models.TextField(null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     date_of_join = models.DateField(null=True, blank=True)
+    role = models.ForeignKey('RoleTable', on_delete=models.SET_NULL, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    parent = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    org_chart_visibility = models.BooleanField(default=False) 
+    
+    
 
 class ExternalIdentity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='external_identities')
@@ -33,3 +39,33 @@ class ExternalIdentity(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.provider}: {self.external_id}"
+
+
+
+class RoleTable(models.Model):
+
+    class DepartmentChoices(models.TextChoices):
+        BACKEND   = 'backend',   'Backend'
+        FRONTEND  = 'frontend',  'Frontend'
+        MOBILE    = 'mobile',    'Mobile'
+        DEVOPS    = 'devops',    'DevOps'
+        QA        = 'qa',        'QA / Testing'
+        DATA      = 'data',      'Data & Analytics'
+        DESIGN    = 'design',    'Design / UX'
+        PRODUCT   = 'product',   'Product'
+        HR        = 'hr',        'HR'
+        FINANCE   = 'finance',   'Finance'
+        SALES     = 'sales',     'Sales'
+        MARKETING = 'marketing', 'Marketing'
+        OTHER     = 'other',     'Other'
+        AIML      = 'aiml',      'AI & ML'
+
+    role_name = models.CharField(max_length=50)   # ceo, cto, backend tl …
+    dep_name  = models.CharField(
+        max_length=20,
+        choices=DepartmentChoices.choices,
+        default=DepartmentChoices.OTHER,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+

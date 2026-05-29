@@ -25,9 +25,12 @@ from rest_framework.routers import DefaultRouter
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
-
+from users.views import RoleViewSet
+from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView
 
 router = DefaultRouter()
+
+router.register(r'roles', RoleViewSet, basename='roles')
 router.register(r'admin/tenants', TenantViewSet, basename='tenants')
 router.register(r'admin/users', UserViewSet, basename='users')
 router.register(r'admin/projects', ProjectViewSet, basename='projects')
@@ -113,6 +116,28 @@ urlpatterns = [
 
     # Homepage
     path('api/homepage/', include('homepage.urls')),
+
+
+    # org chart - 
+    path(
+        'api/org-chart/',
+        UserHierarchyAPIView.as_view()
+    ),
+
+    # PUT update user
+    # DELETE soft delete
+    path(
+        'api/org-chart/<int:pk>/',
+        UserHierarchyAPIView.as_view()
+    ),
+
+
+    # get users autocomplete -
+    path('api/org-users/autocomplete/', UserAutocompleteAPIView.as_view()),
+
+    # get all roles data -
+    path('api/org-roles/', GetAllRolesDropdown.as_view())
+
 ]
 
 if settings.DEBUG:
