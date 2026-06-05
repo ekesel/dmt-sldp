@@ -14,7 +14,7 @@ export const dmtTerms: DMTTerm[] = [
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Shows how much work a team finishes in one sprint (for example, 2 weeks). It helps answer: <em>How fast is the team working?</em></p>
         <p><strong>How it is calculated:</strong> Each task is given <strong>Story Points</strong> based on effort or difficulty. At the end of the sprint, only fully completed tasks are counted.</p>
-        <p><strong>Formula:</strong> Velocity = ∑(Story Points of all Done Work Items)</p>
+
       </div>
     )
   },
@@ -34,7 +34,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Shows how well a person follows the company's process rules and standards (like filling ticket descriptions, linking code, updating status).</p>
-        <p><strong>Formula:</strong> (Number of Compliant Tasks / Total Number of Tasks) × 100</p>
+        <p><strong>How it is calculated:</strong> Count the total number of tasks assigned to the person and the number of tasks that meet all DMT compliance requirements. Divide the number of compliant tasks by the total number of tasks and multiply by 100 to get the compliance percentage.</p>
       </div>
     )
   },
@@ -64,7 +64,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Shows the total number of tasks or tickets the team completes in one sprint, no matter how big or small they are. It answers: <em>How many items did we finish?</em></p>
-        <p><strong>Formula:</strong> Throughput = Count of all Work Items where status = Done</p>
+        <p><strong>How it is calculated:</strong> Throughput = Count of all Work Items where status = Done</p>
       </div>
     )
   },
@@ -79,11 +79,7 @@ export const dmtTerms: DMTTerm[] = [
           <li><strong>Total Volume:</strong> The total number of tasks you were supposed to do.</li>
           <li><strong>Completed Volume:</strong> The number of tasks you actually finished (moved to "Done").</li>
         </ul>
-        <p><strong>Example:</strong> If you were given 10 tasks and you finished 7 of them:</p>
-        <ul className="list-disc pl-4 space-y-1">
-          <li>Your Total Volume is 10.</li>
-          <li>Your Completed Volume is 7.</li>
-        </ul>
+
       </div>
     )
   },
@@ -93,7 +89,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Checks quality by measuring how many bugs are found compared to the amount of work completed. It answers: <em>Are we maintaining quality while working fast?</em></p>
-        <p><strong>Formula:</strong> (Total Bugs / Total Story Points Delivered) × 100</p>
+        <p><strong>How it is calculated: </strong>Count the total number of defects (bugs) reported for the completed work and divide it by the total story points delivered. Multiply the result by 100 to express the value as a percentage.</p>
       </div>
     )
   },
@@ -113,7 +109,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Measures how long it takes for code to get its first review after a developer submits it.</p>
-        <p><strong>Formula:</strong> Average Review Speed = ∑(Time to First Reviews) / Total Pull Requests</p>
+        <p><strong>How it is calculated: </strong>For each pull request, calculate the time between its creation and the first review. Add these times together and divide by the total number of pull requests to get the average review speed.</p>
       </div>
     )
   },
@@ -179,7 +175,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> The project's overall "passing grade". Shows the percentage of work items that successfully pass all DMT quality checks.</p>
-        <p><strong>Formula:</strong> (Compliant Work Items / Total Work Items) × 100</p>
+        <p><strong>How it is calculated:</strong>Count the total number of work items in the project and the number of work items that pass all DMT quality checks. Divide the compliant work items by the total work items and multiply by 100 to get the compliance percentage.</p>
       </div>
     )
   },
@@ -225,31 +221,31 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-4 text-sm">
         <div>
-          <h4 className="font-bold text-foreground">What it means</h4>
-          <p className="mt-1">This answers: <em>“Is this developer following DMT rules better or worse than the rest of the team?”</em></p>
+          <h4 className="font-bold text-accent">What it means</h4>
+          <p className="mt-1">
+            This answers: <em>“Is this developer following DMT rules better or worse than the rest of the team?”</em>
+            <br /><br />
+            Example Result:<br />
+            Developer = 12.5%<br />
+            Team Average = 19.9%<br />
+            <span className="italic">This means the developer is slightly below the team average.</span>
+          </p>
         </div>
 
         <div>
-          <h4 className="font-bold text-foreground">How it is calculated</h4>
-          <ul className="list-disc pl-4 space-y-2 mt-2 text-muted-foreground">
+          <p className="mb-2"><strong>How it is calculated:</strong></p>
+          <ul className="list-disc pl-4 space-y-2 mt-2">
             <li>
-              <strong className="text-foreground">Your Output (e.g., 12.5%):</strong> This is the developer's personal compliance rate.<br />
-              <span className="text-xs font-mono mt-1 block bg-muted/50 p-2 rounded border border-border">Developer Compliance Rate = (Compliant Items by Developer / Total Items Assigned) × 100</span>
+              <strong className="text-accent">Your Output (e.g., 12.5%):</strong> This is the developer's personal compliance rate.<br />
+              <span className="mt-1 block">Count the number of items assigned to the developer that meet all DMT compliance requirements. Divide this by the total number of items assigned to the developer and multiply by 100 to get the developer's compliance rate.</span>
             </li>
             <li>
-              <strong className="text-foreground">Project Average (e.g., 19.9%):</strong> The system takes the compliance percentage of every developer and calculates the average.
+              <strong className="text-accent">Project Average (e.g., 19.9%):</strong> The system takes the compliance percentage of every developer and calculates the average.
             </li>
           </ul>
         </div>
 
-        <div className="bg-muted/30 p-3 rounded-lg border border-border">
-          <h4 className="font-bold text-foreground mb-2">Example Result</h4>
-          <ul className="space-y-1 mb-2">
-            <li><span className="font-medium text-foreground">Developer</span> = 12.5%</li>
-            <li><span className="font-medium text-foreground">Team Average</span> = 19.9%</li>
-          </ul>
-          <p className="text-muted-foreground italic">This means the developer is slightly below the team average.</p>
-        </div>
+
       </div>
     )
   },
@@ -259,65 +255,61 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-4 text-sm">
         <div>
-          <h4 className="font-bold text-foreground">What it means</h4>
+          <h4 className="font-bold text-accent">What it means</h4>
           <p className="mt-1">The Leaderboard helps motivate the team by giving awards and titles to the top performers each month based on their work, quality, reviews, and AI usage.</p>
         </div>
 
         <div>
-          <h4 className="font-bold text-foreground">How it is calculated</h4>
-          <p className="mt-1">All scores are calculated from sprints whose end date falls within the <strong>current calendar month</strong>. The past month section shows the same calculation for the previous calendar month.</p>
+          <p><strong>How it is calculated:</strong> All scores are calculated from sprints whose end date falls within the <strong>current calendar month</strong>. The past month section shows the same calculation for the previous calendar month.</p>
         </div>
 
         <div>
-          <h4 className="font-bold text-foreground mb-2">Awards and Rules</h4>
+          <h4 className="font-bold text-accent mb-2">Awards and Rules</h4>
           <ul className="space-y-3">
             <li id="velocity_king" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Velocity King</strong>
+              <strong className="text-accent">Velocity King</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest total Story Points completed.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Velocity King = max(Σ Story Points Completed)</span>
+              <p><strong>How it is calculated:</strong> Add up all story points completed by each developer. The developer with the highest total completed story points is identified as the Velocity King.</p>
             </li>
             <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Quality Champion</strong>
+              <strong className="text-accent">Quality Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest compliance rate and best code quality.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Quality Champion = max(Average DMT Compliance Rate %)</span>
+              <p><strong>How it is calculated:</strong>Calculate the average DMT compliance rate for each developer over the selected period. The developer with the highest average compliance rate is awarded the Quality Champion title.</p>
             </li>
             <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Top Reviewer</strong>
+              <strong className="text-accent">Top Reviewer</strong>
               <p className="mt-1 text-primary">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Top Reviewer = max(Σ PRs Reviewed)</span>
+              <p><strong>How it is calculated:</strong> Count the total number of pull requests reviewed by each developer during the selected period. The developer with the highest number of completed PR reviews is awarded the Top Reviewer title.</p>
             </li>
             <li id="throughput_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Throughput Champion</strong>
+              <strong className="text-accent">Throughput Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person who completed the most work items (tickets) regardless of size.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Throughput Champion = max(Σ Items Completed)</span>
+              <p><strong>How it is calculated:</strong> Count the total number of work items marked as completed by each developer during the selected period. The developer with the highest number of completed work items is awarded the Throughput Champion title.</p>
             </li>
             <li id="coverage_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Coverage Champion</strong>
+              <strong className="text-accent">Coverage Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest average code coverage across their completed work items.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Coverage Champion = max(Average Code Coverage %)</span>
+              <p><strong>How it is calculated:</strong> Calculate the code coverage percentage for each completed work item of every developer. Then calculate the average code coverage for each developer. The developer with the highest average code coverage is awarded the Coverage Champion title.</p>
             </li>
             <li id="ai_specialist" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">AI Specialist</strong>
+              <strong className="text-accent">AI Specialist</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest self-reported AI tool usage across their work items.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">AI Specialist = max(Average AI Usage %)</span>
+              <p><strong>How it is calculated:</strong> Calculate the AI usage percentage for each developer's completed work items and then determine their average AI usage percentage. The developer with the highest average AI usage is awarded the AI Specialist title.</p>
             </li>
             <li id="objective_ai_master" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Objective AI Master</strong>
+              <strong className="text-accent">Objective AI Master</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest PR-analyzed AI code contribution, measured automatically by scanning submitted code.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Objective AI Master = max(Average Code AI % from PR Analysis)</span>
+              <p><strong>How it is calculated:</strong> Analyze the code submitted in each developer's pull requests using AI-detection and code-analysis tools. Calculate the AI contribution percentage for each PR and then determine the developer's average AI contribution percentage across all analyzed PRs. The developer with the highest average AI contribution percentage is awarded the Objective AI Master title.</p>
             </li>
             <li id="clean_coder" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
-              <strong className="text-foreground">Clean Coder</strong>
+              <strong className="text-accent">Clean Coder</strong>
               <p className="mt-1 text-primary">Awarded to the person with the fewest defects attributed to their work. Lower is better.</p>
-              <span className="text-xs font-mono mt-2 block text-muted-foreground">Clean Coder = min(Σ Defects Attributed)</span>
+              <p><strong>How it is calculated:</strong> Count the total number of defects attributed to each developer's completed work during the selected period. The developer with the fewest attributed defects is awarded the Clean Coder title.</p>
             </li>
           </ul>
         </div>
 
-        <div className="bg-muted/50 p-3 rounded-lg border border-border">
-          <h4 className="font-bold text-foreground mb-2">Example</h4>
-          <p className="text-muted-foreground italic">If person A completed the most Story Points, he gets Velocity King. If person B reviewed the most PRs, she gets Top Reviewer.</p>
-        </div>
+        
       </div>
     )
   }
