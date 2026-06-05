@@ -523,12 +523,12 @@ export default function DeveloperDetailsPage({
               <table className="w-full text-left">
                 <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">
                   <tr>
-                    <th className="px-8 py-6">Sprint</th>
-                    <th className="px-8 py-6">Points</th>
-                    <th className="px-8 py-6">AI Usage (Obj)</th>
-                    <th className="px-8 py-6">PRs Merged</th>
-                    <th className="px-8 py-6">Reviews</th>
-                    <th className="px-8 py-6 text-right">DMT Compliance</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border font-medium">
@@ -537,11 +537,11 @@ export default function DeveloperDetailsPage({
                       key={idx}
                       className="hover:bg-accent transition-all group"
                     >
-                      <td className="px-8 py-6 font-bold group-hover:text-primary transition-colors">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                         {m.sprint_name}
                       </td>
-                      <td className="px-8 py-6">{m.story_points_completed}</td>
-                      <td className="px-8 py-6">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">
                         <span className="text-blue-400 font-bold">
                           {m.code_ai_usage_percent?.toFixed(1) || 0}%
                         </span>
@@ -549,13 +549,13 @@ export default function DeveloperDetailsPage({
                           ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
                         </span>
                       </td>
-                      <td className="px-8 py-6">{m.prs_merged}</td>
-                      <td className="px-8 py-6 text-muted-foreground">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
                         {m.prs_reviewed || 0}
                       </td>
-                      <td className="px-8 py-6 text-right font-black text-primary">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                          <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
                             <div
                               className="h-full bg-primary"
                               style={{ width: `${m.dmt_compliance_rate}%` }}

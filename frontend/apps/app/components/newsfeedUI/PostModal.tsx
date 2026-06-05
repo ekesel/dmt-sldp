@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 
 import { Author, Post } from "../../hooks/useNewsfeedData";
+import { getFileUrl } from "@dmt/api";
 
 interface StaticPostModalProps {
   isOpen: boolean;
@@ -215,7 +216,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
           <div className="flex items-center gap-3">
             {userProfile?.avatar_url ? (
               <img
-                src={userProfile.avatar_url}
+                src={getFileUrl(userProfile.avatar_url)}
                 alt={userProfile.username}
                 className="w-10 h-10 rounded-full object-cover border border-border"
               />
@@ -242,7 +243,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-[11px] font-bold text-muted-foreground">
+                <span className="text-[0.6875rem] font-bold text-muted-foreground">
                   Public
                 </span>
               </div>
@@ -299,7 +300,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
                   className={`w-full h-auto max-h-75 object-contain mx-auto transition-opacity ${isUploading ? "opacity-50" : "opacity-100"}`}
                 />
                 {isUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[0.125rem]">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-xs font-bold text-foreground bg-background/60 px-2 py-1 rounded">

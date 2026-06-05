@@ -2,11 +2,18 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy the entire monorepo
-COPY . .
+# Copy package manifests first (for better Docker layer caching)
+COPY package.json package-lock.json ./
+COPY packages/api/package.json ./packages/api/
+COPY packages/ui/package.json ./packages/ui/
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/app/package.json ./apps/app/
 
 # Install dependencies using clean install
-RUN npm ci
+RUN npm ci --legacy-peer-deps
+
+# Copy the rest of the source code
+COPY . .
 
 # Accept build argument for which app workspace to build
 ARG APP_NAME

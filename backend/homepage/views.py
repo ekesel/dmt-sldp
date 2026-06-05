@@ -11,67 +11,12 @@ from data.models import DeveloperMetrics
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-
+from users.models import User
+from users.serializers import UserSerializer 
+from homepage.utils import get_birthday_info, get_anniversary_info, upcoming_birthday_info, upcoming_anniversary_info ,import_holidays_from_excel
+from core.permissions import IsAdminUser, IsManager
+from django_tenants.utils import schema_context
 logger = logging.getLogger(__name__)
-
-# Organization Chart Api
-class OrgChartAPIView(APIView):
-    permission_classes = [IsManagerOrReadOnly]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request):
-        serializer = OrgChartSerializer(data=request.data)
-        logger.info("Received request to upload organization chart")
-
-        if serializer.is_valid():
-            with transaction.atomic():
-                queryset = Org_chart.objects.filter(org_name=request.tenant.name)
-                for obj in queryset:
-                    if obj.org_chart_file:
-                        obj.org_chart_file.delete(save=False)
-                    obj.delete()
-
-                obj = serializer.save(org_name=request.tenant.name,is_active=True)
-        
-            return Response(
-                {'message': 'Organization chart uploaded successfully'},
-                status=201
-            )
-
-        logger.error("Validation failed for organization chart upload")   
-        return Response(serializer.errors, status=400)
-
-    def get(self, request, id=None):
-        if id:
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
-            if not queryset:
-                return Response({'message': 'Organization chart not found'}, status=404)
-            serializer = OrgChartSerializer(queryset)
-        else:
-            queryset = Org_chart.objects.filter(org_name=request.tenant.name, is_active=True)
-            serializer = OrgChartSerializer(queryset, many=True)
-        return Response(serializer.data, status=200)
-
-    def patch(self, request, id=None):
-        if not id:
-            return Response({'message': 'ID is required'}, status=400)
-        queryset = Org_chart.objects.filter(org_name=request.tenant.name, id=id).first()
-        if not queryset:
-            return Response(
-                {'message': 'Organization chart not found'},
-                status=404
-            )
-        serializer = OrgChartSerializer(queryset, data=request.data, partial=True)
-        if serializer.is_valid():
-            if 'org_chart_file' in serializer.validated_data and queryset.org_chart_file:
-                queryset.org_chart_file.delete(save=False)
-            serializer.save()
-            return Response(
-                {'message': 'Organization chart updated successfully'},
-                status=200
-            )
-        logger.error("Validation failed for organization chart update")   
-        return Response(serializer.errors, status=400)
 
 # Holiday Calendar API
 class HolidayCalendarAPIView(APIView):
@@ -402,66 +347,141 @@ class OnboardingAPIView(APIView):
         )
 
 
+from data.leaderboard_views import LeaderboardView
+
 # star Profomer -
-class LeaderDashboardAPIView(APIView):
-    permission_classes = [IsUser]
+class StarPerformerAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        project_id = request.query_params.get('project_id')
-        now = timezone.now()
+        leaderboard_view = LeaderboardView()
+        response = leaderboard_view.get(request)
+        data = response.data
+        
+        current_data = data.get("current_month", {})
+        past_data = data.get("past_month", {})
 
-        # Try to get data for the current month
-        base_qs = DeveloperMetrics.objects.filter(
-            sprint_end_date__year=now.year,
-            sprint_end_date__month=now.month
-        )
-
-        if project_id:
-            try:
-                project_id = int(project_id)
-            except ValueError:
-                return Response({'message': 'Invalid project_id. Must be a number.'}, status=400)
-            base_qs = base_qs.filter(project_id=project_id)
-            
-        # 1. Highest Compliance
-        quality_winner = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
-            score=Avg('dmt_compliance_rate'),
-            coverage=Avg('coverage_avg_percent')
-        ).order_by('-score', '-coverage').first()
-
-        # 2. Most Points
-        velocity_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('story_points_completed')
-        ).order_by('-score').first()
-
-        # 3. Top Reviewer
-        reviewer_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Sum('prs_reviewed')
-        ).order_by('-score').first()
-
-        # 4. AI Specialist
-        ai_winner = base_qs.values('developer_email', 'developer_name').annotate(
-            score=Avg('ai_usage_percent')
-        ).order_by('-score').first()
-
-        def attach_avatar(winner):
-            from users.models import User
-            if not winner:
-                return winner
-            email = winner.get('developer_email')
-            winner['profile_picture'] = None
-            if email:
-                user = User.objects.filter(email=email).first()
-                if user and user.profile_picture:
-                    winner['profile_picture'] = request.build_absolute_uri(user.profile_picture.url)
-            return winner
+        # Check if current month has any winners
+        has_winners = False
+        for winners in current_data.values():
+            if winners and len(winners) > 0:
+                has_winners = True
+                break
+                
+        active_data = current_data if has_winners else past_data
+        message = "Current month top performers" if has_winners else "Past month top performers"
+        
+        top_performers = {}
+        
+        # Order of categories to process
+        categories = ["quality", "velocity", "reviewer", "ai", "objective_ai", "throughput", "coverage", "clean_coder"]
+        
+        for category in categories:
+            winners = active_data.get(category, [])
+            top_performers[category] = [winners[0]] if winners and len(winners) > 0 else []
 
         return Response({
-            'message': 'Leaderboard data',
-            'top_performers': {
-                'quality': attach_avatar(quality_winner),
-                'velocity': attach_avatar(velocity_winner),
-                'reviewer': attach_avatar(reviewer_winner),
-                'ai': attach_avatar(ai_winner)
-            }
-        }, status=200)
+            "message": message,
+            "top_performers": top_performers
+        })
+
+
+class EventsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today_birthdays = get_birthday_info(request.tenant)
+        logger.info("today_birthdays", today_birthdays)
+        TodayBirthdayList = []
+        for obj in today_birthdays:
+            TodayBirthdayList.append({
+                "user": obj.first_name + " " + obj.last_name
+            })
+
+        upcoming_birthdays_raw = upcoming_birthday_info(request.tenant)
+        logger.info("upcoming_birthdays_raw", upcoming_birthdays_raw)
+        UpcomingBirthdayList = []
+        for obj in upcoming_birthdays_raw:
+            UpcomingBirthdayList.append({
+                "user": obj["user"].first_name + " " + obj["user"].last_name,
+                "days_left": obj["days_left"],
+                "next_birthday": obj["next_birthday"]
+            })
+        
+        upcoming_anniversaries_raw = upcoming_anniversary_info(request.tenant)
+        logger.info("upcoming_anniversaries_raw", upcoming_anniversaries_raw)
+        UpcomingAnniversaryList = []
+        for obj in upcoming_anniversaries_raw:
+            UpcomingAnniversaryList.append({
+                "user": obj["user"].first_name + " " + obj["user"].last_name,
+                "days_left": obj["days_left"],
+                "next_anniversary": obj["next_anniversary"]
+            })
+
+        return Response({
+            "today_birthdays": TodayBirthdayList,
+            "today_anniversaries": get_anniversary_info(request.tenant),
+            "upcoming_birthdays": UpcomingBirthdayList,
+            "upcoming_anniversaries": UpcomingAnniversaryList,
+        })
+
+class UploadHolidayDataAPIView(APIView):
+    permission_classes = [IsAdminUser | IsManager]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        from tenants.models import Tenant
+
+        file_obj = request.data.get('file')
+        if not file_obj:
+            return Response({'error': 'No file provided. Send the Excel file with key "file".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        # Admin can specify any tenant via tenant_id in the request body
+        if user.is_superuser or user.is_platform_admin:
+            tenant_id = request.data.get('tenant_id')
+            if not tenant_id:
+                return Response(
+                    {'error': 'Admin must provide tenant_id to specify which tenant to upload for.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+            except Tenant.DoesNotExist:
+                return Response({'error': f'Tenant with id={tenant_id} not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Manager: use their own tenant
+            tenant = user.tenant
+            if not tenant:
+                return Response({'error': 'No tenant found for your account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        result = import_holidays_from_excel(file_obj, tenant_id=tenant)
+
+        if result['success']:
+            return Response(
+                {
+                    'message': 'Upload completed',
+                    'stats': result['stats']
+                },
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {'error': result.get('error', 'Unknown error occurred'), 'stats': result.get('stats', {})},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class GetHolidayDataAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        with schema_context(request.tenant.schema_name):
+            holidays = Holiday.objects.filter(tenant_id=request.tenant.id)
+            holiday_list = []
+            for holiday in holidays:
+                holiday_list.append({
+                    "name": holiday.name,
+                    "date": holiday.date
+                })
+        return Response({"holidays": holiday_list}, status=200)
+        

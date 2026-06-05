@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { dashboard, getFileUrl } from '@dmt/api';
 
 interface Performer {
     name: string;
@@ -22,27 +23,89 @@ interface StarPerformerProps {
  * Features a trophy illustration, user info, and a star rating.
  */
 export const StarPerformer: React.FC<StarPerformerProps> = ({
-    performers = [
-        {
-            name: "David Chen",
-            role: "Sales",
-            message: "For outstanding performance in Q3",
-            rating: 4.5,
-            avatar: "https://i.pravatar.cc/150?u=david"
-        },
-        {
-            name: "Sarah Miller",
-            role: "Marketing",
-            message: "Exceeded all campaign targets in October",
-            rating: 5,
-            avatar: "https://i.pravatar.cc/150?u=sarah"
-        }
-    ]
+    performers
 }) => {
     const [currentIndex, setCurrentIndex] = React.useState(0);
+    const [apiPerformers, setApiPerformers] = React.useState<Performer[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        // Skip network fetch entirely when performers are injected via props
+        if (performers && performers.length > 0) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchPerformers = async () => {
+            setLoading(true);
+            try {
+                const data = await dashboard.getStarPerformer();
+               
+                if (data && data.top_performers) {
+                    // Derive score bounds from the actual data for monotonic normalization
+                    const rawVals = Object.values(data.top_performers)
+                        .filter((val: any) => val !== null && val !== undefined)
+                        .map((val: any) => {
+                            const p = Array.isArray(val) ? val[0] : val;
+                            return p ? Number(p.score) : NaN;
+                        })
+                        .filter((n) => Number.isFinite(n));
+
+                    const scoreMin = rawVals.length > 0 ? Math.min(...rawVals) : 0;
+                    const scoreMax = rawVals.length > 0 ? Math.max(...rawVals) : 1;
+
+                    const mapped: Performer[] = Object.values(data.top_performers)
+                        .filter((val: any) => val !== null && val !== undefined)
+                        .map((val: any) => {
+                            // Extract single performer object if it is wrapped in an array
+                            const p = Array.isArray(val) ? val[0] : val;
+                            if (!p) return null;
+
+                            // Monotonic linear normalization: map score → [4, 5] stars
+                            const RATING_MIN = 4;
+                            const RATING_MAX = 5;
+                            const DEFAULT_RATING = 4.5;
+                            let rating = DEFAULT_RATING;
+                            if (p.score !== undefined && p.score !== null) {
+                                const valScore = Number(p.score);
+                                if (Number.isFinite(valScore)) {
+                                    const range = scoreMax - scoreMin;
+                                    const normalized = range > 0
+                                        ? (valScore - scoreMin) / range  // 0..1
+                                        : 0.5;                           // all equal → mid
+                                    // Linearly interpolate and clamp to [RATING_MIN, RATING_MAX]
+                                    rating = RATING_MIN + normalized * (RATING_MAX - RATING_MIN);
+                                    rating = Math.min(RATING_MAX, Math.max(RATING_MIN, rating));
+                                }
+                            }
+                            return {
+                                name: p.name || 'Performer',
+                                role: p.title || 'Top Performer',
+                                message: p.reason || 'Outstanding performance',
+                                rating,
+                                avatar: p.avatar ? getFileUrl(p.avatar) : 'https://i.pravatar.cc/150?u=star'
+                            };
+                        })
+                        .filter((p): p is Performer => p !== null);
+                    console.log("RESOLVED API PERFORMERS FOR UI:", mapped);
+                    setApiPerformers(mapped);
+                }
+            } catch (error) {
+                console.error('Failed to fetch star performers:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPerformers();
+    }, [performers, dashboard]);
+
+    // Resolve final data list
+    const dataList = performers && performers.length > 0
+        ? performers
+        : apiPerformers;
 
     const nextSlide = () => {
-        if (currentIndex < performers.length - 1) {
+        if (currentIndex < dataList.length - 1) {
             setCurrentIndex((prev) => prev + 1);
         }
     };
@@ -53,19 +116,84 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
         }
     };
 
-    const currentPerformer = performers[currentIndex];
+    React.useEffect(() => {
+        if (dataList.length <= 1) return;
+
+        const timer = setInterval(() => {
+            setCurrentIndex((prev) => (prev === dataList.length - 1 ? 0 : prev + 1));
+        }, 4000); // cycle every 4 seconds
+
+        return () => clearInterval(timer);
+    }, [dataList.length]);
+
+    if (loading) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col justify-between animate-pulse">
+                <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
+                    <div className="flex flex-col gap-2">
+                        <div className="h-4 w-28 bg-muted rounded" />
+                        <div className="h-3 w-16 bg-muted rounded" />
+                    </div>
+                    <div className="w-12 h-12 bg-muted rounded-full" />
+                </div>
+                <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
+                <div className="flex gap-3 sm:gap-5 items-center flex-1">
+                    <div className="w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] bg-muted flex-shrink-0" />
+                    <div className="flex flex-col justify-center py-0.5 flex-1 gap-2">
+                        <div className="h-4 w-3/4 bg-muted rounded" />
+                        <div className="h-3 w-1/2 bg-muted rounded" />
+                        <div className="h-3 w-5/6 bg-muted rounded" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (dataList.length === 0) {
+        return (
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col">
+                <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
+                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
+                        Star Performer
+                    </h2>
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16 -mr-1 -mt-1 opacity-40">
+                        <Image
+                            src="/assets/trophy.png"
+                            alt="Trophy"
+                            fill
+                            className="object-contain grayscale"
+                            priority
+                        />
+                    </div>
+                </div>
+
+                <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
+
+                <div className="flex flex-col items-center justify-center flex-1 text-center py-2 px-4">
+                    <p className="text-[0.875rem] font-bold text-muted-foreground mb-1">
+                        No star performers yet
+                    </p>
+                    <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground/70 font-medium max-w-[15rem] leading-snug">
+                        Keep pushing boundaries to claim the trophy next month!
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    const currentPerformer = dataList[currentIndex];
 
     return (
         <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col">
             {/* Header Section */}
             <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-[1.125rem] sm:text-[1.25rem] font-black text-card-foreground tracking-tight">
+                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
                         Star Performer
                     </h2>
-                    
+
                     {/* Navigation Controls */}
-                    {performers.length > 1 && (
+                    {dataList.length > 1 && (
                         <div className="flex gap-1.5">
                             <button
                                 onClick={prevSlide}
@@ -79,7 +207,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             </button>
                             <button
                                 onClick={nextSlide}
-                                disabled={currentIndex === performers.length - 1}
+                                disabled={currentIndex === dataList.length - 1}
                                 className="p-1 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground transition-colors border border-border disabled:opacity-30 disabled:cursor-not-allowed"
                                 aria-label="Next performer"
                             >
@@ -109,17 +237,17 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentIndex}
-                        initial={{ opacity: 0, scale: 0.98, x: 10 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.98, x: -10 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -30 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
                         className="flex gap-3 sm:gap-5 items-center absolute inset-0"
                     >
                         {/* Avatar */}
                         <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] overflow-hidden flex-shrink-0 shadow-sm border border-border">
                             <Image
-                                src={currentPerformer.avatar}
-                                alt={currentPerformer.name}
+                                src={currentPerformer?.avatar || 'https://i.pravatar.cc/150?u=star'}
+                                alt={currentPerformer?.name || 'Star Performer'}
                                 fill
                                 className="object-cover"
                                 unoptimized
@@ -127,45 +255,15 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                         </div>
 
                         <div className="flex flex-col justify-center py-0.5 min-w-0 flex-1">
-                            <h3 className="text-[1rem] sm:text-[1.0625rem] font-bold text-card-foreground leading-tight mb-0.5 break-words">
-                                {currentPerformer.name}, {currentPerformer.role}
+                            <h3 className="text-[0.9375rem] sm:text-[1rem] font-bold text-card-foreground leading-tight mb-0.5 break-words">
+                                {currentPerformer?.name}
                             </h3>
-                            <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground font-medium mb-1.5 sm:mb-2 leading-snug break-words">
-                                {currentPerformer.message}
+                            <p className="text-[0.8125rem] sm:text-[0.875rem] font-bold text-muted-foreground/80 mb-1 leading-none">
+                                {currentPerformer?.role}
                             </p>
-
-                            {/* Star Rating Section */}
-                            <div className="flex gap-0.5">
-                                {[1, 2, 3, 4, 5].map((star) => {
-                                    const isHalf = star - 0.5 === currentPerformer.rating;
-                                    const isFull = star <= currentPerformer.rating;
-
-                                    return (
-                                        <div key={star} className="relative">
-                                            <Star
-                                                size="1rem"
-                                                className={`${isFull ? "fill-primary text-primary" : "text-muted/30"} sm:hidden`}
-                                            />
-                                            <Star
-                                                size="1.25rem"
-                                                className={`${isFull ? "fill-primary text-primary" : "text-muted/30"} hidden sm:block`}
-                                            />
-                                            {isHalf && (
-                                                <div className="absolute inset-0 overflow-hidden w-1/2">
-                                                    <Star
-                                                        size="1rem"
-                                                        className="fill-primary text-primary sm:hidden"
-                                                    />
-                                                    <Star
-                                                        size="1.25rem"
-                                                        className="fill-primary text-primary hidden sm:block"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                            <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground font-medium mb-1.5 sm:mb-2 leading-snug break-words">
+                                {currentPerformer?.message}
+                            </p>
                         </div>
                     </motion.div>
                 </AnimatePresence>

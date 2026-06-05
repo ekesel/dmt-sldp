@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Author } from '../../hooks/useNewsfeedData';
+import { getFileUrl } from '@dmt/api';
 
 export interface NavItem {
     icon: string;
@@ -63,7 +64,7 @@ const StaticNavbar = ({
             </div>
 
             {/* Middle Section - Navigation Icons */}
-            <div className="hidden md:flex items-center justify-center flex-grow max-w-[600px] h-full">
+            <div className="hidden md:flex items-center justify-center flex-grow max-w-[37.5rem] h-full">
                 <div className="flex items-center h-full">
                     {navItems.map((item, idx) => (
                         <div 
@@ -90,7 +91,7 @@ const StaticNavbar = ({
                 >
                     {userProfile?.avatar_url ? (
                         <img 
-                            src={userProfile.avatar_url} 
+                            src={getFileUrl(userProfile.avatar_url)} 
                             alt="Profile" 
                             className="w-7 h-7 rounded-full object-cover"
                         />

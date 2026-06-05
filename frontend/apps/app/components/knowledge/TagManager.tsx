@@ -62,7 +62,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Tags</h3>
+        <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">Tags</h3>
         <Tag className="w-3 h-3 text-muted-foreground" />
       </div>
 
@@ -73,7 +73,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
             {selectedTags.map((tag) => (
               <span
                 key={tag}
-                className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm"
+                className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[0.5625rem] font-black uppercase tracking-widest shadow-sm"
               >
                 {tag}
                 <button
@@ -91,7 +91,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
 
         {/* Unified Searchable Tag Input */}
         <div className="space-y-2 relative" ref={tagDropdownRef}>
-          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Tags</label>
+          <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em]">Add Tags</label>
           <div
             className={cn(
               "flex items-center gap-2 px-3 py-2 bg-background border rounded-xl shadow-sm transition-all group",
@@ -117,7 +117,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
                 }
               }}
               placeholder="Search or type..."
-              className="bg-transparent border-none outline-none w-full text-[10px] font-bold uppercase tracking-widest placeholder:text-muted-foreground/40"
+              className="bg-transparent border-none outline-none w-full text-[0.625rem] font-bold uppercase tracking-widest placeholder:text-muted-foreground/40"
             />
             {isTagsCreating && (
               <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
@@ -127,7 +127,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
           {/* Dropdown Menu */}
           {isTagDropdownOpen && (
             <div className="absolute top-full left-0 w-full mt-2 bg-background border border-border/40 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
+              <div className="max-h-[12.5rem] overflow-y-auto no-scrollbar py-1">
                 {/* Filtered Results */}
                 {availableTags
                   .filter((tag) => !selectedTags.includes(tag) && (newTag.trim() === "" || tag.includes(newTag.toUpperCase())))
@@ -138,7 +138,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
                       className="w-full text-left px-4 py-2.5 hover:bg-secondary flex items-center gap-3 transition-colors"
                     >
                       <Tag className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">#{tag}</span>
+                      <span className="text-[0.625rem] font-black uppercase tracking-widest">#{tag}</span>
                     </button>
                   ))}
 
@@ -150,18 +150,18 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
                   >
                     <div className="flex items-center gap-3">
                       <Plus className="w-3 h-3 text-primary" />
-                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                      <span className="text-[0.625rem] font-black text-primary uppercase tracking-widest">
                         Create &quot;{newTag.toUpperCase()}&quot;
                       </span>
                     </div>
-                    <span className="text-[8px] font-bold text-muted-foreground/40 group-hover:text-primary/40">ENTER</span>
+                    <span className="text-[0.5rem] font-bold text-muted-foreground/40 group-hover:text-primary/40">ENTER</span>
                   </button>
                 )}
 
                 {/* Empty State */}
                 {newTag.trim() === "" && availableTags.filter((tag) => !selectedTags.includes(tag)).length === 0 && (
                   <div className="px-4 py-6 text-center">
-                    <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                    <p className="text-[0.625rem] font-bold text-muted-foreground/60 uppercase tracking-widest">
                       No tags available
                     </p>
                   </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Comment, User } from '@dmt/api';
+import { Comment, User, getFileUrl } from '@dmt/api';
 import { Author } from '../../hooks/useNewsfeedData';
 import { Edit2, Trash2, Reply, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -140,7 +140,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     <div className={cn("flex flex-col gap-2 mt-4", depth > 0 && "ml-4 pl-4 border-l border-border/50")}>
       <div className="flex items-start gap-3">
         <img
-          src={displayUser.avatar_url}
+          src={getFileUrl(displayUser.avatar_url)}
           alt={displayUser.username}
           className="w-8 h-8 rounded-full border border-border"
         />
@@ -149,7 +149,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <span className="text-sm font-bold text-foreground">
               {displayUser.username}
             </span>
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+            <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
               {formatTimestamp(comment.created_at, 'Just now', false)}
             </span>
           </div>

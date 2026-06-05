@@ -151,7 +151,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         <div className="p-6">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] hover:text-primary transition-colors mb-12"
+            className="flex items-center gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] hover:text-primary transition-colors mb-12"
           >
             <ChevronLeft className="w-4 h-4" />
             Back to Library
@@ -159,7 +159,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
           <div className="space-y-10">
             <div>
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Metadata</h3>
+              <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Metadata</h3>
               <MetadataForm
                 title={formData.title}
                 onTitleChange={(val) => handleChange("title", val)}
@@ -185,7 +185,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+              <div className="flex items-center gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">
                 <Globe className="w-3 h-3" />
                 <span>{mode === "create" ? "Create" : "Edit"}</span>
                 <span className="text-border">/</span>
@@ -216,7 +216,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
         </header>
 
         <div className="flex-1 flex bg-background">
-          <div className="w-full flex flex-col min-h-[400px] xl:min-h-[600px] overflow-hidden">
+          <div className="w-full flex flex-col min-h-[25rem] xl:min-h-[37.5rem] overflow-hidden">
             <div className="p-4 lg:p-8">
               <AssetUploader
                 mode={mode}

@@ -41,7 +41,7 @@ export function NotificationBell() {
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border border-primary-foreground/20">
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[0.625rem] font-bold flex items-center justify-center rounded-full border border-primary-foreground/20">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -89,7 +89,7 @@ export function NotificationBell() {
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1.5">
                                                     <Clock className="w-3 h-3 text-muted-foreground" />
-                                                    <span className="text-[10px] text-muted-foreground">
+                                                    <span className="text-[0.625rem] text-muted-foreground">
                                                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                                                     </span>
                                                 </div>

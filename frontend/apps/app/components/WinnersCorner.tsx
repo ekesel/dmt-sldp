@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { dashboard, LeaderboardResponse, LeaderboardWinner } from '@dmt/api';
+import { dashboard, LeaderboardResponse, LeaderboardWinner, getFileUrl } from '@dmt/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface WinnersCornerProps {
@@ -53,7 +53,7 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
                 <div className="flex-shrink-0 relative">
                     <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full animate-pulse" />
                     <img
-                        src={current.avatar}
+                        src={current.avatar ? getFileUrl(current.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(current.name)}&background=random`}
                         alt={current.name}
                         className="w-10 h-10 rounded-full border-2 border-primary/50 object-cover relative z-10"
                     />
@@ -84,7 +84,7 @@ const WinnersCorner: React.FC<WinnersCornerProps> = ({ projectId }) => {
             </div>
 
             <div className="hidden md:flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground uppercase">Score</span>
+                <span className="text-[0.625rem] text-muted-foreground uppercase">Score</span>
                 <span className="text-sm font-mono font-bold text-primary">{current.score}</span>
             </div>
 

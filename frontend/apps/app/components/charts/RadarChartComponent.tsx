@@ -23,7 +23,7 @@ export const RadarChartComponent: React.FC<RadarChartProps> = ({ data, sprintA, 
     return (
         <div className="flex flex-col gap-6 w-full h-full">
             <h3 className="font-bold text-foreground text-lg uppercase tracking-wider border-b border-border pb-4">Sprint Health Comparison</h3>
-            <div className="h-[350px] w-full mt-4">
+            <div className="h-[21.875rem] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data}>
                         <PolarGrid stroke="var(--color-border)" />
@@ -47,10 +47,10 @@ export const RadarChartComponent: React.FC<RadarChartProps> = ({ data, sprintA, 
                             fillOpacity={0.3}
                         />
                         <Tooltip
-                            contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', color: 'var(--color-popover-foreground)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)' }}
+                            contentStyle={{ backgroundColor: 'var(--color-popover)', borderColor: 'var(--color-border)', color: 'var(--color-popover-foreground)', borderRadius: '0.75rem', boxShadow: '0 0.625rem 0.9375rem -0.1875rem rgba(0,0,0,0.3)' }}
                             itemStyle={{ color: 'var(--color-popover-foreground)' }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: '20px' }} />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: '1.25rem' }} />
                     </RadarChart>
                 </ResponsiveContainer>
             </div>

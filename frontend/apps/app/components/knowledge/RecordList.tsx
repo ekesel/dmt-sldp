@@ -69,17 +69,17 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <h3 className="text-sm lg:text-base font-bold text-foreground truncate group-hover:text-foreground/80 transition-colors duration-300">
               {record.title}
             </h3>
-            <span className="text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
+            <span className="text-[0.5625rem] lg:text-[0.625rem] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
               {record.version}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[9px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[0.5625rem] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-muted-foreground truncate max-w-[80px]">
+              <span className="text-muted-foreground truncate max-w-[5rem]">
                 {record.date}
               </span>
               <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
-              <span className="text-muted-foreground truncate max-w-[80px]">
+              <span className="text-muted-foreground truncate max-w-[5rem]">
                 {authorName}
               </span>
             </div>
@@ -105,7 +105,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                     e.stopPropagation();
                     onTagClick?.({ id: tag, name: tag }); // Fallback for string-based tags
                   }}
-                  className="px-2 py-0.5 bg-secondary/50 text-[9px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded border border-border/40 transition-colors uppercase tracking-tight"
+                  className="px-2 py-0.5 bg-secondary/50 text-[0.5625rem] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded border border-border/40 transition-colors uppercase tracking-tight"
                 >
                   {tag}
                 </button>

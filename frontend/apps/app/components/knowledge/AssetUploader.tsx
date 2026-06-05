@@ -50,7 +50,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
           role="button"
           tabIndex={0}
           className={cn(
-            "border-2 border-dashed rounded-3xl lg:rounded-[32px] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            "border-2 border-dashed rounded-3xl lg:rounded-[2rem] p-10 lg:p-20 flex flex-col items-center justify-center text-center bg-secondary/50 hover:border-primary/40 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             currentFile ? "border-primary/60 bg-primary/5" : "border-border/40"
           )}
         >
@@ -82,8 +82,8 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
 
         {/* Existing Assets */}
         {mode === "edit" && assets.length > 0 && (
-          <div className="bg-secondary/60 border border-border/40 rounded-[24px] lg:rounded-[40px] p-6 lg:p-10 space-y-6 lg:space-y-8">
-            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+          <div className="bg-secondary/60 border border-border/40 rounded-[1.5rem] lg:rounded-[2.5rem] p-6 lg:p-10 space-y-6 lg:space-y-8">
+            <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">
               Existing Assets ({assets.length})
             </h3>
             <div className="space-y-4">
@@ -95,10 +95,10 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
                   <div className="flex items-center gap-4 lg:gap-6">
                     <FileText className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground" />
                     <div className="flex flex-col">
-                      <span className="text-sm lg:text-lg font-bold text-foreground truncate max-w-[150px] sm:max-w-none">
+                      <span className="text-sm lg:text-lg font-bold text-foreground truncate max-w-[9.375rem] sm:max-w-none">
                         {asset.fileName}
                       </span>
-                      <span className="text-[10px] lg:text-sm font-medium text-muted-foreground/60 uppercase">
+                      <span className="text-[0.625rem] lg:text-sm font-medium text-muted-foreground/60 uppercase">
                         {asset.size}
                       </span>
                     </div>
@@ -110,7 +110,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
                         e.stopPropagation();
                         fileInputRef.current?.click();
                       }}
-                      className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                      className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-xl text-[0.625rem] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                     >
                       Update
                     </button>
@@ -127,7 +127,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
         <aside className="w-full xl:w-64 bg-background border-t xl:border-t-0 xl:border-l border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
           <div className="p-6 space-y-8">
             <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Version History</h3>
+              <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">Version History</h3>
               {isHistoryLoading && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
             </div>
 
@@ -143,9 +143,9 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-black text-foreground">{item.version}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.date}</span>
+                          <span className="text-[0.625rem] font-bold text-muted-foreground uppercase">{item.date}</span>
                         </div>
-                        <p className="text-[10px] font-bold text-muted-foreground mb-1">{authorName}</p>
+                        <p className="text-[0.625rem] font-bold text-muted-foreground mb-1">{authorName}</p>
                       </div>
                     </div>
                   );
@@ -153,9 +153,9 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
               ) : (
                 !isHistoryLoading &&
                 (isHistoryError ? (
-                  <p className="text-[10px] font-medium text-destructive italic">Failed to load version history.</p>
+                  <p className="text-[0.625rem] font-medium text-destructive italic">Failed to load version history.</p>
                 ) : (
-                  <p className="text-[10px] font-medium text-muted-foreground italic">No versions found.</p>
+                  <p className="text-[0.625rem] font-medium text-muted-foreground italic">No versions found.</p>
                 ))
               )}
             </div>

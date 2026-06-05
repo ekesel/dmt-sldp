@@ -59,7 +59,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 <Users className="text-primary w-5 h-5" />
                 <div className="flex items-baseline gap-2">
                     <h2 className="text-xl font-bold text-foreground">Team Workload</h2>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
+                    <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
                 </div>
                 <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>
@@ -139,11 +139,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 mt-5 pt-4 border-t border-border text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 text-warning" /> In Progress</span>
-                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-accent" /> Completed</span>
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Avg Cycle</span>
-                <span className="flex items-center gap-1 ml-auto"><UserCheck className="w-3 h-3 text-accent" /> Portal access</span>
+            <div className="flex flex-wrap items-center gap-5 mt-5 pt-4 border-t border-border text-sm font-bold text-foreground">
+                <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 text-warning" /> In Progress</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> Completed</span>
+                <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Avg Cycle</span>
+                <span className="flex items-center gap-1.5 ml-auto"><UserCheck className="w-4 h-4 text-accent" /> Portal access</span>
             </div>
         </div>
     );

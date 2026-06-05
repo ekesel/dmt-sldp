@@ -116,7 +116,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
                                 <span className="truncate">{sprint.name}</span>
                             </div>
                             {sprint.status === 'active' && (
-                                <span className="text-[9px] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                                <span className="text-[0.5625rem] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded flex-shrink-0">
                                     Active
                                 </span>
                             )}

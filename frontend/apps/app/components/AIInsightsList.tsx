@@ -55,7 +55,7 @@ export const AIInsightsList: React.FC<AIInsightsListProps> = ({ insightId, sugge
                         <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${s.impact === 'High' ? 'bg-destructive text-destructive-foreground' :
+                                    <span className={`text-[0.625rem] font-bold px-1.5 py-0.5 rounded uppercase ${s.impact === 'High' ? 'bg-destructive text-destructive-foreground' :
                                         s.impact === 'Medium' ? 'bg-warning text-warning-foreground' :
                                             'bg-muted text-muted-foreground'
                                         }`}>
