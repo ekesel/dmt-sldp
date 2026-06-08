@@ -310,8 +310,8 @@ export default function DeveloperDetailsPage({
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-6 bg-card border-border hover:border-primary/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/5 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -343,8 +343,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-blue-400/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/5 transition-colors">
               <Sparkles size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -377,8 +377,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-warning/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-warning/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/5 transition-colors">
               <ShieldCheck size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -409,8 +409,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-destructive/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-destructive/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/5 transition-colors">
               <AlertCircle size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -521,7 +521,7 @@ export default function DeveloperDetailsPage({
             </div>
             <Card className="bg-card border-border overflow-hidden rounded-3xl">
               <table className="w-full text-left">
-                <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">
+                <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
                   <tr>
                     <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
                     <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
@@ -535,7 +535,7 @@ export default function DeveloperDetailsPage({
                   {metrics.map((m, idx) => (
                     <tr
                       key={idx}
-                      className="hover:bg-accent transition-all group"
+                      className="hover:bg-gray-100 transition-all group"
                     >
                       <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                         {m.sprint_name}

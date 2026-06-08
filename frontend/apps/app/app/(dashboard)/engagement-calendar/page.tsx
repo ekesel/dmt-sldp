@@ -153,8 +153,8 @@ export default function EngagementCalendarPage() {
                                         </div>
 
                                         <div className="space-y-1.5 min-w-0 flex-1">
-                                            <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
-                                                {fileName}
+                                            <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2 capitalize">
+                                                {fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ')}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
                                                 Official employee engagement events and activities calendar. View the embedded document below or open it directly.

@@ -95,18 +95,18 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                 </div>
 
                                 {/* Stats */}
-                                <div className="flex items-center gap-3 flex-shrink-0 text-xs">
-                                    <span className="flex items-center gap-1 text-warning" title="In progress">
-                                        <Loader2 className="w-3 h-3" />
+                                <div className="flex items-center gap-4 flex-shrink-0 text-sm font-semibold">
+                                    <span className="flex items-center gap-1.5 text-warning" title="In progress">
+                                        <Loader2 className="w-4 h-4" />
                                         {person.in_progress}
                                     </span>
-                                    <span className="flex items-center gap-1 text-accent" title="Completed">
-                                        <CheckCircle2 className="w-3 h-3" />
+                                    <span className="flex items-center gap-1.5 text-accent" title="Completed">
+                                        <CheckCircle2 className="w-4 h-4" />
                                         {person.completed}
                                     </span>
                                     {person.avg_cycle_time_days !== null && (
-                                        <span className="flex items-center gap-1 text-muted-foreground" title="Avg cycle time">
-                                            <Clock className="w-3 h-3" />
+                                        <span className="flex items-center gap-1.5 text-muted-foreground" title="Avg cycle time">
+                                            <Clock className="w-4 h-4" />
                                             {person.avg_cycle_time_days}d
                                         </span>
                                     )}

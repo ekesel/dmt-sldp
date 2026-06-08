@@ -197,7 +197,7 @@ export default function SprintComparisonPage() {
                         )}
 
                         {/* KPI Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                             {Object.entries(data.kpis).map(([key, vals]: [string, any]) => {
                                 const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 

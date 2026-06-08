@@ -219,15 +219,17 @@ export const CelebrationsCard: React.FC = () => {
                         transition={{ duration: 0.4, ease: "easeOut" }}
                         className="flex items-center gap-3 sm:gap-4"
                     >
-                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[0.21875rem] border-card shadow-lg flex-shrink-0 bg-secondary">
-                            <Image
-                                src={currentUser.avatar}
-                                alt={currentUser.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                            />
-                        </div>
+                        {currentUser.name !== 'No Celebrations Today' && (
+                            <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[0.21875rem] border-card shadow-lg flex-shrink-0 bg-secondary">
+                                <Image
+                                    src={currentUser.avatar}
+                                    alt={currentUser.name}
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                />
+                            </div>
+                        )}
                         <div className="flex flex-col items-start text-left mt-3 sm:mt-4">
                             <h3 className="text-[1.125rem] sm:text-[1.25rem] font-bold text-card-foreground leading-tight">
                                 {currentUser.name}

@@ -12,14 +12,14 @@ interface TileProps {
 }
 
 const Tile: React.FC<TileProps> = ({ title, Icon, bgColor, textColor }) => (
-    <div className={`${bgColor} w-full h-full rounded-[1.25rem] flex flex-col items-center justify-center p-2.5 sm:p-3.5 text-center cursor-pointer hover:opacity-95 transition-all shadow-sm group active:scale-95 saturate-[1.15]`}>
+    <div className={`${bgColor} w-full h-full rounded-[1.25rem] flex flex-col items-center justify-center p-2.5 sm:p-3.5 text-center cursor-pointer hover:opacity-95 transition-all shadow-sm group active:scale-95 `}>
         <div className={`${textColor} mb-1.5 sm:mb-2 transform group-hover:scale-110 transition-transform duration-300`}>
             <Icon
                 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8"
                 strokeWidth={2.5}
             />
         </div>
-        <span className={`${textColor} text-[0.55rem] sm:text-[0.625rem] lg:text-[0.75rem] font-[900] leading-[1.1] px-0.5 overflow-hidden text-ellipsis line-clamp-2`}>
+        <span className={`${textColor} text-[0.65rem] sm:text-[0.75rem] lg:text-[0.85rem] font-[900] leading-[1.1] px-0.5 overflow-hidden text-ellipsis line-clamp-2`}>
             {title}
         </span>
     </div>
@@ -31,12 +31,12 @@ const Tile: React.FC<TileProps> = ({ title, Icon, bgColor, textColor }) => (
  */
 export const QuickAccessTiles: React.FC = () => {
     const tiles = [
-        { title: "Org Chart", Icon: Network, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/org-chart" },
-        { title: "Holiday Calendar", Icon: Palmtree, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/holiday-calendar" },
-        { title: "Engagement Calendar", Icon: CalendarHeart, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/engagement-calendar" },
-        { title: "Policies", Icon: FileText, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/policies" },
-        { title: "Learning & Development", Icon: GraduationCap, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/learning-and-development" },
-        { title: "Onboarding", Icon: Rocket, bgColor: "bg-accent", textColor: "text-accent-foreground", href: "/onboarding" },
+        { title: "Org Chart", Icon: Network, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/org-chart" },
+        { title: "Holiday Calendar", Icon: Palmtree, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/holiday-calendar" },
+        { title: "Engagement Calendar", Icon: CalendarHeart, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/engagement-calendar" },
+        { title: "Policies", Icon: FileText, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/policies" },
+        { title: "Learning & Development", Icon: GraduationCap, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/learning-and-development" },
+        { title: "Onboarding", Icon: Rocket, bgColor: "bg-[var(--color-access)]", textColor: "text-[var(--color-access-foreground)]", href: "/onboarding" },
     ];
 
     return (

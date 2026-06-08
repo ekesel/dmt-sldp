@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { getFileUrl } from '@dmt/api';
-import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck } from 'lucide-react';
+import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -38,6 +38,15 @@ export default function PoliciesPage() {
         if (!url) return 'Policy_Document.pdf';
         const parts = url.split('/');
         return decodeURIComponent(parts[parts.length - 1]);
+    };
+
+    // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
+    const getFileViewerUrl = (url: string) => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
+            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+        }
+        return url;
     };
 
     // Handle Uploading a new policy
@@ -100,6 +109,15 @@ export default function PoliciesPage() {
             console.error('Delete failed:', err);
             toast.error('Failed to delete policy.', { id: toastId });
         }
+    };
+
+    // Handle Direct Download using proxy to prevent tab changes
+    const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        // Navigating to the proxy URL will trigger a download without changing the page,
+        // because the proxy sets the Content-Disposition: attachment header.
+        window.location.href = proxyUrl;
     };
 
     return (
@@ -170,16 +188,27 @@ export default function PoliciesPage() {
                                     key={policy.id}
                                     className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
                                 >
-                                    {/* Top right actions (Delete) - restricted to MANAGER only */}
-                                    {isManager && (
-                                        <button
-                                            onClick={() => handleDeleteClick(policy.id)}
-                                            className="absolute top-5 right-5 p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                            title="Delete policy"
+                                    {/* Top right actions (Download & Delete) */}
+                                    <div className="absolute top-5 right-5 flex items-center gap-2">
+                                        <a
+                                            href={getFileUrl(policy.policy_file)}
+                                            onClick={(e) => handleDownloadClick(getFileUrl(policy.policy_file), getFileName(policy.policy_file), e)}
+                                            download={getFileName(policy.policy_file)}
+                                            className="p-2 rounded-xl text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                            title="Download policy"
                                         >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    )}
+                                            <Download className="w-5 h-5" />
+                                        </a>
+                                        {isManager && (
+                                            <button
+                                                onClick={() => handleDeleteClick(policy.id)}
+                                                className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                                title="Delete policy"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
 
                                     {/* Main Card Content */}
                                     <div className="flex gap-4 items-start pr-8">
@@ -201,14 +230,13 @@ export default function PoliciesPage() {
                                     {/* Bottom row actions (Download PDF & Update PDF side by side) */}
                                     <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                         <a
-                                            href={getFileUrl(policy.policy_file)}
-                                            download
+                                            href={getFileViewerUrl(getFileUrl(policy.policy_file))}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
-                                            <Download className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            view/download PDF
+                                            <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
+                                            view document
                                         </a>
                                         
                                         {/* Update Button - restricted to MANAGER only */}

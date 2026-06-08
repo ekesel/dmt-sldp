@@ -55,7 +55,7 @@ export const WelcomeBanner: React.FC = () => {
               suppressHydrationWarning
               className="text-[1.25rem] lg:text-[1.375rem] xl:text-[1.5rem] font-black text-card-foreground leading-[1.1] tracking-tight mb-2"
             >
-              {mounted ? greeting : "Welcome"}, <span className="text-accent">{mounted ? greetingName : "User"}!</span>
+              {mounted ? greeting : "Welcome"}, <span className="text-[var(--color-access)]">{mounted ? greetingName : "User"}!</span>
             </h1>
           </div>
 

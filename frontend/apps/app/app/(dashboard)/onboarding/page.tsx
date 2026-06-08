@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { dashboard, getFileUrl } from '@dmt/api';
-import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle } from 'lucide-react';
+import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -49,6 +49,29 @@ export default function OnboardingPage() {
     useEffect(() => {
         fetchOnboarding();
     }, []);
+
+    // Extract filename from URL
+    const getFileName = (url: string) => {
+        if (!url) return 'Onboarding_Guide.pdf';
+        const parts = url.split('/');
+        return decodeURIComponent(parts[parts.length - 1]);
+    };
+
+    // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
+    const getFileViewerUrl = (url: string) => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
+            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+        }
+        return url;
+    };
+
+    // Handle Direct Download using proxy to prevent tab changes
+    const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        window.location.href = proxyUrl;
+    };
 
     // Open Modal for Upload (Create)
     const openCreateModal = () => {
@@ -189,16 +212,27 @@ export default function OnboardingPage() {
                                 key={guide.id}
                                 className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_0.25rem_0.75rem_rgba(0,0,0,0.03)] hover:shadow-[0_0.375rem_1rem_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
                             >
-                                {/* Top right actions (Delete) - restricted to MANAGER only */}
-                                {isManager && (
-                                    <button
-                                        onClick={() => handleDeleteClick(guide.id)}
-                                        className="absolute top-5 right-5 p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                        title="Delete guide"
+                                {/* Top right actions (Download & Delete) */}
+                                <div className="absolute top-5 right-5 flex items-center gap-2">
+                                    <a
+                                        href={getFileUrl(guide.onboarding_file)}
+                                        onClick={(e) => handleDownloadClick(getFileUrl(guide.onboarding_file), getFileName(guide.onboarding_file), e)}
+                                        download={getFileName(guide.onboarding_file)}
+                                        className="p-2 rounded-xl text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                        title="Download guide"
                                     >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
-                                )}
+                                        <Download className="w-5 h-5" />
+                                    </a>
+                                    {isManager && (
+                                        <button
+                                            onClick={() => handleDeleteClick(guide.id)}
+                                            className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                            title="Delete guide"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Main Card Content */}
                                 <div className="flex gap-4 items-start pr-8">
@@ -220,14 +254,13 @@ export default function OnboardingPage() {
                                 {/* Bottom row actions (Download PDF & Update PDF side by side) */}
                                 <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                     <a
-                                        href={getFileUrl(guide.onboarding_file)}
-                                        download
+                                        href={getFileViewerUrl(getFileUrl(guide.onboarding_file))}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                     >
-                                        <Download className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                        view/download PDF
+                                        <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
+                                        view document
                                     </a>
                                     
                                     {/* Update Button - restricted to MANAGER only */}
