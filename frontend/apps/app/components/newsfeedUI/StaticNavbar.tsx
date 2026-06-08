@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Author } from '../../hooks/useNewsfeedData';
+import { Author } from '../../types/newsfeed';
 import { getFileUrl } from '@dmt/api';
 
 export interface NavItem {

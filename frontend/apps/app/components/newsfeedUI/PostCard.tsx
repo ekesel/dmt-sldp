@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Edit3, Trash2, MessageCircle } from "lucide-react";
-import { Post } from "../../hooks/useNewsfeedData";
+import { Post } from "../../types/newsfeed";
 import { useAuth } from "../../context/AuthContext";
 import ReactionBar from "./ReactionBar";
 import CommentSection from "./CommentSection";
@@ -9,6 +9,7 @@ import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
 import { getFileUrl } from "@dmt/api";
+import { useSearchParams } from "next/navigation";
 
 
 const PostCard = ({
@@ -24,6 +25,7 @@ const PostCard = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { reactions, toggleReaction } = useReactions(post.post_id);
+  const searchParams = useSearchParams();
 
   const {
     author,
@@ -42,8 +44,7 @@ const PostCard = ({
     let timeoutId: number | null = null;
 
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const openCommentsPostId = params.get("openComments");
+      const openCommentsPostId = searchParams.get("openComments");
       if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) {
         setShowComments(true);
         timeoutId = window.setTimeout(() => {
@@ -60,7 +61,7 @@ const PostCard = ({
         window.clearTimeout(timeoutId);
       }
     };
-  }, [post.post_id]);
+  }, [post.post_id, searchParams]);
 
   return (
     <div

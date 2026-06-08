@@ -128,14 +128,17 @@ export default function OnboardingPage() {
 
             setModalOpen(false);
             fetchOnboarding();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Form submission failed:', err);
-            toast.error(
-                modalType === 'create'
-                    ? 'Failed to upload onboarding document.'
-                    : 'Failed to update onboarding document.',
-                { id: toastId }
-            );
+            let errorMessage = modalType === 'create'
+                ? 'Failed to upload onboarding document.'
+                : 'Failed to update onboarding document.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             setSubmitting(false);
         }

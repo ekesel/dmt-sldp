@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Comment, User, getFileUrl } from '@dmt/api';
-import { Author } from '../../hooks/useNewsfeedData';
+import { Author } from '../../types/newsfeed';
 import { Edit2, Trash2, Reply, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { users } from '@dmt/api';

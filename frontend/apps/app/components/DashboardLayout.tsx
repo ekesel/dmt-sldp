@@ -4,7 +4,7 @@ import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { WebSocketProvider } from '../context/WebSocketContext';
-import { NewsfeedProvider } from '../context/NewsfeedContext';
+
 
 
 interface DashboardLayoutProps {
@@ -56,9 +56,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
     return (
         <WebSocketProvider url={wsUrl}>
-            <NewsfeedProvider>
-                {content}
-            </NewsfeedProvider>
+            {content}
         </WebSocketProvider>
     );
 };

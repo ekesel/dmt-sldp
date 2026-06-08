@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Heart, MessageSquare } from 'lucide-react';
-import { useNewsfeedData } from '../hooks/useNewsfeedData';
+import { useNewsfeedQuery } from '../hooks/useNewsfeedQuery';
 import { useReactions } from '../hooks/useReactions';
 import { useComments } from '../hooks/useComments';
 import { getMediaUrl } from '../lib/media';
@@ -17,7 +17,7 @@ import { getFileUrl } from '@dmt/api';
  */
 export const SocialNewsFeed: React.FC = () => {
     const router = useRouter();
-    const { posts, loading } = useNewsfeedData();
+    const { posts, loading } = useNewsfeedQuery();
     const latestPost = posts && posts.length > 0 ? posts[0] : null;
 
     // Fetch reactions and comments for the latest post

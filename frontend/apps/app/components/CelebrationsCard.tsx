@@ -279,7 +279,7 @@ export const CelebrationsCard: React.FC = () => {
                     Upcoming:
                 </h4>
 
-                <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-2.5 pr-1 scrollbar-thin min-h-0">
+                <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-primary min-h-0">
                     {upcoming.length > 0 ? (
                         upcoming.map((item, index) => (
                             <div key={index} className="flex items-center justify-between group animate-fade-in">

@@ -64,9 +64,15 @@ export default function PoliciesPage() {
             formData.append('policy_file', file);
             await uploadMutation.mutateAsync(formData);
             toast.success('Policy uploaded successfully!', { id: toastId });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Upload failed:', err);
-            toast.error('Failed to upload policy.', { id: toastId });
+            let errorMessage = 'Failed to upload policy.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             if (createFileInputRef.current) createFileInputRef.current.value = '';
         }
@@ -87,9 +93,15 @@ export default function PoliciesPage() {
             formData.append('policy_file', file);
             await updateMutation.mutateAsync({ id, formData });
             toast.success('Policy updated successfully!', { id: toastId });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Update failed:', err);
-            toast.error('Failed to update policy.', { id: toastId });
+            let errorMessage = 'Failed to update policy.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             if (updateFileInputRefs.current[id]) {
                 updateFileInputRefs.current[id]!.value = '';
@@ -219,7 +231,7 @@ export default function PoliciesPage() {
                                         
                                         <div className="space-y-1.5 min-w-0">
                                             <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
-                                                {fileName}
+                                                {fileName.replace(/\.[^/.]+$/, "")}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
                                                 Official policy document. Click below to view or download the PDF document.

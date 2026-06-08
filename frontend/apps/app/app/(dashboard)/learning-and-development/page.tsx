@@ -84,9 +84,15 @@ export default function LearningAndDevelopmentPage() {
             await dashboard.uploadLearningAndDevelopment(formData);
             toast.success('Resource uploaded successfully!', { id: toastId });
             fetchCourses();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Upload failed:', err);
-            toast.error('Failed to upload resource.', { id: toastId });
+            let errorMessage = 'Failed to upload resource.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             setUploading(false);
             if (createFileInputRef.current) createFileInputRef.current.value = '';
@@ -109,9 +115,15 @@ export default function LearningAndDevelopmentPage() {
             await dashboard.updateLearningAndDevelopment(id, formData);
             toast.success('Resource updated successfully!', { id: toastId });
             fetchCourses();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Update failed:', err);
-            toast.error('Failed to update resource.', { id: toastId });
+            let errorMessage = 'Failed to update resource.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             if (updateFileInputRefs.current[id]) {
                 updateFileInputRefs.current[id]!.value = '';
@@ -233,7 +245,7 @@ export default function LearningAndDevelopmentPage() {
                                         
                                         <div className="space-y-1.5 min-w-0">
                                             <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
-                                                {fileName}
+                                                {fileName.replace(/\.[^/.]+$/, "")}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
                                                 Official training and guidelines document. Click below to view or download the PDF document.
