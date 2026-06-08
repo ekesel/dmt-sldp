@@ -290,7 +290,7 @@ function OrgChartPageContent() {
                 source: emp.parentId,
                 target: emp.id,
                 type: 'smoothstep',
-                animated: true,
+                animated: false,
                 style: { stroke: 'var(--color-primary)', strokeWidth: 2 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,

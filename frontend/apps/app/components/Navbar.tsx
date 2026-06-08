@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { Menu, LogOut, User, ChevronDown } from "lucide-react";
+import { dashboard, getFileUrl } from "@dmt/api";
+import { Menu, LogOut, User, ChevronDown, Search, FileText } from "lucide-react";
 import Image from "next/image";
 import { NotificationBell } from "./NotificationBell";
 
@@ -13,9 +14,67 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [searchValue, setSearchValue] = useState<string>("");
+  const [dropdownResults, setDropdownResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    const q = searchParams?.get("q") || "";
+    setSearchValue(q);
+    setShowDropdown(false);
+  }, [searchParams]);
+
+  useEffect(() => {
+    // TODO: When backend API search is ready, replace this logic with an API call 
+    // to fetch the top 5 suggestions for `searchValue`.
+    if (!searchValue.trim() || !isFocused) {
+      setDropdownResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const fetchResults = async () => {
+      try {
+        const [policiesData, learningData] = await Promise.all([
+           dashboard.getPolicies().catch(() => []),
+           dashboard.getLearningAndDevelopment().catch(() => [])
+        ]);
+
+        const policies = Array.isArray(policiesData) ? policiesData : [];
+        const learningDocs = Array.isArray(learningData) ? learningData : [];
+
+        const allDocs = [
+          ...policies.map((p: any) => ({ ...p, type: 'Policy', file: p.policy_file })),
+          ...learningDocs.map((l: any) => ({ ...l, type: 'Learning', file: l.learning_and_development_file }))
+        ];
+
+        const query = searchValue.toLowerCase();
+        const getFileName = (url: string) => {
+            if (!url) return '';
+            const parts = url.split('/');
+            return decodeURIComponent(parts[parts.length - 1]);
+        };
+
+        const filteredDocs = allDocs.filter(doc => {
+            const fileName = getFileName(doc.file).toLowerCase();
+            return fileName.startsWith(query);
+        });
+
+        setDropdownResults(filteredDocs.slice(0, 5));
+        setShowDropdown(true);
+      } catch (err) {
+        console.error("Failed to fetch dropdown search results", err);
+      }
+    };
+
+    const debounce = setTimeout(fetchResults, 300);
+    return () => clearTimeout(debounce);
+  }, [searchValue, isFocused]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -85,6 +144,86 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
             />
           </div>
         </div>
+
+        {/* Middle Section: Search Bar */}
+        <div className="hidden md:flex flex-1 max-w-xl px-4 lg:px-8 relative">
+          <div className="relative w-full">
+            <input 
+              type="text" 
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Search documents..." 
+              className="w-full bg-primary-foreground/10 hover:bg-primary-foreground/20 focus:bg-primary-foreground/20 border border-primary-foreground/10 rounded-md py-1.5 px-4 pr-10 text-primary-foreground placeholder:text-primary-foreground/60 outline-none transition-colors text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchValue.trim()) {
+                  setShowDropdown(false);
+                  router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+                }
+              }}
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <Search className="w-4 h-4 text-primary-foreground/60" />
+            </div>
+
+            {/* Dropdown for search results */}
+            {showDropdown && dropdownResults.length > 0 && (
+              <div 
+                className="absolute top-full left-0 right-0 mt-2 bg-card text-card-foreground border border-border rounded-md shadow-lg z-50 overflow-hidden"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                {dropdownResults.map((doc, idx) => {
+                  const getFileName = (url: string) => {
+                    if (!url) return '';
+                    const parts = url.split('/');
+                    return decodeURIComponent(parts[parts.length - 1]);
+                  };
+                  const fileName = getFileName(doc.file).replace(/\.[^/.]+$/, "");
+                  const fileUrl = getFileUrl(doc.file);
+                  const lowerUrl = fileUrl.toLowerCase();
+                  const isOfficeFile = lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/);
+                  const viewerUrl = isOfficeFile ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}` : fileUrl;
+                  
+                  return (
+                    <a 
+                      key={`${doc.type}-${doc.id}-${idx}`}
+                      href={viewerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 p-3 hover:bg-muted cursor-pointer transition-colors border-b border-border last:border-b-0"
+                    >
+                      <div className="bg-primary/10 p-2 rounded-md text-primary shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{fileName}</p>
+                        <p className="text-xs text-muted-foreground">{doc.type}</p>
+                      </div>
+                    </a>
+                  );
+                })}
+                <div 
+                  className="p-2 text-center text-xs font-semibold text-primary hover:bg-muted cursor-pointer transition-colors"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+                  }}
+                >
+                  View all results
+                </div>
+              </div>
+            )}
+            
+            {showDropdown && dropdownResults.length === 0 && searchValue.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-card text-card-foreground border border-border rounded-md shadow-lg z-50 overflow-hidden p-4 text-center">
+                <p className="text-sm text-muted-foreground">No documents found.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Right Section: Time, Notifications, Actions */}
         <div className="flex items-center gap-[0.5rem] md:gap-[1rem]">
           {/* Time Display */}

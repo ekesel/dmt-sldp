@@ -70,6 +70,19 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     const barWidth = Math.round((person.total / maxTotal) * 100);
                     const inProgressPct = person.total > 0 ? Math.round((person.in_progress / person.total) * 100) : 0;
 
+                    let workloadStatus = null;
+                    let barColor = color;
+                    if (barWidth > 80) {
+                        workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
+                        barColor = '#ef4444'; // red-500
+                    } else if (barWidth >= 60 && barWidth <= 80) { 
+                        workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
+                        barColor = '#22c55e'; // green-500
+                    } else {
+                        workloadStatus = { label: 'Underutilised', className: 'bg-warning/10 text-warning border-warning/20' };
+                        barColor = '#eab308'; // yellow-500
+                    }
+
                     return (
                         <div key={person.email} className="group">
                             <div className="flex items-center gap-3 mb-1.5">
@@ -85,6 +98,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="text-sm font-medium text-foreground">{person.name}</span>
+                                        {workloadStatus && (
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${workloadStatus.className}`}>
+                                                {workloadStatus.label}
+                                            </span>
+                                        )}
                                         {person.is_portal_user && (
                                             <span title="Can log in to portal">
                                                 <UserCheck className="w-3.5 h-3.5 text-accent flex-shrink-0" />
@@ -119,7 +137,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                     className="h-full rounded-full transition-all duration-500"
                                     style={{
                                         width: `${barWidth}%`,
-                                        background: `linear-gradient(90deg, ${color}99, ${color})`,
+                                        background: `linear-gradient(90deg, ${barColor}99, ${barColor})`,
                                     }}
                                 />
                             </div>
