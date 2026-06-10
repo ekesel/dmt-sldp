@@ -3,6 +3,7 @@ import { Post } from '../../../types/newsfeed';
 
 export const getNewsfeedQueryOptions = (
     socket: any, 
+    isConnected: boolean,
     handlers: { setPage: (page: number) => void; setHasNextPage: (hasNext: boolean) => void }
 ) => ({
     queryKey: newsfeedKeys.posts(),
@@ -37,7 +38,7 @@ export const getNewsfeedQueryOptions = (
             socket.emit('get_posts', { page: 1 });
         });
     },
-    enabled: !!socket && socket.isConnected,
+    enabled: !!socket && isConnected,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
 });

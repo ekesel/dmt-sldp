@@ -82,13 +82,13 @@ export default function MetricsPage() {
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map(i => (
                             <div key={i} className="h-48 bg-card border border-border rounded-2xl animate-pulse" />
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {filteredDevelopers.map((dev) => {
                             // Use lowercase email as uniqueness key
                             const uniqueKey = (dev.developer_email || '').trim().toLowerCase() || dev.id;
@@ -97,13 +97,13 @@ export default function MetricsPage() {
                             return (
                                 <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent shadow-inner relative overflow-hidden">
+                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent shadow-inner relative overflow-hidden flex-shrink-0">
                                             <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <span className="relative z-10">{initial}</span>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="font-black text-foreground text-lg leading-tight truncate group-hover:text-primary transition-colors">{dev.developer_name}</h3>
-                                            <p className="text-sm text-muted-foreground truncate font-medium">{dev.developer_email}</p>
+                                            <h3 className="font-black text-foreground text-lg leading-tight truncate group-hover:text-primary transition-colors" title={dev.developer_name}>{dev.developer_name}</h3>
+                                            <p className="text-sm text-muted-foreground truncate font-medium" title={dev.developer_email}>{dev.developer_email}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap mb-6">

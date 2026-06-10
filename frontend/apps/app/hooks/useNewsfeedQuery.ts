@@ -8,7 +8,7 @@ import { newsfeedKeys } from '../app/(dashboard)/newsfeed/query-keys';
 import { getNewsfeedQueryOptions } from '../app/(dashboard)/newsfeed/query-options';
 
 export function useNewsfeedQuery() {
-    const { client: socket } = useWebSocket();
+    const { client: socket, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
     const queryKey = newsfeedKeys.posts();
 
@@ -16,7 +16,7 @@ export function useNewsfeedQuery() {
     const [hasNextPage, setHasNextPage] = useState(false);
 
     const query = useQuery<Post[], Error>(
-        getNewsfeedQueryOptions(socket, { setPage, setHasNextPage })
+        getNewsfeedQueryOptions(socket, isConnected, { setPage, setHasNextPage })
     );
 
     useEffect(() => {

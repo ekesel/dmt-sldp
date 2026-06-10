@@ -1,64 +1,70 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
+import React, { useRef } from 'react';
+import { getFileUrl } from '@dmt/api';
 import { GraduationCap, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useLearningAndDevelopmentQuery } from './query-options';
+import { 
+    useUploadLearningAndDevelopment, 
+    useUpdateLearningAndDevelopment, 
+    useDeleteLearningAndDevelopment 
+} from './mutation-options';
 
-interface LearningData {
-    id: number;
-    learning_and_development_file: string;
-}
+/**
+ * Extract filename from URL
+ */
+const getFileName = (url: string) => {
+    if (!url) return 'Training_Resource.pdf';
+    const parts = url.split('/');
+    return decodeURIComponent(parts[parts.length - 1]);
+};
+
+/**
+ * Format URL for Office Viewer if it's a Word/Excel/PPT file
+ */
+const getFileViewerUrl = (url: string) => {
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
+        return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+    }
+    return url;
+};
+
+/**
+ * Parses unknown error to user friendly error message
+ */
+const getErrorMessage = (err: unknown, defaultMessage: string = 'An unexpected error occurred.') => {
+    if (err && typeof err === 'object') {
+        const errorObj = err as { status?: number, message?: string };
+        if (errorObj.status === 413 || errorObj.message?.includes('413') || errorObj.message?.toLowerCase().includes('too large')) {
+            return 'File is too large. Please upload a smaller file.';
+        }
+        if (errorObj.message && errorObj.message !== 'Unknown API error') {
+            return errorObj.message;
+        }
+    }
+    return defaultMessage;
+};
 
 export default function LearningAndDevelopmentPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [courses, setCourses] = useState<LearningData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
 
     // Hidden file inputs
     const createFileInputRef = useRef<HTMLInputElement>(null);
     const updateFileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
-    const fetchCourses = async () => {
-        setLoading(true);
-        try {
-            const data = await dashboard.getLearningAndDevelopment();
-            if (data && Array.isArray(data)) {
-                // Sort by ID descending so that the latest uploaded document appears at the top
-                const sorted = [...data].sort((a, b) => b.id - a.id);
-                setCourses(sorted);
-            }
-        } catch (err) {
-            console.error('Failed to fetch learning materials:', err);
-            toast.error('Failed to load learning resources');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Fetch resources
+    const { data: coursesData, isLoading: loading, isError, error } = useLearningAndDevelopmentQuery();
+    const courses = coursesData || [];
 
-    useEffect(() => {
-        fetchCourses();
-    }, []);
-
-    // Extract filename from URL
-    const getFileName = (url: string) => {
-        if (!url) return 'Training_Resource.pdf';
-        const parts = url.split('/');
-        return decodeURIComponent(parts[parts.length - 1]);
-    };
-
-    // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
-    const getFileViewerUrl = (url: string) => {
-        const lowerUrl = url.toLowerCase();
-        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
-            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
-        }
-        return url;
-    };
+    // Mutations
+    const uploadMutation = useUploadLearningAndDevelopment();
+    const updateMutation = useUpdateLearningAndDevelopment();
+    const deleteMutation = useDeleteLearningAndDevelopment();
 
     // Handle Direct Download using proxy to prevent tab changes
     const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
@@ -76,27 +82,22 @@ export default function LearningAndDevelopmentPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploading(true);
         const toastId = toast.loading('Uploading new resource...');
-        try {
-            const formData = new FormData();
-            formData.append('learning_and_development_file', file);
-            await dashboard.uploadLearningAndDevelopment(formData);
-            toast.success('Resource uploaded successfully!', { id: toastId });
-            fetchCourses();
-        } catch (err: any) {
-            console.error('Upload failed:', err);
-            let errorMessage = 'Failed to upload resource.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
+        const formData = new FormData();
+        formData.append('learning_and_development_file', file);
+        
+        uploadMutation.mutate(formData, {
+            onSuccess: () => {
+                toast.success('Resource uploaded successfully!', { id: toastId });
+            },
+            onError: (err: unknown) => {
+                console.error('Upload failed:', err);
+                toast.error(getErrorMessage(err, 'Failed to upload resource.'), { id: toastId });
+            },
+            onSettled: () => {
+                if (createFileInputRef.current) createFileInputRef.current.value = '';
             }
-            toast.error(errorMessage, { id: toastId });
-        } finally {
-            setUploading(false);
-            if (createFileInputRef.current) createFileInputRef.current.value = '';
-        }
+        });
     };
 
     // Handle Updating an existing course resource
@@ -109,26 +110,23 @@ export default function LearningAndDevelopmentPage() {
         if (!file) return;
 
         const toastId = toast.loading('Updating resource document...');
-        try {
-            const formData = new FormData();
-            formData.append('learning_and_development_file', file);
-            await dashboard.updateLearningAndDevelopment(id, formData);
-            toast.success('Resource updated successfully!', { id: toastId });
-            fetchCourses();
-        } catch (err: any) {
-            console.error('Update failed:', err);
-            let errorMessage = 'Failed to update resource.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
+        const formData = new FormData();
+        formData.append('learning_and_development_file', file);
+        
+        updateMutation.mutate({ id, formData }, {
+            onSuccess: () => {
+                toast.success('Resource updated successfully!', { id: toastId });
+            },
+            onError: (err: unknown) => {
+                console.error('Update failed:', err);
+                toast.error(getErrorMessage(err, 'Failed to update resource.'), { id: toastId });
+            },
+            onSettled: () => {
+                if (updateFileInputRefs.current[id]) {
+                    updateFileInputRefs.current[id]!.value = '';
+                }
             }
-            toast.error(errorMessage, { id: toastId });
-        } finally {
-            if (updateFileInputRefs.current[id]) {
-                updateFileInputRefs.current[id]!.value = '';
-            }
-        }
+        });
     };
 
     // Handle Deleting a resource
@@ -136,14 +134,15 @@ export default function LearningAndDevelopmentPage() {
         if (!confirm('Are you sure you want to delete this resource?')) return;
 
         const toastId = toast.loading('Deleting resource...');
-        try {
-            await dashboard.deleteLearningAndDevelopment(id);
-            toast.success('Resource deleted successfully!', { id: toastId });
-            fetchCourses();
-        } catch (err) {
-            console.error('Delete failed:', err);
-            toast.error('Failed to delete resource.', { id: toastId });
-        }
+        deleteMutation.mutate(id, {
+            onSuccess: () => {
+                toast.success('Resource deleted successfully!', { id: toastId });
+            },
+            onError: (err: unknown) => {
+                console.error('Delete failed:', err);
+                toast.error('Failed to delete resource.', { id: toastId });
+            }
+        });
     };
 
     return (
@@ -181,7 +180,7 @@ export default function LearningAndDevelopmentPage() {
                     {isManager && (
                         <button
                             onClick={handleUploadClick}
-                            disabled={uploading}
+                            disabled={uploadMutation.isPending}
                             className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                         >
                             <Plus className="w-5 h-5" strokeWidth={3} />
@@ -204,6 +203,16 @@ export default function LearningAndDevelopmentPage() {
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
                         <p className="text-muted-foreground font-semibold text-sm mt-3">Loading resources...</p>
+                    </div>
+                ) : isError ? (
+                    <div className="flex flex-col items-center justify-center text-center p-12 bg-card text-card-foreground rounded-2xl border border-destructive/20 shadow-sm min-h-[22rem]">
+                        <div className="p-4 bg-destructive/10 rounded-full text-destructive mb-4 border border-destructive/20">
+                            <ShieldAlert className="w-12 h-12" />
+                        </div>
+                        <h3 className="text-[1.125rem] font-bold text-foreground">Failed to load resources</h3>
+                        <p className="text-muted-foreground text-[0.875rem] max-w-sm mt-2 font-medium leading-normal">
+                            {error instanceof Error ? error.message : 'An unexpected error occurred while fetching the learning materials.'}
+                        </p>
                     </div>
                 ) : courses.length > 0 ? (
                     <div className="space-y-6">
@@ -230,6 +239,7 @@ export default function LearningAndDevelopmentPage() {
                                                 onClick={() => handleDeleteClick(course.id)}
                                                 className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                                 title="Delete resource"
+                                                disabled={deleteMutation.isPending}
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -269,7 +279,8 @@ export default function LearningAndDevelopmentPage() {
                                         {isManager && (
                                             <button
                                                 onClick={() => handleUpdateClick(course.id)}
-                                                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-accent hover:bg-accent/90 text-accent-foreground transition-all shadow-sm cursor-pointer active:scale-95"
+                                                disabled={updateMutation.isPending}
+                                                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-accent hover:bg-accent/90 text-accent-foreground transition-all shadow-sm cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Upload className="w-4.5 h-4.5" strokeWidth={2.5} />
                                                 Update PDF

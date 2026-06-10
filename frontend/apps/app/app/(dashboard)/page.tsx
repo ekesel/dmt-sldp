@@ -247,32 +247,28 @@ export default function DashboardPage() {
                             onSelect={setSelectedProjectId}
                         />
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 min-w-[180px]">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                                    <CalendarDays size={18} className="text-primary" />
-                                </div>
-                                <div className="flex flex-col flex-1">
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">From</span>
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-[42px]">
+                                <CalendarDays size={16} className="text-primary shrink-0" />
+                                <div className="flex flex-col flex-1 justify-center">
+                                    <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">From</span>
                                     <input
                                         type="date"
                                         value={startDate}
                                         onChange={e => setStartDate(e.target.value)}
-                                        className="bg-transparent font-bold text-sm text-foreground outline-none leading-none cursor-pointer w-full"
+                                        className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
                                 </div>
                             </div>
                             <span className="text-muted-foreground text-sm font-bold">→</span>
-                            <div className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 min-w-[180px]">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                                    <CalendarDays size={18} className="text-primary" />
-                                </div>
-                                <div className="flex flex-col flex-1">
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">To</span>
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-[42px]">
+                                <CalendarDays size={16} className="text-primary shrink-0" />
+                                <div className="flex flex-col flex-1 justify-center">
+                                    <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">To</span>
                                     <input
                                         type="date"
                                         value={endDate}
                                         onChange={e => setEndDate(e.target.value)}
-                                        className="bg-transparent font-bold text-sm text-foreground outline-none leading-none cursor-pointer w-full"
+                                        className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
                                 </div>
                             </div>
@@ -316,14 +312,14 @@ export default function DashboardPage() {
                 </header>
 
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                     <KPICard
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description={<span className="text-primary">Average of {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
                         valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
                         helpId="velocity"
                         onHelpClick={handleHelpClick}
@@ -334,7 +330,7 @@ export default function DashboardPage() {
                         trend={{ direction: 'neutral', value: 'Avg' }}
                         description={<span className="text-primary">Average resolution duration</span>}
                         valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
                         helpId="cycle_time"
                         onHelpClick={handleHelpClick}
@@ -345,7 +341,7 @@ export default function DashboardPage() {
                         trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                         description={<span className="text-primary">Minimum Threshold: 80%</span>}
                         valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
                         helpId="compliance"
                         onHelpClick={handleHelpClick}
@@ -357,7 +353,7 @@ export default function DashboardPage() {
                         description={<span className="text-primary">PR-based AI evaluation</span>}
                         icon={<Sparkles size={16} className="text-brand-primary" />}
                         valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
                         helpId="objective_ai"
                         onHelpClick={handleHelpClick}
@@ -368,7 +364,7 @@ export default function DashboardPage() {
                         trend={{ direction: 'neutral', value: 'Total' }}
                         description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
                         valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
+                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
                         helpId="bugs_resolved"
                         onHelpClick={handleHelpClick}
@@ -376,7 +372,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl">
+                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
                         <div className="flex items-center justify-between mb-10">
                             <div>
                                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -391,7 +387,7 @@ export default function DashboardPage() {
                         </div>
                     </Card>
 
-                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl">
+                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
                         <div className="mb-8">
                             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                                 <TrendingUp className="text-primary" />
@@ -422,7 +418,7 @@ export default function DashboardPage() {
                             Compliance Alerts
                         </h2>
                         {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default">
+                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
                                 <div className="flex justify-between items-start">
                                     <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                 </div>
@@ -474,7 +470,7 @@ export default function DashboardPage() {
                             </div>
                         </>
                     ) : (
-                        <Card className="p-8 bg-card border-dashed border-border flex flex-col items-center justify-center text-center">
+                        <Card className="p-8 bg-card border-dashed border-border flex flex-col items-center justify-center text-center shadow-none">
                             <TrendingUp className="text-muted-foreground/60 mb-4" size={32} />
                             <p className="text-muted-foreground font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
                         </Card>
