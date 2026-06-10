@@ -28,6 +28,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from homepage.permissions import IsManagerOrReadOnly
 from django.db.models import Q
+from .models import Department
 
 
 
@@ -499,12 +500,10 @@ class UserHierarchyAPIView(APIView):
             dep_name = data.get("dep_name") or data.get("department")
             if dep_name:
                 dep_name = str(dep_name).lower()
-                from .models import Department
-                valid_choices = list(Department.objects.values_list('name', flat=True))
-                # Auto-create if it doesn't exist, as user said "if i want i can create... but dont chnage my pREVOISE flow"
+               
+                # Auto-create if it doesn't exist, using atomic get_or_create
                 # This way the previous flow doesn't break, and accepts the string.
-                if dep_name not in valid_choices:
-                    Department.objects.create(name=dep_name)
+                Department.objects.get_or_create(name=dep_name)
                     
                 # Update the role's department
                 role_obj.dep_name = dep_name
@@ -660,9 +659,7 @@ class UserHierarchyAPIView(APIView):
                 if dep_name:
                     dep_name = str(dep_name).lower()
                     from .models import Department
-                    valid_choices = list(Department.objects.values_list('name', flat=True))
-                    if dep_name not in valid_choices:
-                        Department.objects.create(name=dep_name)
+                    Department.objects.get_or_create(name=dep_name)
                     
                     # Update the role's department
                     role_obj.dep_name = dep_name
@@ -782,7 +779,7 @@ class GetAllDepartmentsDropdown(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from .models import Department
+    
         departments = Department.objects.all().order_by('name')
         list_data = []
 

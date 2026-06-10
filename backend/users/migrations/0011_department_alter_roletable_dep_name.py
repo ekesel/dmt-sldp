@@ -13,7 +13,16 @@ def populate_departments(apps, schema_editor):
         'design', 'product', 'hr', 'finance', 'sales', 'marketing', 'other', 'aiml'
     ]
     
-    for dep_name in initial_departments:
+    # Get distinct department names from existing RoleTable entries
+    existing_departments = RoleTable.objects.values_list('dep_name', flat=True).distinct()
+    
+    # Combine pre-defined and existing departments, filtering out None/empty values
+    all_departments = set(initial_departments)
+    for dep in existing_departments:
+        if dep:
+            all_departments.add(dep)
+    
+    for dep_name in all_departments:
         Department.objects.get_or_create(name=dep_name)
 
 class Migration(migrations.Migration):
