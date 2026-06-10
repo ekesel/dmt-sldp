@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, GitBranch, Info } from 'lucide-react';
 import { sprints } from '@dmt/api';
+import { cn } from '@dmt/ui';
 
 interface Sprint {
     id: number;
@@ -45,7 +46,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
     const isAllProjects = projectId === null;
 
     if (loading) {
-        return <div className={`animate-pulse bg-muted rounded-lg w-48 ${className || 'h-[42px]'}`} />;
+        return <div className={cn("animate-pulse bg-muted rounded-lg w-48 h-10", className)} />;
     }
 
     // All Projects mode: show a read-only chip with tooltip
@@ -53,7 +54,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
         const latestSprint = sprintList[0];
         return (
             <div className="relative group flex items-center gap-2">
-                <div className={`flex items-center gap-2 rounded-lg bg-muted/50 text-muted-foreground border border-border/50 cursor-not-allowed select-none w-48 ${className || 'px-4 py-2 h-[42px]'}`}>
+                <div className={cn("flex items-center gap-2 rounded-lg bg-muted/50 text-muted-foreground border border-border/50 cursor-not-allowed select-none w-48 px-4 py-2 h-10", className)}>
                     <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
                     <span className="truncate text-sm font-medium">
                         {latestSprint ? latestSprint.name : 'No sprints'}
@@ -77,7 +78,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
     // Project selected mode: full interactive dropdown
     if (sprintList.length === 0) {
         return (
-            <div className={`flex items-center gap-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-48 text-sm font-medium ${className || 'px-4 py-2 h-[42px]'}`}>
+            <div className={cn("flex items-center gap-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-48 text-sm font-medium px-4 py-2 h-10", className)}>
                 <GitBranch size={14} className="text-muted-foreground" />
                 <span>No sprints</span>
             </div>
@@ -88,7 +89,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between ${className || 'px-4 py-2 h-[42px]'}`}
+                className={cn("flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between px-4 py-2 h-10", className)}
             >
                 <div className="flex items-center gap-2 truncate">
                     <GitBranch size={14} className="text-primary flex-shrink-0" />

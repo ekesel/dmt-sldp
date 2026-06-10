@@ -20,7 +20,7 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect }: Proj
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 h-[42px] justify-between"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 h-10 justify-between"
             >
                 <div className="flex items-center gap-2 truncate">
                     <Folder size={16} className="text-primary" />

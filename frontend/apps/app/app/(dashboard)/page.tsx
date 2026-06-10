@@ -247,7 +247,7 @@ export default function DashboardPage() {
                             onSelect={setSelectedProjectId}
                         />
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-[42px]">
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-10">
                                 <CalendarDays size={16} className="text-primary shrink-0" />
                                 <div className="flex flex-col flex-1 justify-center">
                                     <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">From</span>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <span className="text-muted-foreground text-sm font-bold">→</span>
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-[42px]">
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-10">
                                 <CalendarDays size={16} className="text-primary shrink-0" />
                                 <div className="flex flex-col flex-1 justify-center">
                                     <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">To</span>

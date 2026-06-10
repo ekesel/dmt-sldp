@@ -109,11 +109,11 @@ export default function SprintComparisonPage() {
                         <div className="h-6 w-px bg-border hidden md:block" />
 
                         {/* Baseline selector with mode toggle */}
-                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-[42px]">
+                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
                             <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Baseline:</span>
 
                             {/* Mode toggle pills */}
-                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-[32px]">
+                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-8">
                                 <button
                                     onClick={() => handleBaselineModeToggle('sprint')}
                                     className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors ${
@@ -138,23 +138,23 @@ export default function SprintComparisonPage() {
                             </div>
 
                             {useCompanyBaseline ? (
-                                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20 h-[32px]">
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20 h-8">
                                     <Building2 size={12} className="text-primary" />
                                     <span className="text-xs font-bold text-primary">{companyBaseline.name}</span>
                                 </div>
                             ) : (
-                                <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} className="px-3 h-[32px] text-xs" />
+                                <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} className="px-3 h-8 text-xs" />
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-[42px]">
+                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
                             <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Target:</span>
-                            <SprintSelector projectId={projectId} selectedSprintId={sprintBId} onSelect={setSprintBId} className="px-3 h-[32px] text-xs" />
+                            <SprintSelector projectId={projectId} selectedSprintId={sprintBId} onSelect={setSprintBId} className="px-3 h-8 text-xs" />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 bg-primary/10 px-3 rounded-lg border border-primary/20 h-[42px]">
+                <div className="flex items-center gap-3 bg-primary/10 px-3 rounded-lg border border-primary/20 h-10">
                     <Users size={16} className="text-primary ml-1" />
                     <select
                         className="bg-transparent text-foreground/80 text-sm font-medium focus:outline-none"
