@@ -26,7 +26,7 @@ from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
 from users.views import RoleViewSet
-from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView
+from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView, GetAllDepartmentsDropdown
 
 router = DefaultRouter()
 
@@ -136,7 +136,10 @@ urlpatterns = [
     path('api/org-users/autocomplete/', UserAutocompleteAPIView.as_view()),
 
     # get all roles data -
-    path('api/org-roles/', GetAllRolesDropdown.as_view())
+    path('api/org-roles/', GetAllRolesDropdown.as_view()),
+
+    # get all departments data -
+    path('api/org-departments/', GetAllDepartmentsDropdown.as_view())
 
 ]
 
