@@ -220,7 +220,7 @@ export default function DeveloperDetailsPage({
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen((o) => !o)}
-                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
+                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-none transition-all duration-300 w-full min-w-[240px]"
                   >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                       <Briefcase size={20} />
@@ -244,7 +244,7 @@ export default function DeveloperDetailsPage({
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-none overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         {[
                           { id: "all", name: "All Projects Combined" },
@@ -581,7 +581,7 @@ export default function DeveloperDetailsPage({
                 </span>
               )}
             </h2>
-            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-2xl relative overflow-hidden">
+            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-none relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px]" />
 
               <div className="space-y-4">

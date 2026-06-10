@@ -70,7 +70,7 @@ export default function MetricsPage() {
                     </div>
                 </header>
 
-                <div className="flex items-center gap-4 bg-muted/60 p-4 rounded-2xl border border-border">
+                <div className="flex items-center gap-4 bg-muted/60 p-4 rounded-2xl border border-border shadow-inner">
                     <Search className="text-muted-foreground flex-shrink-0" size={20} />
                     <input
                         type="text"
@@ -95,9 +95,9 @@ export default function MetricsPage() {
                             const initial = (dev.developer_name || dev.developer_email || '?').charAt(0).toUpperCase();
                             const projectCount = dev.projects?.length || 0;
                             return (
-                                <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary transition-all duration-300 cursor-pointer group rounded-2xl">
+                                <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent relative overflow-hidden flex-shrink-0">
+                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent shadow-inner relative overflow-hidden flex-shrink-0">
                                             <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <span className="relative z-10">{initial}</span>
                                         </div>
