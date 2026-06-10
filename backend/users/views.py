@@ -22,12 +22,13 @@ from .serializers import RoleSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User
+from .models import User, Department
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from homepage.permissions import IsManagerOrReadOnly
 from django.db.models import Q
+from .models import Department
 
 
 
@@ -499,12 +500,11 @@ class UserHierarchyAPIView(APIView):
             dep_name = data.get("dep_name") or data.get("department")
             if dep_name:
                 dep_name = str(dep_name).lower()
-                valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
-                if dep_name not in valid_choices:
-                    return Response({
-                        "status": False,
-                        "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
-                    }, status=status.HTTP_400_BAD_REQUEST)
+               
+                # Auto-create if it doesn't exist, using atomic get_or_create
+                # This way the previous flow doesn't break, and accepts the string.
+                Department.objects.get_or_create(name=dep_name)
+                    
                 # Update the role's department
                 role_obj.dep_name = dep_name
                 role_obj.save()
@@ -658,12 +658,9 @@ class UserHierarchyAPIView(APIView):
                 dep_name = data.get("dep_name") or data.get("department")
                 if dep_name:
                     dep_name = str(dep_name).lower()
-                    valid_choices = [c[0] for c in RoleTable.DepartmentChoices.choices]
-                    if dep_name not in valid_choices:
-                        return Response({
-                            "status": False,
-                            "message": f"Invalid department '{dep_name}'. Valid choices: {valid_choices}"
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                    from .models import Department
+                    Department.objects.get_or_create(name=dep_name)
+                    
                     # Update the role's department
                     role_obj.dep_name = dep_name
                     role_obj.save()
@@ -773,6 +770,63 @@ class GetAllRolesDropdown(APIView):
             "status": True,
             "data": list_data
         }, status=status.HTTP_200_OK)
+
+
+class GetAllDepartmentsDropdown(APIView):
+    """
+    Returns a flat list of all departments (for dropdowns).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+    
+        departments = Department.objects.all().order_by('name')
+        list_data = []
+
+        for dep in departments:
+            list_data.append({
+                "id": dep.id,
+                "name": dep.name,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        from .models import Department
+        name = request.data.get('name') or request.data.get('dep_name') or request.data.get('department')
+        if not name:
+            return Response({
+                "status": False,
+                "message": "Department name is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        name = str(name).strip().lower()
+        if not name:
+            return Response({
+                "status": False,
+                "message": "Department name cannot be empty"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        department, created = Department.objects.get_or_create(name=name)
+        
+        if created:
+            message = "Department created successfully"
+            status_code = status.HTTP_201_CREATED
+        else:
+            message = "Department already exists"
+            status_code = status.HTTP_200_OK
+            
+        return Response({
+            "status": True,
+            "message": message,
+            "data": {
+                "id": department.id,
+                "name": department.name
+            }
+        }, status=status_code)
 
 
 # User Autocomplete API for search/autofill
