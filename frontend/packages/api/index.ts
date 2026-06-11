@@ -1031,6 +1031,8 @@ export const orgChart = {
   getRolesDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-roles/'),
   searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
   createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string; [key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
+  getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
+  createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
 };
 
 export default api;

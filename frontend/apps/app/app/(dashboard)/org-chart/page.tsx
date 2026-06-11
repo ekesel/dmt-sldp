@@ -111,6 +111,7 @@ function OrgChartPageContent() {
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
     const [rolesList, setRolesList] = useState<Array<{ id: string | number; name: string }>>([]);
+    const [departmentsList, setDepartmentsList] = useState<Array<{ id: string | number; name: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
 
@@ -137,9 +138,10 @@ function OrgChartPageContent() {
         setIsLoading(true);
         setIsError(false);
         try {
-            const [hierarchyRes, rolesRes] = await Promise.all([
+            const [hierarchyRes, rolesRes, departmentsRes] = await Promise.all([
                 orgChart.getHierarchy(),
-                orgChart.getRolesDropdown()
+                orgChart.getRolesDropdown(),
+                orgChart.getDepartments()
             ]);
             
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
@@ -153,6 +155,13 @@ function OrgChartPageContent() {
                 const rolesData = (rolesRes as any).data || rolesRes;
                 if (Array.isArray(rolesData)) {
                     setRolesList(rolesData.map((r: any) => ({ id: r.id, name: r.role_name || r.name })));
+                }
+            }
+
+            if (departmentsRes) {
+                const deptsData = (departmentsRes as any).data || departmentsRes;
+                if (Array.isArray(deptsData)) {
+                    setDepartmentsList(deptsData.map((d: any) => ({ id: d.id, name: d.name })));
                 }
             }
         } catch (error) {
@@ -558,6 +567,7 @@ function OrgChartPageContent() {
                 employeeData={editingEmployee}
                 employeesList={employees.map(e => ({ id: e.id, name: e.name, role: e.role }))}
                 rolesList={rolesList}
+                departmentsList={departmentsList}
                 defaultParentId={defaultParentId}
             />
         </main>

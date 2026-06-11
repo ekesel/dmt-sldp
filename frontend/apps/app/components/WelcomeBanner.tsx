@@ -116,28 +116,22 @@ export const WelcomeBanner: React.FC = () => {
               )}
 
               {/* Task Done Progress */}
-              <div className="mt-3 w-full flex flex-col items-center gap-1.5">
-                {totalTasks === 0 ? (
-                  <div className="text-[0.75rem] font-bold tracking-wide" style={{ color: "var(--color-green)" }}>
-                    "No Task"
+              {totalTasks > 0 && (
+                <div className="mt-3 w-full flex flex-col items-center gap-1.5">
+                  <div className="text-[0.75rem] font-bold text-muted-foreground flex items-center gap-1">
+                    <span>Task Done:</span>
+                    <span className="text-[#f59e0b]">{completedTasks}</span>
+                    <span>/ {totalTasks}</span>
                   </div>
-                ) : (
-                  <>
-                    <div className="text-[0.75rem] font-bold text-muted-foreground flex items-center gap-1">
-                      <span>Task Done:</span>
-                      <span className="text-[#f59e0b]">{completedTasks}</span>
-                      <span>/ {totalTasks}</span>
+                  <div className="w-[120px] h-[1.125rem] bg-orange-100 dark:bg-orange-950/30 rounded-full relative flex items-center">
+                    <div className="absolute top-0 left-0 h-full bg-[#f97316] rounded-full flex items-center justify-end pr-2" style={{ width: `${percentage}%` }}>
+                      <span className="text-[0.65rem] font-bold text-white leading-none">
+                        {percentage}%
+                      </span>
                     </div>
-                    <div className="w-[120px] h-[1.125rem] bg-orange-100 dark:bg-orange-950/30 rounded-full relative flex items-center">
-                      <div className="absolute top-0 left-0 h-full bg-[#f97316] rounded-full flex items-center justify-end pr-2" style={{ width: `${percentage}%` }}>
-                        <span className="text-[0.65rem] font-bold text-white leading-none">
-                          {percentage}%
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
