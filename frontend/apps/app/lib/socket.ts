@@ -7,8 +7,9 @@ class WSClient {
 
   private messageQueue: string[] = [];
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
+  private maxReconnectAttempts = Infinity;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private isIntentionalDisconnect = false;
 
   constructor(url: string) {
     this.url = url;
@@ -19,6 +20,8 @@ class WSClient {
   }
 
   connect() {
+    this.isIntentionalDisconnect = false;
+
     if (
       this.socket &&
       (this.socket.readyState === WebSocket.OPEN ||
@@ -76,6 +79,10 @@ class WSClient {
 
       this.dispatchEvent("close", null);
 
+      if (this.isIntentionalDisconnect) {
+        return;
+      }
+
       // Auto-reconnect logic
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
@@ -128,12 +135,12 @@ class WSClient {
     }
   }
 
-
   getReadyState() {
     return this.socket ? this.socket.readyState : WebSocket.CLOSED;
   }
 
   disconnect() {
+    this.isIntentionalDisconnect = true;
     if (this.socket) {
       this.socket.close();
       this.socket = null;

@@ -99,7 +99,7 @@ export default function SprintComparisonPage() {
     return (
         <div className="flex flex-col gap-8 w-full min-h-screen bg-background pb-10 px-6">
             {/* Header / Sticky Filter */}
-            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 shadow-xl shadow-black/20 transition-all duration-300">
+            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 transition-all duration-300">
                 <div className="flex items-center gap-6 flex-wrap">
                     <div className="font-bold text-xl text-foreground tracking-tight mr-2 border-r border-border pr-6">Sprint Comparison</div>
 
@@ -239,13 +239,13 @@ export default function SprintComparisonPage() {
 
                         {/* Charts Grid */}
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                            <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl">
+                            <div className="bg-card p-8 rounded-3xl border border-border">
                                 <RadarChartComponent data={data.charts.radar} sprintA={effectiveBaselineName} sprintB={sprintBName} />
                             </div>
 
                             <div className="flex flex-col gap-8">
                                 {data.charts.planned_vs_completed && data.charts.planned_vs_completed.length > 0 && (
-                                    <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl h-full flex flex-col justify-center">
+                                    <div className="bg-card p-8 rounded-3xl border border-border h-full flex flex-col justify-center">
                                         <SideBySideBarChart
                                             title="Planned vs Completed Points"
                                             data={data.charts.planned_vs_completed}
@@ -256,7 +256,7 @@ export default function SprintComparisonPage() {
                                 )}
 
                                 {data.charts.blocked_time && data.charts.blocked_time.length > 0 && (
-                                    <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl h-full flex flex-col justify-center">
+                                    <div className="bg-card p-8 rounded-3xl border border-border h-full flex flex-col justify-center">
                                         <BlockedTimeChart
                                             data={data.charts.blocked_time}
                                         />
@@ -268,7 +268,7 @@ export default function SprintComparisonPage() {
                         {/* Workload Distribution Section (Team Only) */}
                         {!developerId && data.charts.workload_distribution?.length > 0 && (
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl overflow-hidden">
+                                <div className="bg-card p-8 rounded-3xl border border-border overflow-hidden">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="text-lg font-semibold text-foreground">Story Points Distribution</h3>
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded">By Developer</span>
@@ -281,7 +281,7 @@ export default function SprintComparisonPage() {
                                     />
                                 </div>
 
-                                <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl overflow-hidden">
+                                <div className="bg-card p-8 rounded-3xl border border-border overflow-hidden">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="text-lg font-semibold text-foreground">Work Items Distribution</h3>
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded">By Developer</span>
