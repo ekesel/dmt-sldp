@@ -98,18 +98,19 @@ def import_users_from_excel(file_obj, tenant=None):
 
 
 def get_user_sprint_task_summary(user):
-   
-    # active tasks
-    total_active_tasks = WorkItem.objects.filter(
+    base_qs = WorkItem.objects.filter(
         resolved_assignee=user,
         sprint__status='active',
-    ).count()
-        
-    # done tasks: 'done' in the active sprint
-    total_done_tasks = WorkItem.objects.filter(
-        resolved_assignee=user,
+    )
+
+    # done tasks in active sprint
+    total_done_tasks = base_qs.filter(
         status_category='done',
-        sprint__status='active'
+    ).count()
+
+    # active (not done) tasks in active sprint
+    total_active_tasks = base_qs.exclude(
+        status_category='done'
     ).count()
 
     logger.info(f"total_done_tasks: {total_done_tasks}")
