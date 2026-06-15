@@ -26,7 +26,7 @@ from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
 from users.views import RoleViewSet
-from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView, GetAllDepartmentsDropdown
+from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView, GetAllDepartmentsDropdown, UserSprintTaskSummaryAPIView
 
 router = DefaultRouter()
 
@@ -139,7 +139,10 @@ urlpatterns = [
     path('api/org-roles/', GetAllRolesDropdown.as_view()),
 
     # get all departments data -
-    path('api/org-departments/', GetAllDepartmentsDropdown.as_view())
+    path('api/org-departments/', GetAllDepartmentsDropdown.as_view()),
+
+    # get user sprint task summary -
+    path('api/user-sprint-task-summary/', UserSprintTaskSummaryAPIView.as_view())
 
 ]
 
