@@ -29,6 +29,7 @@ from rest_framework import status
 from homepage.permissions import IsManagerOrReadOnly
 from django.db.models import Q
 from .models import Department
+from .utils import get_user_sprint_task_summary
 
 
 
@@ -868,4 +869,26 @@ class UserAutocompleteAPIView(APIView):
         return Response({
             "status": True,
             "data": list_data
+        }, status=status.HTTP_200_OK)
+
+
+class UserSprintTaskSummaryAPIView(APIView):
+    """
+    GET API to calculate total active tasks assigned to logged-in user 
+    and how many tasks they have done based on the current active sprint.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from data.models import WorkItem
+        user = request.user
+        
+        summary = get_user_sprint_task_summary(user)
+       
+        return Response({
+            "status": True,
+            "data": {
+                "active": summary["total_active_tasks"],
+                "done": summary["total_done_tasks"]
+            }
         }, status=status.HTTP_200_OK)
