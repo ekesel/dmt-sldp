@@ -20,6 +20,7 @@ from users.views import (
     RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, 
     UserViewSet, InviteUserView, PasswordResetRequestView,ResetPasswordConfirmView,UploadUserDataView
 )
+from core.search_views import GlobalSearchAPIView
 from rest_framework.routers import DefaultRouter
 
 from configuration.views import ProjectViewSet, SourceConfigurationViewSet
@@ -116,6 +117,9 @@ urlpatterns = [
 
     # Homepage
     path('api/homepage/', include('homepage.urls')),
+
+    # Global Search
+    path('api/search/', GlobalSearchAPIView.as_view(), name='global_search'),
 
 
     # org chart - 
