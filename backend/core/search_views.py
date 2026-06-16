@@ -32,13 +32,12 @@ class GlobalSearchAPIView(APIView):
         doc_type = request.query_params.get('type')
 
         if doc_id:
-            results = []
             if not doc_type or doc_type == 'knowledge_base':
                 doc = get_visible_docs(request.user).filter(id=doc_id).first()
                 if doc:
                     latest_version = doc.versions.order_by("-version_number").first()
                     file_url = latest_version.file.url if (latest_version and latest_version.file) else None
-                    results.append({
+                    return Response({
                         "type": "knowledge_base",
                         "id": doc.id,
                         "title": doc.title,
@@ -48,17 +47,14 @@ class GlobalSearchAPIView(APIView):
                 policy = Policy.objects.filter(org_name=request.tenant.name, id=doc_id).first()
                 if policy:
                     file_url = policy.policy_file.url if policy.policy_file else None
-                    results.append({
+                    return Response({
                         "type": "policy_doc",
                         "id": policy.id,
                         "title": policy.policy_file.name.split('/')[-1] if policy.policy_file else "",
                         "file": file_url
                     })
                     
-            return Response({
-                "count": len(results),
-                "results": results
-            })
+            return Response({"error": "Document not found"}, status=404)
 
         if not query:
             return Response({
