@@ -96,7 +96,7 @@ function SearchResults() {
                         </h1>
                     </div>
                     <p className="text-muted-foreground text-[0.875rem] font-medium">
-                        Showing results for "{query}"
+                        Showing results for &quot;{query}&quot;
                     </p>
                 </div>
             </div>
@@ -164,7 +164,7 @@ function SearchResults() {
                     <SearchIcon className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-[1.125rem] font-bold text-foreground">No documents found</h3>
                     <p className="text-muted-foreground text-[0.875rem] max-w-sm mt-2">
-                        We couldn't find any documents starting with "{query}".
+                        We couldn&apos;t find any documents starting with &quot;{query}&quot;.
                     </p>
                 </div>
             )}
