@@ -25,13 +25,20 @@ class GlobalSearchAPIView(APIView):
         
         try:
             limit = int(request.query_params.get('limit', 10))
+            if not (1 <= limit <= 100):
+                return Response({"error": "Limit must be between 1 and 100"}, status=400)
         except ValueError:
-            limit = 10
+            return Response({"error": "Limit must be a valid integer"}, status=400)
 
         doc_id = request.query_params.get('id')
         doc_type = request.query_params.get('type')
 
         if doc_id:
+            try:
+                doc_id = int(doc_id)
+            except ValueError:
+                return Response({"error": "id must be a valid integer"}, status=400)
+
             if not doc_type or doc_type == 'knowledge_base':
                 doc = get_visible_docs(request.user).filter(id=doc_id).first()
                 if doc:
