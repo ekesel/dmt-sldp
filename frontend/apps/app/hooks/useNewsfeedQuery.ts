@@ -75,20 +75,18 @@ export function useNewsfeedQuery() {
         socket.on('post_updated', onPostUpdated);
         socket.on('post_deleted', onPostDeleted);
 
-        // Fetch on reconnect
-        const onOpen = () => {
+        // Fetch on reconnect or if already connected
+        if (isConnected) {
             socket.emit('get_posts', { page: 1 });
-        };
-        socket.on('open', onOpen);
+        }
 
         return () => {
             socket.off('posts', onPosts);
             socket.off('post_created', onPostCreated);
             socket.off('post_updated', onPostUpdated);
             socket.off('post_deleted', onPostDeleted);
-            socket.off('open', onOpen);
         };
-    }, [socket, queryClient, queryKey]);
+    }, [socket, queryClient, queryKey, isConnected]);
 
     const loadMorePosts = useCallback(() => {
         if (socket && hasNextPage) {

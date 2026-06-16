@@ -4,20 +4,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { dashboard, getFileUrl } from '@dmt/api';
 import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useOnboardingQuery } from './query-options';
+import { useUploadOnboarding, useUpdateOnboarding, useDeleteOnboarding } from './mutation-options';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
-
-interface OnboardingData {
-    id: number;
-    title?: string;
-    onboarding_file: string;
-}
 
 export default function OnboardingPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [guides, setGuides] = useState<OnboardingData[]>([]);
-    const [loading, setLoading] = useState(true);
     
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
@@ -28,27 +22,18 @@ export default function OnboardingPage() {
     const [submitting, setSubmitting] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const fetchOnboarding = async () => {
-        setLoading(true);
-        try {
-            const data = await dashboard.getOnboarding();
-            if (data && Array.isArray(data)) {
-                // Sort by ID descending so that the latest uploaded document appears at the top
-                const sorted = [...data].sort((a, b) => b.id - a.id);
-                setGuides(sorted);
-            }
-        } catch (err) {
-            console.error('Failed to fetch onboarding guides:', err);
-            toast.error('Failed to load onboarding resources');
-        } finally {
-            setLoading(false);
-        }
-    };
+    
+    // Queries & Mutations
+    const { data: guides = [], isLoading: loading, isError } = useOnboardingQuery();
+    const uploadMutation = useUploadOnboarding();
+    const updateMutation = useUpdateOnboarding();
+    const deleteMutation = useDeleteOnboarding();
 
     useEffect(() => {
-        fetchOnboarding();
-    }, []);
+        if (isError) {
+            toast.error('Failed to load onboarding resources');
+        }
+    }, [isError]);
 
     // Extract filename from URL
     const getFileName = (url: string) => {
@@ -119,15 +104,14 @@ export default function OnboardingPage() {
             }
 
             if (modalType === 'create') {
-                await dashboard.uploadOnboarding(formData);
+                await uploadMutation.mutateAsync(formData);
                 toast.success('Onboarding document uploaded successfully!', { id: toastId });
             } else if (modalType === 'update' && editingId !== null) {
-                await dashboard.updateOnboarding(editingId, formData);
+                await updateMutation.mutateAsync({ id: editingId, formData });
                 toast.success('Onboarding document updated successfully!', { id: toastId });
             }
 
             setModalOpen(false);
-            fetchOnboarding();
         } catch (err: any) {
             console.error('Form submission failed:', err);
             let errorMessage = modalType === 'create'
@@ -150,9 +134,8 @@ export default function OnboardingPage() {
 
         const toastId = toast.loading('Deleting onboarding guide...');
         try {
-            await dashboard.deleteOnboarding(id);
+            await deleteMutation.mutateAsync(id);
             toast.success('Onboarding guide deleted successfully!', { id: toastId });
-            fetchOnboarding();
         } catch (err) {
             console.error('Delete failed:', err);
             toast.error('Failed to delete onboarding guide.', { id: toastId });

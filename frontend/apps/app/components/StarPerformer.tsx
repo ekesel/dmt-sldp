@@ -40,7 +40,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             setLoading(true);
             try {
                 const data = await dashboard.getStarPerformer();
-               
+
                 if (data && data.top_performers) {
                     // Derive score bounds from the actual data for monotonic normalization
                     const rawVals = Object.values(data.top_performers)
@@ -87,7 +87,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             };
                         })
                         .filter((p): p is Performer => p !== null);
-                    console.log("RESOLVED API PERFORMERS FOR UI:", mapped);
+
                     setApiPerformers(mapped);
                 }
             } catch (error) {
