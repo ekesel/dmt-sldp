@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { dashboard, getFileUrl } from "@dmt/api";
+import { dashboard, search, getFileUrl } from "@dmt/api";
 import { Menu, LogOut, User, ChevronDown, Search, FileText } from "lucide-react";
 import Image from "next/image";
 import { NotificationBell } from "./NotificationBell";
@@ -30,8 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   }, [searchParams]);
 
   useEffect(() => {
-    // TODO: When backend API search is ready, replace this logic with an API call 
-    // to fetch the top 5 suggestions for `searchValue`.
     if (!searchValue.trim() || !isFocused) {
       setDropdownResults([]);
       setShowDropdown(false);
@@ -40,32 +38,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
 
     const fetchResults = async () => {
       try {
-        const [policiesData, learningData] = await Promise.all([
-           dashboard.getPolicies().catch(() => []),
-           dashboard.getLearningAndDevelopment().catch(() => [])
-        ]);
-
-        const policies = Array.isArray(policiesData) ? policiesData : [];
-        const learningDocs = Array.isArray(learningData) ? learningData : [];
-
-        const allDocs = [
-          ...policies.map((p: any) => ({ ...p, type: 'Policy', file: p.policy_file })),
-          ...learningDocs.map((l: any) => ({ ...l, type: 'Learning', file: l.learning_and_development_file }))
-        ];
-
-        const query = searchValue.toLowerCase();
-        const getFileName = (url: string) => {
-            if (!url) return '';
-            const parts = url.split('/');
-            return decodeURIComponent(parts[parts.length - 1]);
-        };
-
-        const filteredDocs = allDocs.filter(doc => {
-            const fileName = getFileName(doc.file).toLowerCase();
-            return fileName.startsWith(query);
-        });
-
-        setDropdownResults(filteredDocs.slice(0, 5));
+        const response = await search.query(searchValue, 5);
+        const results = response.results || [];
+        setDropdownResults(results);
         setShowDropdown(true);
       } catch (err) {
         console.error("Failed to fetch dropdown search results", err);
@@ -179,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
                     const parts = url.split('/');
                     return decodeURIComponent(parts[parts.length - 1]);
                   };
-                  const fileName = getFileName(doc.file).replace(/\.[^/.]+$/, "");
+                  const fileName = doc.title || getFileName(doc.file).replace(/\.[^/.]+$/, "");
                   const fileUrl = getFileUrl(doc.file);
                   const lowerUrl = fileUrl.toLowerCase();
                   const isOfficeFile = lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/);
@@ -199,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">{fileName}</p>
-                        <p className="text-xs text-muted-foreground">{doc.type}</p>
+                        <p className="text-xs text-muted-foreground">{doc.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</p>
                       </div>
                     </a>
                   );

@@ -2,38 +2,61 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { dashboard, getFileUrl } from '@dmt/api';
+import { search, getFileUrl } from '@dmt/api';
 import { ArrowLeft, Search as SearchIcon, FileText, Download, Eye } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
-import { policiesQueryOptions } from '../policies/query-options';
+import toast, { Toaster } from 'react-hot-toast';
+
+interface SearchResultDoc {
+    id: string;
+    title?: string;
+    file: string;
+    type?: string;
+}
 
 function SearchResults() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const query = searchParams.get('q') || '';
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam && !isNaN(parseInt(limitParam, 10)) ? parseInt(limitParam, 10) : undefined;
     
-    const [learningDocs, setLearningDocs] = useState<any[]>([]);
-    const [loadingLearning, setLoadingLearning] = useState(true);
-
-    const { data: policies = [], isLoading: loadingPolicies } = useQuery(policiesQueryOptions);
+    const [filteredDocs, setFilteredDocs] = useState<SearchResultDoc[]>([]);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const fetchLearning = async () => {
-            setLoadingLearning(true);
+        let ignore = false;
+        const fetchSearchResults = async () => {
+            if (!query.trim()) {
+                setFilteredDocs([]);
+                return;
+            }
+            setLoading(true);
             try {
-                const data = await dashboard.getLearningAndDevelopment();
-                if (data && Array.isArray(data)) {
-                    setLearningDocs(data);
+                const response = await search.query(query, limit);
+                if (!ignore) {
+                    if (response && response.results) {
+                        setFilteredDocs(response.results);
+                    } else {
+                        setFilteredDocs([]);
+                    }
                 }
             } catch (err) {
-                console.error('Failed to fetch learning materials:', err);
+                if (!ignore) {
+                    console.error('Failed to fetch search results:', err);
+                    toast.error('Failed to fetch search results. Please try again.');
+                    setFilteredDocs([]);
+                }
             } finally {
-                setLoadingLearning(false);
+                if (!ignore) {
+                    setLoading(false);
+                }
             }
         };
-        fetchLearning();
-    }, []);
+        fetchSearchResults();
+        return () => {
+            ignore = true;
+        };
+    }, [query, limit]);
 
     const getFileName = (url: string) => {
         if (!url) return '';
@@ -54,21 +77,6 @@ function SearchResults() {
         const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
         window.location.href = proxyUrl;
     };
-
-    const allDocs = [
-        ...policies.map(p => ({ ...p, type: 'Policy', file: p.policy_file })),
-        ...learningDocs.map(l => ({ ...l, type: 'Learning', file: l.learning_and_development_file }))
-    ];
-
-    // TODO: When the backend search API is ready, replace this client-side filtering logic 
-    // with an API call (e.g., passing the `query` as a parameter to fetch filtered results directly).
-    const filteredDocs = allDocs.filter(doc => {
-        if (!query) return false;
-        const fileName = getFileName(doc.file).toLowerCase();
-        return fileName.startsWith(query.toLowerCase());
-    });
-
-    const loading = loadingPolicies || loadingLearning;
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -101,7 +109,8 @@ function SearchResults() {
             ) : filteredDocs.length > 0 ? (
                 <div className="space-y-6">
                     {filteredDocs.map((doc, idx) => {
-                        const fileName = getFileName(doc.file);
+                        const fileName = doc.title || getFileName(doc.file);
+                        const displayType = doc.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Document';
                         return (
                             <div
                                 key={`${doc.type}-${doc.id}-${idx}`}
@@ -109,7 +118,7 @@ function SearchResults() {
                             >
                                 <div className="absolute top-5 right-5 flex items-center gap-2">
                                     <span className="text-xs font-bold bg-muted text-muted-foreground px-2 py-1 rounded-md uppercase tracking-wider">
-                                        {doc.type}
+                                        {displayType}
                                     </span>
                                     <a
                                         href={getFileUrl(doc.file)}
@@ -130,7 +139,7 @@ function SearchResults() {
                                             {fileName.replace(/\.[^/.]+$/, "")}
                                         </h3>
                                         <p className="text-[0.875rem] text-muted-foreground font-medium">
-                                            {doc.type === 'Policy' ? 'Official policy document.' : 'Official training resource.'}
+                                            {displayType} document.
                                         </p>
                                     </div>
                                 </div>

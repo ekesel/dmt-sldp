@@ -2,6 +2,8 @@
 import React from "react";
 import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { dashboard } from "@dmt/api";
 
 const formatJoinDate = (dateStr?: string) => {
   if (!dateStr) return "";
@@ -28,8 +30,13 @@ export const WelcomeBanner: React.FC = () => {
     ? `${user.first_name} ${user.last_name || ""}`.trim() 
     : (user?.username || "Guest User");
 
-  const completedTasks: number = 39;
-  const totalTasks: number = 50;
+  const { data: sprintTaskSummary } = useQuery({
+    queryKey: ["user-sprint-task-summary"],
+    queryFn: () => dashboard.getUserSprintTaskSummary(),
+  });
+
+  const completedTasks: number = sprintTaskSummary?.data?.done || 0;
+  const totalTasks: number = (sprintTaskSummary?.data?.active || 0) + completedTasks;
   const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const [mounted, setMounted] = React.useState(false);

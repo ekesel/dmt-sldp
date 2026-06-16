@@ -552,6 +552,9 @@ export const dashboard = {
   deleteOnboarding: (id: number) => del<{ success?: boolean }>(`/homepage/onboarding/${id}/`),
   getEvents: () => get<EventData[]>('/homepage/events/'),
   getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
+
+  
+  getUserSprintTaskSummary: () => get<{ status: boolean; data: { active: number; done: number } }>('/user-sprint-task-summary/'),
 };
 
 export interface LeaderboardWinner {
@@ -616,6 +619,11 @@ export const compliance = {
 export const sprints = {
   list: (projectId?: string | number | null) =>
     get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+};
+
+export const search = {
+  query: (q: string, limit?: number) =>
+    get<{ count: number; results: any[] }>('/search/', { q, limit }),
 };
 
 /** ---------- users ---------- */
