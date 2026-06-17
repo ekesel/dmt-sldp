@@ -34,7 +34,7 @@ const NewsfeedPage = () => {
 
     // Role-based access control check
 
-    const isManager = user?.is_manager || user?.role?.toLowerCase() === "manager";
+    const isManager = user?.is_manager;
 
 
     const handleEdit = (post: Post) => {

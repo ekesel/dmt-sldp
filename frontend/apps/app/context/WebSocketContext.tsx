@@ -36,6 +36,7 @@ export const WebSocketProvider: React.FC<{ url: string | null; children: React.R
         client.off('open', handleOpen);
         client.off('close', handleClose);
         client.disconnect();
+        setIsConnected(false);
       };
     }
   }, [client]);

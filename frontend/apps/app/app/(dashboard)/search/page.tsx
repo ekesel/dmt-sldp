@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { search, getFileUrl } from '@dmt/api';
 import { ArrowLeft, Search as SearchIcon, FileText, Download, Eye } from 'lucide-react';
+import { getFileViewerUrl } from '@/lib/utils';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface SearchResultDoc {
@@ -18,7 +19,8 @@ function SearchResults() {
     const router = useRouter();
     const query = searchParams.get('q') || '';
     const limitParam = searchParams.get('limit');
-    const limit = limitParam && !isNaN(parseInt(limitParam, 10)) ? parseInt(limitParam, 10) : undefined;
+    const parsedLimit = limitParam && !isNaN(parseInt(limitParam, 10)) ? parseInt(limitParam, 10) : undefined;
+    const limit = parsedLimit !== undefined ? Math.min(parsedLimit, 1000) : undefined;
     
     const [filteredDocs, setFilteredDocs] = useState<SearchResultDoc[]>([]);
     const [loading, setLoading] = useState(false);
@@ -28,6 +30,7 @@ function SearchResults() {
         const fetchSearchResults = async () => {
             if (!query.trim()) {
                 setFilteredDocs([]);
+                setLoading(false);
                 return;
             }
             setLoading(true);
@@ -60,17 +63,12 @@ function SearchResults() {
 
     const getFileName = (url: string) => {
         if (!url) return '';
-        const parts = url.split('/');
+        const cleanUrl = url.split(/[?#]/)[0];
+        const parts = cleanUrl.split('/');
         return decodeURIComponent(parts[parts.length - 1]);
     };
 
-    const getFileViewerUrl = (url: string) => {
-        const lowerUrl = url.toLowerCase();
-        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
-            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
-        }
-        return url;
-    };
+
 
     const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
         e.preventDefault();

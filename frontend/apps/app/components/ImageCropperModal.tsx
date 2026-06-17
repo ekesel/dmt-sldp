@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import Cropper, { Area } from 'react-easy-crop';
 import getCroppedImg from '../lib/cropImage';
 import { X, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -12,14 +12,16 @@ interface ImageCropperModalProps {
 export default function ImageCropperModal({ imageSrc, onCropComplete, onClose }: ImageCropperModalProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const onCropCompleteHandler = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+  const onCropCompleteHandler = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
   const handleSave = async () => {
+    if (!croppedAreaPixels) return;
+    
     try {
       setIsProcessing(true);
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels, 0);
@@ -72,7 +74,7 @@ export default function ImageCropperModal({ imageSrc, onCropComplete, onClose }:
               min={1}
               max={3}
               step={0.1}
-              aria-labelledby="Zoom"
+              aria-label="Zoom level"
               onChange={(e) => setZoom(Number(e.target.value))}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
@@ -90,7 +92,7 @@ export default function ImageCropperModal({ imageSrc, onCropComplete, onClose }:
             </button>
             <button
               onClick={handleSave}
-              disabled={isProcessing}
+              disabled={isProcessing || !croppedAreaPixels}
               className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {isProcessing ? 'Saving...' : 'Save'}

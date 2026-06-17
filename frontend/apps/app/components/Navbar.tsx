@@ -30,6 +30,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   }, [searchParams]);
 
   useEffect(() => {
+    let ignore = false;
+
     if (!searchValue.trim() || !isFocused) {
       setDropdownResults([]);
       setShowDropdown(false);
@@ -39,16 +41,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
     const fetchResults = async () => {
       try {
         const response = await search.query(searchValue, 5);
-        const results = response.results || [];
-        setDropdownResults(results);
-        setShowDropdown(true);
+        if (!ignore) {
+          const results = response.results || [];
+          setDropdownResults(results);
+          setShowDropdown(true);
+        }
       } catch (err) {
-        console.error("Failed to fetch dropdown search results", err);
+        if (!ignore) {
+          console.error("Failed to fetch dropdown search results", err);
+          setDropdownResults([]);
+          setShowDropdown(false);
+        }
       }
     };
 
     const debounce = setTimeout(fetchResults, 300);
-    return () => clearTimeout(debounce);
+    return () => {
+      ignore = true;
+      clearTimeout(debounce);
+    };
   }, [searchValue, isFocused]);
 
   useEffect(() => {
@@ -151,12 +162,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
                 {dropdownResults.map((doc, idx) => {
                   const getFileName = (url: string) => {
                     if (!url) return '';
-                    const parts = url.split('/');
+                    const cleanUrl = url.split(/[?#]/)[0];
+                    const parts = cleanUrl.split('/');
                     return decodeURIComponent(parts[parts.length - 1]);
                   };
                   const fileName = doc.title || getFileName(doc.file).replace(/\.[^/.]+$/, "");
                   const fileUrl = getFileUrl(doc.file);
-                  const lowerUrl = fileUrl.toLowerCase();
+                  const cleanFileUrl = fileUrl.split(/[?#]/)[0];
+                  const lowerUrl = cleanFileUrl.toLowerCase();
                   const isOfficeFile = lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/);
                   const viewerUrl = isOfficeFile ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}` : fileUrl;
                   

@@ -9,6 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { policiesQueryOptions } from './query-options';
 import { getUploadMutationOptions, getUpdateMutationOptions, getDeleteMutationOptions } from './mutation-options';
+import { getFileViewerUrl } from '@/lib/utils';
 
 interface PolicyData {
     id: number;
@@ -40,14 +41,7 @@ export default function PoliciesPage() {
         return decodeURIComponent(parts[parts.length - 1]);
     };
 
-    // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
-    const getFileViewerUrl = (url: string) => {
-        const lowerUrl = url.toLowerCase();
-        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
-            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
-        }
-        return url;
-    };
+
 
     // Handle Uploading a new policy
     const handleUploadClick = () => {

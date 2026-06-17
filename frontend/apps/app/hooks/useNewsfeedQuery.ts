@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { Post } from '../types/newsfeed';
 import { newsfeedKeys } from '../app/(dashboard)/newsfeed/query-keys';
@@ -10,7 +10,7 @@ import { getNewsfeedQueryOptions } from '../app/(dashboard)/newsfeed/query-optio
 export function useNewsfeedQuery() {
     const { client: socket, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
-    const queryKey = newsfeedKeys.posts();
+    const queryKey = useMemo(() => newsfeedKeys.posts(), []);
 
     const [page, setPage] = useState(1);
     const [hasNextPage, setHasNextPage] = useState(false);
@@ -46,11 +46,7 @@ export function useNewsfeedQuery() {
             if (!newPost || !newPost.post_id) return;
             
             queryClient.setQueryData<Post[]>(queryKey, (old) => {
-                const filtered = (old || []).filter(p =>
-                    !(p.title === newPost.title &&
-                        p.content === newPost.content &&
-                        p.author?.id === newPost.author?.id)
-                );
+                const filtered = (old || []).filter(p => p.post_id !== newPost.post_id);
                 return [newPost, ...filtered];
             });
         };

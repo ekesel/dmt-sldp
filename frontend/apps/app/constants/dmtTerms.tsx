@@ -89,7 +89,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Checks quality by measuring how many bugs are found compared to the amount of work completed. It answers: <em>Are we maintaining quality while working fast?</em></p>
-        <p><strong>How it is calculated: </strong>Count the total number of defects (bugs) reported for the completed work and divide it by the total story points delivered. Multiply the result by 100 to express the value as a percentage.</p>
+        <p><strong>How it is calculated:</strong> Count the total number of defects (bugs) reported for the completed work and divide it by the total story points delivered. Multiply the result by 100 to express the value as a percentage.</p>
       </div>
     )
   },
@@ -109,7 +109,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> Measures how long it takes for code to get its first review after a developer submits it.</p>
-        <p><strong>How it is calculated: </strong>For each pull request, calculate the time between its creation and the first review. Add these times together and divide by the total number of pull requests to get the average review speed.</p>
+        <p><strong>How it is calculated:</strong> For each pull request, calculate the time between its creation and the first review. Add these times together and divide by the total number of pull requests to get the average review speed.</p>
       </div>
     )
   },
@@ -175,7 +175,7 @@ export const dmtTerms: DMTTerm[] = [
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> The project's overall "passing grade". Shows the percentage of work items that successfully pass all DMT quality checks.</p>
-        <p><strong>How it is calculated:</strong>Count the total number of work items in the project and the number of work items that pass all DMT quality checks. Divide the compliant work items by the total work items and multiply by 100 to get the compliance percentage.</p>
+        <p><strong>How it is calculated:</strong> Count the total number of work items in the project and the number of work items that pass all DMT quality checks. Divide the compliant work items by the total work items and multiply by 100 to get the compliance percentage.</p>
       </div>
     )
   },
@@ -274,7 +274,7 @@ export const dmtTerms: DMTTerm[] = [
             <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-accent">Quality Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest compliance rate and best code quality.</p>
-              <p><strong>How it is calculated:</strong>Calculate the average DMT compliance rate for each developer over the selected period. The developer with the highest average compliance rate is awarded the Quality Champion title.</p>
+              <p><strong>How it is calculated:</strong> Calculate the average DMT compliance rate for each developer over the selected period. The developer with the highest average compliance rate is awarded the Quality Champion title.</p>
             </li>
             <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
               <strong className="text-accent">Top Reviewer</strong>

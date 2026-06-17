@@ -13,7 +13,10 @@ export const getNewsfeedQueryOptions = (
                 return reject(new Error('WebSocket is not connected'));
             }
 
+            let timeoutId: NodeJS.Timeout;
+
             const handlePosts = (payload: any) => {
+                clearTimeout(timeoutId);
                 socket.off('posts', handlePosts);
                 socket.off('error', handleError);
                 
@@ -27,6 +30,7 @@ export const getNewsfeedQueryOptions = (
             };
 
             const handleError = (err: any) => {
+                clearTimeout(timeoutId);
                 socket.off('posts', handlePosts);
                 socket.off('error', handleError);
                 reject(err);
@@ -34,6 +38,12 @@ export const getNewsfeedQueryOptions = (
 
             socket.on('posts', handlePosts);
             socket.on('error', handleError);
+
+            timeoutId = setTimeout(() => {
+                socket.off('posts', handlePosts);
+                socket.off('error', handleError);
+                reject(new Error('Timeout: Server did not respond within 30 seconds'));
+            }, 30000);
 
             socket.emit('get_posts', { page: 1 });
         });

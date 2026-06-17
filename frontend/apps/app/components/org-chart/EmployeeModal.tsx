@@ -79,7 +79,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 name: employeeData ? employeeData.name : '',
                 role: employeeData ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
                 email: employeeData ? (employeeData.email || '') : '',
-                department: employeeData ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name).toLowerCase() : ''),
+                department: employeeData ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
                 parentId: employeeData ? (employeeData.parentId || '') : (defaultParentId || ''),
                 isNotFound: false,
                 autocompleteError: false,
@@ -119,7 +119,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 rejectedMatchesRef.current.add(prev.email);
                 setState(s => {
                     const newRole = s.role === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : s.role;
-                    const newDepartment = s.department === prev.department ? (departmentsListRef.current.length > 0 ? String(departmentsListRef.current[0].name).toLowerCase() : '') : s.department;
+                    const newDepartment = s.department === prev.department ? (departmentsListRef.current.length > 0 ? String(departmentsListRef.current[0].name) : '') : s.department;
                     const newEmail = (prev.matchedBy === 'name' && nameChanged && s.email === prev.email) ? '' : s.email;
                     const newName = (prev.matchedBy === 'email' && emailChanged && s.name === prev.name) ? '' : s.name;
                     return {
@@ -287,7 +287,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             name: name.trim(),
             role: finalRoleId,
             email: email.trim(),
-            department: finalDepartment.toLowerCase(),
+            department: finalDepartment,
             parentId
         });
     };
@@ -438,7 +438,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                         setState(s => ({
                                             ...s,
                                             isCreatingDepartment: false,
-                                            department: departmentsList.length > 0 ? String(departmentsList[0].name).toLowerCase() : ''
+                                            department: departmentsList.length > 0 ? String(departmentsList[0].name) : ''
                                         }));
                                     }}
                                     className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
@@ -460,7 +460,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
                                 >
                                     {departmentsList.map((dept) => (
-                                        <option key={dept.id} value={String(dept.name).toLowerCase()}>
+                                        <option key={dept.id} value={String(dept.name)}>
                                             {dept.name}
                                         </option>
                                     ))}

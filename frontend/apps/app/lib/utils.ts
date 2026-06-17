@@ -37,3 +37,11 @@ export function formatTimestamp(
   }
 }
 
+export function getFileViewerUrl(url: string) {
+    const baseUrl = url.split(/[?#]/)[0];
+    const lowerUrl = baseUrl.toLowerCase();
+    if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
+        return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+    }
+    return url;
+}

@@ -44,7 +44,8 @@ export default function OnboardingPage() {
 
     // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
     const getFileViewerUrl = (url: string) => {
-        const lowerUrl = url.toLowerCase();
+        const baseUrl = url.split(/[?#]/)[0];
+        const lowerUrl = baseUrl.toLowerCase();
         if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
             return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
         }

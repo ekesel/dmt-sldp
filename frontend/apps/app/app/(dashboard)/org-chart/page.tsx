@@ -138,11 +138,24 @@ function OrgChartPageContent() {
         setIsLoading(true);
         setIsError(false);
         try {
-            const [hierarchyRes, rolesRes, departmentsRes] = await Promise.all([
+            const [hierarchyRes, rolesRes] = await Promise.all([
                 orgChart.getHierarchy(),
-                orgChart.getRolesDropdown(),
-                orgChart.getDepartments()
+                orgChart.getRolesDropdown()
             ]);
+
+            // Fetch departments separately as a non-blocking operation
+            orgChart.getDepartments()
+                .then((departmentsRes) => {
+                    if (departmentsRes) {
+                        const deptsData = (departmentsRes as any).data || departmentsRes;
+                        if (Array.isArray(deptsData)) {
+                            setDepartmentsList(deptsData.map((d: any) => ({ id: d.id, name: d.name })));
+                        }
+                    }
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch departments separately:', err);
+                });
             
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
@@ -155,13 +168,6 @@ function OrgChartPageContent() {
                 const rolesData = (rolesRes as any).data || rolesRes;
                 if (Array.isArray(rolesData)) {
                     setRolesList(rolesData.map((r: any) => ({ id: r.id, name: r.role_name || r.name })));
-                }
-            }
-
-            if (departmentsRes) {
-                const deptsData = (departmentsRes as any).data || departmentsRes;
-                if (Array.isArray(deptsData)) {
-                    setDepartmentsList(deptsData.map((d: any) => ({ id: d.id, name: d.name })));
                 }
             }
         } catch (error) {
