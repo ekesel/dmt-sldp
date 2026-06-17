@@ -552,6 +552,9 @@ export const dashboard = {
   deleteOnboarding: (id: number) => del<{ success?: boolean }>(`/homepage/onboarding/${id}/`),
   getEvents: () => get<EventData[]>('/homepage/events/'),
   getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
+
+  
+  getUserSprintTaskSummary: () => get<{ status: boolean; data: { active: number; done: number } }>('/user-sprint-task-summary/'),
 };
 
 export interface LeaderboardWinner {
@@ -616,6 +619,11 @@ export const compliance = {
 export const sprints = {
   list: (projectId?: string | number | null) =>
     get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+};
+
+export const search = {
+  query: (q: string, limit?: number) =>
+    get<{ count: number; results: any[] }>('/search/', { q, limit }),
 };
 
 /** ---------- users ---------- */
@@ -1031,6 +1039,8 @@ export const orgChart = {
   getRolesDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-roles/'),
   searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
   createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string; [key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
+  getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
+  createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
 };
 
 export default api;

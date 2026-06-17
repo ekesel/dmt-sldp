@@ -48,8 +48,8 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                     ${dim} flex items-center justify-center rounded-[5px] cursor-pointer
                     border transition-all duration-150
                     ${checked || indeterminate
-                        ? 'bg-sky-500 border-sky-500 ring-2 ring-sky-200'
-                        : 'bg-white border-sky-200 hover:border-sky-400'
+                        ? 'bg-primary/90 border-primary ring-2 ring-primary/30'
+                        : 'bg-white border-primary/30 hover:border-primary/80'
                     }
                 `}
             >
@@ -162,20 +162,20 @@ export default function SendNotificationPage() {
     };
 
     return (
-        <div className="min-h-screen bg-sky-50 p-8">
+        <div className="min-h-screen bg-[#F3F4F6] p-8">
             <div className="max-w-5xl mx-auto">
 
                 {/* Header */}
-                <header className="mb-8 bg-white rounded-2xl border border-sky-100 shadow-sm px-8 py-6 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-sky-500 flex items-center justify-center shadow-md shadow-sky-200">
+                <header className="mb-8 bg-white rounded-2xl border border-primary/20 shadow-sm px-8 py-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/90 flex items-center justify-center shadow-md shadow-primary/30">
                         <MessageSquare className="w-6 h-6 text-white" />
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Messenger</h1>
-                        <p className="text-sky-600 text-sm font-medium mt-0.5">Send in-app notifications to team members</p>
+                        <p className="text-primary-dark text-sm font-medium mt-0.5">Send in-app notifications to team members</p>
                     </div>
                     {selectedIds.size > 0 && (
-                        <div className="ml-auto flex items-center gap-2 bg-sky-100 text-sky-700 text-sm font-bold px-4 py-2 rounded-full">
+                        <div className="ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-sm font-bold px-4 py-2 rounded-full">
                             <Users className="w-4 h-4" />
                             {selectedIds.size} selected
                         </div>
@@ -185,10 +185,10 @@ export default function SendNotificationPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* ── User list panel ── */}
-                    <div className="lg:col-span-1 bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[600px]">
+                    <div className="lg:col-span-1 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[600px]">
 
                         {/* Panel header */}
-                        <div className="px-4 py-3 bg-sky-500 flex items-center gap-2">
+                        <div className="px-4 py-3 bg-primary/90 flex items-center gap-2">
                             <Users className="w-4 h-4 text-white/80" />
                             <span className="text-white font-semibold text-sm">Team Members</span>
                             {!loading && (
@@ -197,13 +197,13 @@ export default function SendNotificationPage() {
                         </div>
 
                         {/* Search */}
-                        <div className="p-3 border-b border-sky-100 bg-sky-50 space-y-2">
+                        <div className="p-3 border-b border-gray-200 bg-white space-y-2">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/80" />
                                 <input
                                     type="text"
                                     placeholder="Search users..."
-                                    className="w-full pl-9 pr-4 py-2 bg-white border border-sky-200 rounded-lg text-sm text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition"
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -219,10 +219,10 @@ export default function SendNotificationPage() {
                                     />
                                     <span
                                         onClick={toggleSelectAll}
-                                        className="text-xs font-semibold text-sky-600 hover:text-sky-800 transition cursor-pointer"
+                                        className="text-xs font-semibold text-primary-dark hover:text-primary-dark transition cursor-pointer"
                                     >
                                         {allFilteredSelected ? 'Deselect all' : 'Select all'}
-                                        <span className="text-sky-400 ml-1">({filteredUsers.length})</span>
+                                        <span className="text-primary/80 ml-1">({filteredUsers.length})</span>
                                     </span>
                                 </div>
                             )}
@@ -231,9 +231,9 @@ export default function SendNotificationPage() {
                         {/* User rows */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {loading ? (
-                                <div className="p-6 text-center text-sky-400 text-sm">Loading users...</div>
+                                <div className="p-6 text-center text-primary/80 text-sm">Loading users...</div>
                             ) : filteredUsers.length === 0 ? (
-                                <div className="p-6 text-center text-sky-400 text-sm">No users found</div>
+                                <div className="p-6 text-center text-primary/80 text-sm">No users found</div>
                             ) : (
                                 filteredUsers.map((u) => {
                                     const uid = Number(u.id);
@@ -244,8 +244,8 @@ export default function SendNotificationPage() {
                                             onClick={() => toggleUser(uid)}
                                             className={`w-full text-left p-3 rounded-xl flex items-center gap-3 cursor-pointer transition select-none ${
                                                 selected
-                                                    ? 'bg-sky-50 border border-sky-300 shadow-sm'
-                                                    : 'hover:bg-sky-50 border border-transparent'
+                                                    ? 'bg-gray-100 border border-gray-300 shadow-sm'
+                                                    : 'hover:bg-gray-100 border border-transparent'
                                             }`}
                                         >
                                             <Checkbox
@@ -255,13 +255,13 @@ export default function SendNotificationPage() {
                                                 size="sm"
                                             />
                                             <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition ${
-                                                selected ? 'bg-sky-500 border-sky-400' : 'bg-sky-100 border-sky-200'
+                                                selected ? 'bg-primary/90 border-primary/80' : 'bg-gray-100 border-gray-200'
                                             }`}>
-                                                <UserIcon className={`w-4 h-4 ${selected ? 'text-white' : 'text-sky-500'}`} />
+                                                <UserIcon className={`w-4 h-4 ${selected ? 'text-white' : 'text-primary'}`} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-semibold text-gray-800 truncate">{displayName(u)}</p>
-                                                <p className="text-xs text-sky-400 truncate">{u.email}</p>
+                                                <p className="text-xs text-accent truncate">{u.email}</p>
                                             </div>
                                         </div>
                                     );
@@ -271,10 +271,10 @@ export default function SendNotificationPage() {
                     </div>
 
                     {/* ── Compose panel ── */}
-                    <div className="lg:col-span-2 bg-white border border-sky-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div className="lg:col-span-2 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col">
 
                         {/* Panel header */}
-                        <div className="px-6 py-3 bg-sky-500 flex items-center gap-2">
+                        <div className="px-6 py-3 bg-primary/90 flex items-center gap-2">
                             <MessageSquare className="w-4 h-4 text-white/80" />
                             <span className="text-white font-semibold text-sm">Compose Message</span>
                         </div>
@@ -284,12 +284,12 @@ export default function SendNotificationPage() {
                                 <form onSubmit={handleSend} className="space-y-5 h-full flex flex-col">
 
                                     {/* Recipient badge */}
-                                    <div className="flex items-center gap-4 p-4 bg-sky-50 rounded-xl border border-sky-200">
-                                        <div className="p-2 bg-sky-500 rounded-full shadow shadow-sky-200">
+                                    <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200">
+                                        <div className="p-2 bg-primary/90 rounded-full shadow shadow-primary/30">
                                             <Users className="w-5 h-5 text-white" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-[10px] text-sky-500 uppercase font-bold tracking-wider">
+                                            <p className="text-[10px] text-primary uppercase font-bold tracking-wider">
                                                 {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
                                             </p>
                                             <p className="text-sm font-bold text-gray-800 truncate">{recipientLabel()}</p>
@@ -297,7 +297,7 @@ export default function SendNotificationPage() {
                                         <button
                                             type="button"
                                             onClick={() => setSelectedIds(new Set())}
-                                            className="ml-auto text-xs text-sky-400 hover:text-rose-500 transition font-medium"
+                                            className="ml-auto text-xs text-primary/80 hover:text-rose-500 transition font-medium"
                                         >
                                             Clear
                                         </button>
@@ -310,7 +310,7 @@ export default function SendNotificationPage() {
                                         </label>
                                         <div className="grid grid-cols-4 gap-2">
                                             {[
-                                                { id: 'info',    icon: Info,          color: 'text-sky-500',     bg: 'bg-sky-50 border-sky-200',    ring: 'ring-sky-300' },
+                                                { id: 'info',    icon: Info,          color: 'text-primary',     bg: 'bg-white border-gray-200',    ring: 'ring-gray-200' },
                                                 { id: 'success', icon: CheckCircle,   color: 'text-emerald-500', bg: 'bg-emerald-50 border-emerald-200', ring: 'ring-emerald-300' },
                                                 { id: 'warning', icon: AlertTriangle, color: 'text-amber-500',   bg: 'bg-amber-50 border-amber-200',  ring: 'ring-amber-300' },
                                                 { id: 'error',   icon: XCircle,       color: 'text-rose-500',    bg: 'bg-rose-50 border-rose-200',    ring: 'ring-rose-300' },
@@ -322,7 +322,7 @@ export default function SendNotificationPage() {
                                                     className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
                                                         type === t.id
                                                             ? `${t.bg} ring-2 ${t.ring} shadow-sm`
-                                                            : 'bg-white border-sky-100 hover:border-sky-200'
+                                                            : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                     }`}
                                                 >
                                                     <t.icon className={`w-5 h-5 ${t.color}`} />
@@ -340,7 +340,7 @@ export default function SendNotificationPage() {
                                         <input
                                             type="text"
                                             placeholder="Brief summary..."
-                                            className="w-full px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition"
                                             value={title}
                                             onChange={(e) => setTitle(e.target.value)}
                                         />
@@ -354,7 +354,7 @@ export default function SendNotificationPage() {
                                         <textarea
                                             placeholder="Type your message here..."
                                             rows={5}
-                                            className="flex-1 w-full px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl text-gray-800 placeholder-sky-300 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 transition resize-none"
+                                            className="flex-1 w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             required
@@ -385,7 +385,7 @@ export default function SendNotificationPage() {
                                     <button
                                         type="submit"
                                         disabled={sending || !message}
-                                        className="w-full bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white font-bold py-4 rounded-xl shadow-md shadow-sky-200 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
+                                        className="w-full bg-primary/90 hover:bg-primary-dark active:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md shadow-primary/30 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
                                     >
                                         {sending ? (
                                             <span className="flex items-center gap-2">
@@ -402,11 +402,11 @@ export default function SendNotificationPage() {
                                 </form>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                                    <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mb-5 border-2 border-sky-200">
-                                        <MessageSquare className="w-9 h-9 text-sky-400" />
+                                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 border-2 border-gray-200">
+                                        <MessageSquare className="w-9 h-9 text-gray-400" />
                                     </div>
                                     <h3 className="text-xl font-bold text-gray-700 mb-2">No Recipients Yet</h3>
-                                    <p className="text-sky-500 text-sm max-w-xs">
+                                    <p className="text-accent text-sm max-w-xs">
                                         Select one or more team members from the list on the left to start composing your message.
                                     </p>
                                 </div>

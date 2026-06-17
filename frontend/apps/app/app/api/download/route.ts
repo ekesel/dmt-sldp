@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 
 function isAllowedDownloadUrl(urlStr: string): boolean {
     try {
+        if (process.env.NODE_ENV === 'development') {
+            return true;
+        }
         const url = new URL(urlStr);
         if (url.protocol !== 'https:') {
             return false;

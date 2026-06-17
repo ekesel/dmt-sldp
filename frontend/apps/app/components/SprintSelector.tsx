@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown, GitBranch, Info } from 'lucide-react';
 import { sprints } from '@dmt/api';
+import { cn } from '@dmt/ui';
 
 interface Sprint {
     id: number;
@@ -15,9 +16,10 @@ interface SprintSelectorProps {
     projectId: number | null;           // null = all projects
     selectedSprintId: number | null;
     onSelect: (sprintId: number | null) => void;
+    className?: string;
 }
 
-export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelect }: SprintSelectorProps) => {
+export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelect, className }: SprintSelectorProps) => {
     const [sprintList, setSprintList] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
@@ -44,7 +46,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
     const isAllProjects = projectId === null;
 
     if (loading) {
-        return <div className="animate-pulse w-48 h-10 bg-muted rounded-lg" />;
+        return <div className={cn("animate-pulse bg-muted rounded-lg w-48 h-10", className)} />;
     }
 
     // All Projects mode: show a read-only chip with tooltip
@@ -52,7 +54,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
         const latestSprint = sprintList[0];
         return (
             <div className="relative group flex items-center gap-2">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 text-muted-foreground border border-border/50 cursor-not-allowed select-none w-48">
+                <div className={cn("flex items-center gap-2 rounded-lg bg-muted/50 text-muted-foreground border border-border/50 cursor-not-allowed select-none w-48 px-4 py-2 h-10", className)}>
                     <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
                     <span className="truncate text-sm font-medium">
                         {latestSprint ? latestSprint.name : 'No sprints'}
@@ -76,7 +78,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
     // Project selected mode: full interactive dropdown
     if (sprintList.length === 0) {
         return (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-48 text-sm font-medium">
+            <div className={cn("flex items-center gap-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-48 text-sm font-medium px-4 py-2 h-10", className)}>
                 <GitBranch size={14} className="text-muted-foreground" />
                 <span>No sprints</span>
             </div>
@@ -87,7 +89,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between"
+                className={cn("flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between px-4 py-2 h-10", className)}
             >
                 <div className="flex items-center gap-2 truncate">
                     <GitBranch size={14} className="text-primary flex-shrink-0" />

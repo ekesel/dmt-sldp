@@ -4,7 +4,7 @@
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { SocialNewsFeed } from "../SocialNewsFeed";
-import { useNewsfeedData } from "../../hooks/useNewsfeedData";
+import { useNewsfeedQuery } from "../../hooks/useNewsfeedQuery";
 import { useReactions } from "../../hooks/useReactions";
 import { useComments } from "../../hooks/useComments";
 import { useRouter } from "next/navigation";
@@ -23,8 +23,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock custom hooks
-vi.mock("../../hooks/useNewsfeedData", () => ({
-  useNewsfeedData: vi.fn(),
+vi.mock("../../hooks/useNewsfeedQuery", () => ({
+  useNewsfeedQuery: vi.fn(),
 }));
 
 vi.mock("../../hooks/useReactions", () => ({
@@ -51,7 +51,7 @@ describe("SocialNewsFeed Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as any).mockReturnValue({ push: mockPush });
-    (useNewsfeedData as any).mockReturnValue({ posts: [], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [], loading: false });
     (useReactions as any).mockReturnValue({ reactions: {}, toggleReaction: mockToggleReaction });
     (useComments as any).mockReturnValue({ totalComments: 0 });
   });
@@ -61,7 +61,7 @@ describe("SocialNewsFeed Component", () => {
   });
 
   it("renders loading state when data is being fetched", () => {
-    (useNewsfeedData as any).mockReturnValue({ posts: [], loading: true });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [], loading: true });
     
     render(<SocialNewsFeed />);
     
@@ -69,7 +69,7 @@ describe("SocialNewsFeed Component", () => {
   });
 
   it("renders 'No posts available' when there are no posts", () => {
-    (useNewsfeedData as any).mockReturnValue({ posts: [], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [], loading: false });
     
     render(<SocialNewsFeed />);
     
@@ -93,7 +93,7 @@ describe("SocialNewsFeed Component", () => {
       },
     };
 
-    (useNewsfeedData as any).mockReturnValue({ posts: [mockPost], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [mockPost], loading: false });
     
     render(<SocialNewsFeed />);
     
@@ -111,7 +111,7 @@ describe("SocialNewsFeed Component", () => {
       likes: 5,
     };
 
-    (useNewsfeedData as any).mockReturnValue({ posts: [mockPost], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [mockPost], loading: false });
     (useReactions as any).mockReturnValue({
       reactions: {
         1: { total_reactions: 5, user_reaction: null }
@@ -134,7 +134,7 @@ describe("SocialNewsFeed Component", () => {
       title: "Test Post Title",
     };
 
-    (useNewsfeedData as any).mockReturnValue({ posts: [mockPost], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [mockPost], loading: false });
 
     render(<SocialNewsFeed />);
     
@@ -151,7 +151,7 @@ describe("SocialNewsFeed Component", () => {
       title: "Clickable Post Title",
     };
 
-    (useNewsfeedData as any).mockReturnValue({ posts: [mockPost], loading: false });
+    (useNewsfeedQuery as any).mockReturnValue({ posts: [mockPost], loading: false });
 
     render(<SocialNewsFeed />);
     

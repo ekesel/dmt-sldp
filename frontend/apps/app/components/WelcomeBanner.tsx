@@ -2,6 +2,8 @@
 import React from "react";
 import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { dashboard } from "@dmt/api";
 
 const formatJoinDate = (dateStr?: string) => {
   if (!dateStr) return "";
@@ -27,6 +29,15 @@ export const WelcomeBanner: React.FC = () => {
   const fullName = user?.first_name 
     ? `${user.first_name} ${user.last_name || ""}`.trim() 
     : (user?.username || "Guest User");
+
+  const { data: sprintTaskSummary } = useQuery({
+    queryKey: ["user-sprint-task-summary"],
+    queryFn: () => dashboard.getUserSprintTaskSummary(),
+  });
+
+  const completedTasks: number = sprintTaskSummary?.data?.done || 0;
+  const totalTasks: number = (sprintTaskSummary?.data?.active || 0) + completedTasks;
+  const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const [mounted, setMounted] = React.useState(false);
   const [greeting, setGreeting] = React.useState("");
@@ -55,7 +66,7 @@ export const WelcomeBanner: React.FC = () => {
               suppressHydrationWarning
               className="text-[1.25rem] lg:text-[1.375rem] xl:text-[1.5rem] font-black text-card-foreground leading-[1.1] tracking-tight mb-2"
             >
-              {mounted ? greeting : "Welcome"}, <span className="text-accent">{mounted ? greetingName : "User"}!</span>
+              {mounted ? greeting : "Welcome"}, <span className="text-[var(--color-access)]">{mounted ? greetingName : "User"}!</span>
             </h1>
           </div>
 
@@ -90,7 +101,7 @@ export const WelcomeBanner: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="text-center flex flex-col items-center">
+            <div className="text-center flex flex-col items-center w-full">
               <h3 className="text-[1rem] md:text-[1.125rem] font-black text-card-foreground leading-tight">{fullName}</h3>
               {user?.date_of_join && (
                 <div className="mt-1.5 flex items-center gap-1.5 text-[0.75rem] font-bold text-muted-foreground bg-secondary/60 px-2.5 py-0.5 rounded-full border border-border/40 hover:bg-secondary transition-all duration-300">
@@ -108,6 +119,24 @@ export const WelcomeBanner: React.FC = () => {
                     />
                   </svg>
                   <span>Joined: {formatJoinDate(user.date_of_join)}</span>
+                </div>
+              )}
+
+              {/* Task Done Progress */}
+              {totalTasks > 0 && (
+                <div className="mt-3 w-full flex flex-col items-center gap-1.5">
+                  <div className="text-[0.75rem] font-bold text-muted-foreground flex items-center gap-1">
+                    <span>Task Done:</span>
+                    <span className="text-[#f59e0b]">{completedTasks}</span>
+                    <span>/ {totalTasks}</span>
+                  </div>
+                  <div className="w-[120px] h-[1.125rem] bg-orange-100 dark:bg-orange-950/30 rounded-full relative flex items-center">
+                    <div className="absolute top-0 left-0 h-full bg-[#f97316] rounded-full flex items-center justify-end pr-2" style={{ width: `${percentage}%` }}>
+                      <span className="text-[0.65rem] font-bold text-white leading-none">
+                        {percentage}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -40,7 +40,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             setLoading(true);
             try {
                 const data = await dashboard.getStarPerformer();
-               
+
                 if (data && data.top_performers) {
                     // Derive score bounds from the actual data for monotonic normalization
                     const rawVals = Object.values(data.top_performers)
@@ -87,7 +87,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             };
                         })
                         .filter((p): p is Performer => p !== null);
-                    console.log("RESOLVED API PERFORMERS FOR UI:", mapped);
+
                     setApiPerformers(mapped);
                 }
             } catch (error) {
@@ -233,7 +233,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
 
             {/* User Info Section */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 flex items-center min-h-0">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentIndex}
@@ -241,7 +241,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -30 }}
                         transition={{ duration: 0.4, ease: "easeOut" }}
-                        className="flex gap-3 sm:gap-5 items-center absolute inset-0"
+                        className="flex gap-3 sm:gap-5 items-center w-full"
                     >
                         {/* Avatar */}
                         <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] overflow-hidden flex-shrink-0 shadow-sm border border-border">

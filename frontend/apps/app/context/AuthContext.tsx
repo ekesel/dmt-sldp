@@ -18,6 +18,8 @@ interface User {
     custom_title?: string;
     avatar_url?: string;
     date_of_join?: string;
+    completed_tasks?: number;
+    total_tasks?: number;
 }
 
 interface AuthContextType {

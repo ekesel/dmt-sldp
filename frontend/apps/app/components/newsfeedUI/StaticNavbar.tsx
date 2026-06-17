@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Author } from '../../hooks/useNewsfeedData';
+import { Author } from '../../types/newsfeed';
 import { getFileUrl } from '@dmt/api';
 
 export interface NavItem {
@@ -40,7 +40,7 @@ interface StaticNavbarProps {
     onAccountClick?: () => void;
 }
 
-const StaticNavbar = ({ 
+const StaticNavbar = ({
     userProfile,
     logoText = "D",
     navItems = DEFAULT_NAV_ITEMS,
@@ -55,7 +55,7 @@ const StaticNavbar = ({
         <nav className="sticky top-0 z-50 flex items-center justify-between bg-card border-b border-border px-4 h-14 shadow-md">
             {/* Left Section */}
             <div className="flex items-center gap-2 flex-grow sm:flex-grow-0">
-                <div 
+                <div
                     onClick={onLogoClick}
                     className="bg-primary rounded-full w-10 h-10 flex items-center justify-center shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
                 >
@@ -67,8 +67,8 @@ const StaticNavbar = ({
             <div className="hidden md:flex items-center justify-center flex-grow max-w-[37.5rem] h-full">
                 <div className="flex items-center h-full">
                     {navItems.map((item, idx) => (
-                        <div 
-                            key={idx} 
+                        <div
+                            key={idx}
                             onClick={() => onNavClick?.(item, idx)}
                             className={`relative px-8 h-full flex items-center cursor-pointer group`}
                             title={item.label}
@@ -85,14 +85,14 @@ const StaticNavbar = ({
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
-                <button 
+                <button
                     onClick={onProfileClick}
                     className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                     {userProfile?.avatar_url ? (
-                        <img 
-                            src={getFileUrl(userProfile.avatar_url)} 
-                            alt="Profile" 
+                        <img
+                            src={getFileUrl(userProfile.avatar_url)}
+                            alt="Profile"
                             className="w-7 h-7 rounded-full object-cover"
                         />
                     ) : (
@@ -102,10 +102,10 @@ const StaticNavbar = ({
                     )}
                     <span className="text-sm font-semibold text-foreground">{userProfile?.first_name || userProfile?.username || 'User'}</span>
                 </button>
-                
+
                 {actionItems.map((item, idx) => (
-                    <button 
-                        key={idx} 
+                    <button
+                        key={idx}
                         onClick={() => onActionClick?.(item, idx)}
                         className="bg-muted p-2.5 rounded-full hover:bg-accent transition-colors text-foreground"
                         title={item.label}
@@ -115,8 +115,8 @@ const StaticNavbar = ({
                         </svg>
                     </button>
                 ))}
-                
-                <button 
+
+                <button
                     onClick={onAccountClick}
                     className="bg-muted p-2.5 rounded-full hover:bg-accent transition-colors text-foreground"
                     title="Account"

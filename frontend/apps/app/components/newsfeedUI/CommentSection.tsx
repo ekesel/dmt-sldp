@@ -5,7 +5,7 @@ import CommentItem from './CommentItem';
 import { Send, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Comment, User, getFileUrl } from '@dmt/api';
-import { Author } from '../../hooks/useNewsfeedData';
+import { Author } from '../../types/newsfeed';
 
 interface CommentSectionProps {
   postId: number;

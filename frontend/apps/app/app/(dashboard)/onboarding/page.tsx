@@ -2,22 +2,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { dashboard, getFileUrl } from '@dmt/api';
-import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle } from 'lucide-react';
+import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useOnboardingQuery } from './query-options';
+import { useUploadOnboarding, useUpdateOnboarding, useDeleteOnboarding } from './mutation-options';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
-
-interface OnboardingData {
-    id: number;
-    title?: string;
-    onboarding_file: string;
-}
 
 export default function OnboardingPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [guides, setGuides] = useState<OnboardingData[]>([]);
-    const [loading, setLoading] = useState(true);
     
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
@@ -28,27 +22,42 @@ export default function OnboardingPage() {
     const [submitting, setSubmitting] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const fetchOnboarding = async () => {
-        setLoading(true);
-        try {
-            const data = await dashboard.getOnboarding();
-            if (data && Array.isArray(data)) {
-                // Sort by ID descending so that the latest uploaded document appears at the top
-                const sorted = [...data].sort((a, b) => b.id - a.id);
-                setGuides(sorted);
-            }
-        } catch (err) {
-            console.error('Failed to fetch onboarding guides:', err);
-            toast.error('Failed to load onboarding resources');
-        } finally {
-            setLoading(false);
-        }
-    };
+    
+    // Queries & Mutations
+    const { data: guides = [], isLoading: loading, isError } = useOnboardingQuery();
+    const uploadMutation = useUploadOnboarding();
+    const updateMutation = useUpdateOnboarding();
+    const deleteMutation = useDeleteOnboarding();
 
     useEffect(() => {
-        fetchOnboarding();
-    }, []);
+        if (isError) {
+            toast.error('Failed to load onboarding resources');
+        }
+    }, [isError]);
+
+    // Extract filename from URL
+    const getFileName = (url: string) => {
+        if (!url) return 'Onboarding_Guide.pdf';
+        const parts = url.split('/');
+        return decodeURIComponent(parts[parts.length - 1]);
+    };
+
+    // Helper to format URL for Office Viewer if it's a Word/Excel/PPT file
+    const getFileViewerUrl = (url: string) => {
+        const baseUrl = url.split(/[?#]/)[0];
+        const lowerUrl = baseUrl.toLowerCase();
+        if (lowerUrl.match(/\.(doc|docx|xls|xlsx|ppt|pptx)$/)) {
+            return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+        }
+        return url;
+    };
+
+    // Handle Direct Download using proxy to prevent tab changes
+    const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        window.location.href = proxyUrl;
+    };
 
     // Open Modal for Upload (Create)
     const openCreateModal = () => {
@@ -96,23 +105,25 @@ export default function OnboardingPage() {
             }
 
             if (modalType === 'create') {
-                await dashboard.uploadOnboarding(formData);
+                await uploadMutation.mutateAsync(formData);
                 toast.success('Onboarding document uploaded successfully!', { id: toastId });
             } else if (modalType === 'update' && editingId !== null) {
-                await dashboard.updateOnboarding(editingId, formData);
+                await updateMutation.mutateAsync({ id: editingId, formData });
                 toast.success('Onboarding document updated successfully!', { id: toastId });
             }
 
             setModalOpen(false);
-            fetchOnboarding();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Form submission failed:', err);
-            toast.error(
-                modalType === 'create'
-                    ? 'Failed to upload onboarding document.'
-                    : 'Failed to update onboarding document.',
-                { id: toastId }
-            );
+            let errorMessage = modalType === 'create'
+                ? 'Failed to upload onboarding document.'
+                : 'Failed to update onboarding document.';
+            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
+                errorMessage = 'File is too large. Please upload a smaller file.';
+            } else if (err?.message && err.message !== 'Unknown API error') {
+                errorMessage = err.message;
+            }
+            toast.error(errorMessage, { id: toastId });
         } finally {
             setSubmitting(false);
         }
@@ -124,9 +135,8 @@ export default function OnboardingPage() {
 
         const toastId = toast.loading('Deleting onboarding guide...');
         try {
-            await dashboard.deleteOnboarding(id);
+            await deleteMutation.mutateAsync(id);
             toast.success('Onboarding guide deleted successfully!', { id: toastId });
-            fetchOnboarding();
         } catch (err) {
             console.error('Delete failed:', err);
             toast.error('Failed to delete onboarding guide.', { id: toastId });
@@ -189,16 +199,27 @@ export default function OnboardingPage() {
                                 key={guide.id}
                                 className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_0.25rem_0.75rem_rgba(0,0,0,0.03)] hover:shadow-[0_0.375rem_1rem_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
                             >
-                                {/* Top right actions (Delete) - restricted to MANAGER only */}
-                                {isManager && (
-                                    <button
-                                        onClick={() => handleDeleteClick(guide.id)}
-                                        className="absolute top-5 right-5 p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                        title="Delete guide"
+                                {/* Top right actions (Download & Delete) */}
+                                <div className="absolute top-5 right-5 flex items-center gap-2">
+                                    <a
+                                        href={getFileUrl(guide.onboarding_file)}
+                                        onClick={(e) => handleDownloadClick(getFileUrl(guide.onboarding_file), getFileName(guide.onboarding_file), e)}
+                                        download={getFileName(guide.onboarding_file)}
+                                        className="p-2 rounded-xl text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                        title="Download guide"
                                     >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
-                                )}
+                                        <Download className="w-5 h-5" />
+                                    </a>
+                                    {isManager && (
+                                        <button
+                                            onClick={() => handleDeleteClick(guide.id)}
+                                            className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                            title="Delete guide"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Main Card Content */}
                                 <div className="flex gap-4 items-start pr-8">
@@ -220,14 +241,13 @@ export default function OnboardingPage() {
                                 {/* Bottom row actions (Download PDF & Update PDF side by side) */}
                                 <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                     <a
-                                        href={getFileUrl(guide.onboarding_file)}
-                                        download
+                                        href={getFileViewerUrl(getFileUrl(guide.onboarding_file))}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                     >
-                                        <Download className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                        view/download PDF
+                                        <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
+                                        view document
                                     </a>
                                     
                                     {/* Update Button - restricted to MANAGER only */}

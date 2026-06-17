@@ -111,6 +111,7 @@ function OrgChartPageContent() {
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
     const [rolesList, setRolesList] = useState<Array<{ id: string | number; name: string }>>([]);
+    const [departmentsList, setDepartmentsList] = useState<Array<{ id: string | number; name: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
 
@@ -141,6 +142,20 @@ function OrgChartPageContent() {
                 orgChart.getHierarchy(),
                 orgChart.getRolesDropdown()
             ]);
+
+            // Fetch departments separately as a non-blocking operation
+            orgChart.getDepartments()
+                .then((departmentsRes) => {
+                    if (departmentsRes) {
+                        const deptsData = (departmentsRes as any).data || departmentsRes;
+                        if (Array.isArray(deptsData)) {
+                            setDepartmentsList(deptsData.map((d: any) => ({ id: d.id, name: d.name })));
+                        }
+                    }
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch departments separately:', err);
+                });
             
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
@@ -290,7 +305,7 @@ function OrgChartPageContent() {
                 source: emp.parentId,
                 target: emp.id,
                 type: 'smoothstep',
-                animated: true,
+                animated: false,
                 style: { stroke: 'var(--color-primary)', strokeWidth: 2 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
@@ -558,6 +573,7 @@ function OrgChartPageContent() {
                 employeeData={editingEmployee}
                 employeesList={employees.map(e => ({ id: e.id, name: e.name, role: e.role }))}
                 rolesList={rolesList}
+                departmentsList={departmentsList}
                 defaultParentId={defaultParentId}
             />
         </main>

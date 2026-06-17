@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 
-import { Author, Post } from "../../hooks/useNewsfeedData";
+import { Author, Post } from "../../types/newsfeed";
 import { getFileUrl } from "@dmt/api";
 
 interface StaticPostModalProps {

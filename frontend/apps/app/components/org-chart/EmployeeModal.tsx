@@ -27,25 +27,9 @@ interface EmployeeModalProps {
     } | null;
     employeesList: Array<{ id: string; name: string; role: string }>;
     rolesList: Array<{ id: string | number; name: string }>;
+    departmentsList: Array<{ id: string | number; name: string }>;
     defaultParentId?: string;
 }
-
-const DEPARTMENTS = [
-    { value: 'backend', label: 'Backend' },
-    { value: 'frontend', label: 'Frontend' },
-    { value: 'mobile', label: 'Mobile' },
-    { value: 'devops', label: 'DevOps' },
-    { value: 'qa', label: 'QA / Testing' },
-    { value: 'data', label: 'Data & Analytics' },
-    { value: 'design', label: 'Design / UX' },
-    { value: 'product', label: 'Product' },
-    { value: 'hr', label: 'HR' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'sales', label: 'Sales' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'AIML', label: 'AI & ML' },
-    { value: 'other', label: 'Other' }
-];
 
 export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     isOpen,
@@ -54,6 +38,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     employeeData,
     employeesList,
     rolesList,
+    departmentsList,
     defaultParentId = ''
 }) => {
     const [state, setState] = useState({
@@ -66,9 +51,11 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         autocompleteError: false,
         isCreatingRole: false,
         newRoleName: '',
+        isCreatingDepartment: false,
+        newDepartmentName: '',
         isSubmitting: false
     });
-    const { name, role, email, department, parentId, isNotFound, autocompleteError, isCreatingRole, newRoleName, isSubmitting } = state;
+    const { name, role, email, department, parentId, isNotFound, autocompleteError, isCreatingRole, newRoleName, isCreatingDepartment, newDepartmentName, isSubmitting } = state;
     const lastMatchedRef = useRef<{
         name: string, 
         email: string, 
@@ -79,9 +66,11 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const rejectedMatchesRef = useRef<Set<string>>(new Set());
 
     const rolesListRef = useRef(rolesList);
+    const departmentsListRef = useRef(departmentsList);
     useEffect(() => {
         rolesListRef.current = rolesList;
-    }, [rolesList]);
+        departmentsListRef.current = departmentsList;
+    }, [rolesList, departmentsList]);
 
     useEffect(() => {
         if (isOpen) {
@@ -90,17 +79,19 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 name: employeeData ? employeeData.name : '',
                 role: employeeData ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
                 email: employeeData ? (employeeData.email || '') : '',
-                department: employeeData ? employeeData.department : 'backend',
+                department: employeeData ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
                 parentId: employeeData ? (employeeData.parentId || '') : (defaultParentId || ''),
                 isNotFound: false,
                 autocompleteError: false,
                 isCreatingRole: false,
-                newRoleName: ''
+                newRoleName: '',
+                isCreatingDepartment: false,
+                newDepartmentName: ''
             }));
             lastMatchedRef.current = null;
             rejectedMatchesRef.current.clear();
         }
-    }, [isOpen, employeeData, defaultParentId, rolesList]);
+    }, [isOpen, employeeData, defaultParentId, rolesList, departmentsList]);
 
     const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,7 +119,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 rejectedMatchesRef.current.add(prev.email);
                 setState(s => {
                     const newRole = s.role === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : s.role;
-                    const newDepartment = s.department === prev.department ? 'backend' : s.department;
+                    const newDepartment = s.department === prev.department ? (departmentsListRef.current.length > 0 ? String(departmentsListRef.current[0].name) : '') : s.department;
                     const newEmail = (prev.matchedBy === 'name' && nameChanged && s.email === prev.email) ? '' : s.email;
                     const newName = (prev.matchedBy === 'email' && emailChanged && s.name === prev.name) ? '' : s.name;
                     return {
@@ -267,12 +258,36 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             if (!role.trim()) return;
         }
 
+        let finalDepartment = department;
+
+        if (isCreatingDepartment) {
+            if (!newDepartmentName.trim()) {
+                toast.error('Please enter a department name.');
+                return;
+            }
+            setState(s => ({ ...s, isSubmitting: true }));
+            try {
+                const res = await orgChart.createDepartment(newDepartmentName.trim());
+                finalDepartment = res?.data?.name || newDepartmentName.trim();
+                toast.success('New department created successfully!');
+            } catch (error) {
+                console.error('Failed to create department', error);
+                toast.error('Failed to create new department. Please try again.');
+                setState(s => ({ ...s, isSubmitting: false }));
+                return;
+            } finally {
+                setState(s => ({ ...s, isSubmitting: false }));
+            }
+        } else {
+            if (!department.trim()) return;
+        }
+
         onSave({
             id: employeeData?.id,
             name: name.trim(),
             role: finalRoleId,
             email: email.trim(),
-            department,
+            department: finalDepartment,
             parentId
         });
     };
@@ -406,20 +421,56 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                         <label className="text-[0.75rem] font-bold text-muted-foreground uppercase tracking-wider">
                             Department
                         </label>
-                        <div className="relative">
-                            <select
-                                value={department}
-                                onChange={(e) => setState(s => ({ ...s, department: e.target.value }))}
-                                className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
-                            >
-                                {DEPARTMENTS.map((dept) => (
-                                    <option key={dept.value} value={dept.value}>
-                                        {dept.label}
+                        {isCreatingDepartment ? (
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. IT Support"
+                                    value={newDepartmentName}
+                                    onChange={(e) => setState(s => ({ ...s, newDepartmentName: e.target.value }))}
+                                    className="flex-1 px-4 py-3 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50"
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setState(s => ({
+                                            ...s,
+                                            isCreatingDepartment: false,
+                                            department: departmentsList.length > 0 ? String(departmentsList[0].name) : ''
+                                        }));
+                                    }}
+                                    className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <select
+                                    value={department}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'CREATE_NEW') {
+                                            setState(s => ({ ...s, isCreatingDepartment: true, newDepartmentName: '' }));
+                                        } else {
+                                            setState(s => ({ ...s, department: e.target.value }));
+                                        }
+                                    }}
+                                    className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
+                                >
+                                    {departmentsList.map((dept) => (
+                                        <option key={dept.id} value={String(dept.name)}>
+                                            {dept.name}
+                                        </option>
+                                    ))}
+                                    <option value="CREATE_NEW" className="font-bold text-primary">
+                                        + Create New Department
                                     </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        </div>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                            </div>
+                        )}
                     </div>
 
                     {isNotFound && !employeeData && !autocompleteError && (

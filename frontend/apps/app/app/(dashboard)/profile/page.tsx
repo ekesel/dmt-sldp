@@ -5,29 +5,46 @@ import { useAuth } from '../../../context/AuthContext';
 import { User, Mail, Shield, Building2, BadgeCheck, Key, Upload } from 'lucide-react';
 import { auth } from '@dmt/api';
 import { toast } from 'react-hot-toast';
+import ImageCropperModal from '@/components/ImageCropperModal';
 
 export default function ProfilePage() {
     const { user } = useAuth();
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(user?.avatar_url || null);
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Preview
         const reader = new FileReader();
         reader.onloadend = () => {
-            setPreviewUrl(reader.result as string);
+            setCropImageSrc(reader.result as string);
         };
         reader.readAsDataURL(file);
+        
+        // Reset input so the same file can be selected again if needed
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleCropComplete = async (croppedFile: File) => {
+        setCropImageSrc(null); // Close modal
+        
+        // Preview
+        const previewReader = new FileReader();
+        previewReader.onloadend = () => {
+            setPreviewUrl(previewReader.result as string);
+        };
+        previewReader.readAsDataURL(croppedFile);
 
         // Upload
         try {
             setIsUploading(true);
             const formData = new FormData();
-            formData.append('profile_picture', file);
+            formData.append('profile_picture', croppedFile);
 
             await auth.updateProfile(formData);
             toast.success('Profile picture updated successfully!');
@@ -173,6 +190,14 @@ export default function ProfilePage() {
                 </p>
 
             </div>
+
+            {cropImageSrc && (
+                <ImageCropperModal
+                    imageSrc={cropImageSrc}
+                    onCropComplete={handleCropComplete}
+                    onClose={() => setCropImageSrc(null)}
+                />
+            )}
         </div>
     );
 }
