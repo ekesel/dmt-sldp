@@ -66,12 +66,12 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({
         rankdir: direction,
-        nodesep: 60,
-        ranksep: 90
+        nodesep: 80,
+        ranksep: 180
     });
 
     nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: 260, height: 96 });
+        dagreGraph.setNode(node.id, { width: 360, height: 160 });
     });
 
     edges.forEach((edge) => {
@@ -87,8 +87,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
             targetPosition: isHorizontal ? Position.Left : Position.Top,
             sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
-                x: nodeWithPosition.x - 130,
-                y: nodeWithPosition.y - 48
+                x: nodeWithPosition.x - 180,
+                y: nodeWithPosition.y - 80
             }
         };
     });
@@ -156,7 +156,7 @@ function OrgChartPageContent() {
                 .catch((err) => {
                     console.error('Failed to fetch departments separately:', err);
                 });
-            
+
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
                 setEmployees(flatData);
@@ -245,7 +245,7 @@ function OrgChartPageContent() {
     // Handle delete employee node
     const handleDeleteNode = useCallback(async (id: string) => {
         if (!isManager) {
-            toast.error('Only Managers can delete employees.'); 
+            toast.error('Only Managers can delete employees.');
             return;
         }
 
@@ -281,8 +281,8 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
-                width: 180,
-                height: 96,
+                width: 320,
+                height: 160,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -528,36 +528,36 @@ function OrgChartPageContent() {
                     </div>
                 ) : (
                     <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.15 }}
-                    onInit={(instance: ReactFlowInstance) => {
-                        // onInit fires after React Flow has measured the container —
-                        // call fitView here so the CEO node is always centred.
-                        setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
-                    }}
-                    minZoom={0.1}
-                    maxZoom={1.5}
-                    connectOnClick={isManager}
-                    nodesConnectable={isManager}
-                    nodesDraggable={true}
-                    zoomOnScroll={false}
-                    panOnScroll={true}
-                >
-                    <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
-                    <MiniMap
-                        nodeColor={(node) => 'var(--color-primary)'}
-                        nodeStrokeWidth={3}
-                        maskColor="rgba(241, 245, 249, 0.4)"
-                        className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
-                        style={{ height: 90, width: 140 }}
-                    />
-                </ReactFlow>
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.15 }}
+                        onInit={(instance: ReactFlowInstance) => {
+                            // onInit fires after React Flow has measured the container —
+                            // call fitView here so the CEO node is always centred.
+                            setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
+                        }}
+                        minZoom={0.1}
+                        maxZoom={1.5}
+                        connectOnClick={isManager}
+                        nodesConnectable={isManager}
+                        nodesDraggable={true}
+                        zoomOnScroll={false}
+                        panOnScroll={true}
+                    >
+                        <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
+                        <MiniMap
+                            nodeColor={(node) => 'var(--color-primary)'}
+                            nodeStrokeWidth={3}
+                            maskColor="rgba(241, 245, 249, 0.4)"
+                            className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                            style={{ height: 90, width: 140 }}
+                        />
+                    </ReactFlow>
                 )}
             </div>
 

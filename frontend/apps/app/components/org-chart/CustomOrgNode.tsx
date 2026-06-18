@@ -73,7 +73,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
             {/* Custom Node Panel */}
             <div 
-                className={`w-[11.25rem] p-2.5 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_0.5rem_1.875rem_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
+                className={`w-[20rem] p-4 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_0.5rem_1.875rem_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
             >
                 {/* Visual Top Highlight Strip */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${styles.badgeBg.split(' ')[0]}`} />
@@ -81,7 +81,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 <div className="flex items-center gap-3.5 mt-1">
                     {/* Colored Avatar */}
                     <div 
-                        className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-[0.65rem] border-[0.09375rem] border-white shrink-0"
+                        className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-[1.2rem] border-[0.09375rem] border-white shrink-0"
                         style={{ backgroundColor: 'var(--color-accent)' }}
                     >
                         {initials}
@@ -89,19 +89,21 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
                     {/* Node Text Content */}
                     <div className="min-w-0 flex-1">
-                        <h4 className="text-[0.8rem] font-[800] text-card-foreground leading-snug break-words">
+                        <h4 className="text-[1.25rem] font-[800] text-card-foreground leading-snug break-words">
                             {name}
                         </h4>
-                        <p className="text-[0.65rem] text-muted-foreground font-semibold truncate mt-0.5 leading-normal">
+                        <p className="text-[1.1rem] text-muted-foreground font-semibold truncate mt-1 leading-normal">
                             {role}
                         </p>
                         {email && (
-                            <p className="flex items-center gap-1 text-[0.6rem] text-muted-foreground/70 font-medium truncate mt-0.5">
-                                <Mail className="w-2.5 h-2.5 shrink-0" />
-                                {email}
-                            </p>
+                            <div className="flex items-start gap-1.5 mt-1.5 text-muted-foreground/70">
+                                <Mail className="w-5 h-5 shrink-0 mt-[0.15rem]" />
+                                <p className="text-[1rem] font-medium break-all leading-snug">
+                                    {email}
+                                </p>
+                            </div>
                         )}
-                        <span className={`inline-block mt-1.5 px-2 py-0.5 text-[0.55rem] font-bold rounded-md border uppercase tracking-wider ${styles.badgeBg}`}>
+                        <span className={`inline-block mt-2.5 px-3 py-1 text-[0.95rem] font-bold rounded-md border uppercase tracking-wider ${styles.badgeBg}`}>
                             {formatDeptName(department)}
                         </span>
                     </div>
