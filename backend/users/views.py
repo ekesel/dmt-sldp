@@ -455,7 +455,8 @@ class UserHierarchyAPIView(APIView):
         # Fix #4: filter active users at DB level — avoid loading inactive users
         users = User.objects.select_related('role').filter(
             tenant=request.user.tenant,
-            org_chart_visibility=True
+            org_chart_visibility=True,
+            is_active=True
         )
 
         hierarchy = self.build_hierarchy(users)
@@ -520,7 +521,8 @@ class UserHierarchyAPIView(APIView):
             parent_user = User.objects.filter(
                 id=parent_id,
                 tenant=tenant,
-                org_chart_visibility=True
+                org_chart_visibility=True,
+                is_active=True
             ).first()
 
             if not parent_user:
@@ -686,7 +688,8 @@ class UserHierarchyAPIView(APIView):
                 parent_exists = User.objects.filter(
                     id=parent_id,
                     tenant=request.user.tenant,
-                    org_chart_visibility=True
+                    org_chart_visibility=True,
+                    is_active=True
                 ).exists()
 
                 if not parent_exists:
@@ -787,7 +790,7 @@ class GetAllDepartmentsDropdown(APIView):
         for dep in departments:
             list_data.append({
                 "id": dep.id,
-                "name": dep.name,
+                "name": dep.name.upper(),
             })
 
         return Response({
@@ -842,7 +845,8 @@ class UserAutocompleteAPIView(APIView):
         query = request.query_params.get('q', '').strip()
         
         users = User.objects.select_related('role').filter(
-            tenant=request.user.tenant
+            tenant=request.user.tenant,
+            is_active=True
         )
 
         if query:
