@@ -157,7 +157,7 @@ export default function EngagementCalendarPage() {
                                                 {fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ')}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
-                                                Official employee engagement events and activities calendar. View the embedded document below or open it directly.
+                                                Official employee engagement events and activities calendar. 
                                             </p>
                                         </div>
                                     </div>

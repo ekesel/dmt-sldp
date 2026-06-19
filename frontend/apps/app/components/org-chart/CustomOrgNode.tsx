@@ -50,7 +50,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
             'finance': 'Finance',
             'sales': 'Sales',
             'marketing': 'Marketing',
-            'aiml'      :    'AI & ML', 
+            'aiml': 'AI & ML',
             'other': 'Other'
         };
         return labels[dept.toLowerCase()] || dept;
@@ -73,7 +73,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
 
             {/* Custom Node Panel */}
             <div 
-                className={`w-[20rem] p-4 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_0.5rem_1.875rem_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden`}
+                className={`w-[24rem] h-[16rem] p-4 rounded-2xl bg-card border-2 ${styles.border} shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.06)] group-hover/node:shadow-[0_0.5rem_1.875rem_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden flex flex-col justify-between`}
             >
                 {/* Visual Top Highlight Strip */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 ${styles.badgeBg.split(' ')[0]}`} />
@@ -88,22 +88,22 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                     </div>
 
                     {/* Node Text Content */}
-                    <div className="min-w-0 flex-1">
-                        <h4 className="text-[1.25rem] font-[800] text-card-foreground leading-snug break-words">
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                        <h4 className="text-[1.8rem] font-[800] text-card-foreground leading-snug break-words line-clamp-2">
                             {name}
                         </h4>
-                        <p className="text-[1.1rem] text-muted-foreground font-semibold truncate mt-1 leading-normal">
+                        <p className="text-[1.4rem] text-muted-foreground font-semibold truncate mt-1 leading-normal">
                             {role}
                         </p>
                         {email && (
-                            <div className="flex items-start gap-1.5 mt-1.5 text-muted-foreground/70">
-                                <Mail className="w-5 h-5 shrink-0 mt-[0.15rem]" />
-                                <p className="text-[1rem] font-medium break-all leading-snug">
+                            <div className="flex items-start gap-1.5 mt-1.5 text-muted-foreground/70 overflow-hidden">
+                                <Mail className="w-6 h-6 shrink-0 mt-[0.15rem]" />
+                                <p className="text-[1.25rem] font-medium truncate leading-snug">
                                     {email}
                                 </p>
                             </div>
                         )}
-                        <span className={`inline-block mt-2.5 px-3 py-1 text-[0.95rem] font-bold rounded-md border uppercase tracking-wider ${styles.badgeBg}`}>
+                        <span className={`inline-block mt-2.5 px-3 py-1 text-[1.2rem] font-bold rounded-md border uppercase tracking-wider ${styles.badgeBg}`}>
                             {formatDeptName(department)}
                         </span>
                     </div>
@@ -150,7 +150,7 @@ export const CustomOrgNode: React.FC<CustomOrgNodeProps> = ({ data, isConnectabl
                 isConnectable={isConnectable}
             >
                 {isManager && (
-                    <div 
+                    <div
                         onClick={(e) => {
                             if (onAddChild) {
                                 e.stopPropagation();

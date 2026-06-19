@@ -187,70 +187,68 @@ export default function CompliancePage() {
                         onClick={() => toggleFilter('critical')}
                         className="cursor-pointer select-none"
                     >
-                    <Card className={`p-6 bg-card transition-all duration-300 group ${
-                        activeFilter === 'critical'
-                            ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
-                    }`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
-                                <AlertCircle size={20} />
+                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
+                                ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            }`}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                                    <AlertCircle size={20} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        title="Learn more about this metric"
+                                    >
+                                        <HelpCircle size={16} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                                    title="Learn more about this metric"
-                                >
-                                    <HelpCircle size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-destructive">
-                                {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
-                            </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
-                            {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
-                        </p>
-                    </Card>
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-3xl font-black text-destructive">
+                                    {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
+                                </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                                {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
+                            </p>
+                        </Card>
                     </div>
 
                     <div
                         onClick={() => toggleFilter('warning')}
                         className="cursor-pointer select-none"
                     >
-                    <Card className={`p-6 bg-card transition-all duration-300 group ${
-                        activeFilter === 'warning'
-                            ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
-                    }`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
-                                <Activity size={20} />
+                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'warning'
+                                ? 'border-warning ring-2 ring-warning/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            }`}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
+                                    <Activity size={20} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        title="Learn more about this metric"
+                                    >
+                                        <HelpCircle size={16} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                                    title="Learn more about this metric"
-                                >
-                                    <HelpCircle size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-warning">
-                                {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
-                            </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
-                            {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
-                        </p>
-                    </Card>
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-3xl font-black text-warning">
+                                    {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
+                                </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                                {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
+                            </p>
+                        </Card>
                     </div>
 
                     <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
@@ -287,11 +285,10 @@ export default function CompliancePage() {
                             <Activity size={20} className="text-primary" />
                             Active Violations
                             {activeFilter && (
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                                    activeFilter === 'critical'
+                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${activeFilter === 'critical'
                                         ? 'bg-destructive/10 text-destructive border-destructive/30'
                                         : 'bg-warning/10 text-warning border-warning/30'
-                                }`}>
+                                    }`}>
                                     {activeFilter === 'critical' ? 'Critical only' : 'Warnings only'}
                                 </span>
                             )}

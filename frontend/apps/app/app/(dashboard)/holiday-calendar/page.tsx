@@ -158,7 +158,7 @@ export default function HolidayCalendarPage() {
                                                 {fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ')}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
-                                                Official holiday list and company closures calendar. View the embedded document below or open it directly.
+                                                 Official holiday list of company 
                                             </p>
                                         </div>
                                     </div>

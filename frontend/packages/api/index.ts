@@ -848,6 +848,7 @@ export interface DMTNotification {
   notification_type: 'info' | 'success' | 'warning' | 'error' | string;
   is_read: boolean;
   created_at: string;
+  data?: Record<string, any>;
 }
 
 /** @deprecated Use DMTNotification instead */

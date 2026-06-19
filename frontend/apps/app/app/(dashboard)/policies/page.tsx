@@ -152,7 +152,7 @@ export default function PoliciesPage() {
                                 </h1>
                             </div>
                             <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                                View and download official policy documents of organization.
+                                View and Download official policy documents of organization.
                             </p>
                         </div>
                     </div>
@@ -242,7 +242,7 @@ export default function PoliciesPage() {
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
                                             <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            view document
+                                            View Document
                                         </a>
                                         
                                         {/* Update Button - restricted to MANAGER only */}

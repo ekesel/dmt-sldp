@@ -66,12 +66,13 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({
         rankdir: direction,
-        nodesep: 80,
-        ranksep: 180
+        nodesep: 150,
+        ranksep: 180,
+        edgesep: 100,
     });
 
     nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: 360, height: 160 });
+        dagreGraph.setNode(node.id, { width: 420, height: 256 });
     });
 
     edges.forEach((edge) => {
@@ -82,16 +83,110 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 
     const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
+
+        let adjustedX = nodeWithPosition.x;
+        let adjustedY = nodeWithPosition.y;
+        const isRoot = !edges.some((edge) => edge.target === node.id);
+
+        if (isRoot) {
+            let minPos = Infinity;
+            let maxPos = -Infinity;
+
+            nodes.forEach(n => {
+                // Ignore root itself when calculating bounds
+                if (n.id === node.id) return;
+
+                const pos = dagreGraph.node(n.id);
+                if (pos) {
+                    const p = isHorizontal ? pos.y : pos.x;
+                    if (p < minPos) minPos = p;
+                    if (p > maxPos) maxPos = p;
+                }
+            });
+
+            if (minPos !== Infinity && maxPos !== -Infinity) {
+                // Center exactly between the furthest left and furthest right nodes
+                const center = (minPos + maxPos) / 2;
+                if (isHorizontal) {
+                    adjustedY = center - 150;
+                } else {
+                    adjustedX = center - 150;
+                }
+            }
+        } else {
+            // For non-root nodes (like the second row), if they have children, center them above their children
+            const childEdges = edges.filter(e => e.source === node.id);
+            if (childEdges.length > 0) {
+                let sumPos = 0;
+                let count = 0;
+                childEdges.forEach(e => {
+                    const childPos = dagreGraph.node(e.target);
+                    if (childPos) {
+                        sumPos += isHorizontal ? childPos.y : childPos.x;
+                        count++;
+                    }
+                });
+                if (count > 0) {
+                    if (isHorizontal) {
+                        adjustedY = sumPos / count;
+                    } else {
+                        adjustedX = sumPos / count;
+                    }
+                }
+            }
+        }
+
         return {
             ...node,
             targetPosition: isHorizontal ? Position.Left : Position.Top,
             sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
-                x: nodeWithPosition.x - 180,
-                y: nodeWithPosition.y - 80
+                x: adjustedX - 192,
+                y: adjustedY - 128
             }
         };
     });
+
+    // --- POST-PROCESSING: Bottom-up centering for perfect symmetry ---
+    const rootNodes = layoutedNodes.filter(n => !edges.some(e => e.target === n.id));
+    if (rootNodes.length === 1) {
+        const root = rootNodes[0];
+        const secondRow = layoutedNodes.filter(n => edges.some(e => e.source === root.id && e.target === n.id));
+        
+        // 1. Center second row nodes over their respective children
+        secondRow.forEach(row2Node => {
+            const children = layoutedNodes.filter(child => edges.some(e => e.source === row2Node.id && e.target === child.id));
+            if (children.length > 0) {
+                let sumPos = 0;
+                children.forEach(child => {
+                    sumPos += isHorizontal ? child.position.y : child.position.x;
+                });
+                const centerPos = sumPos / children.length;
+                // Nudge the second row nodes left by 600 pixels as requested
+                const nudgedPos = centerPos - 600;
+                
+                if (isHorizontal) {
+                    row2Node.position.y = nudgedPos;
+                } else {
+                    row2Node.position.x = nudgedPos;
+                }
+            }
+        });
+
+        // 2. Center root node perfectly between its immediate children (the second row)
+        if (secondRow.length > 0) {
+            let sumPos = 0;
+            secondRow.forEach(n => {
+                sumPos += isHorizontal ? n.position.y : n.position.x;
+            });
+            const centerPos = sumPos / secondRow.length;
+            if (isHorizontal) {
+                root.position.y = centerPos;
+            } else {
+                root.position.x = centerPos;
+            }
+        }
+    }
 
     return { nodes: layoutedNodes, edges };
 };
@@ -281,8 +376,8 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
-                width: 320,
-                height: 160,
+                width: 384,
+                height: 256,
                 data: {
                     id: emp.id,
                     name: emp.name,
