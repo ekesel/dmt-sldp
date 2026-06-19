@@ -20,7 +20,7 @@ export default function UpcomingBirthdaysList({ birthdays }: UpcomingBirthdaysLi
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h3 className="font-bold text-foreground text-lg">Next up</h3>
-                    <p className="text-sm text-muted-foreground max-w-[200px] leading-tight mt-1">
+                    <p className="text-sm text-muted-foreground max-w-[12.5rem] leading-tight mt-1">
                         Theme colors mark the birthdays coming up fastest.
                     </p>
                 </div>
@@ -49,7 +49,7 @@ export default function UpcomingBirthdaysList({ birthdays }: UpcomingBirthdaysLi
 
                             <div className="text-right shrink-0">
                                 <p className="text-sm font-bold text-foreground mb-1">{p.date}</p>
-                                <div className={`flex items-center gap-1 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-tight ${config.badge} transition-opacity`}>
+                                <div className={`flex items-center gap-1 text-[0.625rem] px-3 py-1 rounded-full font-bold uppercase tracking-tight ${config.badge} transition-opacity`}>
                                     <Sparkles size={10} className="shrink-0" />
                                     {config.label}
                                 </div>

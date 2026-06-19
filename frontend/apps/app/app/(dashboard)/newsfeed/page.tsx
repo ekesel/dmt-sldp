@@ -4,18 +4,37 @@ import React, { useState } from 'react';
 import PostCard from '../../../components/newsfeedUI/PostCard';
 import PostModal from '../../../components/newsfeedUI/PostModal';
 import CreatePostButton from '../../../components/newsfeedUI/CreatePostButton';
-import { useNewsfeedData, Post } from '../../../hooks/useNewsfeedData';
+import { useNewsfeedQuery } from '../../../hooks/useNewsfeedQuery';
+import { useCreatePostMutation, useUpdatePostMutation, useDeletePostMutation, useUploadImageMutation } from '../../../hooks/useNewsfeedMutations';
+import { Post } from '../../../types/newsfeed';
 import { useAuth } from '../../../context/AuthContext';
 
 const NewsfeedPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPost, setEditingPost] = useState<Post | null>(null);
     const { user } = useAuth();
-    const { posts, loading, currentUser, createPost, updatePost, deletePost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
+    
+    const { posts, loading, loadMorePosts, hasNextPage } = useNewsfeedQuery();
+    const { mutateAsync: createPostMutation } = useCreatePostMutation();
+    const { mutateAsync: updatePostMutation } = useUpdatePostMutation();
+    const { mutateAsync: deletePostMutation } = useDeletePostMutation();
+    const { mutateAsync: uploadImage } = useUploadImageMutation();
+
+    const createPost = async (title: string, content: string, category: string, imageId?: string | null) => {
+        await createPostMutation({ title, content, category, imageId: imageId || undefined });
+    };
+
+    const updatePost = async (id: number, title?: string, content?: string, category?: string, imageId?: string | null) => {
+        await updatePostMutation({ id, title, content, category, imageId });
+    };
+
+    const deletePost = async (id: number) => {
+        await deletePostMutation(id);
+    };
 
     // Role-based access control check
 
-    const isManager = user?.is_manager || user?.role?.toLowerCase() === "manager";
+    const isManager = user?.is_manager;
 
 
     const handleEdit = (post: Post) => {
@@ -82,7 +101,7 @@ const NewsfeedPage = () => {
             <PostModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                userProfile={currentUser}
+                userProfile={user}
                 editingPost={editingPost}
                 createPost={createPost}
                 updatePost={updatePost}

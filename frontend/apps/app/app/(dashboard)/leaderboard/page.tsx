@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '@dmt/ui';
-import { dashboard, LeaderboardResponse, LeaderboardWinner } from '@dmt/api';
+import { dashboard, LeaderboardResponse, LeaderboardWinner, getFileUrl } from '@dmt/api';
 import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award, HelpCircle, BarChart2, CheckCircle2, Bot, Bug } from 'lucide-react';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
@@ -91,7 +91,7 @@ const CategoryCard = ({
                     </div>
                     <div className="flex items-center gap-4">
                         <img
-                            src={topWinner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinner.name)}&background=random`}
+                            src={topWinner.avatar ? getFileUrl(topWinner.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinner.name)}&background=random`}
                             alt={topWinner.name}
                             className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg"
                         />
@@ -122,7 +122,7 @@ const CategoryCard = ({
                         <div key={idx} className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors">
                             <div className="text-lg font-bold text-muted-foreground w-4">{idx + 2}</div>
                             <img
-                                src={contender.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(contender.name)}&background=random`}
+                                src={contender.avatar ? getFileUrl(contender.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(contender.name)}&background=random`}
                                 alt={contender.name}
                                 className="w-10 h-10 rounded-full"
                             />

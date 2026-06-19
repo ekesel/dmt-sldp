@@ -4,8 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import CommentItem from './CommentItem';
 import { Send, Loader2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { Comment, User } from '@dmt/api';
-import { Author } from '../../hooks/useNewsfeedData';
+import { Comment, User, getFileUrl } from '@dmt/api';
+import { Author } from '../../types/newsfeed';
 
 interface CommentSectionProps {
   postId: number;
@@ -56,7 +56,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, postAuthor }) =
       {/* Input box */}
       <div className="flex items-center gap-3">
         <img
-          src={user?.avatar_url || "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"}
+          src={
+            user?.avatar_url
+              ? getFileUrl(user.avatar_url)
+              : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
+          }
           alt="currentUser"
           className="w-8 h-8 rounded-full border border-border"
         />

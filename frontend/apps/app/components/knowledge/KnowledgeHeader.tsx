@@ -73,7 +73,7 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <h2 className="text-[10px] lg:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] truncate">
+        <h2 className="text-[0.625rem] lg:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] truncate">
           {query
             ? `Search Results for "${query}"`
             : activeItem
@@ -111,7 +111,7 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">New Record</span>
-            <span className="sm:hidden text-[10px]">New</span>
+            <span className="sm:hidden text-[0.625rem]">New</span>
           </button>
         )}
       </div>

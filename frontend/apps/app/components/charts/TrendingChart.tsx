@@ -49,7 +49,7 @@ export const TrendingChart: React.FC<TrendingChartProps> = ({
     };
 
     return (
-        <div className="h-[200px] w-full">
+        <div className="h-[12.5rem] w-full">
             <ResponsiveContainer width="100%" height="100%">
                 {type === 'line' ? (
                     <LineChart data={chartData}>

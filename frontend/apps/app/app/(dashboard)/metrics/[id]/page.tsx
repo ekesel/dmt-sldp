@@ -220,7 +220,7 @@ export default function DeveloperDetailsPage({
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen((o) => !o)}
-                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
+                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-none transition-all duration-300 w-full min-w-[240px]"
                   >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                       <Briefcase size={20} />
@@ -244,7 +244,7 @@ export default function DeveloperDetailsPage({
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-none overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         {[
                           { id: "all", name: "All Projects Combined" },
@@ -310,8 +310,8 @@ export default function DeveloperDetailsPage({
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-6 bg-card border-border hover:border-primary/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/5 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -343,8 +343,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-blue-400/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/5 transition-colors">
               <Sparkles size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -377,8 +377,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-warning/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-warning/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/5 transition-colors">
               <ShieldCheck size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -409,8 +409,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-destructive/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-destructive/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/5 transition-colors">
               <AlertCircle size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -521,27 +521,27 @@ export default function DeveloperDetailsPage({
             </div>
             <Card className="bg-card border-border overflow-hidden rounded-3xl">
               <table className="w-full text-left">
-                <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">
+                <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
                   <tr>
-                    <th className="px-8 py-6">Sprint</th>
-                    <th className="px-8 py-6">Points</th>
-                    <th className="px-8 py-6">AI Usage (Obj)</th>
-                    <th className="px-8 py-6">PRs Merged</th>
-                    <th className="px-8 py-6">Reviews</th>
-                    <th className="px-8 py-6 text-right">DMT Compliance</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border font-medium">
                   {metrics.map((m, idx) => (
                     <tr
                       key={idx}
-                      className="hover:bg-accent transition-all group"
+                      className="hover:bg-gray-100 transition-all group"
                     >
-                      <td className="px-8 py-6 font-bold group-hover:text-primary transition-colors">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                         {m.sprint_name}
                       </td>
-                      <td className="px-8 py-6">{m.story_points_completed}</td>
-                      <td className="px-8 py-6">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">
                         <span className="text-blue-400 font-bold">
                           {m.code_ai_usage_percent?.toFixed(1) || 0}%
                         </span>
@@ -549,13 +549,13 @@ export default function DeveloperDetailsPage({
                           ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
                         </span>
                       </td>
-                      <td className="px-8 py-6">{m.prs_merged}</td>
-                      <td className="px-8 py-6 text-muted-foreground">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
                         {m.prs_reviewed || 0}
                       </td>
-                      <td className="px-8 py-6 text-right font-black text-primary">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                          <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
                             <div
                               className="h-full bg-primary"
                               style={{ width: `${m.dmt_compliance_rate}%` }}
@@ -581,7 +581,7 @@ export default function DeveloperDetailsPage({
                 </span>
               )}
             </h2>
-            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-2xl relative overflow-hidden">
+            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-none relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px]" />
 
               <div className="space-y-4">

@@ -66,7 +66,7 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
 
   return (
     <aside className={cn(
-      "fixed inset-y-0 left-0 z-50 w-64 bg-card/95 border-r border-border/50 flex flex-col h-full backdrop-blur-2xl transition-all duration-300 xl:static lg:w-56 lg:bg-card/40 lg:backdrop-blur-sm xl:translate-x-0 xl:z-auto",
+      "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/50 flex flex-col h-full transition-all duration-300 xl:static lg:w-56 lg:bg-card xl:translate-x-0 xl:z-auto",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="pl-4 pr-6 pt-8 pb-12 flex-1 flex flex-col min-h-0 overflow-y-auto">
