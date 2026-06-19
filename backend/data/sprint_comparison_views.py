@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import SprintMetrics, DeveloperMetrics, WorkItem
 from django.db.models import Count, Q
+from users.models import User
 
 class SprintComparisonView(APIView):
     permission_classes = [IsAuthenticated]
@@ -241,6 +242,9 @@ class SprintComparisonView(APIView):
             charts['work_type_distribution']['sprint_b'][c['item_type']] = c['count']
 
     def _build_workload_distribution(self, charts, name_a, name_b, project_id):
+        
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
         # Get all developer metrics for these two sprints
         filter_a = Q(sprint_name=name_a)
         filter_b = Q(sprint_name=name_b)
@@ -248,8 +252,8 @@ class SprintComparisonView(APIView):
             filter_a &= Q(project_id=project_id)
             filter_b &= Q(project_id=project_id)
 
-        metrics_a = DeveloperMetrics.objects.filter(filter_a).values('developer_name', 'story_points_completed', 'items_completed')
-        metrics_b = DeveloperMetrics.objects.filter(filter_b).values('developer_name', 'story_points_completed', 'items_completed')
+        metrics_a = DeveloperMetrics.objects.filter(filter_a).exclude(developer_email__in=inactive_user_emails).values('developer_name', 'story_points_completed', 'items_completed')
+        metrics_b = DeveloperMetrics.objects.filter(filter_b).exclude(developer_email__in=inactive_user_emails).values('developer_name', 'story_points_completed', 'items_completed')
 
         # Combine into a format the frontend can easily use for a side-by-side or stacked bar chart
         dist = {} # name -> { points_a, points_b, items_a, items_b }

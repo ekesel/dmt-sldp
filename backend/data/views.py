@@ -22,6 +22,8 @@ from tenants.models import Tenant
 from .analytics.metrics import MetricService
 from .analytics.forecasting import ForecastingService
 from configuration.models import SourceConfiguration
+from .analytics.identity_resolver import IdentityResolver
+from users.models import User
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -258,12 +260,16 @@ class DeveloperListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from .analytics.identity_resolver import IdentityResolver
+        
+        
         resolver = IdentityResolver()
         resolver.load()
         project_id = request.query_params.get('project_id')
         
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+        
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
+        queryset = queryset.exclude(developer_email__in=inactive_user_emails)
         
         if project_id and project_id not in ['null', 'undefined', '']:
             queryset = queryset.filter(project_id=project_id)
@@ -502,9 +508,12 @@ class DeveloperComparisonView(APIView):
             dev_points = combined['story_points_completed']
             dev_compliance = combined['dmt_compliance_rate']
 
+           
+            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
             # Team average: for each developer, sum their latest sprint per project, then average across devs
             all_devs_latest = list(
-                DeveloperMetrics.objects
+                DeveloperMetrics.objects.exclude(developer_email__in=inactive_user_emails)
                 .order_by()
                 .values('developer_email', 'project_id')
                 .annotate(latest_end=Max('sprint_end_date'))
@@ -579,10 +588,13 @@ class DeveloperComparisonView(APIView):
             dev_compliance = dev_agg['dmt_compliance_rate'] or 0
 
             # Team average from DeveloperMetrics for this sprint + project
+            
+            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
             team_agg = DeveloperMetrics.objects.filter(
                 sprint_name=last_sprint.sprint_name,
                 project_id=project_id
-            ).values('developer_email').annotate(
+            ).exclude(developer_email__in=inactive_user_emails).values('developer_email').annotate(
                 total_points=Sum('story_points_completed')
             ).aggregate(avg_points=Avg('total_points'))
             team_avg_points = round(team_agg['avg_points'] or 0, 1)
@@ -1049,7 +1061,7 @@ class AssigneeDistributionView(APIView):
 
         # 1. Process Resolved Assignees
         resolved_rows = (
-            work_items.filter(resolved_assignee__isnull=False)
+            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
             .values('resolved_assignee__id', 'resolved_assignee__first_name',
                     'resolved_assignee__last_name', 'resolved_assignee__email',
                     'resolved_assignee__is_active', 'status_category', 'resolved_at', 'started_at')
@@ -1084,9 +1096,13 @@ class AssigneeDistributionView(APIView):
                     agg['durations'].append(duration)
 
         # 2. Process Fallback Assignees (unlinked)
+    
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
         fallback_rows = (
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
+            .exclude(assignee_email__in=inactive_user_emails)
             .values('assignee_email', 'assignee_name', 'status_category', 'started_at', 'resolved_at')
         )
 
