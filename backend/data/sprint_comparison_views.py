@@ -78,6 +78,23 @@ class SprintComparisonView(APIView):
                 'a': _get_val(m_a, 'items_completed'),
                 'b': _get_val(m_b, 'items_completed'),
             }
+
+            # Calculate average cycle time from WorkItems
+            def _get_dev_cycle_time(m, s_name):
+                if not m: return 0
+                from .analytics.identity_resolver import IdentityResolver
+                from .analytics.metrics import MetricService
+                resolver = IdentityResolver()
+                resolver.load()
+                all_known_aliases = list(set(resolver.all_aliases(m.developer_email)) | {m.developer_email})
+                qs = WorkItem.objects.filter(sprint__name=s_name, assignee_email__in=all_known_aliases)
+                return MetricService.calculate_cycle_time(qs)
+
+            kpis['cycle_time'] = {
+                'a': _get_dev_cycle_time(m_a, sprint_a_name),
+                'b': _get_dev_cycle_time(m_b, sprint_b_name),
+            }
+
             kpis['compliance'] = {
                 'a': _get_val(m_a, 'dmt_compliance_rate'),
                 'b': _get_val(m_b, 'dmt_compliance_rate'),
