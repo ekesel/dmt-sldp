@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 
 from knowledge_base.models import Document
-from homepage.models import Policy
+from homepage.models import Policy, LearningAndDevelopment, Onboarding
 from knowledge_base.serializers import DocumentSerializer
 from homepage.serializers import PolicySerializer
 from knowledge_base.utils import get_visible_docs
@@ -50,14 +50,34 @@ class GlobalSearchAPIView(APIView):
                         "title": doc.title,
                         "file": file_url
                     })
-            if not doc_type or doc_type == 'policy_doc':
+            if not doc_type or doc_type == 'policy_document':
                 policy = Policy.objects.filter(org_name=request.tenant.name, id=doc_id).first()
                 if policy:
                     file_url = policy.policy_file.url if policy.policy_file else None
                     return Response({
-                        "type": "policy_doc",
+                        "type": "policy_document",
                         "id": policy.id,
                         "title": policy.policy_file.name.split('/')[-1] if policy.policy_file else "",
+                        "file": file_url
+                    })
+            if not doc_type or doc_type == 'learning_and_development':
+                ld = LearningAndDevelopment.objects.filter(org_name=request.tenant.name, id=doc_id).first()
+                if ld:
+                    file_url = ld.learning_and_development_file.url if ld.learning_and_development_file else None
+                    return Response({
+                        "type": "learning_and_development",
+                        "id": ld.id,
+                        "title": ld.learning_and_development_file.name.split('/')[-1] if ld.learning_and_development_file else "",
+                        "file": file_url
+                    })
+            if not doc_type or doc_type == 'onboarding':
+                onb = Onboarding.objects.filter(org_name=request.tenant.name, id=doc_id).first()
+                if onb:
+                    file_url = onb.onboarding_file.url if onb.onboarding_file else None
+                    return Response({
+                        "type": "onboarding",
+                        "id": onb.id,
+                        "title": onb.title or (onb.onboarding_file.name.split('/')[-1] if onb.onboarding_file else ""),
                         "file": file_url
                     })
                     
@@ -81,6 +101,18 @@ class GlobalSearchAPIView(APIView):
             policy_file__icontains=query
         ).distinct()[:limit]
 
+        # Learning and Development search
+        ld_docs = LearningAndDevelopment.objects.filter(
+            org_name=request.tenant.name,
+            learning_and_development_file__icontains=query
+        ).distinct()[:limit]
+
+        # Onboarding search
+        onb_docs = Onboarding.objects.filter(
+            Q(org_name=request.tenant.name) &
+            (Q(title__icontains=query) | Q(onboarding_file__icontains=query))
+        ).distinct()[:limit]
+
         # Unify results
         results = []
 
@@ -97,9 +129,27 @@ class GlobalSearchAPIView(APIView):
         for policy in policy_docs:
             file_url = policy.policy_file.url if policy.policy_file else None
             results.append({
-                "type": "policy_doc",
+                "type": "policy_document",
                 "id": policy.id,
                 "title": policy.policy_file.name.split('/')[-1] if policy.policy_file else "",
+                "file": file_url
+            })
+
+        for ld in ld_docs:
+            file_url = ld.learning_and_development_file.url if ld.learning_and_development_file else None
+            results.append({
+                "type": "learning_and_development",
+                "id": ld.id,
+                "title": ld.learning_and_development_file.name.split('/')[-1] if ld.learning_and_development_file else "",
+                "file": file_url
+            })
+
+        for onb in onb_docs:
+            file_url = onb.onboarding_file.url if onb.onboarding_file else None
+            results.append({
+                "type": "onboarding",
+                "id": onb.id,
+                "title": onb.title or (onb.onboarding_file.name.split('/')[-1] if onb.onboarding_file else ""),
                 "file": file_url
             })
 
