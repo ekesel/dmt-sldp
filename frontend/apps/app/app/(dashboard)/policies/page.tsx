@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { getFileUrl } from '@dmt/api';
+import { getFileUrl, getUploadErrorMessage } from '@dmt/api';
 import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
@@ -58,14 +58,9 @@ export default function PoliciesPage() {
             formData.append('policy_file', file);
             await uploadMutation.mutateAsync(formData);
             toast.success('Policy uploaded successfully!', { id: toastId });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Upload failed:', err);
-            let errorMessage = 'Failed to upload policy.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
-            }
+            const errorMessage = getUploadErrorMessage(err, 'Failed to upload policy.');
             toast.error(errorMessage, { id: toastId });
         } finally {
             if (createFileInputRef.current) createFileInputRef.current.value = '';
@@ -87,14 +82,9 @@ export default function PoliciesPage() {
             formData.append('policy_file', file);
             await updateMutation.mutateAsync({ id, formData });
             toast.success('Policy updated successfully!', { id: toastId });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Update failed:', err);
-            let errorMessage = 'Failed to update policy.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
-            }
+            const errorMessage = getUploadErrorMessage(err, 'Failed to update policy.');
             toast.error(errorMessage, { id: toastId });
         } finally {
             if (updateFileInputRefs.current[id]) {

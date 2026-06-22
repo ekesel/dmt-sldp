@@ -4,7 +4,8 @@ import { Post } from '../../../types/newsfeed';
 export const getNewsfeedQueryOptions = (
     socket: any, 
     isConnected: boolean,
-    handlers: { setPage: (page: number) => void; setHasNextPage: (hasNext: boolean) => void }
+    handlers: { setPage: (page: number) => void; setHasNextPage: (hasNext: boolean) => void },
+    postId?: number | null
 ) => ({
     queryKey: newsfeedKeys.posts(),
     queryFn: () => {
@@ -45,7 +46,7 @@ export const getNewsfeedQueryOptions = (
                 reject(new Error('Timeout: Server did not respond within 30 seconds'));
             }, 30000);
 
-            socket.emit('get_posts', { page: 1 });
+            socket.emit('get_posts', { page: 1, post_id: postId });
         });
     },
     enabled: !!socket && isConnected,

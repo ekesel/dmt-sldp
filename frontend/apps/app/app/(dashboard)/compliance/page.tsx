@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from "@dmt/ui";
 import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2, HelpCircle, Clock } from "lucide-react";
 import { compliance } from '@dmt/api';
@@ -53,6 +54,9 @@ export default function CompliancePage() {
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
 
+    const searchParams = useSearchParams();
+    const workItemId = searchParams?.get('work_item_id');
+
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
     }, []);
@@ -65,12 +69,15 @@ export default function CompliancePage() {
         setIsHelpOpen(false);
     }, []);
 
-    const fetchData = useCallback((projectId: number | null, sprintId: number | null) => {
+    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null) => {
         setLoading(true);
         setSummaryLoading(true);
         setFixedLaterLoading(true);
 
-        compliance.listFlags(projectId, sprintId)
+        // Only use workItemId for the API call if the user hasn't explicitly set another filter
+        const effectiveWorkItemId = (projectId === null && sprintId === null) ? workItemId : null;
+        
+        compliance.listFlags(projectId, sprintId, effectiveWorkItemId)
             .then(data => setFlags(data))
             .catch(err => console.error("Failed to fetch compliance flags:", err))
             .finally(() => setLoading(false));
@@ -88,8 +95,42 @@ export default function CompliancePage() {
 
     // Refetch whenever project OR sprint changes
     useEffect(() => {
-        fetchData(selectedProjectId, selectedSprintId);
-    }, [selectedProjectId, selectedSprintId, fetchData]);
+        fetchData(selectedProjectId, selectedSprintId, workItemId);
+    }, [selectedProjectId, selectedSprintId, workItemId, fetchData]);
+
+    useEffect(() => {
+        if (workItemId) {
+            setSelectedProjectId(null);
+            setSelectedSprintId(null);
+            setActiveFilter(null);
+        }
+    }, [workItemId]);
+
+    // Scroll to specific work item if provided in URL
+    useEffect(() => {
+        let scrollTimer: number | null = null;
+        let innerTimer: number | null = null;
+
+        if (!loading && flags.length > 0 && workItemId) {
+            console.log(`[Compliance] Attempting to scroll to work-item-${workItemId}`);
+            scrollTimer = window.setTimeout(() => {
+                const element = document.getElementById(`work-item-${workItemId}`);
+                console.log(`[Compliance] Element found:`, !!element);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
+                    innerTimer = window.setTimeout(() => {
+                        element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
+                    }, 3000);
+                }
+            }, 500);
+        }
+
+        return () => {
+            if (scrollTimer) window.clearTimeout(scrollTimer);
+            if (innerTimer) window.clearTimeout(innerTimer);
+        };
+    }, [loading, flags, workItemId]);
 
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
@@ -143,6 +184,7 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             selectedSprintId={selectedSprintId}
                             onSelect={setSelectedSprintId}
+                            autoSelectLatest={!workItemId}
                         />
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
@@ -334,7 +376,7 @@ export default function CompliancePage() {
                                 </div>
                             );
                             return visibleFlags.map((flag) => (
-                                <Card key={flag.id} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">
                                             <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'

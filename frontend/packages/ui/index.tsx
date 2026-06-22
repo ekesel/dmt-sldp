@@ -6,11 +6,11 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-export const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+export const Card = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div className={cn(
         "bg-glass-gradient backdrop-blur-md border border-white/10 rounded-xl shadow-glass p-6",
         className
-    )}>
+    )} {...props}>
         {children}
     </div>
 );

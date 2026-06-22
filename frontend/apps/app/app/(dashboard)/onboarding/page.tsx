@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
+import { dashboard, getFileUrl, getUploadErrorMessage } from '@dmt/api';
 import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useOnboardingQuery } from './query-options';
@@ -113,16 +113,12 @@ export default function OnboardingPage() {
             }
 
             setModalOpen(false);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Form submission failed:', err);
-            let errorMessage = modalType === 'create'
+            const defaultMessage = modalType === 'create'
                 ? 'Failed to upload onboarding document.'
                 : 'Failed to update onboarding document.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
-            }
+            const errorMessage = getUploadErrorMessage(err, defaultMessage);
             toast.error(errorMessage, { id: toastId });
         } finally {
             setSubmitting(false);

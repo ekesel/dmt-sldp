@@ -65,7 +65,7 @@ const menuItems: MenuItem[] = [
   },
   {
     icon: MessageSquare,
-    label: "Messenger",
+    label: "Notifications",
     href: "/notifications/send",
   },
   {

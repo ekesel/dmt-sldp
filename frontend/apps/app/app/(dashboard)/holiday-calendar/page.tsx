@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl, HolidayCalendarData } from '@dmt/api';
+import { dashboard, getFileUrl, HolidayCalendarData, getUploadErrorMessage } from '@dmt/api';
 import { Palmtree, ArrowLeft, Plus, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
@@ -63,9 +63,10 @@ export default function HolidayCalendarPage() {
             await dashboard.uploadHolidayCalendar(formData);
             toast.success('Holiday calendar uploaded successfully!', { id: toastId });
             fetchCalendars();
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Upload failed:', err);
-            toast.error('Failed to upload holiday calendar.', { id: toastId });
+            const errorMessage = getUploadErrorMessage(err, 'Failed to upload holiday calendar.');
+            toast.error(errorMessage, { id: toastId });
         } finally {
             setUploading(false);
             if (createFileInputRef.current) createFileInputRef.current.value = '';

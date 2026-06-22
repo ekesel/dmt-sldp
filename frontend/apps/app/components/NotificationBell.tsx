@@ -17,15 +17,23 @@ export function NotificationBell() {
 
         switch (n.notification_type) {
             case 'compliance_failure':
+                if (n.data?.work_item_id) {
+                    return `/compliance?work_item_id=${n.data.work_item_id}`;
+                }
                 return '/compliance';
             case 'sprint_ending':
                 return '/sprint-analysis';
             case 'ai_insight':
                 return '/metrics';
+            case 'info':
+            case 'success':
+            case 'warning':
+            case 'error':
+                return `/notifications/send?notification_id=${n.id}`;
         }
 
         if (n.data?.post_id) {
-            return '/newsfeed';
+            return `/newsfeed?post_id=${n.data.post_id}`;
         }
 
         return null;
@@ -38,7 +46,13 @@ export function NotificationBell() {
         const link = getNotificationLink(n);
         if (link) {
             setIsOpen(false);
-            router.push(link);
+            const linkPath = link.split('?')[0].replace(/\/$/, '');
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            if (currentPath === linkPath) {
+                window.location.assign(link);
+            } else {
+                router.push(link);
+            }
         }
     };
 

@@ -42,23 +42,38 @@ const PostCard = ({
 
   useEffect(() => {
     let timeoutId: number | null = null;
+    let innerTimeoutId: number | null = null;
 
     if (typeof window !== "undefined") {
-      const openCommentsPostId = searchParams.get("openComments");
-      if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) {
-        setShowComments(true);
+      const openCommentsPostId = searchParams?.get("openComments");
+      const targetPostIdStr = searchParams?.get("post_id");
+      const targetPostId = targetPostIdStr ? Number(targetPostIdStr) : null;
+      
+      if ((openCommentsPostId && Number(openCommentsPostId) === post.post_id) || (targetPostId === post.post_id)) {
+        if (openCommentsPostId) setShowComments(true);
+        
         timeoutId = window.setTimeout(() => {
           const element = document.getElementById(`post-${post.post_id}`);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "center" });
+            
+            if (targetPostId) {
+                element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
+                innerTimeoutId = window.setTimeout(() => {
+                    element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
+                }, 3000);
+            }
           }
-        }, 150);
+        }, 500); // 500ms delay to ensure it's rendered
       }
     }
 
     return () => {
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
+      }
+      if (innerTimeoutId !== null) {
+        window.clearTimeout(innerTimeoutId);
       }
     };
   }, [post.post_id, searchParams]);

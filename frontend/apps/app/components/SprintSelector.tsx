@@ -17,9 +17,10 @@ interface SprintSelectorProps {
     selectedSprintId: number | null;
     onSelect: (sprintId: number | null) => void;
     className?: string;
+    autoSelectLatest?: boolean;
 }
 
-export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelect, className }: SprintSelectorProps) => {
+export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelect, className, autoSelectLatest = true }: SprintSelectorProps) => {
     const [sprintList, setSprintList] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +32,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
             .then(data => {
                 setSprintList(data);
                 // Auto-select latest sprint (first in list) whenever project changes
-                if (data.length > 0) {
+                if (data.length > 0 && autoSelectLatest) {
                     onSelect(data[0].id);
                 } else {
                     onSelect(null);
