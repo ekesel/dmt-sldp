@@ -79,13 +79,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 name: employeeData ? employeeData.name : '',
                 role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null') ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
                 email: employeeData ? (employeeData.email || '') : '',
-<<<<<<< HEAD
                 department: (employeeData && employeeData.department && employeeData.department !== 'null') ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
                 parentId: (employeeData && employeeData.parentId && employeeData.parentId !== 'null') ? employeeData.parentId : (defaultParentId || ''),
-=======
-                department: employeeData ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
-                parentId: employeeData ? (employeeData.parentId || '') : (defaultParentId || ''),
->>>>>>> 6242ee2a28d2b456fbbbfc81d9dc0789079ce78d
                 isNotFound: false,
                 autocompleteError: false,
                 isCreatingRole: false,
