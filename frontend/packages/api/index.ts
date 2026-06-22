@@ -571,7 +571,6 @@ export const dashboard = {
   getEvents: () => get<EventData[]>('/homepage/events/'),
   getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
 
-
   getUserSprintTaskSummary: () => get<{ status: boolean; data: { active: number; done: number } }>('/user-sprint-task-summary/'),
 };
 

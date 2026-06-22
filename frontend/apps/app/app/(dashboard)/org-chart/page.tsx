@@ -251,7 +251,6 @@ function OrgChartPageContent() {
                 .catch((err) => {
                     console.error('Failed to fetch departments separately:', err);
                 });
-
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
                 setEmployees(flatData);

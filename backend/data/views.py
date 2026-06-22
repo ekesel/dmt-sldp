@@ -22,6 +22,8 @@ from tenants.models import Tenant
 from .analytics.metrics import MetricService
 from .analytics.forecasting import ForecastingService
 from configuration.models import SourceConfiguration
+from .analytics.identity_resolver import IdentityResolver
+from users.models import User
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -258,12 +260,16 @@ class DeveloperListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from .analytics.identity_resolver import IdentityResolver
+        
+        
         resolver = IdentityResolver()
         resolver.load()
         project_id = request.query_params.get('project_id')
         
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+        
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
+        queryset = queryset.exclude(developer_email__in=inactive_user_emails)
         
         if project_id and project_id not in ['null', 'undefined', '']:
             queryset = queryset.filter(project_id=project_id)
@@ -272,6 +278,14 @@ class DeveloperListView(APIView):
             'developer_email', 'developer_name', 'project__id', 'project__name'
         )
         
+        # Pre-fetch all active users' names for email resolution
+        active_users = User.objects.filter(is_active=True).values('email', 'first_name', 'last_name')
+        user_name_map = {}
+        for u in active_users:
+            if u['email']:
+                full_name = f"{u['first_name']} {u['last_name']}".strip()
+                user_name_map[u['email'].lower()] = full_name
+
         # Deduplicate in Python using IdentityResolver
         dev_map = {}  # canonical_email (lowercase) -> {info dict}
         for m in all_metrics:
@@ -280,19 +294,41 @@ class DeveloperListView(APIView):
                 continue
                 
             email = resolver.resolve(raw_email)
+            
+            # Find the actual name:
+            # 1. Check if the canonical email (or any alias) has a registered name in User table
+            full_name = ""
+            aliases = list(set(resolver.all_aliases(email)) | {email})
+            for alias in aliases:
+                alias_lower = alias.lower()
+                if alias_lower in user_name_map and user_name_map[alias_lower]:
+                    full_name = user_name_map[alias_lower]
+                    break
+                    
+            # 2. Fallback to developer_name from metrics if not found in User table
+            if not full_name:
+                full_name = (m['developer_name'] or '').strip()
+                
+            # 3. If name is still an email or empty, clean it from the username part of the email
+            if not full_name or '@' in full_name:
+                fallback_source = full_name if '@' in full_name else email
+                username_part = fallback_source.split('@')[0]
+                full_name = ' '.join(p.capitalize() for p in username_part.replace('.', ' ').replace('_', ' ').replace('-', ' ').split())
+
             if email not in dev_map:
                 dev_map[email] = {
                     'developer_email': email,
-                    'developer_name': m['developer_name'] or email,
+                    'developer_name': full_name,
                     'id': email,  # Use canonical email as consistent ID
                     'projects': {}
                 }
-            
-            # Prefer the longest/most descriptive name
-            existing_name = dev_map[email]['developer_name']
-            new_name = m['developer_name'] or ''
-            if len(new_name) > len(existing_name) and ' ' in new_name:
-                dev_map[email]['developer_name'] = new_name
+            else:
+                existing_name = dev_map[email]['developer_name']
+                # Prefer actual names over email/cleaned email names, and prefer longer descriptive names
+                if '@' in existing_name or (' ' not in existing_name and ' ' in full_name and '@' not in full_name):
+                    dev_map[email]['developer_name'] = full_name
+                elif len(full_name) > len(existing_name) and ' ' in full_name and '@' not in full_name and '@' not in existing_name:
+                    dev_map[email]['developer_name'] = full_name
             
             # Accumulate unique projects
             if m['project__id']:
@@ -356,6 +392,67 @@ def _get_combined_metrics(developer_email):
         'sprint_end_date': None,
     }
     return combined
+
+def _inject_workload(data_list, resolved_id, project_id=None):
+    from .analytics.identity_resolver import IdentityResolver
+    from .models import WorkItem, Sprint
+    from configuration.models import SourceConfiguration
+    
+    # 1. Fetch all linked email aliases (GitHub, Jira, etc.) of the developer
+    resolver = IdentityResolver()
+    resolver.load()
+    developer_emails = list(set(resolver.all_aliases(resolved_id)) | {resolved_id})
+    
+    # 2. Fetch project source configurations if project-specific filtering is required
+    project_source_ids = None
+    is_valid_project = project_id and project_id not in ['null', 'undefined', 'all']
+    if is_valid_project:
+        project_source_ids = list(
+            SourceConfiguration.objects.filter(project_id=project_id)
+            .values_list('id', flat=True)
+        )
+        
+    for item in data_list:
+        sprint_name = item.get('sprint_name')
+        
+        # Find the globally latest active sprint if 'All Projects (Current)' is specified
+        if sprint_name == 'All Projects (Current)':
+            latest_active_sprint = Sprint.objects.exclude(status='backlog').order_by('-end_date', '-start_date').first()
+            sprint_name = latest_active_sprint.name if latest_active_sprint else None
+            
+        if not sprint_name:
+            item['workload'] = None
+            continue
+            
+        # 3. Fetch all WorkItems assigned to the developer in this sprint
+        tasks = WorkItem.objects.filter(sprint__name=sprint_name, assignee_email__in=developer_emails)
+        if project_source_ids is not None:
+            tasks = tasks.filter(source_config_id__in=project_source_ids)
+            
+        # 4. Count tasks based on their status
+        total_tasks = tasks.count()
+        in_progress_count = tasks.filter(status_category='in_progress').count()
+        completed_count = tasks.filter(status_category='done').count()
+        todo_count = tasks.filter(status_category='todo').count()
+        
+        # 5. Determine the workload status (Based on remaining active tasks: in_progress + todo)
+        active_tasks_count = in_progress_count + todo_count
+        if active_tasks_count > 5:
+            workload_status = 'Overloaded'
+        elif active_tasks_count >= 3:
+            workload_status = 'Balanced'
+        else:
+            workload_status = 'Underutilised'
+            
+        # 6. Inject the workload data into the response item
+        item['workload'] = {
+            'total': total_tasks,
+            'in_progress': in_progress_count,
+            'completed': completed_count,
+            'todo': todo_count,
+            'status': workload_status
+        }
+
 
 class DeveloperMetricsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -439,6 +536,10 @@ class DeveloperMetricsView(APIView):
             if metrics and hasattr(metrics[0], '__dict__'):
                 serializer = DeveloperMetricsSerializer(metrics, many=True)
                 data = serializer.data
+                
+                # Inject workload stats
+                _inject_workload(data, resolved_id, project_id)
+
                 # Inject is_selected field into the serialized output
                 if sprint_obj:
                     for item in data:
@@ -478,6 +579,10 @@ class DeveloperMetricsView(APIView):
 
         # Prepend combined current so metrics[0] is always the true cross-project snapshot
         result = ([combined] + history) if combined else history
+        
+        # Inject workload stats
+        _inject_workload(result, resolved_id, project_id)
+
         return Response(result)
 
 class DeveloperComparisonView(APIView):
@@ -502,9 +607,12 @@ class DeveloperComparisonView(APIView):
             dev_points = combined['story_points_completed']
             dev_compliance = combined['dmt_compliance_rate']
 
+           
+            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
             # Team average: for each developer, sum their latest sprint per project, then average across devs
             all_devs_latest = list(
-                DeveloperMetrics.objects
+                DeveloperMetrics.objects.exclude(developer_email__in=inactive_user_emails)
                 .order_by()
                 .values('developer_email', 'project_id')
                 .annotate(latest_end=Max('sprint_end_date'))
@@ -529,11 +637,13 @@ class DeveloperComparisonView(APIView):
                 team_avg_points = 0
                 team_avg_compliance = 0
 
-            return Response({
+            res_data = {
                 "velocity": {"you": dev_points, "team_avg": team_avg_points},
                 "compliance": {"you": round(dev_compliance, 1), "team_avg": team_avg_compliance},
                 "sprint_name": "All Projects (Current)",
-            })
+            }
+            _inject_workload([res_data], resolved_id, project_id)
+            return Response(res_data)
 
         else:
             # --- Specific Project ---
@@ -560,11 +670,13 @@ class DeveloperComparisonView(APIView):
 
             if not last_sprint:
                 if requested_sprint_name:
-                    return Response({
+                    res_data = {
                         "velocity": {"you": 0, "team_avg": 0},
                         "compliance": {"you": 0, "team_avg": 0},
                         "sprint_name": requested_sprint_name,
-                    })
+                    }
+                    _inject_workload([res_data], resolved_id, project_id)
+                    return Response(res_data)
                 return Response({})
 
             dev_agg = DeveloperMetrics.objects.filter(
@@ -579,22 +691,27 @@ class DeveloperComparisonView(APIView):
             dev_compliance = dev_agg['dmt_compliance_rate'] or 0
 
             # Team average from DeveloperMetrics for this sprint + project
+            
+            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
             team_agg = DeveloperMetrics.objects.filter(
                 sprint_name=last_sprint.sprint_name,
                 project_id=project_id
-            ).values('developer_email').annotate(
+            ).exclude(developer_email__in=inactive_user_emails).values('developer_email').annotate(
                 total_points=Sum('story_points_completed')
             ).aggregate(avg_points=Avg('total_points'))
             team_avg_points = round(team_agg['avg_points'] or 0, 1)
 
-            return Response({
+            res_data = {
                 "velocity": {"you": dev_points, "team_avg": team_avg_points},
                 "compliance": {
                     "you": round(dev_compliance, 1),
                     "team_avg": round(last_sprint.compliance_rate_percent, 1),
                 },
                 "sprint_name": last_sprint.sprint_name,
-            })
+            }
+            _inject_workload([res_data], resolved_id, project_id)
+            return Response(res_data)
 
 class SprintListView(APIView):
     """
@@ -1049,10 +1166,10 @@ class AssigneeDistributionView(APIView):
 
         # 1. Process Resolved Assignees
         resolved_rows = (
-            work_items.filter(resolved_assignee__isnull=False)
+            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
             .values('resolved_assignee__id', 'resolved_assignee__first_name',
                     'resolved_assignee__last_name', 'resolved_assignee__email',
-                    'resolved_assignee__is_active', 'status_category', 'resolved_at', 'started_at')
+                    'resolved_assignee__is_active', 'status_category', 'resolved_at', 'started_at', 'created_at')
         )
 
         for row in resolved_rows:
@@ -1079,15 +1196,20 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                if row['resolved_at'] and row['started_at']:
-                    duration = (row['resolved_at'] - row['started_at']).total_seconds() / 86400.0
+                start_time = row['started_at'] or row['created_at']
+                if row['resolved_at'] and start_time:
+                    duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
                     agg['durations'].append(duration)
 
         # 2. Process Fallback Assignees (unlinked)
+    
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
         fallback_rows = (
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
-            .values('assignee_email', 'assignee_name', 'status_category', 'started_at', 'resolved_at')
+            .exclude(assignee_email__in=inactive_user_emails)
+            .values('assignee_email', 'assignee_name', 'status_category', 'started_at', 'resolved_at', 'created_at')
         )
 
         for row in fallback_rows:
@@ -1113,8 +1235,9 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                if row['resolved_at'] and row['started_at']:
-                    duration = (row['resolved_at'] - row['started_at']).total_seconds() / 86400.0
+                start_time = row['started_at'] or row['created_at']
+                if row['resolved_at'] and start_time:
+                    duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
                     agg['durations'].append(duration)
 
         # 3. Finalize result list

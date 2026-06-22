@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import SprintMetrics, DeveloperMetrics, WorkItem
 from django.db.models import Count, Q
+from users.models import User
 
 class SprintComparisonView(APIView):
     permission_classes = [IsAuthenticated]
@@ -46,7 +47,7 @@ class SprintComparisonView(APIView):
             metric_b = DeveloperMetrics.objects.filter(**filter_kwargs_b).order_by('-sprint_end_date').first()
             
             # Calculate KPIs
-            self._build_kpis(data['kpis'], metric_a, metric_b, sprint_a_name, sprint_b_name, is_developer=True)
+            self._build_kpis(data['kpis'], metric_a, metric_b, sprint_a_name, sprint_b_name, is_developer=True, project_id=project_id)
             self._build_developer_charts(data['charts'], metric_a, metric_b, sprint_a_name, sprint_b_name)
         else:
             # Team View
@@ -54,7 +55,7 @@ class SprintComparisonView(APIView):
             metric_b = SprintMetrics.objects.filter(**filter_kwargs_b).order_by('-sprint_end_date').first()
             
             # Calculate KPIs
-            self._build_kpis(data['kpis'], metric_a, metric_b, sprint_a_name, sprint_b_name, is_developer=False)
+            self._build_kpis(data['kpis'], metric_a, metric_b, sprint_a_name, sprint_b_name, is_developer=False, project_id=project_id)
             self._build_team_charts(data['charts'], metric_a, metric_b, sprint_a_name, sprint_b_name)
             
             # Work items distribution for team
@@ -63,7 +64,7 @@ class SprintComparisonView(APIView):
 
         return Response(data)
 
-    def _build_kpis(self, kpis, m_a, m_b, sprint_a_name, sprint_b_name, is_developer=False):
+    def _build_kpis(self, kpis, m_a, m_b, sprint_a_name, sprint_b_name, is_developer=False, project_id=None):
         def _get_val(obj, key, default=0):
             val = getattr(obj, key, default) if obj else default
             return val if val is not None else default
@@ -77,6 +78,27 @@ class SprintComparisonView(APIView):
                 'a': _get_val(m_a, 'items_completed'),
                 'b': _get_val(m_b, 'items_completed'),
             }
+
+            # Calculate average cycle time from WorkItems
+            def _get_dev_cycle_time(m, s_name):
+                if not m: return 0
+                from .analytics.identity_resolver import IdentityResolver
+                from .analytics.metrics import MetricService
+                from configuration.models import SourceConfiguration
+                resolver = IdentityResolver()
+                resolver.load()
+                all_known_aliases = list(set(resolver.all_aliases(m.developer_email)) | {m.developer_email})
+                qs = WorkItem.objects.filter(sprint__name=s_name, assignee_email__in=all_known_aliases)
+                if project_id:
+                    source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    qs = qs.filter(source_config_id__in=source_ids)
+                return MetricService.calculate_cycle_time(qs)
+
+            kpis['cycle_time'] = {
+                'a': _get_dev_cycle_time(m_a, sprint_a_name),
+                'b': _get_dev_cycle_time(m_b, sprint_b_name),
+            }
+
             kpis['compliance'] = {
                 'a': _get_val(m_a, 'dmt_compliance_rate'),
                 'b': _get_val(m_b, 'dmt_compliance_rate'),
@@ -101,7 +123,15 @@ class SprintComparisonView(APIView):
             # Calculate item volume from WorkItems (Total vs Completed)
             def _get_dev_items(m, s_name):
                 if not m: return 0, 0
-                qs = WorkItem.objects.filter(sprint__name=s_name, assignee_email=m.developer_email)
+                from .analytics.identity_resolver import IdentityResolver
+                from configuration.models import SourceConfiguration
+                resolver = IdentityResolver()
+                resolver.load()
+                all_known_aliases = list(set(resolver.all_aliases(m.developer_email)) | {m.developer_email})
+                qs = WorkItem.objects.filter(sprint__name=s_name, assignee_email__in=all_known_aliases)
+                if project_id:
+                    source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    qs = qs.filter(source_config_id__in=source_ids)
                 total = qs.count()
                 completed = qs.filter(status_category='done').count()
                 return total, completed
@@ -229,8 +259,10 @@ class SprintComparisonView(APIView):
         # Sprint might be related through a foreign key or external ID, we might need to check how it's linked
         # If no strict relation, we might just query by sprint name directly
         if project_id:
-            # We assume source_config_id ties to project, but for now we filter by sprint name
-            pass
+            from configuration.models import SourceConfiguration
+            source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+            qs_a = qs_a.filter(source_config_id__in=source_ids)
+            qs_b = qs_b.filter(source_config_id__in=source_ids)
             
         counts_a = qs_a.values('item_type').annotate(count=Count('id'))
         counts_b = qs_b.values('item_type').annotate(count=Count('id'))
@@ -241,6 +273,9 @@ class SprintComparisonView(APIView):
             charts['work_type_distribution']['sprint_b'][c['item_type']] = c['count']
 
     def _build_workload_distribution(self, charts, name_a, name_b, project_id):
+        
+        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+
         # Get all developer metrics for these two sprints
         filter_a = Q(sprint_name=name_a)
         filter_b = Q(sprint_name=name_b)
@@ -248,8 +283,8 @@ class SprintComparisonView(APIView):
             filter_a &= Q(project_id=project_id)
             filter_b &= Q(project_id=project_id)
 
-        metrics_a = DeveloperMetrics.objects.filter(filter_a).values('developer_name', 'story_points_completed', 'items_completed')
-        metrics_b = DeveloperMetrics.objects.filter(filter_b).values('developer_name', 'story_points_completed', 'items_completed')
+        metrics_a = DeveloperMetrics.objects.filter(filter_a).exclude(developer_email__in=inactive_user_emails).values('developer_name', 'story_points_completed', 'items_completed')
+        metrics_b = DeveloperMetrics.objects.filter(filter_b).exclude(developer_email__in=inactive_user_emails).values('developer_name', 'story_points_completed', 'items_completed')
 
         # Combine into a format the frontend can easily use for a side-by-side or stacked bar chart
         dist = {} # name -> { points_a, points_b, items_a, items_b }

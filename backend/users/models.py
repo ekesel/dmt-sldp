@@ -42,29 +42,21 @@ class ExternalIdentity(models.Model):
 
 
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
 class RoleTable(models.Model):
-
-    class DepartmentChoices(models.TextChoices):
-        BACKEND   = 'backend',   'Backend'
-        FRONTEND  = 'frontend',  'Frontend'
-        MOBILE    = 'mobile',    'Mobile'
-        DEVOPS    = 'devops',    'DevOps'
-        QA        = 'qa',        'QA / Testing'
-        DATA      = 'data',      'Data & Analytics'
-        DESIGN    = 'design',    'Design / UX'
-        PRODUCT   = 'product',   'Product'
-        HR        = 'hr',        'HR'
-        FINANCE   = 'finance',   'Finance'
-        SALES     = 'sales',     'Sales'
-        MARKETING = 'marketing', 'Marketing'
-        OTHER     = 'other',     'Other'
-        AIML      = 'aiml',      'AI & ML'
-
-    role_name = models.CharField(max_length=50)   # ceo, cto, backend tl …
+    role_name = models.CharField(max_length=50) 
     dep_name  = models.CharField(
-        max_length=20,
-        choices=DepartmentChoices.choices,
-        default=DepartmentChoices.OTHER,
+        max_length=100,
+        null=True,
+        blank=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
