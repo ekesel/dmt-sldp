@@ -398,12 +398,12 @@ def _inject_workload(data_list, resolved_id, project_id=None):
     from .models import WorkItem, Sprint
     from configuration.models import SourceConfiguration
     
-    # 1. Developer ki saari linked email aliases (GitHub, Jira, etc.) fetch karna
+    # 1. Fetch all linked email aliases (GitHub, Jira, etc.) of the developer
     resolver = IdentityResolver()
     resolver.load()
     developer_emails = list(set(resolver.all_aliases(resolved_id)) | {resolved_id})
     
-    # 2. Agar project specific filtering karni ho toh project ke source configurations nikalna
+    # 2. Fetch project source configurations if project-specific filtering is required
     project_source_ids = None
     is_valid_project = project_id and project_id not in ['null', 'undefined', 'all']
     if is_valid_project:
@@ -415,7 +415,7 @@ def _inject_workload(data_list, resolved_id, project_id=None):
     for item in data_list:
         sprint_name = item.get('sprint_name')
         
-        # 'All Projects (Current)' hone par globally latest active sprint dhoondhna
+        # Find the globally latest active sprint if 'All Projects (Current)' is specified
         if sprint_name == 'All Projects (Current)':
             latest_active_sprint = Sprint.objects.exclude(status='backlog').order_by('-end_date', '-start_date').first()
             sprint_name = latest_active_sprint.name if latest_active_sprint else None
@@ -424,18 +424,18 @@ def _inject_workload(data_list, resolved_id, project_id=None):
             item['workload'] = None
             continue
             
-        # 3. Developer ko is sprint mein assign kiye gaye sabhi WorkItems fetch karna
+        # 3. Fetch all WorkItems assigned to the developer in this sprint
         tasks = WorkItem.objects.filter(sprint__name=sprint_name, assignee_email__in=developer_emails)
         if project_source_ids is not None:
             tasks = tasks.filter(source_config_id__in=project_source_ids)
             
-        # 4. Tasks ko count karna (status wise)
+        # 4. Count tasks based on their status
         total_tasks = tasks.count()
         in_progress_count = tasks.filter(status_category='in_progress').count()
         completed_count = tasks.filter(status_category='done').count()
         todo_count = tasks.filter(status_category='todo').count()
         
-        # 5. Workload status judge karna (Based on remaining active tasks: in_progress + todo)
+        # 5. Determine the workload status (Based on remaining active tasks: in_progress + todo)
         active_tasks_count = in_progress_count + todo_count
         if active_tasks_count > 5:
             workload_status = 'Overloaded'
@@ -444,7 +444,7 @@ def _inject_workload(data_list, resolved_id, project_id=None):
         else:
             workload_status = 'Underutilised'
             
-        # 6. Response item ke andar data inject karna
+        # 6. Inject the workload data into the response item
         item['workload'] = {
             'total': total_tasks,
             'in_progress': in_progress_count,
