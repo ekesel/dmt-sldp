@@ -48,20 +48,20 @@ const PostCard = ({
       const openCommentsPostId = searchParams?.get("openComments");
       const targetPostIdStr = searchParams?.get("post_id");
       const targetPostId = targetPostIdStr ? Number(targetPostIdStr) : null;
-      
+
       if ((openCommentsPostId && Number(openCommentsPostId) === post.post_id) || (targetPostId === post.post_id)) {
         if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) setShowComments(true);
-        
+
         timeoutId = window.setTimeout(() => {
           const element = document.getElementById(`post-${post.post_id}`);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "center" });
-            
+
             if (targetPostId) {
-                element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
-                innerTimeoutId = window.setTimeout(() => {
-                    element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
-                }, 3000);
+              element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
+              innerTimeoutId = window.setTimeout(() => {
+                element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
+              }, 3000);
             }
           }
         }, 500); // 500ms delay to ensure it's rendered
@@ -171,11 +171,11 @@ const PostCard = ({
       </div>
 
       {image && (
-        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50">
+        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50 max-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
           <img
             src={getMediaUrl(image)}
             alt="post media"
-            className="w-full max-h-125 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+            className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.01]"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = getFallbackImage();
