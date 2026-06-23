@@ -66,12 +66,13 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({
         rankdir: direction,
-        nodesep: 60,
-        ranksep: 90
+        nodesep: 150,
+        ranksep: 180,
+        edgesep: 100,
     });
 
     nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: 260, height: 96 });
+        dagreGraph.setNode(node.id, { width: 420, height: 256 });
     });
 
     edges.forEach((edge) => {
@@ -82,16 +83,110 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 
     const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
+
+        let adjustedX = nodeWithPosition.x;
+        let adjustedY = nodeWithPosition.y;
+        const isRoot = !edges.some((edge) => edge.target === node.id);
+
+        if (isRoot) {
+            let minPos = Infinity;
+            let maxPos = -Infinity;
+
+            nodes.forEach(n => {
+                // Ignore root itself when calculating bounds
+                if (n.id === node.id) return;
+
+                const pos = dagreGraph.node(n.id);
+                if (pos) {
+                    const p = isHorizontal ? pos.y : pos.x;
+                    if (p < minPos) minPos = p;
+                    if (p > maxPos) maxPos = p;
+                }
+            });
+
+            if (minPos !== Infinity && maxPos !== -Infinity) {
+                // Center exactly between the furthest left and furthest right nodes
+                const center = (minPos + maxPos) / 2;
+                if (isHorizontal) {
+                    adjustedY = center - 150;
+                } else {
+                    adjustedX = center - 150;
+                }
+            }
+        } else {
+            // For non-root nodes (like the second row), if they have children, center them above their children
+            const childEdges = edges.filter(e => e.source === node.id);
+            if (childEdges.length > 0) {
+                let sumPos = 0;
+                let count = 0;
+                childEdges.forEach(e => {
+                    const childPos = dagreGraph.node(e.target);
+                    if (childPos) {
+                        sumPos += isHorizontal ? childPos.y : childPos.x;
+                        count++;
+                    }
+                });
+                if (count > 0) {
+                    if (isHorizontal) {
+                        adjustedY = sumPos / count;
+                    } else {
+                        adjustedX = sumPos / count;
+                    }
+                }
+            }
+        }
+
         return {
             ...node,
             targetPosition: isHorizontal ? Position.Left : Position.Top,
             sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
-                x: nodeWithPosition.x - 130,
-                y: nodeWithPosition.y - 48
+                x: adjustedX - 192,
+                y: adjustedY - 128
             }
         };
     });
+
+    // --- POST-PROCESSING: Bottom-up centering for perfect symmetry ---
+    const rootNodes = layoutedNodes.filter(n => !edges.some(e => e.target === n.id));
+    if (rootNodes.length === 1) {
+        const root = rootNodes[0];
+        const secondRow = layoutedNodes.filter(n => edges.some(e => e.source === root.id && e.target === n.id));
+        
+        // 1. Center second row nodes over their respective children
+        secondRow.forEach(row2Node => {
+            const children = layoutedNodes.filter(child => edges.some(e => e.source === row2Node.id && e.target === child.id));
+            if (children.length > 0) {
+                let sumPos = 0;
+                children.forEach(child => {
+                    sumPos += isHorizontal ? child.position.y : child.position.x;
+                });
+                const centerPos = sumPos / children.length;
+                // Nudge the second row nodes left by 600 pixels as requested
+                const nudgedPos = centerPos - 600;
+                
+                if (isHorizontal) {
+                    row2Node.position.y = nudgedPos;
+                } else {
+                    row2Node.position.x = nudgedPos;
+                }
+            }
+        });
+
+        // 2. Center root node perfectly between its immediate children (the second row)
+        if (secondRow.length > 0) {
+            let sumPos = 0;
+            secondRow.forEach(n => {
+                sumPos += isHorizontal ? n.position.y : n.position.x;
+            });
+            const centerPos = sumPos / secondRow.length;
+            if (isHorizontal) {
+                root.position.y = centerPos;
+            } else {
+                root.position.x = centerPos;
+            }
+        }
+    }
 
     return { nodes: layoutedNodes, edges };
 };
@@ -156,7 +251,6 @@ function OrgChartPageContent() {
                 .catch((err) => {
                     console.error('Failed to fetch departments separately:', err);
                 });
-            
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
                 setEmployees(flatData);
@@ -245,7 +339,7 @@ function OrgChartPageContent() {
     // Handle delete employee node
     const handleDeleteNode = useCallback(async (id: string) => {
         if (!isManager) {
-            toast.error('Only Managers can delete employees.'); 
+            toast.error('Only Managers can delete employees.');
             return;
         }
 
@@ -281,8 +375,8 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
-                width: 180,
-                height: 96,
+                width: 384,
+                height: 256,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -528,36 +622,36 @@ function OrgChartPageContent() {
                     </div>
                 ) : (
                     <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.15 }}
-                    onInit={(instance: ReactFlowInstance) => {
-                        // onInit fires after React Flow has measured the container —
-                        // call fitView here so the CEO node is always centred.
-                        setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
-                    }}
-                    minZoom={0.1}
-                    maxZoom={1.5}
-                    connectOnClick={isManager}
-                    nodesConnectable={isManager}
-                    nodesDraggable={true}
-                    zoomOnScroll={false}
-                    panOnScroll={true}
-                >
-                    <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
-                    <MiniMap
-                        nodeColor={(node) => 'var(--color-primary)'}
-                        nodeStrokeWidth={3}
-                        maskColor="rgba(241, 245, 249, 0.4)"
-                        className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
-                        style={{ height: 90, width: 140 }}
-                    />
-                </ReactFlow>
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.15 }}
+                        onInit={(instance: ReactFlowInstance) => {
+                            // onInit fires after React Flow has measured the container —
+                            // call fitView here so the CEO node is always centred.
+                            setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
+                        }}
+                        minZoom={0.1}
+                        maxZoom={1.5}
+                        connectOnClick={isManager}
+                        nodesConnectable={isManager}
+                        nodesDraggable={true}
+                        zoomOnScroll={false}
+                        panOnScroll={true}
+                    >
+                        <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
+                        <MiniMap
+                            nodeColor={(node) => 'var(--color-primary)'}
+                            nodeStrokeWidth={3}
+                            maskColor="rgba(241, 245, 249, 0.4)"
+                            className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                            style={{ height: 90, width: 140 }}
+                        />
+                    </ReactFlow>
                 )}
             </div>
 

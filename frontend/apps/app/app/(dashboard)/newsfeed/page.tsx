@@ -8,13 +8,18 @@ import { useNewsfeedQuery } from '../../../hooks/useNewsfeedQuery';
 import { useCreatePostMutation, useUpdatePostMutation, useDeletePostMutation, useUploadImageMutation } from '../../../hooks/useNewsfeedMutations';
 import { Post } from '../../../types/newsfeed';
 import { useAuth } from '../../../context/AuthContext';
+import { useSearchParams } from 'next/navigation';
 
 const NewsfeedPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPost, setEditingPost] = useState<Post | null>(null);
     const { user } = useAuth();
     
-    const { posts, loading, loadMorePosts, hasNextPage } = useNewsfeedQuery();
+    const searchParams = useSearchParams();
+    const postIdStr = searchParams?.get("post_id");
+    const targetPostId = postIdStr ? parseInt(postIdStr, 10) : null;
+
+    const { posts, loading, loadMorePosts, hasNextPage } = useNewsfeedQuery(targetPostId);
     const { mutateAsync: createPostMutation } = useCreatePostMutation();
     const { mutateAsync: updatePostMutation } = useUpdatePostMutation();
     const { mutateAsync: deletePostMutation } = useDeletePostMutation();

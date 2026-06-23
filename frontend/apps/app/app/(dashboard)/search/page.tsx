@@ -108,7 +108,7 @@ function SearchResults() {
                 <div className="space-y-6">
                     {filteredDocs.map((doc, idx) => {
                         const fileName = doc.title || getFileName(doc.file);
-                        const displayType = doc.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Document';
+                        const displayType = doc.type?.replace(/_/g, ' ').replace(/\bdocument\b/gi, '').replace(/\s+/g, ' ').trim().replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'File';
                         return (
                             <div
                                 key={`${doc.type}-${doc.id}-${idx}`}
@@ -134,11 +134,9 @@ function SearchResults() {
                                     </div>
                                     <div className="space-y-1.5 min-w-0">
                                         <h3 className="text-[1.125rem] font-[900] text-accent truncate">
-                                            {fileName.replace(/\.[^/.]+$/, "")}
+                                            {fileName.replace(/\.[^/.]+$/, "")} 
                                         </h3>
-                                        <p className="text-[0.875rem] text-muted-foreground font-medium">
-                                            {displayType} document.
-                                        </p>
+                                       
                                     </div>
                                 </div>
 

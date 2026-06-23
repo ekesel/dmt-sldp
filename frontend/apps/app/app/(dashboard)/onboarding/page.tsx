@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
+import { dashboard, getFileUrl, getUploadErrorMessage } from '@dmt/api';
 import { Rocket, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, X, AlertCircle, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useOnboardingQuery } from './query-options';
@@ -113,16 +113,12 @@ export default function OnboardingPage() {
             }
 
             setModalOpen(false);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Form submission failed:', err);
-            let errorMessage = modalType === 'create'
+            const defaultMessage = modalType === 'create'
                 ? 'Failed to upload onboarding document.'
                 : 'Failed to update onboarding document.';
-            if (err?.status === 413 || err?.message?.includes('413') || err?.message?.toLowerCase().includes('too large')) {
-                errorMessage = 'File is too large. Please upload a smaller file.';
-            } else if (err?.message && err.message !== 'Unknown API error') {
-                errorMessage = err.message;
-            }
+            const errorMessage = getUploadErrorMessage(err, defaultMessage);
             toast.error(errorMessage, { id: toastId });
         } finally {
             setSubmitting(false);
@@ -169,12 +165,12 @@ export default function OnboardingPage() {
                                 </h1>
                             </div>
                             <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                                Welcome to the team! View and download official welcome playbooks, handbooks, and setup blueprints.
+                                Welcome to the team! View and Download official welcome playbooks, handbooks, and setup blueprints.
                             </p>
                         </div>
                     </div>
 
-                    {/* Upload button on the right - restricted to MANAGER only */}
+                    {/* Upload button on the right - restricted to MANAGER only */} 
                     {isManager && (
                         <button
                             onClick={openCreateModal}
@@ -247,7 +243,7 @@ export default function OnboardingPage() {
                                         className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                     >
                                         <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                        view document
+                                        View Document
                                     </a>
                                     
                                     {/* Update Button - restricted to MANAGER only */}

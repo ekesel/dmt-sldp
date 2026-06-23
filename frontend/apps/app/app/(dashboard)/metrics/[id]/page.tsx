@@ -53,20 +53,20 @@ export default function DeveloperDetailsPage({
 
   const buildRows = () =>
     metrics.map((m: any) => ({
-      "Sprint Name":            m.sprint_name ?? "",
-      "Sprint End Date":        m.sprint_end_date ?? "",
-      "Story Points":           m.story_points_completed ?? 0,
-      "Items Completed":        m.items_completed ?? 0,
-      "Commits":                m.commits_count ?? 0,
-      "PRs Authored":           m.prs_authored ?? 0,
-      "PRs Merged":             m.prs_merged ?? 0,
-      "PRs Reviewed":           m.prs_reviewed ?? 0,
-      "Avg Review Time (hrs)":  m.avg_review_time_hours ?? "",
-      "Defects Attributed":     m.defects_attributed ?? 0,
-      "Coverage %":             m.coverage_avg_percent ?? "",
-      "DMT Compliance %":       m.dmt_compliance_rate ?? 0,
-      "AI Usage % (Custom)":    m.ai_usage_percent ?? 0,
-      "Objective AI % (PR)":    m.code_ai_usage_percent ?? 0,
+      "Sprint Name": m.sprint_name ?? "",
+      "Sprint End Date": m.sprint_end_date ?? "",
+      "Story Points": m.story_points_completed ?? 0,
+      "Items Completed": m.items_completed ?? 0,
+      "Commits": m.commits_count ?? 0,
+      "PRs Authored": m.prs_authored ?? 0,
+      "PRs Merged": m.prs_merged ?? 0,
+      "PRs Reviewed": m.prs_reviewed ?? 0,
+      "Avg Review Time (hrs)": m.avg_review_time_hours ?? "",
+      "Defects Attributed": m.defects_attributed ?? 0,
+      "Coverage %": m.coverage_avg_percent ?? "",
+      "DMT Compliance %": m.dmt_compliance_rate ?? 0,
+      "AI Usage % (Custom)": m.ai_usage_percent ?? 0,
+      "Objective AI % (PR)": m.code_ai_usage_percent ?? 0,
     }));
 
   const fileName = (ext: string) => {
@@ -259,14 +259,14 @@ export default function DeveloperDetailsPage({
                                 setDropdownOpen(false);
                               }}
                               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
-                                  ? "bg-primary/15 text-primary-foreground"
-                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                ? "bg-primary/15 text-primary-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                 }`}
                             >
                               <div
                                 className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive
-                                    ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
-                                    : "bg-muted group-hover:bg-muted-foreground"
+                                  ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
+                                  : "bg-muted group-hover:bg-muted-foreground"
                                   }`}
                               />
                               <span className="font-semibold text-sm truncate">
@@ -309,7 +309,7 @@ export default function DeveloperDetailsPage({
         </header>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           <Card className="p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/5 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
@@ -438,6 +438,39 @@ export default function DeveloperDetailsPage({
                 {selectedProjectId === "all"
                   ? "Bugs across active sprints"
                   : `Bugs in ${comparison?.sprint_name || "current sprint"}`}
+              </p>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-card border-border hover:border-emerald-500/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-emerald-500/5 group-hover:text-emerald-500/5 transition-colors">
+              <Briefcase size={120} strokeWidth={3} />
+            </div>
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-emerald-500">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                  <Briefcase size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Workload
+                </span>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('workload'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
+            </div>
+            <div className="relative">
+              <div className="text-5xl font-black">
+                {latestMetrics.workload?.completed || 0}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+                {selectedProjectId === "all"
+                  ? "Items across active sprints"
+                  : `Items completed  ${comparison?.sprint_name || "current sprint"}`}
               </p>
             </div>
           </Card>
@@ -589,11 +622,11 @@ export default function DeveloperDetailsPage({
                   <div className="flex items-center gap-2">
                     <span>Relative Velocity</span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
-                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                        title="Learn more about this metric"
+                      onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      title="Learn more about this metric"
                     >
-                        <HelpCircle size={14} />
+                      <HelpCircle size={14} />
                     </button>
                   </div>
                   <span className="text-foreground">
@@ -619,11 +652,11 @@ export default function DeveloperDetailsPage({
                   <div className="flex items-center gap-2">
                     <span>DMT Standards</span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
-                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                        title="Learn more about this metric"
+                      onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      title="Learn more about this metric"
                     >
-                        <HelpCircle size={14} />
+                      <HelpCircle size={14} />
                     </button>
                   </div>
                   <span className="text-foreground">
@@ -691,6 +724,43 @@ export default function DeveloperDetailsPage({
                 ))}
               </div>
             </Card>
+
+            {latestMetrics.workload && (
+              <Card className="p-8 bg-blue-600/10 border-blue-500/20 rounded-3xl">
+                <h3 className="text-lg font-black flex items-center gap-2 mb-4">
+                  <Briefcase className="text-blue-400" size={20} />
+                  Workload
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { label: "Total", value: latestMetrics.workload.total ?? 0 },
+                    { label: "Completed", value: latestMetrics.workload.completed ?? 0 },
+                    { label: "In Progress", value: latestMetrics.workload.in_progress ?? 0 },
+                    { label: "To Do", value: latestMetrics.workload.todo ?? 0 },
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-muted-foreground font-medium">
+                        {label}
+                      </span>
+                      <span className="text-foreground font-black">{value}</span>
+                    </div>
+                  ))}
+                  {latestMetrics.workload.status && (
+                    <div className="flex items-center justify-between text-sm pt-3 mt-3 border-t border-border/50">
+                      <span className="text-muted-foreground font-medium">
+                        Status
+                      </span>
+                      <span className="text-foreground font-black">
+                        {latestMetrics.workload.status}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>

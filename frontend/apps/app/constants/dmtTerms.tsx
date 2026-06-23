@@ -142,6 +142,21 @@ export const dmtTerms: DMTTerm[] = [
     )
   },
   {
+    id: "workload",
+    title: "Workload",
+    description: (
+      <div className="space-y-2">
+        <p><strong>Meaning:</strong> How busy the developer is right now based on unfinished tasks.</p>
+        <p><strong>How it is calculated:</strong> The system counts the developer's unfinished tasks (To Do + In Progress) for current/latest sprint.</p>
+        <ul className="list-disc pl-4 space-y-1 mt-2">
+          <li>0 to 2 tasks = Underutilised</li>
+          <li>3 to 5 tasks = Balanced</li>
+          <li>6 or more tasks = Overloaded</li>
+        </ul>
+      </div>
+    )
+  },
+  {
     id: "what_dmt_means",
     title: "What DMT Means",
     description: (

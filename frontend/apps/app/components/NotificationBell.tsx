@@ -4,11 +4,57 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
-
+import { useRouter } from 'next/navigation';
+import { DMTNotification } from '@dmt/api';
 export function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+
+    const getNotificationLink = (n: DMTNotification) => {
+        if (n.data?.link) return n.data.link as string;
+
+        switch (n.notification_type) {
+            case 'compliance_failure':
+                if (n.data?.work_item_id) {
+                    return `/compliance?work_item_id=${n.data.work_item_id}`;
+                }
+                return '/compliance';
+            case 'sprint_ending':
+                return '/sprint-analysis';
+            case 'ai_insight':
+                return '/metrics';
+            case 'info':
+            case 'success':
+            case 'warning':
+            case 'error':
+                return `/notifications/send?notification_id=${n.id}`;
+        }
+
+        if (n.data?.post_id) {
+            return `/newsfeed?post_id=${n.data.post_id}`;
+        }
+
+        return null;
+    };
+
+    const handleNotificationClick = (n: DMTNotification) => {
+        if (!n.is_read) {
+            markAsRead(n.id);
+        }
+        const link = getNotificationLink(n);
+        if (link) {
+            setIsOpen(false);
+            const linkPath = link.split('?')[0].replace(/\/$/, '');
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            if (currentPath === linkPath) {
+                window.location.assign(link);
+            } else {
+                router.push(link);
+            }
+        }
+    };
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -73,8 +119,8 @@ export function NotificationBell() {
                                 {notifications.map((n) => (
                                     <div
                                         key={n.id}
-                                        className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''}`}
-                                        onClick={() => !n.is_read && markAsRead(n.id)}
+                                        className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''} ${getNotificationLink(n) ? 'cursor-pointer' : ''}`}
+                                        onClick={() => handleNotificationClick(n)}
                                     >
                                         <div className="flex gap-3">
                                             <div className="mt-0.5">{getIcon(n.notification_type)}</div>

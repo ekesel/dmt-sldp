@@ -77,10 +77,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             setState(prev => ({
                 ...prev,
                 name: employeeData ? employeeData.name : '',
-                role: employeeData ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
+                role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null') ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
                 email: employeeData ? (employeeData.email || '') : '',
-                department: employeeData ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
-                parentId: employeeData ? (employeeData.parentId || '') : (defaultParentId || ''),
+                department: (employeeData && employeeData.department && employeeData.department !== 'null') ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
+                parentId: (employeeData && employeeData.parentId && employeeData.parentId !== 'null') ? employeeData.parentId : (defaultParentId || ''),
                 isNotFound: false,
                 autocompleteError: false,
                 isCreatingRole: false,

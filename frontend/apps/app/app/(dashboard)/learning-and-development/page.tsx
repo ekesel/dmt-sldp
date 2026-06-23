@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { getFileUrl } from '@dmt/api';
+import { getFileUrl, getUploadErrorMessage } from '@dmt/api';
 import { GraduationCap, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileText, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
@@ -34,21 +34,6 @@ const getFileViewerUrl = (url: string) => {
     return url;
 };
 
-/**
- * Parses unknown error to user friendly error message
- */
-const getErrorMessage = (err: unknown, defaultMessage: string = 'An unexpected error occurred.') => {
-    if (err && typeof err === 'object') {
-        const errorObj = err as { status?: number, message?: string };
-        if (errorObj.status === 413 || errorObj.message?.includes('413') || errorObj.message?.toLowerCase().includes('too large')) {
-            return 'File is too large. Please upload a smaller file.';
-        }
-        if (errorObj.message && errorObj.message !== 'Unknown API error') {
-            return errorObj.message;
-        }
-    }
-    return defaultMessage;
-};
 
 export default function LearningAndDevelopmentPage() {
     const router = useRouter();
@@ -93,7 +78,7 @@ export default function LearningAndDevelopmentPage() {
             },
             onError: (err: unknown) => {
                 console.error('Upload failed:', err);
-                toast.error(getErrorMessage(err, 'Failed to upload resource.'), { id: toastId });
+                toast.error(getUploadErrorMessage(err, 'Failed to upload resource.'), { id: toastId });
             },
             onSettled: () => {
                 if (createFileInputRef.current) createFileInputRef.current.value = '';
@@ -120,7 +105,7 @@ export default function LearningAndDevelopmentPage() {
             },
             onError: (err: unknown) => {
                 console.error('Update failed:', err);
-                toast.error(getErrorMessage(err, 'Failed to update resource.'), { id: toastId });
+                toast.error(getUploadErrorMessage(err, 'Failed to update resource.'), { id: toastId });
             },
             onSettled: () => {
                 if (updateFileInputRefs.current[id]) {
@@ -172,7 +157,7 @@ export default function LearningAndDevelopmentPage() {
                                 </h1>
                             </div>
                             <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                                View and download official training guides, technical specifications, and resources of organization.
+                                View and Download official training guides, technical specifications, and resources of organization.
                             </p>
                         </div>
                     </div>
@@ -273,7 +258,7 @@ export default function LearningAndDevelopmentPage() {
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
                                             <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            view document
+                                            View Document
                                         </a>
                                         
                                         {/* Update Button - restricted to MANAGER only */}

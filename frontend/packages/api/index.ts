@@ -258,9 +258,27 @@ function handleApiError(error: unknown): never {
       axiosErr.message ||
       'An unexpected API error occurred';
     throw new ApiClientError(message, status, data);
-  }
+}
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
+
+export const getUploadErrorMessage = (err: unknown, defaultMessage: string = 'An unexpected error occurred.'): string => {
+  if (err && typeof err === 'object') {
+    const errorObj = err as { status?: number; message?: string };
+    if (
+      errorObj.status === 413 ||
+      errorObj.message?.includes('413') ||
+      errorObj.message?.toLowerCase().includes('too large') ||
+      errorObj.message === 'Network Error'
+    ) {
+      return 'Document size is too large. Please upload a smaller size document.';
+    }
+    if (errorObj.message && errorObj.message !== 'Unknown API error') {
+      return errorObj.message;
+    }
+  }
+  return defaultMessage;
+};
 
 /* =========================
    Identity Mapping Types
@@ -553,7 +571,6 @@ export const dashboard = {
   getEvents: () => get<EventData[]>('/homepage/events/'),
   getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
 
-  
   getUserSprintTaskSummary: () => get<{ status: boolean; data: { active: number; done: number } }>('/user-sprint-task-summary/'),
 };
 
@@ -606,8 +623,8 @@ export const developers = {
 };
 
 export const compliance = {
-  listFlags: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null) =>
+    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId })}`),
   resolveFlag: (flagId: string) =>
     post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
@@ -848,6 +865,7 @@ export interface DMTNotification {
   notification_type: 'info' | 'success' | 'warning' | 'error' | string;
   is_read: boolean;
   created_at: string;
+  data?: Record<string, any>;
 }
 
 /** @deprecated Use DMTNotification instead */
@@ -1038,7 +1056,7 @@ export const orgChart = {
   getUsersDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-users/'),
   getRolesDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-roles/'),
   searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
-  createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string; [key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
+  createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string;[key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
   getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
   createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
 };

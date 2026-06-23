@@ -55,33 +55,6 @@ export const getCreatePostMutationOptions = (socket: any, user: any, queryClient
                 image_id: imageId || null
             });
         });
-    },
-    onMutate: async (newPost: any) => {
-        await queryClient.cancelQueries({ queryKey: newsfeedKeys.posts() });
-        const previousPosts = queryClient.getQueryData<Post[]>(newsfeedKeys.posts());
-
-        if (user) {
-            const tempPost: Post = {
-                post_id: Date.now(),
-                title: newPost.title,
-                content: newPost.content,
-                category: newPost.category,
-                author: {
-                    id: user.id as number,
-                    username: user.username as string,
-                    avatar_url: (user as any).avatar_url || null
-                },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                likes: 0,
-                comments: 0
-            };
-            queryClient.setQueryData<Post[]>(newsfeedKeys.posts(), (old) => [tempPost, ...(old || [])]);
-        }
-        return { previousPosts };
-    },
-    onError: (err: any, newPost: any, context: any) => {
-        queryClient.setQueryData(newsfeedKeys.posts(), context?.previousPosts);
     }
 });
 

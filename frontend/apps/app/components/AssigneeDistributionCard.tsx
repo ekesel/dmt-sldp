@@ -118,12 +118,12 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                         <Loader2 className="w-4 h-4" />
                                         {person.in_progress}
                                     </span>
-                                    <span className="flex items-center gap-1.5 text-accent" title="Completed">
+                                    <span className="flex items-center gap-1.5 text-green-500" title="Completed">
                                         <CheckCircle2 className="w-4 h-4" />
                                         {person.completed}
                                     </span>
                                     {person.avg_cycle_time_days !== null && (
-                                        <span className="flex items-center gap-1.5 text-muted-foreground" title="Avg cycle time">
+                                        <span className="flex items-center gap-1.5 text-primary" title="Avg cycle time">
                                             <Clock className="w-4 h-4" />
                                             {person.avg_cycle_time_days}d
                                         </span>
@@ -159,7 +159,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-5 mt-5 pt-4 border-t border-border text-sm font-bold text-foreground">
                 <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 text-warning" /> In Progress</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> Completed</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Completed</span>
                 <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Avg Cycle</span>
                 <span className="flex items-center gap-1.5 ml-auto"><UserCheck className="w-4 h-4 text-accent" /> Portal access</span>
             </div>
