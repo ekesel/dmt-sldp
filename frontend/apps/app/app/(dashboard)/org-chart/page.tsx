@@ -152,7 +152,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
     if (rootNodes.length === 1) {
         const root = rootNodes[0];
         const secondRow = layoutedNodes.filter(n => edges.some(e => e.source === root.id && e.target === n.id));
-        
+
         // 1. Center second row nodes over their respective children
         secondRow.forEach(row2Node => {
             const children = layoutedNodes.filter(child => edges.some(e => e.source === row2Node.id && e.target === child.id));
@@ -164,7 +164,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
                 const centerPos = sumPos / children.length;
                 // Nudge the second row nodes left by 600 pixels as requested
                 const nudgedPos = centerPos - 600;
-                
+
                 if (isHorizontal) {
                     row2Node.position.y = nudgedPos;
                 } else {
@@ -556,9 +556,7 @@ function OrgChartPageContent() {
                                 Organization Chart
                             </h1>
                         </div>
-                        <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                            Explore, search, and manage the official corporate hierarchy and reporting connections.
-                        </p>
+                       
                     </div>
                 </div>
 

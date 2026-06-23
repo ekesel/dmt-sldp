@@ -10,7 +10,7 @@ import { getNewsfeedQueryOptions } from '../app/(dashboard)/newsfeed/query-optio
 export function useNewsfeedQuery(postId?: number | null) {
     const { client: socket, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
-    const queryKey = useMemo(() => newsfeedKeys.posts(), []);
+    const queryKey = useMemo(() => [...newsfeedKeys.posts(), { postId }], [postId]);
 
     const [page, setPage] = useState(1);
     const [hasNextPage, setHasNextPage] = useState(false);
@@ -73,7 +73,7 @@ export function useNewsfeedQuery(postId?: number | null) {
 
         // Fetch on reconnect or if already connected
         if (isConnected) {
-            socket.emit('get_posts', { page: 1 });
+            socket.emit('get_posts', { page: 1, post_id: postId });
         }
 
         return () => {
@@ -82,14 +82,14 @@ export function useNewsfeedQuery(postId?: number | null) {
             socket.off('post_updated', onPostUpdated);
             socket.off('post_deleted', onPostDeleted);
         };
-    }, [socket, queryClient, queryKey, isConnected]);
+    }, [socket, queryClient, queryKey, isConnected, postId]);
 
     const loadMorePosts = useCallback(() => {
         if (socket && hasNextPage) {
             const nextPage = page + 1;
-            socket.emit('get_posts', { page: nextPage });
+            socket.emit('get_posts', { page: nextPage, post_id: postId });
         }
-    }, [page, hasNextPage, socket]);
+    }, [page, hasNextPage, socket, postId]);
 
     return {
         ...query,

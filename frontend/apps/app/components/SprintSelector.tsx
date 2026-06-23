@@ -27,23 +27,38 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
 
     // Re-fetch sprints whenever the project changes
     useEffect(() => {
+        let isMounted = true;
         setLoading(true);
+        
         sprints.list(projectId)
             .then(data => {
+                if (!isMounted) return;
                 setSprintList(data);
                 // Auto-select latest sprint (first in list) whenever project changes
-                if (data.length > 0 && autoSelectLatest) {
-                    onSelect(data[0].id);
-                } else {
-                    onSelect(null);
+                if (autoSelectLatest) {
+                    if (data.length > 0) {
+                        onSelect(data[0].id);
+                    } else {
+                        onSelect(null);
+                    }
                 }
             })
-            .catch(() => setSprintList([]))
-            .finally(() => setLoading(false));
+            .catch(() => {
+                if (!isMounted) return;
+                setSprintList([]);
+            })
+            .finally(() => {
+                if (!isMounted) return;
+                setLoading(false);
+            });
+            
+        return () => {
+            isMounted = false;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId]);
+    }, [projectId, autoSelectLatest]);
 
-    const selectedSprint = sprintList.find(s => s.id === selectedSprintId);
+    const selectedSprint = sprintList.find(s => String(s.id) === String(selectedSprintId));
     const isAllProjects = projectId === null;
 
     if (loading) {
@@ -95,7 +110,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
                 <div className="flex items-center gap-2 truncate">
                     <GitBranch size={14} className="text-primary flex-shrink-0" />
                     <span className="truncate text-sm">
-                        {selectedSprint ? selectedSprint.name : 'Select sprint'}
+                        {selectedSprint ? selectedSprint.name : (selectedSprintId ? `Sprint ${selectedSprintId}` : 'Select sprint')}
                     </span>
                 </div>
                 <ChevronDown size={14} className={`transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
@@ -110,7 +125,7 @@ export const SprintSelector = React.memo(({ projectId, selectedSprintId, onSelec
                                 onSelect(sprint.id);
                                 setIsOpen(false);
                             }}
-                            className={`w-full px-4 py-2.5 text-left text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors ${selectedSprintId === sprint.id ? 'text-primary bg-accent/50' : 'text-muted-foreground'
+                            className={`w-full px-4 py-2.5 text-left text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors ${String(selectedSprintId) === String(sprint.id) ? 'text-primary bg-accent/50' : 'text-muted-foreground'
                                 }`}
                         >
                             <div className="flex items-center gap-2 min-w-0">

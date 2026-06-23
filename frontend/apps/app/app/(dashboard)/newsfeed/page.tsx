@@ -17,7 +17,8 @@ const NewsfeedPage = () => {
     
     const searchParams = useSearchParams();
     const postIdStr = searchParams?.get("post_id");
-    const targetPostId = postIdStr ? parseInt(postIdStr, 10) : null;
+    const parsedPostId = postIdStr ? parseInt(postIdStr, 10) : null;
+    const targetPostId = Number.isNaN(parsedPostId) ? null : parsedPostId;
 
     const { posts, loading, loadMorePosts, hasNextPage } = useNewsfeedQuery(targetPostId);
     const { mutateAsync: createPostMutation } = useCreatePostMutation();
