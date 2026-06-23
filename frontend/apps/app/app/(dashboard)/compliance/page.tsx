@@ -47,15 +47,18 @@ export default function CompliancePage() {
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
     const [fixedLaterLoading, setFixedLaterLoading] = useState(true);
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
-
-    const [activeFilter, setActiveFilter] = useState<'critical' | 'warning' | null>(null);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<'critical' | 'warning' | null>(null);
 
     const searchParams = useSearchParams();
     const workItemId = searchParams?.get('work_item_id');
+    const paramProjectId = searchParams?.get('project_id');
+    const paramSprintId = searchParams?.get('sprint_id');
+    const nTitle = searchParams?.get('n_title') || '';
+    const nMessage = searchParams?.get('n_message') || '';
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(paramProjectId ? Number(paramProjectId) : null);
+    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(paramSprintId ? Number(paramSprintId) : null);
 
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
@@ -69,28 +72,44 @@ export default function CompliancePage() {
         setIsHelpOpen(false);
     }, []);
 
+    const requestCounter = React.useRef(0);
+
     const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null) => {
+        const currentRequestId = ++requestCounter.current;
+        
         setLoading(true);
         setSummaryLoading(true);
         setFixedLaterLoading(true);
 
-        // Only use workItemId for the API call if the user hasn't explicitly set another filter
-        const effectiveWorkItemId = (projectId === null && sprintId === null) ? workItemId : null;
+        // Always use workItemId if provided in URL to ensure the specific flag is fetched
+        const effectiveWorkItemId = workItemId;
         
         compliance.listFlags(projectId, sprintId, effectiveWorkItemId)
-            .then(data => setFlags(data))
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setFlags(data);
+            })
             .catch(err => console.error("Failed to fetch compliance flags:", err))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setLoading(false);
+            });
 
         compliance.getSummary(projectId, sprintId)
-            .then(data => setSummary(data))
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setSummary(data);
+            })
             .catch(err => console.error("Failed to fetch compliance summary:", err))
-            .finally(() => setSummaryLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setSummaryLoading(false);
+            });
 
         compliance.listFixedLater(projectId, sprintId)
-            .then(data => setFixedLaterItems(data))
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setFixedLaterItems(data);
+            })
             .catch(err => console.error("Failed to fetch fixed-later items:", err))
-            .finally(() => setFixedLaterLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setFixedLaterLoading(false);
+            });
     }, []);
 
     // Refetch whenever project OR sprint changes
@@ -99,38 +118,85 @@ export default function CompliancePage() {
     }, [selectedProjectId, selectedSprintId, workItemId, fetchData]);
 
     useEffect(() => {
+        setSelectedProjectId(paramProjectId ? Number(paramProjectId) : null);
+        setSelectedSprintId(paramSprintId ? Number(paramSprintId) : null);
         if (workItemId) {
-            setSelectedProjectId(null);
-            setSelectedSprintId(null);
             setActiveFilter(null);
         }
-    }, [workItemId]);
+    }, [workItemId, paramProjectId, paramSprintId]);
 
     // Scroll to specific work item if provided in URL
     useEffect(() => {
         let scrollTimer: number | null = null;
-        let innerTimer: number | null = null;
+        let classRemovalTimer: number | null = null;
+        let retryCount = 0;
 
-        if (!loading && flags.length > 0 && workItemId) {
-            console.log(`[Compliance] Attempting to scroll to work-item-${workItemId}`);
-            scrollTimer = window.setTimeout(() => {
-                const element = document.getElementById(`work-item-${workItemId}`);
-                console.log(`[Compliance] Element found:`, !!element);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
-                    innerTimer = window.setTimeout(() => {
-                        element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
-                    }, 3000);
+        const attemptScroll = () => {
+            if (loading || fixedLaterLoading) return;
+            
+            // First try strict match by workItemId
+            let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId) || fixedLaterItems.find(f => f.work_item_id?.toString() === workItemId);
+            
+            // If strict match fails, try matching by notification title or message (case-insensitive and robust)
+            if (!targetFlag && (nTitle || nMessage)) {
+                const sanitize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const sNTitle = sanitize(nTitle);
+                const sNMessage = sanitize(nMessage);
+                
+                const matchFlag = (f: ComplianceFlag) => {
+                    const sTitle = sanitize(f.work_item_title);
+                    return sTitle.length > 3 && (sNTitle.includes(sTitle) || sNMessage.includes(sTitle));
+                };
+                
+                targetFlag = flags.find(matchFlag) || fixedLaterItems.find(matchFlag);
+            }
+
+            // Also try to find by extracting any numbers from the notification title
+            if (!targetFlag && nTitle) {
+                const numbersInTitle = nTitle.match(/\d+/g);
+                if (numbersInTitle) {
+                    const extractedId = numbersInTitle[0];
+                    targetFlag = flags.find(f => f.work_item_title.includes(extractedId)) || fixedLaterItems.find(f => f.work_item_title.includes(extractedId));
                 }
-            }, 500);
+            }
+
+            const searchId = targetFlag ? targetFlag.work_item_id : workItemId;
+            let element = document.getElementById(`work-item-${searchId}`);
+            if (!element) {
+                // Try finding by prefix
+                element = document.querySelector(`[id^="work-item-${searchId}"]`) as HTMLElement;
+            }
+            if (!element) {
+                // Try finding anywhere in id
+                element = document.querySelector(`[id*="${searchId}"]`) as HTMLElement;
+            }
+
+            if (element) {
+                console.log(`[Compliance] Element found for ${searchId}, scrolling...`);
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]', 'transition-all', 'duration-500');
+                
+                classRemovalTimer = window.setTimeout(() => {
+                    if (element) {
+                        element.classList.remove('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]');
+                    }
+                }, 4000);
+            } else if (retryCount < 6) { // Retry up to 6 times (3 seconds)
+                retryCount++;
+                console.log(`[Compliance] Element not found for ${searchId}, retrying (${retryCount}/6)...`);
+                scrollTimer = window.setTimeout(attemptScroll, 500);
+            }
+        };
+
+        if (workItemId && (!loading && !fixedLaterLoading)) {
+            scrollTimer = window.setTimeout(attemptScroll, 500);
         }
 
         return () => {
             if (scrollTimer) window.clearTimeout(scrollTimer);
-            if (innerTimer) window.clearTimeout(innerTimer);
+            if (classRemovalTimer) window.clearTimeout(classRemovalTimer);
         };
-    }, [loading, flags, workItemId]);
+    }, [loading, fixedLaterLoading, flags, fixedLaterItems, workItemId, nTitle, nMessage]);
 
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
@@ -184,7 +250,7 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             selectedSprintId={selectedSprintId}
                             onSelect={setSelectedSprintId}
-                            autoSelectLatest={!workItemId}
+                            autoSelectLatest={!workItemId && !paramSprintId}
                         />
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
@@ -376,7 +442,7 @@ export default function CompliancePage() {
                                 </div>
                             );
                             return visibleFlags.map((flag) => (
-                                <Card key={flag.id} id={`work-item-${flag.work_item_id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">
                                             <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
@@ -446,7 +512,7 @@ export default function CompliancePage() {
                             </div>
                         ) : (
                             fixedLaterItems.map((item) => (
-                                <Card key={item.id} className="p-5 bg-card border-emerald-500/20 hover:bg-accent/30 transition-all group rounded-2xl">
+                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-emerald-500/20 hover:bg-accent/30 transition-all group rounded-2xl">
                                     <div className="flex flex-wrap items-center gap-3 mb-3">
                                         <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                                             Fixed Later

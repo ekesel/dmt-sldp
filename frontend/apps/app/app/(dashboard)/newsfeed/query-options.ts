@@ -7,7 +7,7 @@ export const getNewsfeedQueryOptions = (
     handlers: { setPage: (page: number) => void; setHasNextPage: (hasNext: boolean) => void },
     postId?: number | null
 ) => ({
-    queryKey: newsfeedKeys.posts(),
+    queryKey: [...newsfeedKeys.posts(), { postId }],
     queryFn: () => {
         return new Promise<Post[]>((resolve, reject) => {
             if (!socket) {

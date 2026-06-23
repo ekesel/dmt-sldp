@@ -13,12 +13,17 @@ export function NotificationBell() {
     const router = useRouter();
 
     const getNotificationLink = (n: DMTNotification) => {
-        if (n.data?.link) return n.data.link as string;
 
         switch (n.notification_type) {
             case 'compliance_failure':
-                if (n.data?.work_item_id) {
-                    return `/compliance?work_item_id=${n.data.work_item_id}`;
+                if (n.data?.work_item_id || n.data?.project_id || n.data?.sprint_id) {
+                    const params = new URLSearchParams();
+                    if (n.data.work_item_id) params.append('work_item_id', n.data.work_item_id.toString());
+                    if (n.data.project_id) params.append('project_id', n.data.project_id.toString());
+                    if (n.data.sprint_id) params.append('sprint_id', n.data.sprint_id.toString());
+                    if (n.title) params.append('n_title', n.title);
+                    if (n.message) params.append('n_message', n.message);
+                    return `/compliance?${params.toString()}`;
                 }
                 return '/compliance';
             case 'sprint_ending':
@@ -33,7 +38,7 @@ export function NotificationBell() {
         }
 
         if (n.data?.post_id) {
-            return `/newsfeed?post_id=${n.data.post_id}`;
+            return `/newsfeed?post_id=${encodeURIComponent(String(n.data.post_id))}`;
         }
 
         return null;

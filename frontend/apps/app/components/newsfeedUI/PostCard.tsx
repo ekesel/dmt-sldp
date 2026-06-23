@@ -50,7 +50,7 @@ const PostCard = ({
       const targetPostId = targetPostIdStr ? Number(targetPostIdStr) : null;
       
       if ((openCommentsPostId && Number(openCommentsPostId) === post.post_id) || (targetPostId === post.post_id)) {
-        if (openCommentsPostId) setShowComments(true);
+        if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) setShowComments(true);
         
         timeoutId = window.setTimeout(() => {
           const element = document.getElementById(`post-${post.post_id}`);
