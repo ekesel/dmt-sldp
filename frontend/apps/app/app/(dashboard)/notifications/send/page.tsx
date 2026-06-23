@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { users as apiUsers, notifications as apiNotifications, User, DMTNotification } from '@dmt/api';
+import { useWebSocket } from '../../../../hooks/useWebSocket';
 import {
     Send,
     User as UserIcon,
@@ -98,6 +99,28 @@ export default function SendNotificationPage() {
     const [loadingNotifications, setLoadingNotifications] = useState(true);
     const [highlightId, setHighlightId] = useState<string | null>(null);
     const searchParams = useSearchParams();
+    const { client: socket } = useWebSocket();
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onNotification = (payload: any) => {
+            const data = payload.data || payload;
+            const manualTypes = ['info', 'success', 'warning', 'error'];
+            
+            if (manualTypes.includes(data.notification_type) && !data.data?.post_id) {
+                setNotifications(prev => {
+                    if (prev.some(n => n.id === data.id)) return prev;
+                    return [data, ...prev];
+                });
+            }
+        };
+
+        socket.on('notification_message', onNotification);
+        return () => {
+            socket.off('notification_message', onNotification);
+        };
+    }, [socket]);
 
     useEffect(() => {
         const id = searchParams.get('notification_id');
@@ -135,7 +158,9 @@ export default function SendNotificationPage() {
         try {
             const data = await apiNotifications.list();
             const manualTypes = ['info', 'success', 'warning', 'error'];
-            const manualMessages = data.filter(n => manualTypes.includes(n.notification_type));
+            const manualMessages = data.filter(n => 
+                manualTypes.includes(n.notification_type) && !n.data?.post_id
+            );
             setNotifications(manualMessages);
         } catch (err) {
             console.error('Failed to fetch notifications', err);
@@ -455,6 +480,7 @@ export default function SendNotificationPage() {
                                                 </>
                                             )}
                                         </button>
+                                        <div className="h-2 shrink-0"></div>
                                     </form>
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center text-center p-12">

@@ -14,6 +14,10 @@ export function NotificationBell() {
 
     const getNotificationLink = (n: DMTNotification) => {
 
+        if (n.data?.post_id) {
+            return `/newsfeed?post_id=${encodeURIComponent(String(n.data.post_id))}`;
+        }
+
         switch (n.notification_type) {
             case 'compliance_failure':
                 if (n.data?.work_item_id || n.data?.project_id || n.data?.sprint_id) {
@@ -35,10 +39,6 @@ export function NotificationBell() {
             case 'warning':
             case 'error':
                 return `/notifications/send?notification_id=${n.id}`;
-        }
-
-        if (n.data?.post_id) {
-            return `/newsfeed?post_id=${encodeURIComponent(String(n.data.post_id))}`;
         }
 
         return null;
