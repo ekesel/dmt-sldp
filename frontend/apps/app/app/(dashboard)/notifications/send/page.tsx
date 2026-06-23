@@ -253,8 +253,8 @@ export default function SendNotificationPage() {
                         <MessageSquare className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-                        <p className="text-primary-dark text-sm font-medium mt-0.5">Send in-app notifications to team members</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Quick Updates</h1>
+                        <p className="text-primary-dark text-sm font-medium mt-0.5">Send updates to your team members</p>
                     </div>
                     {selectedIds.size > 0 && (
                         <div className="ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-sm font-bold px-4 py-2 rounded-full">
