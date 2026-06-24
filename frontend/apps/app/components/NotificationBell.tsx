@@ -4,11 +4,62 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
-
+import { useRouter } from 'next/navigation';
+import { DMTNotification } from '@dmt/api';
 export function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const router = useRouter();
+
+    const getNotificationLink = (n: DMTNotification) => {
+
+        if (n.data?.post_id) {
+            return `/newsfeed?post_id=${encodeURIComponent(String(n.data.post_id))}`;
+        }
+
+        switch (n.notification_type) {
+            case 'compliance_failure':
+                if (n.data?.work_item_id || n.data?.project_id || n.data?.sprint_id) {
+                    const params = new URLSearchParams();
+                    if (n.data.work_item_id) params.append('work_item_id', n.data.work_item_id.toString());
+                    if (n.data.project_id) params.append('project_id', n.data.project_id.toString());
+                    if (n.data.sprint_id) params.append('sprint_id', n.data.sprint_id.toString());
+                    if (n.title) params.append('n_title', n.title);
+                    if (n.message) params.append('n_message', n.message);
+                    return `/compliance?${params.toString()}`;
+                }
+                return '/compliance';
+            case 'sprint_ending':
+                return '/sprint-analysis';
+            case 'ai_insight':
+                return '/metrics';
+            case 'info':
+            case 'success':
+            case 'warning':
+            case 'error':
+                return `/notifications/send?notification_id=${n.id}`;
+        }
+
+        return null;
+    };
+
+    const handleNotificationClick = (n: DMTNotification) => {
+        if (!n.is_read) {
+            markAsRead(n.id);
+        }
+        const link = getNotificationLink(n);
+        if (link) {
+            setIsOpen(false);
+            const linkPath = link.split('?')[0].replace(/\/$/, '');
+            const currentPath = window.location.pathname.replace(/\/$/, '');
+            if (currentPath === linkPath) {
+                window.location.assign(link);
+            } else {
+                router.push(link);
+            }
+        }
+    };
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -41,7 +92,7 @@ export function NotificationBell() {
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center rounded-full border border-primary-foreground/20">
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-(--color-access) text-(--color-access-foreground) text-[0.625rem] font-bold flex items-center justify-center rounded-full border border-primary-foreground/20">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -73,8 +124,8 @@ export function NotificationBell() {
                                 {notifications.map((n) => (
                                     <div
                                         key={n.id}
-                                        className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''}`}
-                                        onClick={() => !n.is_read && markAsRead(n.id)}
+                                        className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''} ${getNotificationLink(n) ? 'cursor-pointer' : ''}`}
+                                        onClick={() => handleNotificationClick(n)}
                                     >
                                         <div className="flex gap-3">
                                             <div className="mt-0.5">{getIcon(n.notification_type)}</div>
@@ -89,7 +140,7 @@ export function NotificationBell() {
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1.5">
                                                     <Clock className="w-3 h-3 text-muted-foreground" />
-                                                    <span className="text-[10px] text-muted-foreground">
+                                                    <span className="text-[0.625rem] text-muted-foreground">
                                                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                                                     </span>
                                                 </div>

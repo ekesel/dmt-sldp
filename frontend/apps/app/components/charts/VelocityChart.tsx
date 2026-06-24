@@ -21,9 +21,9 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
     }
 
     return (
-        <div className="w-full h-full min-h-[300px]">
+        <div className="w-full h-full min-h-[18.75rem]">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 30 }}>
+                <AreaChart data={data} margin={{ top: 10, right: 30, left: 80, bottom: 30 }}>
                     <defs>
                         <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
@@ -38,9 +38,46 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
                         tickLine={false}
                         axisLine={false}
                         interval={0}
-                        angle={-25}
-                        textAnchor="end"
-                        height={60}
+                        height={110}
+                        tick={(props: any) => {
+                            const { x, y, payload } = props;
+                            const value = payload.value || '';
+                            let line1 = value;
+                            let line2 = '';
+                            
+                            if (value.length > 25) {
+                                // Find a sensible place to split
+                                const mid = Math.floor(value.length / 2);
+                                let splitIndex = value.lastIndexOf(' ', mid + 8);
+                                if (splitIndex === -1 || splitIndex < 10) {
+                                    splitIndex = value.indexOf(' ', mid - 5);
+                                }
+                                if (splitIndex !== -1) {
+                                    line1 = value.substring(0, splitIndex);
+                                    line2 = value.substring(splitIndex + 1);
+                                } else {
+                                    line1 = value.substring(0, mid);
+                                    line2 = value.substring(mid);
+                                }
+                            }
+
+                            return (
+                                <g transform={`translate(${x},${y})`}>
+                                    <text
+                                        x={0}
+                                        y={0}
+                                        dy={16}
+                                        textAnchor="end"
+                                        fill="var(--color-muted-foreground)"
+                                        fontSize={11}
+                                        transform="rotate(-25)"
+                                    >
+                                        <tspan x={0} dy="0em">{line1}</tspan>
+                                        {line2 && <tspan x={0} dy="1.2em">{line2}</tspan>}
+                                    </text>
+                                </g>
+                            );
+                        }}
                     />
                     <YAxis
                         stroke="var(--color-muted-foreground)"
@@ -53,7 +90,7 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
                         contentStyle={{
                             backgroundColor: 'var(--color-popover)',
                             border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
+                            borderRadius: '0.5rem',
                             color: 'var(--color-popover-foreground)'
                         }}
                     />

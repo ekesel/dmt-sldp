@@ -13,6 +13,11 @@ class LeaderboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_winners_from_qs(self, base_qs, project_id, request):
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        
+        base_qs = base_qs.exclude(developer_email__in=inactive_user_emails)
+        
         if project_id:
             base_qs = base_qs.filter(project_id=project_id)
 

@@ -1,21 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
+import { dashboard, getFileUrl, HolidayCalendarData, getUploadErrorMessage } from '@dmt/api';
 import { Palmtree, ArrowLeft, Plus, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
 
-interface HolidayData {
-    id: number;
-    holiday_calendar_file: string;
-}
 
 export default function HolidayCalendarPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [calendars, setCalendars] = useState<HolidayData[]>([]);
+    const [calendars, setCalendars] = useState<HolidayCalendarData[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
 
@@ -67,9 +63,10 @@ export default function HolidayCalendarPage() {
             await dashboard.uploadHolidayCalendar(formData);
             toast.success('Holiday calendar uploaded successfully!', { id: toastId });
             fetchCalendars();
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Upload failed:', err);
-            toast.error('Failed to upload holiday calendar.', { id: toastId });
+            const errorMessage = getUploadErrorMessage(err, 'Failed to upload holiday calendar.');
+            toast.error(errorMessage, { id: toastId });
         } finally {
             setUploading(false);
             if (createFileInputRef.current) createFileInputRef.current.value = '';
@@ -158,11 +155,11 @@ export default function HolidayCalendarPage() {
                                         </div>
 
                                         <div className="space-y-1.5 min-w-0 flex-1">
-                                            <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
-                                                {fileName}
+                                            <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2 capitalize">
+                                                {fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ')}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
-                                                Official holiday list and company closures calendar. View the embedded document below or open it directly.
+                                                 Official holiday list of company 
                                             </p>
                                         </div>
                                     </div>
@@ -189,13 +186,12 @@ export default function HolidayCalendarPage() {
                                     {/* Bottom row actions (Download PDF) */}
                                     <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                         <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            href={`/api/download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(fileName)}`}
+                                            download={fileName}
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
                                             <Palmtree className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            View / Download Holiday Calendar PDF
+                                             Download Holiday Calendar 
                                         </a>
                                     </div>
                                 </div>

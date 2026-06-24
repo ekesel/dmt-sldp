@@ -10,37 +10,43 @@ import EventsCalendar from "../../../components/EventsCalendar";
 
 export default function HomePage() {
   return (
-    <main className="bg-[#F3F4F6] px-4 pt-2 pb-10 lg:px-6 lg:pt-3 lg:pb-12 xl:pb-0 min-h-[calc(100vh-4rem)] xl:overflow-y-hidden">
-      <div className="max-w-[100rem] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Row 1: Welcome Banner (6) + Calendar (3) + Star (3) */}
-        {/* Row 1: Welcome Banner + Calendar + Star */}
-        <div className="lg:col-span-8 xl:col-span-6">
-          <WelcomeBanner />
-        </div>
-        <div className="lg:col-span-4 xl:col-span-3">
-          <EventsCalendar />
-        </div>
-        <div className="lg:col-span-12 xl:col-span-3">
-          <StarPerformer />
+    <div className="min-h-full lg:h-full flex flex-col bg-[#F3F4F6] px-4 pt-2 pb-3 lg:px-6 lg:pt-3 lg:pb-4">
+      {/* Inner container: flex column, fills all available height */}
+      <div className="max-w-[100rem] w-full mx-auto flex flex-col gap-4 flex-1 lg:min-h-0">
+
+        {/* ── Row 1: shrinks to content height ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-shrink-0">
+          <div className="lg:col-span-8 xl:col-span-6">
+            <WelcomeBanner />
+          </div>
+          <div className="lg:col-span-4 xl:col-span-3">
+            <EventsCalendar />
+          </div>
+          <div className="lg:col-span-12 xl:col-span-3">
+            <StarPerformer />
+          </div>
         </div>
 
-        {/* Dynamic Bento Layout Below */}
+        {/* ── Row 2: stretches to fill remaining viewport height ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[11.25rem] lg:min-h-[15.625rem]">
 
-        {/* Column 1: Quick Access Tiles */}
-        <div className="lg:col-span-6 xl:col-span-4">
-          <QuickAccessTiles />
+          {/* Quick Access Tiles */}
+          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
+            <QuickAccessTiles />
+          </div>
+
+          {/* Social News Feed */}
+          <div className="lg:col-span-6 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
+            <SocialNewsFeed />
+          </div>
+
+          {/* Celebrations Card */}
+          <div className="lg:col-span-12 xl:col-span-4 flex flex-col min-h-[11.25rem] lg:min-h-[15.625rem]">
+            <CelebrationsCard />
+          </div>
         </div>
 
-        {/* Column 2: Social News Feed */}
-        <div className="lg:col-span-6 xl:col-span-4 flex flex-col h-full">
-          <SocialNewsFeed />
-        </div>
-
-        {/* Column 3: Celebrations Card */}
-        <div className="lg:col-span-12 xl:col-span-4 flex flex-col h-full">
-          <CelebrationsCard />
-        </div>
       </div>
-    </main>
+    </div>
   );
 }

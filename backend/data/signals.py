@@ -109,13 +109,21 @@ def notify_compliance_issue(sender, instance, **kwargs):
             # Find a relevant user to notify (e.g. the assignee or a project admin)
             # For MVP, we notify the resolved_assignee if present
             if instance.resolved_assignee:
+                from configuration.models import SourceConfiguration
+                source_config = SourceConfiguration.objects.filter(id=instance.source_config_id).first()
+                project_id = source_config.project_id if source_config else None
+                
                 Notification.objects.get_or_create(
                     tenant=tenant,
                     user=instance.resolved_assignee,
                     notification_type='compliance_failure',
                     title=f"Compliance Failure: {instance.external_id}",
                     message=f"Work item {instance.title} does not meet DMT standards.",
-                    data={'work_item_id': instance.id}
+                    data={
+                        'work_item_id': instance.id,
+                        'sprint_id': instance.sprint_id,
+                        'project_id': project_id
+                    }
                 )
         except Exception:
             pass

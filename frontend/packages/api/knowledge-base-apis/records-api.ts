@@ -330,7 +330,7 @@ export const knowledgeRecords = {
       });
 
       // Create a blob URL and trigger download
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] as string });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
 
@@ -471,7 +471,7 @@ export const knowledgeRecords = {
         responseType: 'blob',
       });
 
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const blob = new Blob([response.data], { type: response.headers['content-type'] as string });
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch (error: any) {

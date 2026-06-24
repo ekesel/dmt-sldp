@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Edit3, Trash2, MessageCircle } from "lucide-react";
-import { Post } from "../../hooks/useNewsfeedData";
+import { Post } from "../../types/newsfeed";
 import { useAuth } from "../../context/AuthContext";
 import ReactionBar from "./ReactionBar";
 import CommentSection from "./CommentSection";
@@ -8,6 +8,8 @@ import { cn, formatTimestamp } from "@/lib/utils";
 import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
+import { getFileUrl } from "@dmt/api";
+import { useSearchParams } from "next/navigation";
 
 
 const PostCard = ({
@@ -23,6 +25,7 @@ const PostCard = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { reactions, toggleReaction } = useReactions(post.post_id);
+  const searchParams = useSearchParams();
 
   const {
     author,
@@ -39,18 +42,29 @@ const PostCard = ({
 
   useEffect(() => {
     let timeoutId: number | null = null;
+    let innerTimeoutId: number | null = null;
 
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const openCommentsPostId = params.get("openComments");
-      if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) {
-        setShowComments(true);
+      const openCommentsPostId = searchParams?.get("openComments");
+      const targetPostIdStr = searchParams?.get("post_id");
+      const targetPostId = targetPostIdStr ? Number(targetPostIdStr) : null;
+
+      if ((openCommentsPostId && Number(openCommentsPostId) === post.post_id) || (targetPostId === post.post_id)) {
+        if (openCommentsPostId && Number(openCommentsPostId) === post.post_id) setShowComments(true);
+
         timeoutId = window.setTimeout(() => {
           const element = document.getElementById(`post-${post.post_id}`);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            if (targetPostId) {
+              element.classList.add('ring-4', 'ring-accent', 'shadow-2xl');
+              innerTimeoutId = window.setTimeout(() => {
+                element.classList.remove('ring-4', 'ring-accent', 'shadow-2xl');
+              }, 3000);
+            }
           }
-        }, 150);
+        }, 500); // 500ms delay to ensure it's rendered
       }
     }
 
@@ -58,11 +72,14 @@ const PostCard = ({
       if (timeoutId !== null) {
         window.clearTimeout(timeoutId);
       }
+      if (innerTimeoutId !== null) {
+        window.clearTimeout(innerTimeoutId);
+      }
     };
-  }, [post.post_id]);
+  }, [post.post_id, searchParams]);
 
   return (
-    <div 
+    <div
       id={`post-${post.post_id}`}
       className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
     >
@@ -71,8 +88,9 @@ const PostCard = ({
         <div className="flex items-center gap-3">
           <img
             src={
-              author?.avatar_url ||
-              "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
+              author?.avatar_url
+                ? getFileUrl(author.avatar_url)
+                : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
             }
             alt={author?.username}
             className="w-10 h-10 rounded-full object-cover border border-border cursor-pointer"
@@ -87,7 +105,7 @@ const PostCard = ({
               {post.category && (
                 <>
                   <span className={cn(
-                    "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider",
+                    "px-2 py-0.5 rounded-full text-[0.625rem] font-medium uppercase tracking-wider",
                     post.category.toLowerCase() === 'tech' && "bg-primary/10 text-primary border border-primary/20",
                     post.category.toLowerCase() === 'news' && "bg-accent/10 text-accent border border-accent/20",
                     post.category.toLowerCase() === 'general' && "bg-secondary text-secondary-foreground border border-border",
@@ -149,15 +167,15 @@ const PostCard = ({
         <h2 className="text-lg font-bold text-foreground leading-tight">
           {title || "No Title Available"}
         </h2>
-        <p className="text-foreground text-[15px] leading-relaxed">{content}</p>
+        <p className="text-foreground text-[0.9375rem] leading-relaxed">{content}</p>
       </div>
 
       {image && (
-        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50">
+        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50 max-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
           <img
             src={getMediaUrl(image)}
             alt="post media"
-            className="w-full max-h-125 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+            className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.01]"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = getFallbackImage();

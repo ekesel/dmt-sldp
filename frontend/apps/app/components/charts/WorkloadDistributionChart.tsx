@@ -37,7 +37,7 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
     const sortedData = [...data].sort((a, b) => (b[dataKeyB] as number) - (a[dataKeyB] as number));
 
     return (
-        <div className="w-full h-[400px]">
+        <div className="w-full h-[25rem]">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                     data={sortedData}
@@ -67,7 +67,7 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                         contentStyle={{
                             backgroundColor: 'var(--color-popover)',
                             border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
+                            borderRadius: '0.5rem',
                             color: 'var(--color-popover-foreground)'
                         }}
                         cursor={{ fill: 'var(--color-muted)', opacity: 0.4 }}
@@ -75,7 +75,7 @@ const WorkloadDistributionChart = ({ data, type, sprintAName, sprintBName }: Pro
                     <Legend
                         verticalAlign="top"
                         align="right"
-                        wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }}
+                        wrapperStyle={{ paddingBottom: '1.25rem', fontSize: '0.75rem' }}
                     />
                     <Bar
                         name={`${sprintAName} (${label})`}

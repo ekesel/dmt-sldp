@@ -1,0 +1,142 @@
+1. Organization Chart — GET & POST
+
+Base path: api/org-chart/
+
+GET api/org-chart/
+
+Fetch the full hierarchical user tree for the current tenant. Only active users with org_chart_visibility = True are returned.
+
+
+Permission IsAuthenticated (any logged-in user)
+
+Auth Header Authorization: Bearer <token>
+
+Request Body None
+
+
+Response 200 OK
+
+{ "status": true, "message": "Hierarchy fetched successfully", "data": [ { "id": 1, "full_name": "Jane Doe", "email": "jane.doe@example.com", "username": "jane.doe@example.com", "role_id": 2, "role": "CEO", "department": "management", "parent_id": null, "is_active": true, "org_chart_visibility": true, "children": [ { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role_id": 3, "role": "Engineering Manager", "department": "engineering", "parent_id": 1, "is_active": true, "org_chart_visibility": true, "children": [] } ] } ] }
+
+
+
+POST api/org-chart/
+
+Create a new user, or update the role and parent of an existing user when the email already exists. Assigning a parent automatically sets org_chart_visibility = True.
+
+
+Permission IsManagerOrReadOnly (Managers or Admins only)
+
+Auth Header Authorization: Bearer <token>
+
+Request Body JSON (see below)
+
+
+Request Body
+
+{ "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith", "designation": 3, "department": "engineering", "parent": 1 }
+
+designation — integer Role ID. department / dep_name — string matching predefined department choices.
+
+
+Response 201 Created
+
+{ "status": true, "message": "Employee created successfully", "data": { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role": "Engineering Manager", "department": "engineering" } }
+
+
+Response 200 OK (existing user updated)
+
+{ "status": true, "message": "Existing user updated successfully", "data": { "id": 2, "full_name": "John Smith", "email": "john.smith@example.com", "role": "Engineering Manager", "department": "engineering" } }
+
+
+
+
+2. Organization Chart Details — PUT & DELETE
+
+Base path: api/org-chart/<int:pk>/
+
+PUT api/org-chart/<int:pk>/
+
+Update one or more properties for the user identified by <pk>. All request fields are optional. The endpoint guards against circular hierarchies and self-parenting.
+
+
+Permission IsManagerOrReadOnly (Managers or Admins only)
+
+Auth Header Authorization: Bearer <token>
+
+Request Body JSON (all fields optional)
+
+
+Request Body
+
+{ "first_name": "Johnny", "last_name": "Smith", "designation": 4, "department": "engineering", "parent": 1, "is_active": true }
+
+
+Response 200 OK
+
+{ "status": true, "message": "User updated successfully", "data": { "id": 2, "full_name": "Johnny Smith", "email": "john.smith@example.com", "role": "Senior Engineer", "department": "engineering" } }
+
+
+Error 400 Bad Request — Circular Hierarchy
+
+{ "status": false, "message": "This parent assignment would create a circular hierarchy" }
+
+DELETE api/org-chart/<int:pk>/
+
+Hides the user from the org chart by setting org_chart_visibility = False. The underlying user record is not deleted.
+
+
+Permission IsManagerOrReadOnly (Managers or Admins only)
+
+Auth Header Authorization: Bearer <token>
+
+Request Body None
+
+
+Response 200 OK
+
+{ "status": true, "message": "User hidden from organization successfully" }
+
+
+3. User Autocomplete
+
+Base path: api/org-users/autocomplete/?q=<search_string>
+
+GET api/org-users/autocomplete/
+
+Returns a flat list of up to 10 active users whose first name, last name, or email matches the query string. Useful for parent-selection dropdowns.
+
+
+Permission IsAuthenticated (any logged-in user)
+
+Auth Header Authorization: Bearer <token>
+
+Query Parameter q (string) — e.g. ?q=john
+
+Request Body None
+
+
+Response 200 OK
+
+{ "status": true, "data": [ { "id": 2, "full_name": "Johnny Smith", "email": "john.smith@example.com", "role": "Senior Engineer", "department": "engineering" } ] }
+
+
+4. Roles Dropdown
+
+Base path: api/org-roles/
+
+GET api/org-roles/
+
+Returns all available roles as a flat list. Intended to populate role dropdowns when creating or editing users.
+
+
+Permission IsAuthenticated (any logged-in user)
+
+Auth Header Authorization: Bearer <token>
+
+Request Body None
+
+
+Response 200 OK
+
+{ "status": true, "data": [ { "id": 1, "role_name": "Platform Admin" }, { "id": 2, "role_name": "CEO" }, { "id": 3, "role_name": "Engineering Manager" }

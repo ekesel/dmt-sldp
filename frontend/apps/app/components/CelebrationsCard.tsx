@@ -156,7 +156,7 @@ export const CelebrationsCard: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-[20rem] overflow-hidden flex flex-col items-center justify-center">
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full overflow-hidden flex flex-col items-center justify-center">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
                 <p className="text-muted-foreground font-semibold text-sm mt-3">Loading Celebrations...</p>
             </div>
@@ -165,7 +165,7 @@ export const CelebrationsCard: React.FC = () => {
 
     if (errorMessage) {
         return (
-            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-[20rem] overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full overflow-hidden flex flex-col items-center justify-center px-6 text-center">
                 <p className="text-card-foreground font-semibold text-sm">{errorMessage}</p>
                 <button
                     type="button"
@@ -190,7 +190,7 @@ export const CelebrationsCard: React.FC = () => {
     }
 
     return (
-        <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full xl:max-h-[20rem] overflow-hidden flex flex-col">
+        <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full overflow-hidden flex flex-col">
             {/* Festive Header Section */}
             <div className="relative h-[5.5rem] sm:h-[6.25rem] w-full flex flex-col items-center justify-start flex-shrink-0">
                 {/* Background Illustration */}
@@ -219,15 +219,17 @@ export const CelebrationsCard: React.FC = () => {
                         transition={{ duration: 0.4, ease: "easeOut" }}
                         className="flex items-center gap-3 sm:gap-4"
                     >
-                        <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[3.5px] border-card shadow-lg flex-shrink-0 bg-secondary">
-                            <Image
-                                src={currentUser.avatar}
-                                alt={currentUser.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                            />
-                        </div>
+                        {currentUser.name !== 'No Celebrations Today' && (
+                            <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[0.21875rem] border-card shadow-lg flex-shrink-0 bg-secondary">
+                                <Image
+                                    src={currentUser.avatar}
+                                    alt={currentUser.name}
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                />
+                            </div>
+                        )}
                         <div className="flex flex-col items-start text-left mt-3 sm:mt-4">
                             <h3 className="text-[1.125rem] sm:text-[1.25rem] font-bold text-card-foreground leading-tight">
                                 {currentUser.name}
@@ -272,12 +274,12 @@ export const CelebrationsCard: React.FC = () => {
             </div>
 
             {/* Upcoming Section */}
-            <div className="px-4 sm:px-6 pt-1 pb-2 font-sans flex-1 flex flex-col justify-start overflow-hidden">
+            <div className="px-4 sm:px-6 pt-1 pb-3 font-sans flex-1 flex flex-col min-h-0">
                 <h4 className="text-[0.875rem] sm:text-[1rem] font-semibold text-muted-foreground mb-1 sm:mb-1.5">
                     Upcoming:
                 </h4>
 
-                <div className="space-y-2 sm:space-y-2.5 overflow-y-auto max-h-[7.5rem] pr-1 scrollbar-thin">
+                <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-primary min-h-0">
                     {upcoming.length > 0 ? (
                         upcoming.map((item, index) => (
                             <div key={index} className="flex items-center justify-between group animate-fade-in">
@@ -297,7 +299,7 @@ export const CelebrationsCard: React.FC = () => {
                                         </span>
                                         {item.type === 'anniversary' ? (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-primary/10 text-primary border border-primary/20 flex-shrink-0">
-                                                🎉work Anniversary 
+                                                🎉work Anniversary
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.625rem] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20 flex-shrink-0">

@@ -53,3 +53,29 @@ class IdentityResolver:
         if emails:
             return list(emails)
         return [canonical_email]
+
+def get_inactive_user_emails_expanded(tenant=None):
+    """
+    Returns a set of all inactive emails including their mapped aliases.
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    qs = User.objects.filter(is_active=False)
+    if tenant:
+        qs = qs.filter(tenant=tenant)
+        
+    base_emails = list(qs.values_list('email', flat=True))
+    
+    resolver = IdentityResolver()
+    resolver.load()
+    
+    expanded = set()
+    for email in base_emails:
+        if email:
+            canonical = resolver.resolve(email)
+            expanded.update(resolver.all_aliases(canonical))
+            expanded.add(email)
+            
+    return list(expanded)
+

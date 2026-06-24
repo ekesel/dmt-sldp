@@ -16,7 +16,28 @@ from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
 from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer
 from users.utils import import_users_from_excel
+from rest_framework import viewsets
+from .models import RoleTable
+from .serializers import RoleSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import User, Department
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from homepage.permissions import IsManagerOrReadOnly
+from django.db.models import Q
+from .models import Department
+from .utils import get_user_sprint_task_summary
+
+
+
+from .models import User, RoleTable
 User = get_user_model()
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -47,6 +68,15 @@ class UserViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(tenant_id=target_tenant)
              else:
                 return User.objects.none()
+        # 3. Optional is_active filtering (default to active users)
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            if is_active.lower() == 'true':
+                queryset = queryset.filter(is_active=True)
+            elif is_active.lower() == 'false':
+                queryset = queryset.filter(is_active=False)
+        else:
+            queryset = queryset.filter(is_active=True)
         
         return queryset
 
@@ -358,3 +388,520 @@ class UploadUserDataView(APIView):
                 {'error': result.get('error', 'Unknown error occurred'), 'stats': result.get('stats', {})},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsManagerOrReadOnly]
+    queryset = RoleTable.objects.all().order_by('-id')
+    serializer_class = RoleSerializer
+
+
+
+
+
+# ORG CHART API
+class UserHierarchyAPIView(APIView):
+    permission_classes = [IsManagerOrReadOnly]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsAuthenticated()]
+        return [IsManagerOrReadOnly()]
+
+    # CYCLE DETECTION — prevents circular chains (e.g. A→B→C→A)
+    def would_create_cycle(self, user_id, new_parent_id):
+        current_id = new_parent_id
+        visited = set()
+        while current_id is not None:
+            if current_id in visited:
+                break
+            if current_id == user_id:
+                return True
+            visited.add(current_id)
+            current_id = User.objects.filter(id=current_id).values_list('parent_id', flat=True).first()
+        return False
+
+    # BUILD HIERARCHY — O(n) using pre-grouped dict (Fix #3)
+    def build_hierarchy(self, users, parent_id=None):
+
+        # Group all users by their parent_id in one pass
+        children_map = {}
+        user_ids = {u.id for u in users}
+        
+        for user in users:
+            pid = user.parent_id
+            # If the parent is hidden or not in the list, attach the user to the root
+            if pid not in user_ids and pid is not None:
+                pid = None
+            children_map.setdefault(pid, []).append(user)
+
+        def build(pid):
+            result = []
+            for user in children_map.get(pid, []):
+                result.append({
+                    "id": user.id,
+                    "full_name": f"{user.first_name} {user.last_name}".strip(),
+                    "email": user.email,
+                    "username": user.username,
+                    "role_id": user.role.id if user.role else None,
+                    "role": user.role.role_name if user.role else None,
+                    "department": user.role.dep_name if user.role else None,
+                    "parent_id": user.parent_id,
+                    "is_active": user.is_active,
+                    "org_chart_visibility": user.org_chart_visibility,
+                    "children": build(user.id)
+                })
+            return result
+
+        return build(parent_id)
+
+
+    # GET -> FULL HIERARCHY
+    def get(self, request):
+
+        # Fix #4: filter active users at DB level — avoid loading inactive users
+        users = User.objects.select_related('role').filter(
+            tenant=request.user.tenant,
+            org_chart_visibility=True,
+            is_active=True
+        )
+
+        hierarchy = self.build_hierarchy(users)
+
+        return Response({
+            "status": True,
+            "message": "Hierarchy fetched successfully",
+            "data": hierarchy
+        }, status=status.HTTP_200_OK)
+
+    # POST -> CREATE USER / UPDATE EXISTING USER
+    def post(self, request):
+
+        data = request.data
+        tenant = request.user.tenant
+
+        email = data.get("email")
+
+        # Email required
+        if not email:
+            return Response({
+                "status": False,
+                "message": "Email is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # GET ROLE  (frontend sends role ID)
+        role_obj = None
+
+        designation = data.get("designation")  # expects RoleTable pk (integer)
+
+        if designation:
+            role_obj = RoleTable.objects.filter(
+                id=designation
+            ).first()
+
+            if not role_obj:
+                return Response({
+                    "status": False,
+                    "message": f"Role with id={designation} not found"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate and update dep_name if frontend sends it
+            dep_name = data.get("dep_name") or data.get("department")
+            if dep_name:
+                dep_name = str(dep_name).lower()
+               
+                # Auto-create if it doesn't exist, using atomic get_or_create
+                # This way the previous flow doesn't break, and accepts the string.
+                Department.objects.get_or_create(name=dep_name)
+                    
+                # Update the role's department
+                role_obj.dep_name = dep_name
+                role_obj.save()
+
+        # GET PARENT USER
+        parent_user = None
+
+        parent_id = data.get("parent")
+
+        if parent_id:
+
+            parent_user = User.objects.filter(
+                id=parent_id,
+                tenant=tenant,
+                org_chart_visibility=True,
+                is_active=True
+            ).first()
+
+            if not parent_user:
+                return Response({
+                    "status": False,
+                    "message": "Parent user not found"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # CHECK EXISTING USER
+        existing_user = User.objects.filter(
+            email=email,
+            tenant=tenant
+        ).first()
+
+        # UPDATE EXISTING USER
+        if existing_user:
+
+            if role_obj:
+                existing_user.role = role_obj
+
+            # Fix #5: only update parent if explicitly sent — prevent silent wipe
+            if "parent" in data:
+                if parent_id == existing_user.id:
+                    return Response({
+                        "status": False,
+                        "message": "User cannot be parent of itself"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                if parent_id and self.would_create_cycle(existing_user.id, parent_id):
+                    return Response({
+                        "status": False,
+                        "message": "This parent assignment would create a circular hierarchy"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                existing_user.parent = parent_user
+                existing_user.org_chart_visibility = True
+
+            existing_user.save()
+
+            return Response({
+                "status": True,
+                "message": "Existing user updated successfully",
+                "data": {
+                    "id": existing_user.id,
+                    "full_name": f"{existing_user.first_name} {existing_user.last_name}".strip(),
+                    "email": existing_user.email,
+                    "role": existing_user.role.role_name if existing_user.role else None,
+                    "department": existing_user.role.dep_name if existing_user.role else None,
+                }
+            }, status=status.HTTP_200_OK)
+
+        #   CREATE NEW USER
+        try:
+
+            user = User.objects.create_user(
+                tenant=tenant,
+                username=email,
+                email=email,
+                first_name=data.get("first_name", ""),
+                last_name=data.get("last_name", ""),
+                role=role_obj,
+                parent=parent_user,
+                is_active=True,
+                org_chart_visibility = True
+            )
+
+            # Disable password login initially
+            user.set_unusable_password()
+            user.save(update_fields=['password'])
+
+            return Response({
+                "status": True,
+                "message": "Employee created successfully",
+                "data": {
+                    "id": user.id,
+                    "full_name": f"{user.first_name} {user.last_name}".strip(),
+                    "email": user.email,
+                    # Fix #1: use role_obj directly (already in memory) to avoid null department
+                    "role": role_obj.role_name if role_obj else None,
+                    "department": role_obj.dep_name if role_obj else None,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            # Fix #7: log the real error instead of swallowing it
+            logger.exception("User creation failed for email=%s: %s", email, str(e))
+            return Response({
+                "status": False,
+                "message": "Could not create user"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT -> UPDATE USER
+    def put(self, request, pk):
+
+        try:
+            user = User.objects.get(
+                id=pk,
+                tenant=request.user.tenant
+            )
+
+        except User.DoesNotExist:
+
+            return Response({
+                "status": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+
+        # Update first name
+        if "first_name" in data:
+            user.first_name = data.get("first_name")
+
+        # Update last name
+        if "last_name" in data:
+            user.last_name = data.get("last_name")
+
+        # Update role  (frontend sends role ID)
+        if "designation" in data:
+
+            designation = data.get("designation")
+            role_obj = None
+
+            if designation:
+                role_obj = RoleTable.objects.filter(
+                    id=designation
+                ).first()
+
+                if not role_obj:
+                    return Response({
+                        "status": False,
+                        "message": f"Role with id={designation} not found"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Validate and update dep_name if frontend sends it
+                dep_name = data.get("dep_name") or data.get("department")
+                if dep_name:
+                    dep_name = str(dep_name).lower()
+                    from .models import Department
+                    Department.objects.get_or_create(name=dep_name)
+                    
+                    # Update the role's department
+                    role_obj.dep_name = dep_name
+                    role_obj.save()
+
+            user.role = role_obj
+
+        # Update parent
+        if "parent" in data:
+
+            parent_id = data.get("parent")
+
+            # Prevent self-parenting
+            if parent_id == user.id:
+                return Response({
+                    "status": False,
+                    "message": "User cannot be parent of itself"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate parent exists and check for circular chains (Fix #6)
+            if parent_id:
+
+                parent_exists = User.objects.filter(
+                    id=parent_id,
+                    tenant=request.user.tenant,
+                    org_chart_visibility=True,
+                    is_active=True
+                ).exists()
+
+                if not parent_exists:
+                    return Response({
+                        "status": False,
+                        "message": "Parent user not found"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Fix #6: detect circular hierarchy (e.g. A→B→C→A)
+                if self.would_create_cycle(user.id, parent_id):
+                    return Response({
+                        "status": False,
+                        "message": "This parent assignment would create a circular hierarchy"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            user.parent_id = parent_id
+
+        # Update active status
+        if "is_active" in data:
+            user.is_active = data.get("is_active")
+
+        user.save()
+
+        user.refresh_from_db()
+
+        return Response({
+            "status": True,
+            "message": "User updated successfully",
+            "data": {
+                "id": user.id,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "email": user.email,
+                "role": user.role.role_name if user.role else None,
+                "department": user.role.dep_name if user.role else None,
+            }
+        }, status=status.HTTP_200_OK)
+
+    #  DELETE ->Org_chart_visibility= False
+    def delete(self, request, pk):
+
+        try:
+            user = User.objects.get(
+                id=pk,
+                tenant=request.user.tenant
+            )
+
+        except User.DoesNotExist:
+
+            return Response({
+                "status": False,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        user.org_chart_visibility = False
+        user.save()
+
+        return Response({
+            "status": True,
+            "message": "User hidden from organization successfully"
+        }, status=status.HTTP_200_OK)
+
+
+
+# ROLE DROPDOWN API
+class GetAllRolesDropdown(APIView):
+    """
+    Returns a flat list of all roles (for dropdowns).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        roles = RoleTable.objects.all().order_by('role_name')
+        list_data = []
+
+        for role in roles:
+            list_data.append({
+                "id": role.id,
+                "role_name": role.role_name,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+
+class GetAllDepartmentsDropdown(APIView):
+    """
+    Returns a flat list of all departments (for dropdowns).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+    
+        departments = Department.objects.all().order_by('name')
+        list_data = []
+
+        for dep in departments:
+            list_data.append({
+                "id": dep.id,
+                "name": dep.name.upper(),
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        from .models import Department
+        name = request.data.get('name') or request.data.get('dep_name') or request.data.get('department')
+        if not name:
+            return Response({
+                "status": False,
+                "message": "Department name is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        name = str(name).strip().lower()
+        if not name:
+            return Response({
+                "status": False,
+                "message": "Department name cannot be empty"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        department, created = Department.objects.get_or_create(name=name)
+        
+        if created:
+            message = "Department created successfully"
+            status_code = status.HTTP_201_CREATED
+        else:
+            message = "Department already exists"
+            status_code = status.HTTP_200_OK
+            
+        return Response({
+            "status": True,
+            "message": message,
+            "data": {
+                "id": department.id,
+                "name": department.name
+            }
+        }, status=status_code)
+
+
+# User Autocomplete API for search/autofill
+class UserAutocompleteAPIView(APIView):
+    """
+    Search API for autofill/populate data.
+    Takes a 'q' parameter and returns matching active users.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        
+        users = User.objects.select_related('role').filter(
+            tenant=request.user.tenant,
+            is_active=True
+        )
+
+        if query:
+            
+            users = users.filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query)
+            )
+
+        # Limit to 10 results for autocomplete performance
+        users = users[:10]
+
+        list_data = []
+        for user in users:
+            list_data.append({
+                "id": user.id,
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "email": user.email,
+                "role": user.role.role_name if user.role else None,
+                "department": user.role.dep_name if user.role else None,
+            })
+
+        return Response({
+            "status": True,
+            "data": list_data
+        }, status=status.HTTP_200_OK)
+
+
+class UserSprintTaskSummaryAPIView(APIView):
+    """
+    GET API to calculate total active tasks assigned to logged-in user 
+    and how many tasks they have done based on the current active sprint.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from data.models import WorkItem
+        user = request.user
+        
+        summary = get_user_sprint_task_summary(user)
+       
+        return Response({
+            "status": True,
+            "data": {
+                "active": summary["total_active_tasks"],
+                "done": summary["total_done_tasks"]
+            }
+        }, status=status.HTTP_200_OK)

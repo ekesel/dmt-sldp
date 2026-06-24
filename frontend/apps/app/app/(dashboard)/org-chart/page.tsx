@@ -21,7 +21,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
-import html2canvas from 'html2canvas-pro';
+
 import toast, { Toaster } from 'react-hot-toast';
 import { Network, ArrowLeft, Shield, ShieldAlert, RefreshCw } from 'lucide-react';
 
@@ -29,6 +29,18 @@ import { usePermissions } from '@/hooks/usePermissions';
 import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
 import OrgChartControls from '@/components/org-chart/OrgChartControls';
 import EmployeeModal from '@/components/org-chart/EmployeeModal';
+import { orgChart } from '@dmt/api';
+
+export interface OrgChartUser {
+    id: number | string;
+    full_name: string;
+    role: string;
+    role_id: number | string;
+    email: string;
+    department: string;
+    parent_id?: number | string | null;
+    children?: OrgChartUser[];
+}
 
 /**
  * Represents a single employee record in the org chart dataset.
@@ -39,29 +51,11 @@ interface IEmployee {
     id: string;
     name: string;
     role: string;
+    roleId: string;
     email: string;
     department: string;
     parentId: string;
 }
-
-// Initial dummy organizational data
-const INITIAL_EMPLOYEES = [
-    { id: '1', name: 'Sarah Jenkins', role: 'Chief Executive Officer (CEO)', email: 'sarah.jenkins@company.com', department: 'Executive', parentId: '' },
-    
-    { id: '2', name: 'Marcus Chen', role: 'Chief Technology Officer (CTO)', email: 'marcus.chen@company.com', department: 'Engineering', parentId: '1' },
-    { id: '3', name: 'Elena Rostova', role: 'Head of HR & People', email: 'elena.rostova@company.com', department: 'HR', parentId: '1' },
-    { id: '4', name: 'David Miller', role: 'VP of Sales & Marketing', email: 'david.miller@company.com', department: 'Sales', parentId: '1' },
-    
-    { id: '5', name: 'Sophia Lin', role: 'Engineering Tech Lead', email: 'sophia.lin@company.com', department: 'Engineering', parentId: '2' },
-    { id: '6', name: 'Alex Rivera', role: 'QA Lead Analyst', email: 'alex.rivera@company.com', department: 'Engineering', parentId: '2' },
-    { id: '7', name: 'Liam Carter', role: 'Lead Product Manager', email: 'liam.carter@company.com', department: 'Product', parentId: '2' },
-    
-    { id: '8', name: 'Chloe Zhao', role: 'AI-ML Solutions Engineer', email: 'chloe.zhao@company.com', department: 'Engineering', parentId: '5' },
-    { id: '9', name: 'Jack Vance', role: 'Senior Backend Developer', email: 'jack.vance@company.com', department: 'Engineering', parentId: '5' },
-    { id: '10', name: 'Chloe Vance', role: 'Senior Frontend Developer', email: 'chloe.vance@company.com', department: 'Engineering', parentId: '5' },
-    { id: '11', name: 'Jordan Lee', role: 'Associate PM', email: 'jordan.lee@company.com', department: 'Product', parentId: '7' }
-];
-
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
     const isHorizontal = direction === 'LR';
@@ -72,12 +66,13 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({
         rankdir: direction,
-        nodesep: 60,
-        ranksep: 90
+        nodesep: 150,
+        ranksep: 180,
+        edgesep: 100,
     });
 
     nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: 260, height: 96 });
+        dagreGraph.setNode(node.id, { width: 420, height: 256 });
     });
 
     edges.forEach((edge) => {
@@ -88,16 +83,110 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 
     const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
+
+        let adjustedX = nodeWithPosition.x;
+        let adjustedY = nodeWithPosition.y;
+        const isRoot = !edges.some((edge) => edge.target === node.id);
+
+        if (isRoot) {
+            let minPos = Infinity;
+            let maxPos = -Infinity;
+
+            nodes.forEach(n => {
+                // Ignore root itself when calculating bounds
+                if (n.id === node.id) return;
+
+                const pos = dagreGraph.node(n.id);
+                if (pos) {
+                    const p = isHorizontal ? pos.y : pos.x;
+                    if (p < minPos) minPos = p;
+                    if (p > maxPos) maxPos = p;
+                }
+            });
+
+            if (minPos !== Infinity && maxPos !== -Infinity) {
+                // Center exactly between the furthest left and furthest right nodes
+                const center = (minPos + maxPos) / 2;
+                if (isHorizontal) {
+                    adjustedY = center - 150;
+                } else {
+                    adjustedX = center - 150;
+                }
+            }
+        } else {
+            // For non-root nodes (like the second row), if they have children, center them above their children
+            const childEdges = edges.filter(e => e.source === node.id);
+            if (childEdges.length > 0) {
+                let sumPos = 0;
+                let count = 0;
+                childEdges.forEach(e => {
+                    const childPos = dagreGraph.node(e.target);
+                    if (childPos) {
+                        sumPos += isHorizontal ? childPos.y : childPos.x;
+                        count++;
+                    }
+                });
+                if (count > 0) {
+                    if (isHorizontal) {
+                        adjustedY = sumPos / count;
+                    } else {
+                        adjustedX = sumPos / count;
+                    }
+                }
+            }
+        }
+
         return {
             ...node,
             targetPosition: isHorizontal ? Position.Left : Position.Top,
             sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
             position: {
-                x: nodeWithPosition.x - 130,
-                y: nodeWithPosition.y - 48
+                x: adjustedX - 192,
+                y: adjustedY - 128
             }
         };
     });
+
+    // --- POST-PROCESSING: Bottom-up centering for perfect symmetry ---
+    const rootNodes = layoutedNodes.filter(n => !edges.some(e => e.target === n.id));
+    if (rootNodes.length === 1) {
+        const root = rootNodes[0];
+        const secondRow = layoutedNodes.filter(n => edges.some(e => e.source === root.id && e.target === n.id));
+
+        // 1. Center second row nodes over their respective children
+        secondRow.forEach(row2Node => {
+            const children = layoutedNodes.filter(child => edges.some(e => e.source === row2Node.id && e.target === child.id));
+            if (children.length > 0) {
+                let sumPos = 0;
+                children.forEach(child => {
+                    sumPos += isHorizontal ? child.position.y : child.position.x;
+                });
+                const centerPos = sumPos / children.length;
+                // Nudge the second row nodes left by 600 pixels as requested
+                const nudgedPos = centerPos - 600;
+
+                if (isHorizontal) {
+                    row2Node.position.y = nudgedPos;
+                } else {
+                    row2Node.position.x = nudgedPos;
+                }
+            }
+        });
+
+        // 2. Center root node perfectly between its immediate children (the second row)
+        if (secondRow.length > 0) {
+            let sumPos = 0;
+            secondRow.forEach(n => {
+                sumPos += isHorizontal ? n.position.y : n.position.x;
+            });
+            const centerPos = sumPos / secondRow.length;
+            if (isHorizontal) {
+                root.position.y = centerPos;
+            } else {
+                root.position.x = centerPos;
+            }
+        }
+    }
 
     return { nodes: layoutedNodes, edges };
 };
@@ -115,24 +204,78 @@ function OrgChartPageContent() {
     const { fitView } = useReactFlow();
 
     // Employees list holds the underlying raw dataset for easy CRUD
-    const [employees, setEmployees] = useState<IEmployee[]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('dmt_org_chart_employees');
-            if (saved) {
-                try {
-                    return JSON.parse(saved) as IEmployee[];
-                } catch (e) {
-                    console.error('Failed to parse org chart local storage', e);
+    const [employees, setEmployees] = useState<IEmployee[]>([]);
+    const [rolesList, setRolesList] = useState<Array<{ id: string | number; name: string }>>([]);
+    const [departmentsList, setDepartmentsList] = useState<Array<{ id: string | number; name: string }>>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+
+    const flattenHierarchy = (nodes: OrgChartUser[]): IEmployee[] => {
+        let flat: IEmployee[] = [];
+        nodes.forEach(node => {
+            flat.push({
+                id: String(node.id),
+                name: node.full_name,
+                role: node.role,
+                roleId: String(node.role_id),
+                email: node.email,
+                department: node.department,
+                parentId: node.parent_id ? String(node.parent_id) : '',
+            });
+            if (node.children && node.children.length > 0) {
+                flat = flat.concat(flattenHierarchy(node.children));
+            }
+        });
+        return flat;
+    };
+
+    const fetchOrgChart = useCallback(async () => {
+        setIsLoading(true);
+        setIsError(false);
+        try {
+            const [hierarchyRes, rolesRes] = await Promise.all([
+                orgChart.getHierarchy(),
+                orgChart.getRolesDropdown()
+            ]);
+
+            // Fetch departments separately as a non-blocking operation
+            orgChart.getDepartments()
+                .then((departmentsRes) => {
+                    if (departmentsRes) {
+                        const deptsData = (departmentsRes as any).data || departmentsRes;
+                        if (Array.isArray(deptsData)) {
+                            setDepartmentsList(deptsData.map((d: any) => ({ id: d.id, name: d.name })));
+                        }
+                    }
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch departments separately:', err);
+                });
+            if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
+                const flatData = flattenHierarchy(hierarchyRes.data);
+                setEmployees(flatData);
+            } else {
+                setEmployees([]);
+            }
+
+            if (rolesRes) {
+                const rolesData = (rolesRes as any).data || rolesRes;
+                if (Array.isArray(rolesData)) {
+                    setRolesList(rolesData.map((r: any) => ({ id: r.id, name: r.role_name || r.name })));
                 }
             }
+        } catch (error) {
+            console.error('Failed to fetch org chart', error);
+            toast.error('Failed to load organizational chart');
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
         }
-        return INITIAL_EMPLOYEES;
-    });
+    }, []);
 
-    // Save to local storage whenever employees dataset changes
     useEffect(() => {
-        localStorage.setItem('dmt_org_chart_employees', JSON.stringify(employees));
-    }, [employees]);
+        fetchOrgChart();
+    }, [fetchOrgChart]);
 
     // Graph state variables
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -194,26 +337,23 @@ function OrgChartPageContent() {
     }, [isManager]);
 
     // Handle delete employee node
-    const handleDeleteNode = useCallback((id: string) => {
+    const handleDeleteNode = useCallback(async (id: string) => {
         if (!isManager) {
             toast.error('Only Managers can delete employees.');
             return;
         }
 
-        if (confirm('Are you sure you want to delete this employee? This will reset reporting lines for their subordinates.')) {
-            // Delete employee and re-parent their direct reports to their own parent (skip a level) or set to none.
-            // Use the functional updater so the lookup is always based on the latest employees state.
-            setEmployees((prev) => {
-                const deletedEmp = prev.find((e) => e.id === id);
-                const newParentId = deletedEmp?.parentId ?? '';
-
-                return prev
-                    .filter((e) => e.id !== id)
-                    .map((e) => (e.parentId === id ? { ...e, parentId: newParentId } : e));
-            });
-            toast.success('Employee deleted and organization re-routed successfully.');
+        if (confirm('Are you sure you want to delete this employee?')) {
+            try {
+                await orgChart.deleteUser(id);
+                toast.success('Employee removed successfully.');
+                fetchOrgChart();
+            } catch (error) {
+                console.error('Failed to delete employee', error);
+                toast.error('Failed to delete employee.');
+            }
         }
-    }, [isManager]);
+    }, [isManager, fetchOrgChart]);
 
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
@@ -235,6 +375,8 @@ function OrgChartPageContent() {
                 position: fallbackPos,
                 targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
                 sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
+                width: 384,
+                height: 256,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -257,13 +399,13 @@ function OrgChartPageContent() {
                 source: emp.parentId,
                 target: emp.id,
                 type: 'smoothstep',
-                animated: true,
-                style: { stroke: '#94a3b8', strokeWidth: 2 },
+                animated: false,
+                style: { stroke: 'var(--color-primary)', strokeWidth: 2 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
                     width: 20,
                     height: 20,
-                    color: '#94a3b8'
+                    color: 'var(--color-primary)'
                 }
             }));
 
@@ -296,10 +438,10 @@ function OrgChartPageContent() {
     useEffect(() => {
         if (nodes.length === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.3, duration: 500 });
-        }, 50);
+            fitView({ padding: 0.3, duration: 600, minZoom: 0.5, maxZoom: 1 });
+        }, 150);
         return () => clearTimeout(timer);
-    }, [nodes.length, fitView]);
+    }, [nodes.length, fitView, layoutDirection]);
 
     // Layout arrangement reset trigger
     const handleAutoArrange = (dir: 'TB' | 'LR') => {
@@ -310,7 +452,7 @@ function OrgChartPageContent() {
 
 
     // Edge drawing/creation handler
-    const onConnect = useCallback((params: Connection) => {
+    const onConnect = useCallback(async (params: Connection) => {
         if (!isManager) {
             toast.error('Only Managers can draw reporting connections.');
             return;
@@ -319,37 +461,19 @@ function OrgChartPageContent() {
         const { source, target } = params;
         if (!source || !target || source === target) return;
 
-        // Prevent circular relationship loops (source cannot be reporting to target, directly or indirectly).
-        // Use the functional updater so the check always uses the latest employees state.
-        let circular = false;
-        setEmployees((prev) => {
-            const byId = new Map(prev.map((e) => [e.id, e] as const));
-
-            let currentId = source;
-            while (true) {
-                const current = byId.get(currentId);
-                if (!current) break;
-                if (current.parentId === target) {
-                    circular = true;
-                    return prev;
-                }
-                if (!current.parentId) break;
-                currentId = current.parentId;
-            }
-
-            return prev.map((emp) => (emp.id === target ? { ...emp, parentId: source } : emp));
-        });
-
-        if (circular) {
-            toast.error('Cannot establish reporting connection: this would create a circular reporting structure!');
-            return;
+        try {
+            await orgChart.updateUser(target, { parent: Number(source) });
+            toast.success('Reporting line updated successfully.');
+            fetchOrgChart();
+        } catch (error: any) {
+            console.error('Failed to update reporting line', error);
+            const msg = error.data?.message || 'Failed to update reporting line. It might create a circular dependency.';
+            toast.error(msg);
         }
-
-        toast.success('Reporting line updated successfully.');
-    }, [isManager]);
+    }, [isManager, fetchOrgChart]);
 
     // Modal Create / Save Changes
-    const handleSaveEmployee = (empData: {
+    const handleSaveEmployee = async (empData: {
         id?: string;
         name: string;
         role: string;
@@ -362,98 +486,59 @@ function OrgChartPageContent() {
             return;
         }
 
-        if (empData.id) {
-            // Editing existing
-            setEmployees(prev => prev.map(emp => 
-                emp.id === empData.id 
-                    ? { 
-                        ...emp, 
-                        name: empData.name, 
-                        role: empData.role, 
-                        email: empData.email,
-                        department: empData.department, 
-                        parentId: empData.parentId 
-                      } 
-                    : emp
-            ));
-            toast.success('Employee details updated successfully!');
-        } else {
-            // Creating new
-            // IDs must not assume numeric strings (parseInt → NaN can corrupt the sequence).
-            // Generate a unique, stable string id.
-            const newId =
-                typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-                    ? crypto.randomUUID()
-                    : `emp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-            const newEmp = {
-                id: newId,
-                name: empData.name,
-                role: empData.role,
-                email: empData.email,
-                department: empData.department,
-                parentId: empData.parentId
-            };
-            setEmployees(prev => [...prev, newEmp]);
-            toast.success('New employee successfully added to org-chart!');
+        try {
+            const nameParts = empData.name.trim().split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+
+            if (empData.id) {
+                await orgChart.updateUser(empData.id, {
+                    first_name: firstName,
+                    last_name: lastName,
+                    designation: Number(empData.role),
+                    department: empData.department,
+                    parent: empData.parentId ? Number(empData.parentId) : null,
+                });
+                toast.success('Employee details updated successfully!');
+            } else {
+                await orgChart.createOrUpdateUser({
+                    email: empData.email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    designation: Number(empData.role),
+                    department: empData.department,
+                    parent: empData.parentId ? Number(empData.parentId) : null,
+                });
+                toast.success('New employee successfully added to org-chart!');
+            }
+            fetchOrgChart();
+            setIsModalOpen(false);
+            setEditingEmployee(null);
+            setDefaultParentId('');
+        } catch (error: any) {
+            console.error('Failed to save employee', error);
+            const msg = error.data?.message || 'Failed to save employee details.';
+            toast.error(msg);
         }
-        setIsModalOpen(false);
-        setEditingEmployee(null);
-        setDefaultParentId('');
     };
 
     // Reset initial dataset
     const handleResetChart = () => {
-        if (!isManager) {
-            toast.error('Only Managers can reset the organizational chart.');
-            return;
-        }
-        if (confirm('Are you sure you want to reset the chart back to initial seed corporate structure? Your current changes will be overwritten.')) {
-            shouldAutoLayoutRef.current = true;
-            nodePositionsRef.current.clear();
-            setEmployees(INITIAL_EMPLOYEES);
-            toast.success('Chart reset successfully.');
-        }
+        shouldAutoLayoutRef.current = true;
+        nodePositionsRef.current.clear();
+        fetchOrgChart();
+        setTimeout(() => fitView({ padding: 0.3, duration: 600 }), 150);
+        toast.success('Chart layout reset successfully.');
     };
 
-    // Export current chart layout as PNG using html2canvas
-    const handleExportPNG = async () => {
-        if (!reactFlowWrapper.current) return;
-        const toastId = toast.loading('Generating high-res PNG export...');
 
-        try {
-            // Momentarily hide graph controllers/minimap overlay lines in Canvas if needed
-            const flowContainer = reactFlowWrapper.current.querySelector('.react-flow__viewport') as HTMLElement;
-            if (!flowContainer) {
-                toast.error('Failed to locate chart viewport', { id: toastId });
-                return;
-            }
-
-            // Perform html2canvas rendering
-            const canvas = await html2canvas(reactFlowWrapper.current, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#f9fafb',
-                logging: false,
-                scale: 2 // Make it higher resolution
-            });
-
-            const link = document.createElement('a');
-            link.download = `Org_Chart_${new Date().toISOString().split('T')[0]}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            toast.success('PNG exported successfully!', { id: toastId });
-        } catch (e) {
-            console.error('Export failed', e);
-            toast.error('Failed to export image', { id: toastId });
-        }
-    };
 
     return (
         <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-6">
             <Toaster position="top-center" reverseOrder={false} />
-            
+
             {/* Header section matching calendar page layout */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
                     {/* Go Back button */}
                     <button
@@ -468,93 +553,104 @@ function OrgChartPageContent() {
                         <div className="flex items-center gap-2">
                             <Network className="w-7 h-7 text-primary" strokeWidth={2.5} />
                             <h1 className="text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
-                                Company Org Chart
+                                Organization Chart
                             </h1>
                         </div>
-                        <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                            Explore, search, and manage the official corporate hierarchy and reporting connections.
-                        </p>
+                       
                     </div>
                 </div>
 
-                {/* Right: Permission Status & Reset button */}
-                <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
-                    {isManager ? (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.75rem] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <Shield className="w-4 h-4 text-emerald-600" />
-                            Manager Mode Active
-                        </div>
-                    ) : (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.75rem] font-black bg-blue-50 text-blue-700 border border-blue-200">
-                            <ShieldAlert className="w-4 h-4 text-blue-600" />
-                            Viewer Only Access
-                        </div>
-                    )}
+                {/* Float Settings / Controls Panel */}
+                <div className="shrink-0">
+                    <OrgChartControls
+                        currentDirection={layoutDirection}
+                        onAutoArrange={handleAutoArrange}
+                        onAddClick={handleAddClick}
 
-                    {isManager && (
-                        <button
-                            onClick={handleResetChart}
-                            className="p-2 rounded-xl hover:bg-muted text-gray-500 hover:text-gray-800 transition-colors border border-border bg-card shadow-sm flex items-center justify-center cursor-pointer"
-                            title="Reset seed data"
-                        >
-                            <RefreshCw className="w-4.5 h-4.5" />
-                        </button>
-                    )}
+                        isManager={isManager}
+                    />
                 </div>
             </div>
 
-            {/* Float Settings / Controls Panel */}
-            <OrgChartControls
-                currentDirection={layoutDirection}
-                onAutoArrange={handleAutoArrange}
-                onAddClick={handleAddClick}
-                onExportPNG={handleExportPNG}
-                isManager={isManager}
-            />
-
             {/* Core Canvas Wrapper Container */}
-            <div 
+            <div
                 ref={reactFlowWrapper}
                 className="w-full bg-card rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
                 style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
             >
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={handleNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.15 }}
-                    onInit={(instance: ReactFlowInstance) => {
-                        // onInit fires after React Flow has measured the container —
-                        // call fitView here so the CEO node is always centred.
-                        setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
-                    }}
-                    minZoom={0.1}
-                    maxZoom={1.5}
-                    connectOnClick={isManager}
-                    nodesConnectable={isManager}
-                    nodesDraggable={true}
-                >
-                    <Background color="#cbd5e1" gap={20} size={1.2} />
-                    <Controls showInteractive={false} className="!bg-white !border-gray-200 !shadow-md !rounded-xl overflow-hidden" />
-                    <MiniMap 
-                        nodeColor={(node) => {
-                            // Match mini-map node color to department
-                            const dept = (node.data?.department || '').toLowerCase();
-                            if (dept.includes('exec') || dept.includes('ceo')) return '#6366f1';
-                            if (dept.includes('eng') || dept.includes('cto') || dept.includes('tech') || dept.includes('dev') || dept.includes('qa') || dept.includes('ai')) return '#0d9488';
-                            if (dept.includes('hr')) return '#ec4899';
-                            if (dept.includes('sales')) return '#f59e0b';
-                            return '#a855f7';
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground font-medium">Loading organization chart...</p>
+                    </div>
+                ) : isError ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4 text-center px-4">
+                        <div className="bg-destructive/10 p-4 rounded-full">
+                            <ShieldAlert className="w-8 h-8 text-destructive" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-semibold text-foreground">Failed to Load Data</h3>
+                            <p className="text-muted-foreground text-sm max-w-sm">We couldn't retrieve the organizational chart. Please check your connection and try again.</p>
+                        </div>
+                        <button
+                            onClick={fetchOrgChart}
+                            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Retry
+                        </button>
+                    </div>
+                ) : employees.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full w-full space-y-6 text-center px-4 bg-muted/10">
+                        <div className="bg-primary/10 p-6 rounded-full">
+                            <Network className="w-10 h-10 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-[800] text-foreground tracking-tight">Empty Organization Chart</h3>
+                            <p className="text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
+                                Your organization chart is currently empty. Start by adding the very first employee to build out the hierarchy.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleAddClick}
+                            className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[0.925rem] font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer active:scale-95 shadow-md hover:shadow-lg"
+                        >
+                            <span>+ Create First Employee</span>
+                        </button>
+                    </div>
+                ) : (
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={handleNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.15 }}
+                        onInit={(instance: ReactFlowInstance) => {
+                            // onInit fires after React Flow has measured the container —
+                            // call fitView here so the CEO node is always centred.
+                            setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
                         }}
-                        nodeStrokeWidth={3}
-                        maskColor="rgba(241, 245, 249, 0.4)"
-                        className="!bg-white !border-gray-200 !shadow-md !rounded-xl !right-4 !bottom-4 overflow-hidden"
-                    />
-                </ReactFlow>
+                        minZoom={0.1}
+                        maxZoom={1.5}
+                        connectOnClick={isManager}
+                        nodesConnectable={isManager}
+                        nodesDraggable={true}
+                        zoomOnScroll={false}
+                        panOnScroll={true}
+                    >
+                        <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
+                        <MiniMap
+                            nodeColor={(node) => 'var(--color-primary)'}
+                            nodeStrokeWidth={3}
+                            maskColor="rgba(241, 245, 249, 0.4)"
+                            className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                            style={{ height: 90, width: 140 }}
+                        />
+                    </ReactFlow>
+                )}
             </div>
 
             {/* Node Edit / Add Modal */}
@@ -568,6 +664,8 @@ function OrgChartPageContent() {
                 onSave={handleSaveEmployee}
                 employeeData={editingEmployee}
                 employeesList={employees.map(e => ({ id: e.id, name: e.name, role: e.role }))}
+                rolesList={rolesList}
+                departmentsList={departmentsList}
                 defaultParentId={defaultParentId}
             />
         </main>

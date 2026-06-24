@@ -28,16 +28,16 @@ export const TaskReportCard: React.FC<TaskReportCardProps> = ({
     return (
         <div className="w-full space-y-4">
             {/* Title Header */}
-            <h2 className="text-[20px] font-bold text-[#111827] tracking-tight ml-1">
+            <h2 className="text-[1.25rem] font-bold text-[#111827] tracking-tight ml-1">
                 Task Report
             </h2>
 
             {/* Main Card Container */}
-            <div className="bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.05)] p-5 w-full max-w-full space-y-4">
+            <div className="bg-white rounded-[1.5rem] border border-gray-100 shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-5 w-full max-w-full space-y-4">
                 
                 {/* Header Section: Stats and Avatars */}
                 <div className="flex justify-between items-center px-1">
-                    <h3 className="text-[17px] font-bold text-[#111827]">
+                    <h3 className="text-[1.0625rem] font-bold text-[#111827]">
                         Task Done: <span className="text-[#FFAB40] ml-1">{completed} / {total}</span>
                     </h3>
 
@@ -58,12 +58,12 @@ export const TaskReportCard: React.FC<TaskReportCardProps> = ({
                 </div>
 
                 {/* Custom Progress Bar */}
-                <div className="relative h-[32px] w-full bg-[#FEF3E2] rounded-full overflow-hidden">
+                <div className="relative h-[2rem] w-full bg-[#FEF3E2] rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-[#FFAB40] rounded-full flex items-center justify-center transition-all duration-1000 ease-out shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]"
+                        className="h-full bg-[#FFAB40] rounded-full flex items-center justify-center transition-all duration-1000 ease-out shadow-[inset_0_0.125rem_0.25rem_rgba(0,0,0,0.05)]"
                         style={{ width: `${percentage}%` }}
                     >
-                        <span className="text-white font-[900] text-[15px] tracking-tight">
+                        <span className="text-white font-[900] text-[0.9375rem] tracking-tight">
                             {percentage}%
                         </span>
                     </div>
@@ -74,17 +74,17 @@ export const TaskReportCard: React.FC<TaskReportCardProps> = ({
 
                 {/* Action Footer */}
                 <div className="flex justify-between items-center px-1 pt-2 gap-4">
-                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[13.5px] group whitespace-nowrap">
+                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[0.84375rem] group whitespace-nowrap">
                         <Check size={16} className="text-gray-400 group-hover:text-[#FFAB40]" />
                         <span>Mark Complete</span>
                     </button>
                     
-                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[13.5px] group whitespace-nowrap">
+                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[0.84375rem] group whitespace-nowrap">
                         <UserPlus size={16} className="text-gray-400 group-hover:text-[#FFAB40]" />
                         <span>Delegate</span>
                     </button>
                     
-                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[13.5px] group whitespace-nowrap">
+                    <button className="flex items-center gap-1.5 text-[#4B5563] hover:text-[#FFAB40] transition-colors font-bold text-[0.84375rem] group whitespace-nowrap">
                         <Info size={16} className="text-gray-400 group-hover:text-[#FFAB40]" />
                         <span>Details</span>
                     </button>

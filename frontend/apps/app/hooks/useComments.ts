@@ -198,7 +198,7 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
 
   // Auto-fetch comments on initial mount if not in cache and enabled
   useEffect(() => {
-    if (options.enabled && !commentsCache[postId] && postId < 1e11) {
+    if (options.enabled && !commentsCache[postId] && postId > 0 && postId < 1e11) {
       fetchComments();
     }
   }, [postId, fetchComments, options.enabled]);

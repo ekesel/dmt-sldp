@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth } from '@dmt/api';
+import { auth, getFileUrl } from '@dmt/api';
 
 interface User {
     id: number;
@@ -17,6 +17,9 @@ interface User {
     tenant_name?: string;
     custom_title?: string;
     avatar_url?: string;
+    date_of_join?: string;
+    completed_tasks?: number;
+    total_tasks?: number;
 }
 
 interface AuthContextType {
@@ -46,6 +49,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setToken(storedToken);
                 try {
                     const userData = await auth.getProfile() as any;
+                    if (userData && userData.avatar_url) {
+                        userData.avatar_url = getFileUrl(userData.avatar_url);
+                    }
                     setUser(userData);
                     if (userData?.tenant_slug) {
                         localStorage.setItem('dmt-tenant', userData.tenant_slug);
@@ -75,6 +81,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setToken(response.access);
             if (response.user?.tenant_slug) {
                 localStorage.setItem('dmt-tenant', response.user.tenant_slug);
+            }
+            if (response.user && response.user.avatar_url) {
+                response.user.avatar_url = getFileUrl(response.user.avatar_url);
             }
             setUser(response.user);
         } catch (err: any) {

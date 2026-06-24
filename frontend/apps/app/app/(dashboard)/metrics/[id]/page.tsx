@@ -53,20 +53,20 @@ export default function DeveloperDetailsPage({
 
   const buildRows = () =>
     metrics.map((m: any) => ({
-      "Sprint Name":            m.sprint_name ?? "",
-      "Sprint End Date":        m.sprint_end_date ?? "",
-      "Story Points":           m.story_points_completed ?? 0,
-      "Items Completed":        m.items_completed ?? 0,
-      "Commits":                m.commits_count ?? 0,
-      "PRs Authored":           m.prs_authored ?? 0,
-      "PRs Merged":             m.prs_merged ?? 0,
-      "PRs Reviewed":           m.prs_reviewed ?? 0,
-      "Avg Review Time (hrs)":  m.avg_review_time_hours ?? "",
-      "Defects Attributed":     m.defects_attributed ?? 0,
-      "Coverage %":             m.coverage_avg_percent ?? "",
-      "DMT Compliance %":       m.dmt_compliance_rate ?? 0,
-      "AI Usage % (Custom)":    m.ai_usage_percent ?? 0,
-      "Objective AI % (PR)":    m.code_ai_usage_percent ?? 0,
+      "Sprint Name": m.sprint_name ?? "",
+      "Sprint End Date": m.sprint_end_date ?? "",
+      "Story Points": m.story_points_completed ?? 0,
+      "Items Completed": m.items_completed ?? 0,
+      "Commits": m.commits_count ?? 0,
+      "PRs Authored": m.prs_authored ?? 0,
+      "PRs Merged": m.prs_merged ?? 0,
+      "PRs Reviewed": m.prs_reviewed ?? 0,
+      "Avg Review Time (hrs)": m.avg_review_time_hours ?? "",
+      "Defects Attributed": m.defects_attributed ?? 0,
+      "Coverage %": m.coverage_avg_percent ?? "",
+      "DMT Compliance %": m.dmt_compliance_rate ?? 0,
+      "AI Usage % (Custom)": m.ai_usage_percent ?? 0,
+      "Objective AI % (PR)": m.code_ai_usage_percent ?? 0,
     }));
 
   const fileName = (ext: string) => {
@@ -220,7 +220,7 @@ export default function DeveloperDetailsPage({
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen((o) => !o)}
-                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[240px]"
+                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-none transition-all duration-300 w-full min-w-[240px]"
                   >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                       <Briefcase size={20} />
@@ -244,7 +244,7 @@ export default function DeveloperDetailsPage({
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-none overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         {[
                           { id: "all", name: "All Projects Combined" },
@@ -259,14 +259,14 @@ export default function DeveloperDetailsPage({
                                 setDropdownOpen(false);
                               }}
                               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
-                                  ? "bg-primary/15 text-primary-foreground"
-                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                ? "bg-primary/15 text-primary-foreground"
+                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                                 }`}
                             >
                               <div
                                 className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive
-                                    ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
-                                    : "bg-muted group-hover:bg-muted-foreground"
+                                  ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
+                                  : "bg-muted group-hover:bg-muted-foreground"
                                   }`}
                               />
                               <span className="font-semibold text-sm truncate">
@@ -309,9 +309,9 @@ export default function DeveloperDetailsPage({
         </header>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-6 bg-card border-border hover:border-primary/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/10 transition-colors">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <Card className="p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/5 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -343,8 +343,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-blue-400/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-blue-400/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/5 transition-colors">
               <Sparkles size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -377,8 +377,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-warning/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-warning/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/5 transition-colors">
               <ShieldCheck size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -409,8 +409,8 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-destructive/30 transition-all duration-500 group overflow-hidden relative">
-            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/10 transition-colors">
+          <Card className="p-6 bg-card border-border hover:border-destructive/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/5 transition-colors">
               <AlertCircle size={120} strokeWidth={3} />
             </div>
             <div className="flex items-center gap-2 mb-6 relative z-10">
@@ -438,6 +438,39 @@ export default function DeveloperDetailsPage({
                 {selectedProjectId === "all"
                   ? "Bugs across active sprints"
                   : `Bugs in ${comparison?.sprint_name || "current sprint"}`}
+              </p>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-card border-border hover:border-emerald-500/10 transition-all duration-500 group overflow-hidden relative">
+            <div className="absolute -right-4 -top-4 text-emerald-500/5 group-hover:text-emerald-500/5 transition-colors">
+              <Briefcase size={120} strokeWidth={3} />
+            </div>
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="flex items-center gap-3 text-emerald-500">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                  <Briefcase size={20} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Workload
+                </span>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleHelpClick('workload'); }}
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                title="Learn more about this metric"
+              >
+                <HelpCircle size={16} />
+              </button>
+            </div>
+            <div className="relative">
+              <div className="text-5xl font-black">
+                {latestMetrics.workload?.completed || 0}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+                {selectedProjectId === "all"
+                  ? "Items across active sprints"
+                  : `Items completed  ${comparison?.sprint_name || "current sprint"}`}
               </p>
             </div>
           </Card>
@@ -521,27 +554,27 @@ export default function DeveloperDetailsPage({
             </div>
             <Card className="bg-card border-border overflow-hidden rounded-3xl">
               <table className="w-full text-left">
-                <thead className="bg-muted text-[10px] uppercase font-black tracking-widest text-muted-foreground">
+                <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
                   <tr>
-                    <th className="px-8 py-6">Sprint</th>
-                    <th className="px-8 py-6">Points</th>
-                    <th className="px-8 py-6">AI Usage (Obj)</th>
-                    <th className="px-8 py-6">PRs Merged</th>
-                    <th className="px-8 py-6">Reviews</th>
-                    <th className="px-8 py-6 text-right">DMT Compliance</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
+                    <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border font-medium">
                   {metrics.map((m, idx) => (
                     <tr
                       key={idx}
-                      className="hover:bg-accent transition-all group"
+                      className="hover:bg-gray-100 transition-all group"
                     >
-                      <td className="px-8 py-6 font-bold group-hover:text-primary transition-colors">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                         {m.sprint_name}
                       </td>
-                      <td className="px-8 py-6">{m.story_points_completed}</td>
-                      <td className="px-8 py-6">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">
                         <span className="text-blue-400 font-bold">
                           {m.code_ai_usage_percent?.toFixed(1) || 0}%
                         </span>
@@ -549,13 +582,13 @@ export default function DeveloperDetailsPage({
                           ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
                         </span>
                       </td>
-                      <td className="px-8 py-6">{m.prs_merged}</td>
-                      <td className="px-8 py-6 text-muted-foreground">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
                         {m.prs_reviewed || 0}
                       </td>
-                      <td className="px-8 py-6 text-right font-black text-primary">
+                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                          <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
                             <div
                               className="h-full bg-primary"
                               style={{ width: `${m.dmt_compliance_rate}%` }}
@@ -581,7 +614,7 @@ export default function DeveloperDetailsPage({
                 </span>
               )}
             </h2>
-            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-2xl relative overflow-hidden">
+            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-none relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px]" />
 
               <div className="space-y-4">
@@ -589,11 +622,11 @@ export default function DeveloperDetailsPage({
                   <div className="flex items-center gap-2">
                     <span>Relative Velocity</span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
-                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                        title="Learn more about this metric"
+                      onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      title="Learn more about this metric"
                     >
-                        <HelpCircle size={14} />
+                      <HelpCircle size={14} />
                     </button>
                   </div>
                   <span className="text-foreground">
@@ -619,11 +652,11 @@ export default function DeveloperDetailsPage({
                   <div className="flex items-center gap-2">
                     <span>DMT Standards</span>
                     <button
-                        onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
-                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                        title="Learn more about this metric"
+                      onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      title="Learn more about this metric"
                     >
-                        <HelpCircle size={14} />
+                      <HelpCircle size={14} />
                     </button>
                   </div>
                   <span className="text-foreground">
@@ -691,6 +724,43 @@ export default function DeveloperDetailsPage({
                 ))}
               </div>
             </Card>
+
+            {latestMetrics.workload && (
+              <Card className="p-8 bg-blue-600/10 border-blue-500/20 rounded-3xl">
+                <h3 className="text-lg font-black flex items-center gap-2 mb-4">
+                  <Briefcase className="text-blue-400" size={20} />
+                  Workload
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { label: "Total", value: latestMetrics.workload.total ?? 0 },
+                    { label: "Completed", value: latestMetrics.workload.completed ?? 0 },
+                    { label: "In Progress", value: latestMetrics.workload.in_progress ?? 0 },
+                    { label: "To Do", value: latestMetrics.workload.todo ?? 0 },
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-muted-foreground font-medium">
+                        {label}
+                      </span>
+                      <span className="text-foreground font-black">{value}</span>
+                    </div>
+                  ))}
+                  {latestMetrics.workload.status && (
+                    <div className="flex items-center justify-between text-sm pt-3 mt-3 border-t border-border/50">
+                      <span className="text-muted-foreground font-medium">
+                        Status
+                      </span>
+                      <span className="text-foreground font-black">
+                        {latestMetrics.workload.status}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from "@dmt/ui";
 import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2, HelpCircle, Clock } from "lucide-react";
 import { compliance } from '@dmt/api';
@@ -46,12 +47,18 @@ export default function CompliancePage() {
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
     const [fixedLaterLoading, setFixedLaterLoading] = useState(true);
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
-
-    const [activeFilter, setActiveFilter] = useState<'critical' | 'warning' | null>(null);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<'critical' | 'warning' | null>(null);
+
+    const searchParams = useSearchParams();
+    const workItemId = searchParams?.get('work_item_id');
+    const paramProjectId = searchParams?.get('project_id');
+    const paramSprintId = searchParams?.get('sprint_id');
+    const nTitle = searchParams?.get('n_title') || '';
+    const nMessage = searchParams?.get('n_message') || '';
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(paramProjectId ? Number(paramProjectId) : null);
+    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(paramSprintId ? Number(paramSprintId) : null);
 
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
@@ -65,31 +72,131 @@ export default function CompliancePage() {
         setIsHelpOpen(false);
     }, []);
 
-    const fetchData = useCallback((projectId: number | null, sprintId: number | null) => {
+    const requestCounter = React.useRef(0);
+
+    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null) => {
+        const currentRequestId = ++requestCounter.current;
+        
         setLoading(true);
         setSummaryLoading(true);
         setFixedLaterLoading(true);
 
-        compliance.listFlags(projectId, sprintId)
-            .then(data => setFlags(data))
+        // Always use workItemId if provided in URL to ensure the specific flag is fetched
+        const effectiveWorkItemId = workItemId;
+        
+        compliance.listFlags(projectId, sprintId, effectiveWorkItemId)
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setFlags(data);
+            })
             .catch(err => console.error("Failed to fetch compliance flags:", err))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setLoading(false);
+            });
 
         compliance.getSummary(projectId, sprintId)
-            .then(data => setSummary(data))
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setSummary(data);
+            })
             .catch(err => console.error("Failed to fetch compliance summary:", err))
-            .finally(() => setSummaryLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setSummaryLoading(false);
+            });
 
         compliance.listFixedLater(projectId, sprintId)
-            .then(data => setFixedLaterItems(data))
+            .then(data => {
+                if (requestCounter.current === currentRequestId) setFixedLaterItems(data);
+            })
             .catch(err => console.error("Failed to fetch fixed-later items:", err))
-            .finally(() => setFixedLaterLoading(false));
+            .finally(() => {
+                if (requestCounter.current === currentRequestId) setFixedLaterLoading(false);
+            });
     }, []);
 
     // Refetch whenever project OR sprint changes
     useEffect(() => {
-        fetchData(selectedProjectId, selectedSprintId);
-    }, [selectedProjectId, selectedSprintId, fetchData]);
+        fetchData(selectedProjectId, selectedSprintId, workItemId);
+    }, [selectedProjectId, selectedSprintId, workItemId, fetchData]);
+
+    useEffect(() => {
+        setSelectedProjectId(paramProjectId ? Number(paramProjectId) : null);
+        setSelectedSprintId(paramSprintId ? Number(paramSprintId) : null);
+        if (workItemId) {
+            setActiveFilter(null);
+        }
+    }, [workItemId, paramProjectId, paramSprintId]);
+
+    // Scroll to specific work item if provided in URL
+    useEffect(() => {
+        let scrollTimer: number | null = null;
+        let classRemovalTimer: number | null = null;
+        let retryCount = 0;
+
+        const attemptScroll = () => {
+            if (loading || fixedLaterLoading) return;
+            
+            // First try strict match by workItemId
+            let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId) || fixedLaterItems.find(f => f.work_item_id?.toString() === workItemId);
+            
+            // If strict match fails, try matching by notification title or message (case-insensitive and robust)
+            if (!targetFlag && (nTitle || nMessage)) {
+                const sanitize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const sNTitle = sanitize(nTitle);
+                const sNMessage = sanitize(nMessage);
+                
+                const matchFlag = (f: ComplianceFlag) => {
+                    const sTitle = sanitize(f.work_item_title);
+                    return sTitle.length > 3 && (sNTitle.includes(sTitle) || sNMessage.includes(sTitle));
+                };
+                
+                targetFlag = flags.find(matchFlag) || fixedLaterItems.find(matchFlag);
+            }
+
+            // Also try to find by extracting any numbers from the notification title
+            if (!targetFlag && nTitle) {
+                const numbersInTitle = nTitle.match(/\d+/g);
+                if (numbersInTitle) {
+                    const extractedId = numbersInTitle[0];
+                    targetFlag = flags.find(f => f.work_item_title.includes(extractedId)) || fixedLaterItems.find(f => f.work_item_title.includes(extractedId));
+                }
+            }
+
+            const searchId = targetFlag ? targetFlag.work_item_id : workItemId;
+            let element = document.getElementById(`work-item-${searchId}`);
+            if (!element) {
+                // Try finding by prefix
+                element = document.querySelector(`[id^="work-item-${searchId}"]`) as HTMLElement;
+            }
+            if (!element) {
+                // Try finding anywhere in id
+                element = document.querySelector(`[id*="${searchId}"]`) as HTMLElement;
+            }
+
+            if (element) {
+                console.log(`[Compliance] Element found for ${searchId}, scrolling...`);
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]', 'transition-all', 'duration-500');
+                
+                classRemovalTimer = window.setTimeout(() => {
+                    if (element) {
+                        element.classList.remove('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]');
+                    }
+                }, 4000);
+            } else if (retryCount < 6) { // Retry up to 6 times (3 seconds)
+                retryCount++;
+                console.log(`[Compliance] Element not found for ${searchId}, retrying (${retryCount}/6)...`);
+                scrollTimer = window.setTimeout(attemptScroll, 500);
+            }
+        };
+
+        if (workItemId && (!loading && !fixedLaterLoading)) {
+            scrollTimer = window.setTimeout(attemptScroll, 500);
+        }
+
+        return () => {
+            if (scrollTimer) window.clearTimeout(scrollTimer);
+            if (classRemovalTimer) window.clearTimeout(classRemovalTimer);
+        };
+    }, [loading, fixedLaterLoading, flags, fixedLaterItems, workItemId, nTitle, nMessage]);
 
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
@@ -143,6 +250,7 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             selectedSprintId={selectedSprintId}
                             onSelect={setSelectedSprintId}
+                            autoSelectLatest={!workItemId && !paramSprintId}
                         />
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
@@ -187,70 +295,68 @@ export default function CompliancePage() {
                         onClick={() => toggleFilter('critical')}
                         className="cursor-pointer select-none"
                     >
-                    <Card className={`p-6 bg-card transition-all duration-300 group ${
-                        activeFilter === 'critical'
-                            ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
-                    }`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
-                                <AlertCircle size={20} />
+                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
+                                ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            }`}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                                    <AlertCircle size={20} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        title="Learn more about this metric"
+                                    >
+                                        <HelpCircle size={16} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                                    title="Learn more about this metric"
-                                >
-                                    <HelpCircle size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-destructive">
-                                {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
-                            </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
-                            {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
-                        </p>
-                    </Card>
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-3xl font-black text-destructive">
+                                    {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
+                                </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                                {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
+                            </p>
+                        </Card>
                     </div>
 
                     <div
                         onClick={() => toggleFilter('warning')}
                         className="cursor-pointer select-none"
                     >
-                    <Card className={`p-6 bg-card transition-all duration-300 group ${
-                        activeFilter === 'warning'
-                            ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
-                    }`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
-                                <Activity size={20} />
+                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'warning'
+                                ? 'border-warning ring-2 ring-warning/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            }`}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
+                                    <Activity size={20} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        title="Learn more about this metric"
+                                    >
+                                        <HelpCircle size={16} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
-                                    title="Learn more about this metric"
-                                >
-                                    <HelpCircle size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-warning">
-                                {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
-                            </div>
-                        )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
-                            {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
-                        </p>
-                    </Card>
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-3xl font-black text-warning">
+                                    {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
+                                </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                                {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
+                            </p>
+                        </Card>
                     </div>
 
                     <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
@@ -287,11 +393,10 @@ export default function CompliancePage() {
                             <Activity size={20} className="text-primary" />
                             Active Violations
                             {activeFilter && (
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                                    activeFilter === 'critical'
+                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${activeFilter === 'critical'
                                         ? 'bg-destructive/10 text-destructive border-destructive/30'
                                         : 'bg-warning/10 text-warning border-warning/30'
-                                }`}>
+                                    }`}>
                                     {activeFilter === 'critical' ? 'Critical only' : 'Warnings only'}
                                 </span>
                             )}
@@ -337,7 +442,7 @@ export default function CompliancePage() {
                                 </div>
                             );
                             return visibleFlags.map((flag) => (
-                                <Card key={flag.id} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">
                                             <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
@@ -407,7 +512,7 @@ export default function CompliancePage() {
                             </div>
                         ) : (
                             fixedLaterItems.map((item) => (
-                                <Card key={item.id} className="p-5 bg-card border-emerald-500/20 hover:bg-accent/30 transition-all group rounded-2xl">
+                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-emerald-500/20 hover:bg-accent/30 transition-all group rounded-2xl">
                                     <div className="flex flex-wrap items-center gap-3 mb-3">
                                         <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                                             Fixed Later

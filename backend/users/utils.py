@@ -2,6 +2,8 @@ import pandas as pd
 import logging
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from data.models import WorkItem
+
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -91,3 +93,29 @@ def import_users_from_excel(file_obj, tenant=None):
             logger.error(e)
 
     return {"success": True, "stats": stats}
+
+
+
+
+def get_user_sprint_task_summary(user):
+    base_qs = WorkItem.objects.filter(
+        resolved_assignee=user,
+        sprint__status='active',
+    )
+
+    # done tasks in active sprint
+    total_done_tasks = base_qs.filter(
+        status_category='done',
+    ).count()
+
+    # active (not done) tasks in active sprint
+    total_active_tasks = base_qs.exclude(
+        status_category='done'
+    ).count()
+
+    logger.info(f"total_done_tasks: {total_done_tasks}")
+    logger.info(f"total_active_tasks: {total_active_tasks}")
+    return {
+        "total_active_tasks": total_active_tasks,
+        "total_done_tasks": total_done_tasks,
+    }

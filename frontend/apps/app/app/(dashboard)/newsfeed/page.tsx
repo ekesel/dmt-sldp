@@ -4,18 +4,43 @@ import React, { useState } from 'react';
 import PostCard from '../../../components/newsfeedUI/PostCard';
 import PostModal from '../../../components/newsfeedUI/PostModal';
 import CreatePostButton from '../../../components/newsfeedUI/CreatePostButton';
-import { useNewsfeedData, Post } from '../../../hooks/useNewsfeedData';
+import { useNewsfeedQuery } from '../../../hooks/useNewsfeedQuery';
+import { useCreatePostMutation, useUpdatePostMutation, useDeletePostMutation, useUploadImageMutation } from '../../../hooks/useNewsfeedMutations';
+import { Post } from '../../../types/newsfeed';
 import { useAuth } from '../../../context/AuthContext';
+import { useSearchParams } from 'next/navigation';
 
 const NewsfeedPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPost, setEditingPost] = useState<Post | null>(null);
     const { user } = useAuth();
-    const { posts, loading, currentUser, createPost, updatePost, deletePost, uploadImage, loadMorePosts, hasNextPage } = useNewsfeedData();
+    
+    const searchParams = useSearchParams();
+    const postIdStr = searchParams?.get("post_id");
+    const parsedPostId = postIdStr ? parseInt(postIdStr, 10) : null;
+    const targetPostId = Number.isNaN(parsedPostId) ? null : parsedPostId;
+
+    const { posts, loading, loadMorePosts, hasNextPage } = useNewsfeedQuery(targetPostId);
+    const { mutateAsync: createPostMutation } = useCreatePostMutation();
+    const { mutateAsync: updatePostMutation } = useUpdatePostMutation();
+    const { mutateAsync: deletePostMutation } = useDeletePostMutation();
+    const { mutateAsync: uploadImage } = useUploadImageMutation();
+
+    const createPost = async (title: string, content: string, category: string, imageId?: string | null) => {
+        await createPostMutation({ title, content, category, imageId: imageId || undefined });
+    };
+
+    const updatePost = async (id: number, title?: string, content?: string, category?: string, imageId?: string | null) => {
+        await updatePostMutation({ id, title, content, category, imageId });
+    };
+
+    const deletePost = async (id: number) => {
+        await deletePostMutation(id);
+    };
 
     // Role-based access control check
 
-    const isManager = user?.is_manager || user?.role?.toLowerCase() === "manager";
+    const isManager = user?.is_manager;
 
 
     const handleEdit = (post: Post) => {
@@ -36,7 +61,7 @@ const NewsfeedPage = () => {
         <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
             <main className="flex justify-center max-w-screen-xl mx-auto py-10 px-4">
                 {/* Main Feed Content - Centered and focused */}
-                <div className="w-full max-w-[680px]">
+                <div className="w-full max-w-[850px]">
                     <div className="flex items-center justify-between mb-10">
                         <h1 className="text-3xl font-bold tracking-tight">Newsfeed</h1>
 
@@ -82,7 +107,7 @@ const NewsfeedPage = () => {
             <PostModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                userProfile={currentUser}
+                userProfile={user}
                 editingPost={editingPost}
                 createPost={createPost}
                 updatePost={updatePost}

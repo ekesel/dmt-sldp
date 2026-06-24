@@ -13,8 +13,8 @@ export const getMediaUrl = (imagePath?: string | null): string => {
 
   // Handle absolute URLs (http, https, data:, blob:)
   if (
-    imagePath.startsWith("http") || 
-    imagePath.startsWith("data:") || 
+    imagePath.startsWith("http") ||
+    imagePath.startsWith("data:") ||
     imagePath.startsWith("blob:") ||
     imagePath.startsWith("//")
   ) {
@@ -33,24 +33,24 @@ export const getMediaUrl = (imagePath?: string | null): string => {
     // 1. Try to get tenant from hostname (first part)
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
-    
+
     const devDomains = (process.env.NEXT_PUBLIC_DEV_DOMAINS || "localhost,127.0.0.1").split(',');
     const isLocal = devDomains.includes(parts[0]);
-    
+
     let tenant = null;
-    
+
     if (!isLocal && parts.length > 2) {
       tenant = parts[0];
     } else {
       // 2. Fallback to localStorage for localhost/dev
       tenant = localStorage.getItem('dmt-tenant');
     }
-    
+
     if (tenant) {
       url = url.replace('api.elevate.samta.ai', `${tenant}.elevate.samta.ai`);
     } else {
-       // Optional: fallback to a default if absolutely no tenant info is found
-       // For now, let's just keep it as is if no tenant is detected
+      // Optional: fallback to a default if absolutely no tenant info is found
+      // For now, let's just keep it as is if no tenant is detected
     }
   }
 

@@ -12,7 +12,9 @@
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces"
   },
-  "dependencies": {},
+  "dependencies": {
+    "react-easy-crop": "^5.5.7"
+  },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",

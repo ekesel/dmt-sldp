@@ -139,97 +139,112 @@ function buildQuery(params: Record<string, string | number | null | undefined>):
 }
 
 export const getFileUrl = (path: string) => {
-    if (!path) return '#';
-    
-    let resultUrl = path;
-    
-    if (!path.startsWith('http://') && !path.startsWith('https://')) {
-        let apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.elevate.samta.ai/api/';
-        
-        try {
-            const urlObj = new URL(apiBase);
-            
-            if (typeof window !== 'undefined') {
-                const hostname = window.location.hostname;
-                const currentParts = hostname.split('.');
-                const currentSubdomain = currentParts[0]; // e.g. "samta"
-                
-                // If it's a multi-tenant URL on the deployed server (e.g. *.elevate.samta.ai)
-                if (urlObj.host.includes('elevate.samta.ai')) {
-                    const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
-                    if (isUrlObjLocal) {
-                        const port = urlObj.port || '8000';
-                        resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
-                    } else {
-                        const origin = urlObj.origin || window.location.origin;
-                        if (!origin && currentSubdomain) {
-                            resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                        } else {
-                            resultUrl = `${origin}${path}`;
-                        }
-                    }
-                } else {
-                    // Local development
-                    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
-                    if (isLocal) {
-                        if (urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1')) {
-                            const backendPort = urlObj.port || '8000';
-                            const baseOrigin = urlObj.origin || window.location.origin;
-                            const finalHost = urlObj.hostname || hostname;
-                            const finalProtocol = urlObj.protocol || window.location.protocol;
-                            resultUrl = `${finalProtocol}//${finalHost}:${backendPort}${path}`;
-                        } else {
-                            // Hybrid: local frontend connected to deployed backend
-                            const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
-                            if (isUrlObjLocal) {
-                                const port = urlObj.port || '8000';
-                                resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
-                            } else {
-                                const origin = urlObj.origin || window.location.origin;
-                                if (!origin && currentSubdomain) {
-                                    resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
-                                } else {
-                                    resultUrl = `${origin}${path}`;
-                                }
-                            }
-                        }
-                    } else {
-                        // Fallback to active window origin
-                        const cleanPort = window.location.port ? `:${window.location.port}` : '';
-                        resultUrl = `${window.location.protocol}//${hostname}${cleanPort}${path}`;
-                    }
-                }
-            } else {
-                const cleanHost = urlObj.host;
-                resultUrl = `${urlObj.protocol}//${cleanHost}${path}`;
-            }
-        } catch (e) {
-            resultUrl = path;
-        }
+  if (!path) return '#';
+
+  let resultUrl = path;
+
+  if (resultUrl.startsWith('http://') || resultUrl.startsWith('https://')) {
+    try {
+      const urlObj = new URL(resultUrl);
+      if (
+        urlObj.host.includes('backend:8000') ||
+        urlObj.host.includes('localhost:8000') ||
+        urlObj.host.includes('127.0.0.1:8000')
+      ) {
+        resultUrl = urlObj.pathname + urlObj.search + urlObj.hash;
+      }
+    } catch (e) {
+      // Ignore parsing errors
     }
-    
-    // --- Domain Swapping Logic ---
-    // If the constructed or input URL includes api.elevate.samta.ai, swap it with the correct tenant domain
-    if (typeof window !== 'undefined' && resultUrl.includes('api.elevate.samta.ai')) {
+  }
+
+  if (!resultUrl.startsWith('http://') && !resultUrl.startsWith('https://')) {
+    let apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api.elevate.samta.ai/api/';
+
+    try {
+      const urlObj = new URL(apiBase);
+
+      if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        const parts = hostname.split('.');
-        
-        const devDomains = (process.env.NEXT_PUBLIC_DEV_DOMAINS || "localhost,127.0.0.1").split(',');
-        const isLocal = devDomains.includes(parts[0]);
-        
-        let tenant = null;
-        if (!isLocal && parts.length > 2) {
-            tenant = parts[0];
+        const currentParts = hostname.split('.');
+        const currentSubdomain = currentParts[0]; // e.g. "samta"
+
+        // If it's a multi-tenant URL on the deployed server (e.g. *.elevate.samta.ai)
+        if (urlObj.host.includes('elevate.samta.ai')) {
+          const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
+          if (isUrlObjLocal) {
+            const port = urlObj.port || '8000';
+            resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
+          } else {
+            const origin = urlObj.origin || window.location.origin;
+            if (!origin && currentSubdomain) {
+              resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
+            } else {
+              resultUrl = `${origin}${path}`;
+            }
+          }
         } else {
-            tenant = localStorage.getItem('dmt-tenant');
+          // Local development
+          const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+          if (isLocal) {
+            if (urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1')) {
+              const backendPort = urlObj.port || '8000';
+              const baseOrigin = urlObj.origin || window.location.origin;
+              const finalHost = urlObj.hostname || hostname;
+              const finalProtocol = urlObj.protocol || window.location.protocol;
+              resultUrl = `${finalProtocol}//${finalHost}:${backendPort}${path}`;
+            } else {
+              // Hybrid: local frontend connected to deployed backend
+              const isUrlObjLocal = urlObj.host.includes('localhost') || urlObj.host.includes('127.0.0.1');
+              if (isUrlObjLocal) {
+                const port = urlObj.port || '8000';
+                resultUrl = `${urlObj.protocol}//${urlObj.hostname}:${port}${path}`;
+              } else {
+                const origin = urlObj.origin || window.location.origin;
+                if (!origin && currentSubdomain) {
+                  resultUrl = `https://${currentSubdomain}.elevate.samta.ai${path}`;
+                } else {
+                  resultUrl = `${origin}${path}`;
+                }
+              }
+            }
+          } else {
+            // Fallback to active window origin
+            const cleanPort = window.location.port ? `:${window.location.port}` : '';
+            resultUrl = `${window.location.protocol}//${hostname}${cleanPort}${path}`;
+          }
         }
-        
-        if (tenant) {
-            resultUrl = resultUrl.replace('api.elevate.samta.ai', `${tenant}.elevate.samta.ai`);
-        }
+      } else {
+        const cleanHost = urlObj.host;
+        resultUrl = `${urlObj.protocol}//${cleanHost}${path}`;
+      }
+    } catch (e) {
+      resultUrl = path;
     }
-    
-    return resultUrl;
+  }
+
+  // --- Domain Swapping Logic ---
+  // If the constructed or input URL includes api.elevate.samta.ai, swap it with the correct tenant domain
+  if (typeof window !== 'undefined' && resultUrl.includes('api.elevate.samta.ai')) {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+
+    const devDomains = (process.env.NEXT_PUBLIC_DEV_DOMAINS || "localhost,127.0.0.1").split(',');
+    const isLocal = devDomains.includes(parts[0]);
+
+    let tenant = null;
+    if (!isLocal && parts.length > 2) {
+      tenant = parts[0];
+    } else {
+      tenant = localStorage.getItem('dmt-tenant');
+    }
+
+    if (tenant) {
+      resultUrl = resultUrl.replace('api.elevate.samta.ai', `${tenant}.elevate.samta.ai`);
+    }
+  }
+
+  return resultUrl;
 };
 
 function handleApiError(error: unknown): never {
@@ -243,9 +258,27 @@ function handleApiError(error: unknown): never {
       axiosErr.message ||
       'An unexpected API error occurred';
     throw new ApiClientError(message, status, data);
-  }
+}
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
+
+export const getUploadErrorMessage = (err: unknown, defaultMessage: string = 'An unexpected error occurred.'): string => {
+  if (err && typeof err === 'object') {
+    const errorObj = err as { status?: number; message?: string };
+    if (
+      errorObj.status === 413 ||
+      errorObj.message?.includes('413') ||
+      errorObj.message?.toLowerCase().includes('too large') ||
+      errorObj.message === 'Network Error'
+    ) {
+      return 'Document size is too large. Please upload a smaller size document.';
+    }
+    if (errorObj.message && errorObj.message !== 'Unknown API error') {
+      return errorObj.message;
+    }
+  }
+  return defaultMessage;
+};
 
 /* =========================
    Identity Mapping Types
@@ -482,6 +515,15 @@ export interface DashboardForecast {
 
 export type InsightFeedbackStatus = 'accepted' | 'rejected';
 
+export interface StarPerformerData { id?: number;[key: string]: unknown; }
+export interface PolicyData { id: number; policy_file: string;[key: string]: unknown; }
+export interface HolidayCalendarData { id: number; holiday_calendar_file: string;[key: string]: unknown; }
+export interface EmployeeEngagementData { id: number; employee_engagement_calendar_file: string;[key: string]: unknown; }
+export interface LearningAndDevelopmentData { id: number; learning_and_development_file: string;[key: string]: unknown; }
+export interface OnboardingData { id: number; onboarding_file: string; title?: string;[key: string]: unknown; }
+export interface EventData { id?: number;[key: string]: unknown; }
+export interface HolidayData { id?: number;[key: string]: unknown; }
+
 export const dashboard = {
   getMetrics: () => get<DashboardMetrics>('/analytics/metrics/'),
   getForecast: (integrationId: string, remainingItems = 10) =>
@@ -499,34 +541,37 @@ export const dashboard = {
   getSprintComparison: (sprintA: string, sprintB: string, projectId?: string | number | null, developerId?: string | null) =>
     get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 
-  
-  getStarPerformer: () => get<any>('/homepage/star-performer/'),
-  getPolicies: () => get<any[]>('/homepage/policy/'),
-  uploadPolicy: (formData: FormData) => post<any, FormData>('/homepage/policy/', formData),
-  updatePolicy: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/policy/${id}/`, formData),
-  deletePolicy: (id: number) => del<any>(`/homepage/policy/${id}/`),
-  
-  getHolidayCalendars: () => get<any[]>('/homepage/holiday-calendar/'),
-  uploadHolidayCalendar: (formData: FormData) => post<any, FormData>('/homepage/holiday-calendar/', formData),
-  updateHolidayCalendar: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/holiday-calendar/${id}/`, formData),
-  deleteHolidayCalendar: (id: number) => del<any>(`/homepage/holiday-calendar/${id}/`),
 
-  getEmployeeEngagements: () => get<any[]>('/homepage/employee-engagement/'),
-  uploadEmployeeEngagement: (formData: FormData) => post<any, FormData>('/homepage/employee-engagement/', formData),
-  updateEmployeeEngagement: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/employee-engagement/${id}/`, formData),
-  deleteEmployeeEngagement: (id: number) => del<any>(`/homepage/employee-engagement/${id}/`),
+  getStarPerformer: () => get<StarPerformerData>('/homepage/star-performer/'),
+  getPolicies: () => get<PolicyData[]>('/homepage/policy/'),
+  uploadPolicy: (formData: FormData) => post<PolicyData, FormData>('/homepage/policy/', formData),
+  updatePolicy: (id: number, formData: FormData) => patch<PolicyData, FormData>(`/homepage/policy/${id}/`, formData),
+  deletePolicy: (id: number) => del<{ success?: boolean }>(`/homepage/policy/${id}/`),
 
-  getLearningAndDevelopment: () => get<any[]>('/homepage/learning-and-development/'),
-  uploadLearningAndDevelopment: (formData: FormData) => post<any, FormData>('/homepage/learning-and-development/', formData),
-  updateLearningAndDevelopment: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/learning-and-development/${id}/`, formData),
-  deleteLearningAndDevelopment: (id: number) => del<any>(`/homepage/learning-and-development/${id}/`),
+  getHolidayCalendars: () => get<HolidayCalendarData[]>('/homepage/holiday-calendar/'),
+  uploadHolidayCalendar: (formData: FormData) => post<HolidayCalendarData, FormData>('/homepage/holiday-calendar/', formData),
+  updateHolidayCalendar: (id: number, formData: FormData) => patch<HolidayCalendarData, FormData>(`/homepage/holiday-calendar/${id}/`, formData),
+  deleteHolidayCalendar: (id: number) => del<{ success?: boolean }>(`/homepage/holiday-calendar/${id}/`),
+
+  getEmployeeEngagements: () => get<EmployeeEngagementData[]>('/homepage/employee-engagement/'),
+  uploadEmployeeEngagement: (formData: FormData) => post<EmployeeEngagementData, FormData>('/homepage/employee-engagement/', formData),
+  updateEmployeeEngagement: (id: number, formData: FormData) => patch<EmployeeEngagementData, FormData>(`/homepage/employee-engagement/${id}/`, formData),
+  deleteEmployeeEngagement: (id: number) => del<{ success?: boolean }>(`/homepage/employee-engagement/${id}/`),
+
+  getLearningAndDevelopment: () => get<LearningAndDevelopmentData[]>('/homepage/learning-and-development/'),
+  uploadLearningAndDevelopment: (formData: FormData) => post<LearningAndDevelopmentData, FormData>('/homepage/learning-and-development/', formData),
+  updateLearningAndDevelopment: (id: number, formData: FormData) => patch<LearningAndDevelopmentData, FormData>(`/homepage/learning-and-development/${id}/`, formData),
+  deleteLearningAndDevelopment: (id: number) => del<{ success?: boolean }>(`/homepage/learning-and-development/${id}/`),
 
 
-  getOnboarding: () => get<any[]>('/homepage/onboarding/'),
-  uploadOnboarding: (formData: FormData) => post<any, FormData>('/homepage/onboarding/', formData),
-  updateOnboarding: (id: number, formData: FormData) => patch<any, FormData>(`/homepage/onboarding/${id}/`, formData),
-  deleteOnboarding: (id: number) => del<any>(`/homepage/onboarding/${id}/`),
-  getEvents: () => get<any>('/homepage/events/'),
+  getOnboarding: () => get<OnboardingData[]>('/homepage/onboarding/'),
+  uploadOnboarding: (formData: FormData) => post<OnboardingData, FormData>('/homepage/onboarding/', formData),
+  updateOnboarding: (id: number, formData: FormData) => patch<OnboardingData, FormData>(`/homepage/onboarding/${id}/`, formData),
+  deleteOnboarding: (id: number) => del<{ success?: boolean }>(`/homepage/onboarding/${id}/`),
+  getEvents: () => get<EventData[]>('/homepage/events/'),
+  getHolidays: () => get<HolidayData[]>('/homepage/holidays/'),
+
+  getUserSprintTaskSummary: () => get<{ status: boolean; data: { active: number; done: number } }>('/user-sprint-task-summary/'),
 };
 
 export interface LeaderboardWinner {
@@ -578,8 +623,8 @@ export const developers = {
 };
 
 export const compliance = {
-  listFlags: (projectId?: string | number | null, sprintId?: string | number | null) =>
-    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId })}`),
+  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null) =>
+    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId })}`),
   resolveFlag: (flagId: string) =>
     post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
@@ -591,6 +636,11 @@ export const compliance = {
 export const sprints = {
   list: (projectId?: string | number | null) =>
     get<any[]>(`/sprints/${buildQuery({ project_id: projectId })}`),
+};
+
+export const search = {
+  query: (q: string, limit?: number) =>
+    get<{ count: number; results: any[] }>('/search/', { q, limit }),
 };
 
 /** ---------- users ---------- */
@@ -815,6 +865,7 @@ export interface DMTNotification {
   notification_type: 'info' | 'success' | 'warning' | 'error' | string;
   is_read: boolean;
   created_at: string;
+  data?: Record<string, any>;
 }
 
 /** @deprecated Use DMTNotification instead */
@@ -937,5 +988,77 @@ export const reactions = {
 
 export { getWebSocketManager } from './websocket';
 export type { TelemetryMessage } from './websocket';
+
+/** ---------- orgChart ---------- */
+
+export interface OrgChartUser {
+  id: number;
+  full_name: string;
+  email: string;
+  username: string;
+  role_id: number;
+  role: string;
+  department: string;
+  parent_id: number | null;
+  is_active: boolean;
+  children: OrgChartUser[];
+}
+
+export interface OrgChartCreatePayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  designation?: number | string;
+  department?: string;
+  parent?: number | string;
+}
+
+export interface OrgChartUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  designation?: number | string;
+  department?: string;
+  parent?: number | string;
+  is_active?: boolean;
+}
+
+export interface OrgChartActionResponse {
+  status: boolean;
+  message: string;
+  data?: OrgChartUser;
+  [key: string]: unknown;
+}
+
+export interface OrgDropdownItem {
+  id: number | string;
+  name?: string;
+  role_name?: string;
+  [key: string]: unknown;
+}
+
+export interface AutocompleteItem {
+  id?: number | string;
+  name?: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
+  department?: string;
+  [key: string]: unknown;
+}
+
+export const orgChart = {
+  getHierarchy: () => get<{ status: boolean; message: string; data: OrgChartUser[] }>('/org-chart/'),
+  createOrUpdateUser: (data: OrgChartCreatePayload) =>
+    post<OrgChartActionResponse, OrgChartCreatePayload>('/org-chart/', data),
+  updateUser: (id: number | string, data: OrgChartUpdatePayload) =>
+    api.put<OrgChartActionResponse>(`/org-chart/${id}/`, data).then(res => res.data),
+  deleteUser: (id: number | string) => del<OrgChartActionResponse>(`/org-chart/${id}/`),
+  getUsersDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-users/'),
+  getRolesDropdown: () => get<{ status: boolean; data: OrgDropdownItem[] }>('/org-roles/'),
+  searchAutocomplete: (query: string) => get<{ status: boolean; data: AutocompleteItem[] }>(`/org-users/autocomplete/?q=${encodeURIComponent(query)}`),
+  createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string;[key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
+  getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
+  createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
+};
 
 export default api;

@@ -65,7 +65,7 @@ const menuItems: MenuItem[] = [
   },
   {
     icon: MessageSquare,
-    label: "Messenger",
+    label: "Quick Updates",
     href: "/notifications/send",
   },
   {
@@ -131,17 +131,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         onClick={onClose}
         className={`flex items-center gap-3 transition-all group/item ${isNested ? "pl-6 pr-3 py-2.5 rounded-md" : "px-4 py-3 rounded-lg"
           } ${isActive
-            ? "bg-accent text-accent-foreground font-bold shadow-sm saturate-[1.15]"
+            ? "bg-access text-access-foreground font-bold shadow-sm"
             : "text-primary-foreground font-medium hover:bg-muted hover:text-foreground"
           }`}
       >
-        <Icon className={`${isNested ? "w-4.5 h-4.5" : "w-5 h-5"} flex-shrink-0 transition-colors ${isActive ? "text-accent-foreground" : "text-primary-foreground group-hover/item:text-foreground"
+        <Icon className={`${isNested ? "w-4.5 h-4.5" : "w-5 h-5"} flex-shrink-0 transition-colors ${isActive ? "text-access-foreground" : "text-primary-foreground group-hover/item:text-foreground"
           }`} />
-        <span className={isNested ? "text-[14px]" : "text-[15px]"}>{item.label}</span>
+        <span className={isNested ? "text-[0.875rem]" : "text-[0.9375rem]"}>{item.label}</span>
         {item.section && (
           <span
-            className={`ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase tracking-widest font-bold ${isActive
-              ? "bg-accent-foreground text-accent border border-border"
+            className={`ml-auto text-[0.625rem] px-1.5 py-0.5 rounded uppercase tracking-widest font-bold ${isActive
+              ? "bg-access-foreground text-access border border-border"
               : "bg-secondary text-secondary-foreground border border-border"
               }`}
           >
@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             >
               <div className="flex items-center gap-3">
                 <Shield className="w-5 h-5 text-primary-foreground group-hover:text-foreground transition-colors" />
-                <span className="text-[15px] font-medium text-primary-foreground group-hover:text-foreground transition-colors">
+                <span className="text-[0.9375rem] font-medium text-primary-foreground group-hover:text-foreground transition-colors">
                   DMT
                 </span>
               </div>
@@ -195,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             <div
               className={`transition-all duration-300 ease-in-out origin-top border-l-2 border-border ml-4 pl-2 space-y-1 ${isContentExpanded
-                ? "opacity-100 max-h-[1000px] mt-1"
+                ? "opacity-100 max-h-[62.5rem] mt-1"
                 : "opacity-0 max-h-0 overflow-hidden pointer-events-none mt-0"
                 }`}
             >

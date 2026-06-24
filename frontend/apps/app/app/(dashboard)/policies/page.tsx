@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { dashboard, getFileUrl } from '@dmt/api';
-import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck } from 'lucide-react';
+import React, { useRef } from 'react';
+import { getFileUrl, getUploadErrorMessage } from '@dmt/api';
+import { FileText, Download, Upload, Trash2, ArrowLeft, Plus, ShieldAlert, FileCheck, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { policiesQueryOptions } from './query-options';
+import { getUploadMutationOptions, getUpdateMutationOptions, getDeleteMutationOptions } from './mutation-options';
+import { getFileViewerUrl } from '@/lib/utils';
 
 interface PolicyData {
     id: number;
@@ -15,34 +19,20 @@ interface PolicyData {
 export default function PoliciesPage() {
     const router = useRouter();
     const { isManager } = usePermissions();
-    const [policies, setPolicies] = useState<PolicyData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
+    const queryClient = useQueryClient();
     
     // Hidden file inputs
     const createFileInputRef = useRef<HTMLInputElement>(null);
     const updateFileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
-    const fetchPolicies = async () => {
-        setLoading(true);
-        try {
-            const data = await dashboard.getPolicies();
-            if (data && Array.isArray(data)) {
-                // Sort by ID descending so that the latest uploaded document appears at the top
-                const sorted = [...data].sort((a, b) => b.id - a.id);
-                setPolicies(sorted);
-            }
-        } catch (err) {
-            console.error('Failed to fetch policies:', err);
-            toast.error('Failed to load policies');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Fetch Policies using React Query
+    const { data: policies = [], isLoading: loading } = useQuery(policiesQueryOptions);
 
-    useEffect(() => {
-        fetchPolicies();
-    }, []);
+    const uploadMutation = useMutation(getUploadMutationOptions(queryClient));
+
+    const updateMutation = useMutation(getUpdateMutationOptions(queryClient));
+
+    const deleteMutation = useMutation(getDeleteMutationOptions(queryClient));
 
     // Extract filename from URL
     const getFileName = (url: string) => {
@@ -50,6 +40,8 @@ export default function PoliciesPage() {
         const parts = url.split('/');
         return decodeURIComponent(parts[parts.length - 1]);
     };
+
+
 
     // Handle Uploading a new policy
     const handleUploadClick = () => {
@@ -60,19 +52,17 @@ export default function PoliciesPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploading(true);
         const toastId = toast.loading('Uploading new policy...');
         try {
             const formData = new FormData();
             formData.append('policy_file', file);
-            await dashboard.uploadPolicy(formData);
+            await uploadMutation.mutateAsync(formData);
             toast.success('Policy uploaded successfully!', { id: toastId });
-            fetchPolicies();
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Upload failed:', err);
-            toast.error('Failed to upload policy.', { id: toastId });
+            const errorMessage = getUploadErrorMessage(err, 'Failed to upload policy.');
+            toast.error(errorMessage, { id: toastId });
         } finally {
-            setUploading(false);
             if (createFileInputRef.current) createFileInputRef.current.value = '';
         }
     };
@@ -90,12 +80,12 @@ export default function PoliciesPage() {
         try {
             const formData = new FormData();
             formData.append('policy_file', file);
-            await dashboard.updatePolicy(id, formData);
+            await updateMutation.mutateAsync({ id, formData });
             toast.success('Policy updated successfully!', { id: toastId });
-            fetchPolicies();
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Update failed:', err);
-            toast.error('Failed to update policy.', { id: toastId });
+            const errorMessage = getUploadErrorMessage(err, 'Failed to update policy.');
+            toast.error(errorMessage, { id: toastId });
         } finally {
             if (updateFileInputRefs.current[id]) {
                 updateFileInputRefs.current[id]!.value = '';
@@ -109,13 +99,21 @@ export default function PoliciesPage() {
 
         const toastId = toast.loading('Deleting policy document...');
         try {
-            await dashboard.deletePolicy(id);
+            await deleteMutation.mutateAsync(id);
             toast.success('Policy deleted successfully!', { id: toastId });
-            fetchPolicies();
         } catch (err) {
             console.error('Delete failed:', err);
             toast.error('Failed to delete policy.', { id: toastId });
         }
+    };
+
+    // Handle Direct Download using proxy to prevent tab changes
+    const handleDownloadClick = (url: string, filename: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        // Navigating to the proxy URL will trigger a download without changing the page,
+        // because the proxy sets the Content-Disposition: attachment header.
+        window.location.href = proxyUrl;
     };
 
     return (
@@ -144,7 +142,7 @@ export default function PoliciesPage() {
                                 </h1>
                             </div>
                             <p className="text-muted-foreground text-[0.875rem] font-medium leading-normal">
-                                View and download official policy documents of organization.
+                                View and Download official policy documents of organization.
                             </p>
                         </div>
                     </div>
@@ -153,7 +151,7 @@ export default function PoliciesPage() {
                     {isManager && (
                         <button
                             onClick={handleUploadClick}
-                            disabled={uploading}
+                            disabled={uploadMutation.isPending}
                             className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                         >
                             <Plus className="w-5 h-5" strokeWidth={3} />
@@ -186,16 +184,27 @@ export default function PoliciesPage() {
                                     key={policy.id}
                                     className="relative bg-card text-card-foreground rounded-2xl border border-border hover:border-primary/45 p-6 flex flex-col gap-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.05)] transition-all duration-300 border-l-4 border-l-primary"
                                 >
-                                    {/* Top right actions (Delete) - restricted to MANAGER only */}
-                                    {isManager && (
-                                        <button
-                                            onClick={() => handleDeleteClick(policy.id)}
-                                            className="absolute top-5 right-5 p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                            title="Delete policy"
+                                    {/* Top right actions (Download & Delete) */}
+                                    <div className="absolute top-5 right-5 flex items-center gap-2">
+                                        <a
+                                            href={getFileUrl(policy.policy_file)}
+                                            onClick={(e) => handleDownloadClick(getFileUrl(policy.policy_file), getFileName(policy.policy_file), e)}
+                                            download={getFileName(policy.policy_file)}
+                                            className="p-2 rounded-xl text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                            title="Download policy"
                                         >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    )}
+                                            <Download className="w-5 h-5" />
+                                        </a>
+                                        {isManager && (
+                                            <button
+                                                onClick={() => handleDeleteClick(policy.id)}
+                                                className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                                title="Delete policy"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
 
                                     {/* Main Card Content */}
                                     <div className="flex gap-4 items-start pr-8">
@@ -206,7 +215,7 @@ export default function PoliciesPage() {
                                         
                                         <div className="space-y-1.5 min-w-0">
                                             <h3 className="text-[1.125rem] font-[900] text-accent truncate pr-2">
-                                                {fileName}
+                                                {fileName.replace(/\.[^/.]+$/, "")}
                                             </h3>
                                             <p className="text-[0.875rem] text-muted-foreground font-medium leading-relaxed">
                                                 Official policy document. Click below to view or download the PDF document.
@@ -217,14 +226,13 @@ export default function PoliciesPage() {
                                     {/* Bottom row actions (Download PDF & Update PDF side by side) */}
                                     <div className="flex flex-col sm:flex-row gap-3 mt-1">
                                         <a
-                                            href={getFileUrl(policy.policy_file)}
-                                            download
+                                            href={getFileViewerUrl(getFileUrl(policy.policy_file))}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm cursor-pointer active:scale-95"
                                         >
-                                            <Download className="w-4.5 h-4.5" strokeWidth={2.5} />
-                                            view/download PDF
+                                            <Eye className="w-4.5 h-4.5" strokeWidth={2.5} />
+                                            View Document
                                         </a>
                                         
                                         {/* Update Button - restricted to MANAGER only */}
