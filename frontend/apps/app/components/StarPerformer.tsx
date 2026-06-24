@@ -153,7 +153,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
         return (
             <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col">
                 <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
-                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
+                    <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-card-foreground tracking-tight">
                         Star Performer
                     </h2>
                     <div className="relative w-12 h-12 sm:w-16 sm:h-16 -mr-1 -mt-1 opacity-40">
@@ -188,7 +188,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             {/* Header Section */}
             <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-[0.9375rem] sm:text-[1.0625rem] font-black text-card-foreground tracking-tight">
+                    <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-card-foreground tracking-tight">
                         Star Performer
                     </h2>
 
