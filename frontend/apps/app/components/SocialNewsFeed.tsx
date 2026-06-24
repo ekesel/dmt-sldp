@@ -71,7 +71,7 @@ export const SocialNewsFeed: React.FC = () => {
             <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full flex flex-col overflow-hidden">
                 {/* Fixed Title Header */}
                 <div className="flex justify-between items-center mb-2.5 flex-shrink-0">
-                    <h2 className="text-[1rem] sm:text-[1.125rem] md:text-[1.25rem] font-black text-foreground tracking-tight">
+                    <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-foreground tracking-tight">
                         Newsfeed
                     </h2>
                 </div>
