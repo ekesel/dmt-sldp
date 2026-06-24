@@ -166,6 +166,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 if not os.path.exists(MEDIA_ROOT):
     os.makedirs(MEDIA_ROOT, exist_ok=True)
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5242880 — total request body cap
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5242880
+
 # CORS & Security
 def csv_env(name, default):
     return [x.strip() for x in os.environ.get(name, default).split(",") if x.strip()]
