@@ -266,7 +266,8 @@ class DeveloperListView(APIView):
         resolver.load()
         project_id = request.query_params.get('project_id')
         
-        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
         
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
         queryset = queryset.exclude(developer_email__in=inactive_user_emails)
@@ -467,10 +468,14 @@ class DeveloperMetricsView(APIView):
         except ValueError:
             limit = 5
 
-        from .analytics.identity_resolver import IdentityResolver
+        from .analytics.identity_resolver import IdentityResolver, get_inactive_user_emails_expanded
         resolver = IdentityResolver()
         resolver.load()
         resolved_id = resolver.resolve(id)
+
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        if resolved_id in inactive_user_emails or id in inactive_user_emails:
+            return Response({"error": "Developer is inactive"}, status=403)
 
         metrics_qs = DeveloperMetrics.objects.filter(
             developer_email__iexact=resolved_id
@@ -593,10 +598,14 @@ class DeveloperComparisonView(APIView):
         project_id = request.query_params.get('project_id')
         is_all_projects = not project_id or project_id in ['null', 'undefined', 'all']
 
-        from .analytics.identity_resolver import IdentityResolver
+        from .analytics.identity_resolver import IdentityResolver, get_inactive_user_emails_expanded
         resolver = IdentityResolver()
         resolver.load()
         resolved_id = resolver.resolve(id)
+
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        if resolved_id in inactive_user_emails or id in inactive_user_emails:
+            return Response({"error": "Developer is inactive"}, status=403)
 
         if is_all_projects:
             # --- All Projects Combined ---
@@ -608,7 +617,8 @@ class DeveloperComparisonView(APIView):
             dev_compliance = combined['dmt_compliance_rate']
 
            
-            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+            from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+            inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
             # Team average: for each developer, sum their latest sprint per project, then average across devs
             all_devs_latest = list(
@@ -692,7 +702,8 @@ class DeveloperComparisonView(APIView):
 
             # Team average from DeveloperMetrics for this sprint + project
             
-            inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+            from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+            inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
             team_agg = DeveloperMetrics.objects.filter(
                 sprint_name=last_sprint.sprint_name,
@@ -1203,7 +1214,8 @@ class AssigneeDistributionView(APIView):
 
         # 2. Process Fallback Assignees (unlinked)
     
-        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
         fallback_rows = (
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)

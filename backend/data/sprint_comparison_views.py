@@ -274,7 +274,8 @@ class SprintComparisonView(APIView):
 
     def _build_workload_distribution(self, charts, name_a, name_b, project_id):
         
-        inactive_user_emails = User.objects.filter(is_active=False).values_list('email', flat=True)
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
         # Get all developer metrics for these two sprints
         filter_a = Q(sprint_name=name_a)
