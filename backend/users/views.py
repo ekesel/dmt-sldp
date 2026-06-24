@@ -68,15 +68,13 @@ class UserViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(tenant_id=target_tenant)
              else:
                 return User.objects.none()
-        # 3. Optional is_active filtering (default to active users)
+        # 3. Optional is_active filtering (default to all users: active and inactive)
         is_active = self.request.query_params.get('is_active')
         if is_active is not None:
             if is_active.lower() == 'true':
                 queryset = queryset.filter(is_active=True)
             elif is_active.lower() == 'false':
                 queryset = queryset.filter(is_active=False)
-        else:
-            queryset = queryset.filter(is_active=True)
         
         return queryset
 
