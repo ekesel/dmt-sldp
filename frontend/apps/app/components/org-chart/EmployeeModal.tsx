@@ -45,7 +45,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
         name: '',
         role: '',
         email: '',
-        department: 'backend',
+        department: '',
         parentId: '',
         isNotFound: false,
         autocompleteError: false,
@@ -77,9 +77,9 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             setState(prev => ({
                 ...prev,
                 name: employeeData ? employeeData.name : '',
-                role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null') ? employeeData.roleId : (rolesList.length > 0 ? String(rolesList[0].id) : ''),
+                role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null') ? employeeData.roleId : '',
                 email: employeeData ? (employeeData.email || '') : '',
-                department: (employeeData && employeeData.department && employeeData.department !== 'null') ? employeeData.department : (departmentsList.length > 0 ? String(departmentsList[0].name) : ''),
+                department: (employeeData && employeeData.department && employeeData.department !== 'null') ? employeeData.department : '',
                 parentId: (employeeData && employeeData.parentId && employeeData.parentId !== 'null') ? employeeData.parentId : (defaultParentId || ''),
                 isNotFound: false,
                 autocompleteError: false,
@@ -118,8 +118,8 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             if (nameChanged || emailChanged) {
                 rejectedMatchesRef.current.add(prev.email);
                 setState(s => {
-                    const newRole = s.role === prev.role ? (rolesListRef.current.length > 0 ? String(rolesListRef.current[0].id) : '') : s.role;
-                    const newDepartment = s.department === prev.department ? (departmentsListRef.current.length > 0 ? String(departmentsListRef.current[0].name) : '') : s.department;
+                    const newRole = s.role === prev.role ? '' : s.role;
+                    const newDepartment = s.department === prev.department ? '' : s.department;
                     const newEmail = (prev.matchedBy === 'name' && nameChanged && s.email === prev.email) ? '' : s.email;
                     const newName = (prev.matchedBy === 'email' && emailChanged && s.name === prev.name) ? '' : s.name;
                     return {
@@ -185,7 +185,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                             if (lastMatchedRef.current?.email !== matchEmail) {
                                 const rList = rolesListRef.current;
                                 const foundRole = rList.find(r => r.name.toLowerCase() === matchRoleName.toLowerCase());
-                                const roleIdToSet = foundRole ? String(foundRole.id) : (rList.length > 0 ? String(rList[0].id) : '');
+                                const roleIdToSet = foundRole ? String(foundRole.id) : '';
 
                                 setState(s => ({
                                     ...s,
@@ -255,7 +255,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setState(s => ({ ...s, isSubmitting: false }));
             }
         } else {
-            if (!role.trim()) return;
+            if (!role.trim()) {
+                toast.error('Please select a designation/role.');
+                return;
+            }
         }
 
         let finalDepartment = department;
@@ -279,7 +282,10 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                 setState(s => ({ ...s, isSubmitting: false }));
             }
         } else {
-            if (!department.trim()) return;
+            if (!department.trim()) {
+                toast.error('Please select a department.');
+                return;
+            }
         }
 
         onSave({
@@ -361,7 +367,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                         setState(s => ({
                                             ...s,
                                             isCreatingRole: false,
-                                            role: rolesList.length > 0 ? String(rolesList[0].id) : ''
+                                            role: ''
                                         }));
                                     }}
                                     className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
@@ -382,6 +388,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     }}
                                     className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
                                 >
+                                    <option value="" disabled hidden>Select Role</option>
                                     {rolesList.map((r) => (
                                         <option key={r.id} value={String(r.id)}>
                                             {r.name}
@@ -438,7 +445,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                         setState(s => ({
                                             ...s,
                                             isCreatingDepartment: false,
-                                            department: departmentsList.length > 0 ? String(departmentsList[0].name) : ''
+                                            department: ''
                                         }));
                                     }}
                                     className="p-3 rounded-xl border border-input hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
@@ -459,6 +466,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                                     }}
                                     className="w-full px-4 py-3 pr-10 rounded-xl border border-input text-[0.875rem] font-semibold text-foreground focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-muted/50 appearance-none cursor-pointer"
                                 >
+                                    <option value="" disabled hidden>Select Department</option>
                                     {departmentsList.map((dept) => (
                                         <option key={dept.id} value={String(dept.name)}>
                                             {dept.name}

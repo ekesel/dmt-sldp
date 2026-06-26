@@ -269,7 +269,7 @@ export default function CompliancePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                            <div className="w-10 h-10 rounded-xl bg-green/10 flex items-center justify-center text-green border border-green/20">
                                 <ShieldCheck size={20} />
                             </div>
                             <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export default function CompliancePage() {
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
                             <div className="text-3xl font-black text-foreground">
-                                {summary?.overall_health ?? '—'}<span className="text-sm text-emerald-500/50 -ml-0.5">%</span>
+                                {summary?.overall_health ?? '—'}<span className="text-sm text-green/50 -ml-0.5">%</span>
                             </div>
                         )}
                         <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">Project compliance rate</p>
@@ -425,9 +425,9 @@ export default function CompliancePage() {
                                 ))}
                             </div>
                         ) : flags.length === 0 ? (
-                            <div className="p-12 text-center bg-emerald-500/5 rounded-3xl border border-emerald-500/20 shadow-inner">
-                                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-                                    <CheckCircle className="text-emerald-500" size={32} />
+                            <div className="p-12 text-center bg-green/5 rounded-3xl border border-green/20 shadow-inner">
+                                <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green/20">
+                                    <CheckCircle className="text-green" size={32} />
                                 </div>
                                 <h3 className="text-xl font-black text-foreground tracking-tight">Compliance Maintained</h3>
                                 <p className="text-emerald-200/60 mt-2 font-medium">No active compliance violations detected for this context.</p>
@@ -449,12 +449,10 @@ export default function CompliancePage() {
                                                 }`}>
                                                 {flag.severity}
                                             </span>
-                                            {!selectedProjectId && (
-                                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
-                                                    <Folder size={10} />
-                                                    {flag.project_name}
-                                                </span>
-                                            )}
+                                            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
+                                                <Folder size={10} />
+                                                {flag.project_name}
+                                            </span>
                                             <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
                                                 <Calendar size={12} className="text-primary" />
                                                 {formatDateTime(flag.created_at)}
@@ -493,7 +491,7 @@ export default function CompliancePage() {
                 {/* Fixed Later Section */}
                 <div className="space-y-4 mt-10">
                     <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
-                        <Clock size={20} className="text-emerald-500" />
+                        <Clock size={20} className="text-green" />
                         Fixed Later
                         <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
                             Items that had violations but are now compliant
@@ -512,25 +510,23 @@ export default function CompliancePage() {
                             </div>
                         ) : (
                             fixedLaterItems.map((item) => (
-                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-emerald-500/20 hover:bg-accent/30 transition-all group rounded-2xl">
+                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-2 border-green/20 hover:ring-2 hover:ring-inset hover:ring-green hover:bg-green/5 shadow-sm transition-all group rounded-2xl">
                                     <div className="flex flex-wrap items-center gap-3 mb-3">
-                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green/15 text-green border border-green/30">
                                             Fixed Later
                                         </span>
-                                        {!selectedProjectId && (
-                                            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
-                                                <Folder size={10} />
-                                                {item.project_name}
-                                            </span>
-                                        )}
+                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
+                                            <Folder size={10} />
+                                            {item.project_name}
+                                        </span>
                                         {item.violations_cleared_at && (
                                             <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
-                                                <CheckCircle size={12} className="text-emerald-500" />
+                                                <CheckCircle size={12} className="text-green" />
                                                 Cleared {formatDateTime(item.violations_cleared_at)}
                                             </span>
                                         )}
                                     </div>
-                                    <h3 className="text-base font-black text-foreground group-hover:text-emerald-500 transition-colors tracking-tight">
+                                    <h3 className="text-base font-black text-foreground group-hover:text-green transition-colors tracking-tight">
                                         {item.work_item_title}
                                     </h3>
                                     {item.violation_history?.length > 0 && (
@@ -542,8 +538,8 @@ export default function CompliancePage() {
                                         </p>
                                     )}
                                     <div className="flex items-center gap-3 text-muted-foreground text-xs bg-muted/50 w-fit px-4 py-2 rounded-xl border border-border shadow-inner mt-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                            <User size={12} className="text-emerald-500" />
+                                        <div className="w-5 h-5 rounded-full bg-green/20 flex items-center justify-center">
+                                            <User size={12} className="text-green" />
                                         </div>
                                         <span className="font-bold text-foreground/80">{item.assignee_name}</span>
                                     </div>
