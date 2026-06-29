@@ -14,7 +14,7 @@ interface ComplianceFlag {
     work_item_id: string;
     work_item_title: string;
     flag_type: string;
-    severity: 'critical' | 'warning' | 'fixed';
+    severity: 'critical' | 'warning';
     created_at: string;
     project_name: string;
     assignee_name: string;
@@ -76,14 +76,14 @@ export default function CompliancePage() {
 
     const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null) => {
         const currentRequestId = ++requestCounter.current;
-
+        
         setLoading(true);
         setSummaryLoading(true);
         setFixedLaterLoading(true);
 
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
-
+        
         compliance.listFlags(projectId, sprintId, effectiveWorkItemId)
             .then(data => {
                 if (requestCounter.current === currentRequestId) setFlags(data);
@@ -133,21 +133,21 @@ export default function CompliancePage() {
 
         const attemptScroll = () => {
             if (loading || fixedLaterLoading) return;
-
+            
             // First try strict match by workItemId
             let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId) || fixedLaterItems.find(f => f.work_item_id?.toString() === workItemId);
-
+            
             // If strict match fails, try matching by notification title or message (case-insensitive and robust)
             if (!targetFlag && (nTitle || nMessage)) {
                 const sanitize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const sNTitle = sanitize(nTitle);
                 const sNMessage = sanitize(nMessage);
-
+                
                 const matchFlag = (f: ComplianceFlag) => {
                     const sTitle = sanitize(f.work_item_title);
                     return sTitle.length > 3 && (sNTitle.includes(sTitle) || sNMessage.includes(sTitle));
                 };
-
+                
                 targetFlag = flags.find(matchFlag) || fixedLaterItems.find(matchFlag);
             }
 
@@ -175,7 +175,7 @@ export default function CompliancePage() {
                 console.log(`[Compliance] Element found for ${searchId}, scrolling...`);
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 element.classList.add('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]', 'transition-all', 'duration-500');
-
+                
                 classRemovalTimer = window.setTimeout(() => {
                     if (element) {
                         element.classList.remove('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]');
@@ -296,8 +296,8 @@ export default function CompliancePage() {
                         className="cursor-pointer select-none"
                     >
                         <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
-                            ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                                ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                             }`}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
@@ -330,8 +330,8 @@ export default function CompliancePage() {
                         className="cursor-pointer select-none"
                     >
                         <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'warning'
-                            ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                                ? 'border-warning ring-2 ring-warning/30 shadow-lg'
+                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                             }`}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
@@ -391,11 +391,11 @@ export default function CompliancePage() {
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
                             <Activity size={20} className="text-primary" />
-                            Compliance Violations
+                            Active Violations
                             {activeFilter && (
                                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${activeFilter === 'critical'
-                                    ? 'bg-destructive/10 text-destructive border-destructive/30'
-                                    : 'bg-warning/10 text-warning border-warning/30'
+                                        ? 'bg-destructive/10 text-destructive border-destructive/30'
+                                        : 'bg-warning/10 text-warning border-warning/30'
                                     }`}>
                                     {activeFilter === 'critical' ? 'Critical only' : 'Warnings only'}
                                 </span>
@@ -433,42 +433,19 @@ export default function CompliancePage() {
                                 <p className="text-emerald-200/60 mt-2 font-medium">No active compliance violations detected for this context.</p>
                             </div>
                         ) : (() => {
-                            const fixedFlags = fixedLaterItems.flatMap(item => {
-                                const history = item.violation_history || [];
-                                const lastHistory = history[history.length - 1];
-                                const failures = lastHistory?.failures || [];
-                                return failures.map((f: string) => ({
-                                    id: `${item.id}-${f}-fixed`,
-                                    work_item_id: item.work_item_id,
-                                    work_item_title: item.work_item_title,
-                                    flag_type: f,
-                                    severity: 'fixed' as const,
-                                    created_at: item.violations_cleared_at || item.updated_at,
-                                    project_name: item.project_name,
-                                    assignee_name: item.assignee_name,
-                                    assignee_names: [item.assignee_name],
-                                    responsible_role: null,
-                                    responsible_name: null,
-                                }));
-                            });
-
-                            let visibleFlags = activeFilter ? flags.filter(f => f.severity === activeFilter) : flags;
-                            if (!activeFilter) {
-                                visibleFlags = [...visibleFlags, ...fixedFlags];
-                            }
-
+                            const visibleFlags = activeFilter ? flags.filter(f => f.severity === activeFilter) : flags;
                             if (visibleFlags.length === 0) return (
                                 <div className="p-8 text-center bg-muted/30 rounded-2xl border border-border">
                                     <p className="text-muted-foreground text-sm font-medium">
-                                        No {activeFilter || 'compliance'} violations in this sprint.
+                                        No {activeFilter} violations in this sprint.
                                     </p>
                                 </div>
                             );
                             return visibleFlags.map((flag) => (
-                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className={`p-6 bg-card border-2 hover:ring-2 hover:ring-inset shadow-md transition-all group rounded-2xl ${flag.severity === 'fixed' ? 'border-green/20 hover:ring-green/50' : 'border-primary hover:ring-primary'}`}>
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : flag.severity === 'warning' ? 'bg-warning text-warning-foreground' : 'bg-green/15 text-green border border-green/30'
+                                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
                                                 }`}>
                                                 {flag.severity}
                                             </span>
@@ -477,31 +454,14 @@ export default function CompliancePage() {
                                                 {flag.project_name}
                                             </span>
                                             <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
-                                                {flag.severity === 'fixed' ? (
-                                                    <>
-                                                        <CheckCircle size={12} className="text-green" />
-                                                        Cleared {formatDateTime(flag.created_at)}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Calendar size={12} className="text-primary" />
-                                                        {formatDateTime(flag.created_at)}
-                                                    </>
-                                                )}
+                                                <Calendar size={12} className="text-primary" />
+                                                {formatDateTime(flag.created_at)}
                                             </span>
                                         </div>
                                         <div>
                                             <h3 className="text-xl font-black text-primary transition-colors tracking-tight">{flag.work_item_title}</h3>
                                             <p className="text-muted-foreground text-sm mt-1.5 font-medium flex items-center gap-2">
-                                                Violation: 
-                                                <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border inline-flex items-center gap-2">
-                                                    <span>{FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}</span>
-                                                    {flag.severity === 'fixed' && (
-                                                        <span className="text-muted-foreground font-medium text-[10px] border-l border-border/60 pl-2">
-                                                            Fixed on {formatDateTime(flag.created_at)}
-                                                        </span>
-                                                    )}
-                                                </span>
+                                                Violation: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border">{FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}</span>
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
@@ -526,6 +486,66 @@ export default function CompliancePage() {
                                 </Card>
                             ))
                         })()}
+                    </div>
+                </div>
+                {/* Fixed Later Section */}
+                <div className="space-y-4 mt-10">
+                    <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
+                        <Clock size={20} className="text-green" />
+                        Fixed Later
+                        <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
+                            Items that had violations but are now compliant
+                        </span>
+                    </h2>
+                    <div className="grid gap-4">
+                        {fixedLaterLoading ? (
+                            <div className="flex flex-col gap-4">
+                                {[1, 2].map(i => (
+                                    <div key={i} className="h-20 w-full bg-muted border border-border rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : fixedLaterItems.length === 0 ? (
+                            <div className="p-8 text-center bg-muted/30 rounded-2xl border border-border">
+                                <p className="text-muted-foreground text-sm font-medium">No items with cleared violations in this sprint.</p>
+                            </div>
+                        ) : (
+                            fixedLaterItems.map((item) => (
+                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-2 border-green/20 hover:ring-2 hover:ring-inset hover:ring-green hover:bg-green/5 shadow-sm transition-all group rounded-2xl">
+                                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green/15 text-green border border-green/30">
+                                            Fixed Later
+                                        </span>
+                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
+                                            <Folder size={10} />
+                                            {item.project_name}
+                                        </span>
+                                        {item.violations_cleared_at && (
+                                            <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
+                                                <CheckCircle size={12} className="text-green" />
+                                                Cleared {formatDateTime(item.violations_cleared_at)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h3 className="text-base font-black text-foreground group-hover:text-green transition-colors tracking-tight">
+                                        {item.work_item_title}
+                                    </h3>
+                                    {item.violation_history?.length > 0 && (
+                                        <p className="text-muted-foreground text-xs mt-1.5 font-medium">
+                                            Had {item.violation_history.length} violation period{item.violation_history.length > 1 ? 's' : ''} &mdash;{' '}
+                                            {item.violation_history[item.violation_history.length - 1]?.failures?.map((f: string) =>
+                                                FLAG_TYPE_LABELS[f] || f
+                                            ).join(', ')}
+                                        </p>
+                                    )}
+                                    <div className="flex items-center gap-3 text-muted-foreground text-xs bg-muted/50 w-fit px-4 py-2 rounded-xl border border-border shadow-inner mt-3">
+                                        <div className="w-5 h-5 rounded-full bg-green/20 flex items-center justify-center">
+                                            <User size={12} className="text-green" />
+                                        </div>
+                                        <span className="font-bold text-foreground/80">{item.assignee_name}</span>
+                                    </div>
+                                </Card>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
