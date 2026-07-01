@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Edit3, Trash2, MessageCircle } from "lucide-react";
 import { Post } from "../../types/newsfeed";
 import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from "../../hooks/usePermissions";
 import ReactionBar from "./ReactionBar";
 import CommentSection from "./CommentSection";
 import { cn, formatTimestamp } from "@/lib/utils";
@@ -22,6 +23,7 @@ const PostCard = ({
   onDelete?: (id: number) => void;
 }) => {
   const { user } = useAuth();
+  const { isManager } = usePermissions();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { reactions, toggleReaction } = useReactions(post.post_id);
@@ -127,7 +129,7 @@ const PostCard = ({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {user?.is_manager && (
+          {isManager && (
             <div className="flex items-center gap-1 mr-1">
               <button
                 onClick={() => onEdit?.(post)}

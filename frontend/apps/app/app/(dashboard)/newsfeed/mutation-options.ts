@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import api from '@dmt/api';
 import { newsfeedKeys } from './query-keys';
 import { Post } from '../../../types/newsfeed';
+import { useRoleStore } from '../../../store/roleStore';
 
 export const getUploadImageMutationOptions = () => ({
     mutationFn: async (file: File) => {
@@ -19,7 +20,7 @@ export const getUploadImageMutationOptions = () => ({
 
 export const getCreatePostMutationOptions = (socket: any, user: any, queryClient: QueryClient) => ({
     mutationFn: async ({ title, content, category, imageId }: { title: string, content: string, category: string, imageId?: string }) => {
-        if (!user?.is_manager) throw new Error('Only managers can perform this action');
+        if (!useRoleStore.getState().isManager) throw new Error('Only managers can perform this action');
         if (!socket || !socket.isConnected) throw new Error('WebSocket is not connected');
 
         return new Promise((resolve, reject) => {
@@ -60,7 +61,7 @@ export const getCreatePostMutationOptions = (socket: any, user: any, queryClient
 
 export const getUpdatePostMutationOptions = (socket: any, user: any) => ({
     mutationFn: async ({ id, title, content, category, imageId }: { id: number, title?: string, content?: string, category?: string, imageId?: string | null }) => {
-        if (!user?.is_manager) throw new Error('Only managers can perform this action');
+        if (!useRoleStore.getState().isManager) throw new Error('Only managers can perform this action');
         if (!socket || !socket.isConnected) throw new Error('WebSocket is not connected');
 
         return new Promise<void>((resolve, reject) => {
@@ -101,7 +102,7 @@ export const getUpdatePostMutationOptions = (socket: any, user: any) => ({
 
 export const getDeletePostMutationOptions = (socket: any, user: any) => ({
     mutationFn: async (id: number) => {
-        if (!user?.is_manager) throw new Error('Only managers can perform this action');
+        if (!useRoleStore.getState().isManager) throw new Error('Only managers can perform this action');
         if (!socket || !socket.isConnected) throw new Error('WebSocket is not connected');
 
         return new Promise<void>((resolve, reject) => {

@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth, getFileUrl } from '@dmt/api';
+import { useRoleStore } from '../store/roleStore';
 
 interface User {
     id: number;
@@ -56,11 +57,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (userData?.tenant_slug) {
                         localStorage.setItem('dmt-tenant', userData.tenant_slug);
                     }
+                    useRoleStore.getState().setRolesFromUser(userData);
                 } catch (err) {
                     localStorage.removeItem('dmt-access-token');
                     localStorage.removeItem('dmt-refresh-token');
                     localStorage.removeItem('dmt-tenant');
                     setUser(null);
+                    useRoleStore.getState().setRolesFromUser(null);
                     setToken(null);
                 }
             } else {
@@ -86,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 response.user.avatar_url = getFileUrl(response.user.avatar_url);
             }
             setUser(response.user);
+            useRoleStore.getState().setRolesFromUser(response.user);
         } catch (err: any) {
             const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials.';
             setError(errorMessage);
@@ -121,6 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStorage.removeItem('dmt-refresh-token');
             localStorage.removeItem('dmt-tenant');
             setUser(null);
+            useRoleStore.getState().setRolesFromUser(null);
             setToken(null);
             setIsLoading(false);
         }
