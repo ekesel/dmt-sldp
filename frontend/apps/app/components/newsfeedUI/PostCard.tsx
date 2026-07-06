@@ -129,7 +129,7 @@ const PostCard = ({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {isManager && (
+          {(isManager && user?.id === author?.id) && (
             <div className="flex items-center gap-1 mr-1">
               <button
                 onClick={() => onEdit?.(post)}

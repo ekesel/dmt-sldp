@@ -238,12 +238,12 @@ export default function SprintComparisonPage() {
                         </div>
 
                         {/* Charts Grid */}
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                            <div className="bg-card p-8 rounded-3xl border border-border">
+                        <div className="flex flex-col gap-8">
+                            <div className="bg-card p-8 rounded-3xl border border-border w-full">
                                 <RadarChartComponent data={data.charts.radar} sprintA={effectiveBaselineName} sprintB={sprintBName} />
                             </div>
 
-                            <div className="flex flex-col gap-8">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                                 {data.charts.planned_vs_completed && data.charts.planned_vs_completed.length > 0 && (
                                     <div className="bg-card p-8 rounded-3xl border border-border h-full flex flex-col justify-center">
                                         <SideBySideBarChart
