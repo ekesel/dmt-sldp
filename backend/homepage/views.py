@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from homepage.serializers import *
 from rest_framework.parsers import MultiPartParser, FormParser
-from homepage.permissions import IsManagerOrReadOnly,IsUser
+from homepage.permissions import IsManagerOrReadOnly, IsUser, HasRequiredPermission
 import logging
 from django.db.models import Avg, Sum
 from data.models import DeveloperMetrics
@@ -136,7 +136,8 @@ class EmployeeEngagementCalendarAPIView(APIView):
 
 # Policy Api
 class PolicyAPIView(APIView):
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [HasRequiredPermission]
+    required_permission_code = 'UPLOAD_DOCUMENTS'
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -207,7 +208,8 @@ class PolicyAPIView(APIView):
 
 # Learning and Development Api
 class LearningAndDevelopmentAPIView(APIView):
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [HasRequiredPermission]
+    required_permission_code = 'UPLOAD_DOCUMENTS'
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):

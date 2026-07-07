@@ -768,27 +768,38 @@ class ComplianceFlagListView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        # Return root work items that are not compliant (sub-tasks are never compliance targets)
+        # 1. Query root work items that are active and not compliant
         items = WorkItem.objects.filter(
             dmt_compliant=False,
             parent__isnull=True,
             status_category__in=['todo', 'in_progress', 'done']
         ).order_by('-updated_at')
 
+        # 2. Query root work items that had violations but are now compliant (fixed later)
+        fixed_later_items = WorkItem.objects.filter(
+            had_violations=True,
+            dmt_compliant=True,
+            parent__isnull=True
+        ).order_by('-violations_cleared_at')
+
+        # Apply same project filters
         if project_id and project_id not in ['null', 'undefined', '']:
             from configuration.models import SourceConfiguration
             source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             items = items.filter(source_config_id__in=source_config_ids)
+            fixed_later_items = fixed_later_items.filter(source_config_id__in=source_config_ids)
 
+        # Apply same sprint filters
         if sprint_id and sprint_id not in ['null', 'undefined', '']:
             items = items.filter(sprint_id=sprint_id)
+            fixed_later_items = fixed_later_items.filter(sprint_id=sprint_id)
         elif not sprint_id:
             # Auto: pick items from the latest sprint only
             latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
             if latest_sprint:
                 items = items.filter(sprint_id=latest_sprint.id)
+                fixed_later_items = fixed_later_items.filter(sprint_id=latest_sprint.id)
 
-        # We can simulate "flags" by wrapping these items
         flags = []
         
         # Get project mapping for efficiency
@@ -801,19 +812,21 @@ class ComplianceFlagListView(APIView):
         _AC_VIOLATIONS = {'missing_ac_quality'}
         _TECH_VIOLATIONS = {'missing_pr_link', 'unit_testing_not_done', 'missing_dmt_signoff'}
 
+        # Helper to get assignee names
+        def get_assignee_names(work_item):
+            if work_item.assignee_contributions and len(work_item.assignee_contributions) > 1:
+                return [c.get('name') or c.get('email', '') for c in work_item.assignee_contributions if c.get('email')]
+            primary = work_item.assignee_name
+            if not primary or primary == 'None':
+                primary = work_item.assignee_email
+            if not primary or primary == 'None':
+                primary = 'Unassigned'
+            return [primary]
+
+        # Process active non-compliant items
         for item in items:
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-
-            # Build assignee list — use contributions if multi-assignee, else single
-            if item.assignee_contributions and len(item.assignee_contributions) > 1:
-                assignee_names = [c.get('name') or c.get('email', '') for c in item.assignee_contributions if c.get('email')]
-            else:
-                primary = item.assignee_name
-                if not primary or primary == 'None':
-                    primary = item.assignee_email
-                if not primary or primary == 'None':
-                    primary = 'Unassigned'
-                assignee_names = [primary]
+            assignee_names = get_assignee_names(item)
 
             for failure in item.compliance_failures:
                 if failure in _AC_VIOLATIONS:
@@ -838,9 +851,80 @@ class ComplianceFlagListView(APIView):
                     "assignee_names": assignee_names,
                     "responsible_role": responsible_role,
                     "responsible_name": responsible_name,
+                    "fixed_later": False,
+                    "violations_cleared_at": None,
                 })
-                 
-        return Response(flags)
+
+        # Process historical fixed later items
+        for item in fixed_later_items:
+            project_name = source_to_project.get(item.source_config_id, "Unknown Project")
+            assignee_names = get_assignee_names(item)
+
+            # Get historical failures from violation history
+            historical_failures = []
+            if item.violation_history and isinstance(item.violation_history, list):
+                last_entry = item.violation_history[-1]
+                if isinstance(last_entry, dict):
+                    historical_failures = last_entry.get('failures', [])
+            
+            if not historical_failures:
+                historical_failures = ['unknown']
+
+            for failure in historical_failures:
+                if failure in _AC_VIOLATIONS:
+                    responsible_role = 'PM'
+                    responsible_name = item.pm_name or item.pm_email or None
+                elif failure in _TECH_VIOLATIONS:
+                    responsible_role = 'Tech Lead'
+                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                else:
+                    responsible_role = None
+                    responsible_name = None
+
+                flags.append({
+                    "id": f"{item.id}-{failure}",
+                    "work_item_id": item.id,
+                    "work_item_title": item.title,
+                    "flag_type": failure,
+                    "severity": "critical" if item.status_category == 'done' else "warning",
+                    "created_at": item.updated_at,
+                    "project_name": project_name,
+                    "assignee_name": assignee_names[0],
+                    "assignee_names": assignee_names,
+                    "responsible_role": responsible_role,
+                    "responsible_name": responsible_name,
+                    "fixed_later": True,
+                    "violations_cleared_at": item.violations_cleared_at,
+                })
+
+        # Pagination support
+        try:
+            page = int(request.query_params.get('page', 1))
+        except ValueError:
+            page = 1
+
+        try:
+            page_size = int(request.query_params.get('page_size', 10))
+        except ValueError:
+            page_size = 10
+
+        total_count = len(flags)
+        import math
+        total_pages = math.ceil(total_count / page_size) if total_count > 0 else 0
+
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated_flags = flags[start_idx:end_idx]
+
+        return Response({
+            "status_code": 200,
+            "message": "Data retrieved successfully",
+            "data": paginated_flags,
+            "current_page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "total_count": total_count
+        })
 
 class ComplianceFlagResolveView(APIView):
     permission_classes = [IsAuthenticated]
