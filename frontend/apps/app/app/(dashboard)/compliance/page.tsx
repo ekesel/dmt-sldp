@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card } from "@dmt/ui";
-import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2, HelpCircle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity, CheckCircle2, HelpCircle, Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { compliance } from '@dmt/api';
 import { ProjectSelector } from "../../../components/ProjectSelector";
 import { SprintSelector } from "../../../components/SprintSelector";
@@ -21,6 +21,8 @@ interface ComplianceFlag {
     assignee_names: string[];
     responsible_role: string | null;
     responsible_name: string | null;
+    fixed_later?: boolean;
+    violations_cleared_at?: string | null;
 }
 
 interface ComplianceSummary {
@@ -55,10 +57,16 @@ export default function CompliancePage() {
     const workItemId = searchParams?.get('work_item_id');
     const paramProjectId = searchParams?.get('project_id');
     const paramSprintId = searchParams?.get('sprint_id');
+    const paramPage = searchParams?.get('page');
+    const paramPageSize = searchParams?.get('page_size');
     const nTitle = searchParams?.get('n_title') || '';
     const nMessage = searchParams?.get('n_message') || '';
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(paramProjectId ? Number(paramProjectId) : null);
     const [selectedSprintId, setSelectedSprintId] = useState<number | null>(paramSprintId ? Number(paramSprintId) : null);
+    const [currentPage, setCurrentPage] = useState<number>(paramPage ? Number(paramPage) : 1);
+    const [pageSize, setPageSize] = useState<number>(paramPageSize ? Number(paramPageSize) : 10);
+    const [totalPages, setTotalPages] = useState<number>(1);
+    const [totalCount, setTotalCount] = useState<number>(0);
 
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
@@ -74,7 +82,7 @@ export default function CompliancePage() {
 
     const requestCounter = React.useRef(0);
 
-    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null) => {
+    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null, page: number = 1, pageSize: number = 10) => {
         const currentRequestId = ++requestCounter.current;
         
         setLoading(true);
@@ -84,9 +92,23 @@ export default function CompliancePage() {
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
         
-        compliance.listFlags(projectId, sprintId, effectiveWorkItemId)
-            .then(data => {
-                if (requestCounter.current === currentRequestId) setFlags(data);
+        compliance.listFlags(projectId, sprintId, effectiveWorkItemId, page, pageSize)
+            .then(res => {
+                if (requestCounter.current === currentRequestId) {
+                    if (res && res.data && Array.isArray(res.data)) {
+                        setFlags(res.data);
+                        setTotalPages(res.total_pages || 1);
+                        setTotalCount(res.total_count || res.data.length);
+                    } else if (Array.isArray(res)) {
+                        setFlags(res);
+                        setTotalPages(1);
+                        setTotalCount(res.length);
+                    } else {
+                        setFlags([]);
+                        setTotalPages(1);
+                        setTotalCount(0);
+                    }
+                }
             })
             .catch(err => console.error("Failed to fetch compliance flags:", err))
             .finally(() => {
@@ -114,16 +136,18 @@ export default function CompliancePage() {
 
     // Refetch whenever project OR sprint changes
     useEffect(() => {
-        fetchData(selectedProjectId, selectedSprintId, workItemId);
-    }, [selectedProjectId, selectedSprintId, workItemId, fetchData]);
+        fetchData(selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize);
+    }, [selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize, fetchData]);
 
     useEffect(() => {
         setSelectedProjectId(paramProjectId ? Number(paramProjectId) : null);
         setSelectedSprintId(paramSprintId ? Number(paramSprintId) : null);
+        if (paramPage) setCurrentPage(Number(paramPage));
+        if (paramPageSize) setPageSize(Number(paramPageSize));
         if (workItemId) {
             setActiveFilter(null);
         }
-    }, [workItemId, paramProjectId, paramSprintId]);
+    }, [workItemId, paramProjectId, paramSprintId, paramPage, paramPageSize]);
 
     // Scroll to specific work item if provided in URL
     useEffect(() => {
@@ -457,6 +481,12 @@ export default function CompliancePage() {
                                                 <Calendar size={12} className="text-primary" />
                                                 {formatDateTime(flag.created_at)}
                                             </span>
+                                            {flag.fixed_later && flag.violations_cleared_at && (
+                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green/10 text-green px-3 py-1 rounded-full border border-green/20">
+                                                    <CheckCircle size={12} />
+                                                    Fixed: {formatDateTime(flag.violations_cleared_at)}
+                                                </span>
+                                            )}
                                         </div>
                                         <div>
                                             <h3 className="text-xl font-black text-primary transition-colors tracking-tight">{flag.work_item_title}</h3>
@@ -488,6 +518,99 @@ export default function CompliancePage() {
                         })()}
                     </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {!loading && totalPages > 1 && (
+                    <div className="flex flex-wrap items-center justify-between gap-4 py-3 px-6 bg-card border border-border rounded-xl mt-4 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">Rows per page</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                className="bg-muted border border-border text-foreground rounded-lg px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span className="text-sm font-medium text-muted-foreground ml-2 border-l border-border pl-4">
+                                Total {totalCount} items
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                title="First Page"
+                            >
+                                <ChevronsLeft size={16} />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                title="Previous Page"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            
+                            <div className="flex items-center gap-1 px-2">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                    
+                                    if (pageNum < 1 || pageNum > totalPages) return null;
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`min-w-[32px] h-8 px-2 rounded-full flex items-center justify-center text-sm font-bold transition border ${currentPage === pageNum ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'}`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                                {totalPages > 5 && currentPage < totalPages - 2 && (
+                                    <>
+                                        <span className="text-muted-foreground px-1 font-bold">...</span>
+                                        <button
+                                            onClick={() => setCurrentPage(totalPages)}
+                                            className="min-w-[32px] h-8 px-2 rounded-full flex items-center justify-center text-sm font-bold text-muted-foreground border border-transparent hover:bg-muted hover:border-border transition"
+                                        >
+                                            {totalPages}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                title="Next Page"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
+                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                title="Last Page"
+                            >
+                                <ChevronsRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {/* Fixed Later Section */}
                 <div className="space-y-4 mt-10">
                     <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">

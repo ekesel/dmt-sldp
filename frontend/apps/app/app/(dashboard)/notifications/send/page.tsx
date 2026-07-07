@@ -107,7 +107,7 @@ export default function SendNotificationPage() {
         const onNotification = (payload: any) => {
             const data = payload.data || payload;
             const manualTypes = ['info', 'success', 'warning', 'error'];
-            
+
             if (manualTypes.includes(data.notification_type) && !data.data?.post_id) {
                 setNotifications(prev => {
                     if (prev.some(n => n.id === data.id)) return prev;
@@ -158,7 +158,7 @@ export default function SendNotificationPage() {
         try {
             const data = await apiNotifications.list();
             const manualTypes = ['info', 'success', 'warning', 'error'];
-            const manualMessages = data.filter(n => 
+            const manualMessages = data.filter(n =>
                 manualTypes.includes(n.notification_type) && !n.data?.post_id
             );
             setNotifications(manualMessages);
@@ -331,7 +331,7 @@ export default function SendNotificationPage() {
                                         >
                                             <Checkbox
                                                 checked={selected}
-                                                onChange={() => toggleUser(uid)}
+                                                onChange={() => {}} // Parent div handles the click event via bubbling
                                                 ariaLabel={`Select ${displayName(u)}`}
                                                 size="sm"
                                             />

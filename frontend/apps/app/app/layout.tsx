@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
     title: 'Elevate',
     description: 'Engineering Analytics & Compliance',
+    icons: {
+        icon: '/assets/image.png',
+    },
 };
 
 import { Toaster } from 'react-hot-toast';
