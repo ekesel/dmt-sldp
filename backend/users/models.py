@@ -51,13 +51,41 @@ class Department(models.Model):
         return self.name
 
 
+class CustomPermission(models.Model):
+    permission_code = models.CharField(max_length=100, unique=True)  # e.g., "UPLOAD_DOCUMENTS"
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'custom_permissions'
+
+    def __str__(self):
+        return f"{self.name} ({self.permission_code})"
+
+
 class RoleTable(models.Model):
     role_name = models.CharField(max_length=50) 
+    role_code = models.CharField(max_length=50, unique=True, null=True, blank=True)
     dep_name  = models.CharField(
         max_length=100,
         null=True,
         blank=True
     )
+    permissions = models.ManyToManyField(
+        CustomPermission,
+        blank=True,
+        related_name='roles',
+        db_table='role_permissions_mapping'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.role_code and self.role_name:
+            self.role_code = self.role_name.upper().replace(' ', '_')
+        super().save(*args, **kwargs)
+
+
 
