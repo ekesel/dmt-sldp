@@ -99,6 +99,7 @@ urlpatterns = [
     # to prevent DRF's /{pk}/ pattern from greedily matching "send" / "send-bulk"
     path('api/notifications/send/', NotificationViewSet.as_view({'post': 'send_notification'}), name='notification_send'),
     path('api/notifications/send-bulk/', NotificationViewSet.as_view({'post': 'send_notification_bulk'}), name='notification_send_bulk'),
+    path('api/notifications/quick-update/', NotificationViewSet.as_view({'get': 'quick_update'}), name='notification_quick_update'),
     
     # Identity Mapping explicit routes (to avoid router 404s)
     path('api/admin/identity-mappings/', UserIdentityMappingViewSet.as_view({'get': 'list', 'post': 'create'}), name='identity-list'),

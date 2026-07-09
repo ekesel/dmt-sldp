@@ -2,8 +2,32 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from .models import Notification
-from .serializers import NotificationSerializer
+from .serializers import NotificationSerializer, QuickUpdateNotificationSerializer
+
+class QuickUpdateNotificationPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        total_records = self.page.paginator.count
+        total_pages = self.page.paginator.num_pages
+        current_page = self.page.number
+        page_size = self.page.paginator.per_page
+
+        return Response({
+            'status_code': 200,
+            'message': 'success',
+            'pagination': {
+                'current_page': current_page,
+                'page_size': page_size,
+                'total_pages': total_pages,
+                'total_count': total_records
+            },
+            'data': data
+        })
 
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
@@ -12,6 +36,28 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Always filter by current user
         return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='quick-update')
+    def quick_update(self, request):
+        queryset = self.get_queryset().filter(notification_type='qucik_update')
+        paginator = QuickUpdateNotificationPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        if page is not None:
+            serializer = QuickUpdateNotificationSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+            
+        serializer = QuickUpdateNotificationSerializer(queryset, many=True)
+        return Response({
+            'status_code': 200,
+            'message': 'success',
+            'pagination': {
+                'current_page': 1,
+                'page_size': len(serializer.data),
+                'total_pages': 1,
+                'total_count': len(serializer.data)
+            },
+            'data': serializer.data
+        })
 
     @action(detail=True, methods=['post'], url_path='mark-as-read')
     def mark_as_read(self, request, pk=None):
@@ -73,6 +119,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                     continue
                 Notification.objects.create(
                     user=recipient,
+                    sender=request.user,
                     tenant=tenant,
                     title=title,
                     message=message,
@@ -126,6 +173,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                 
             notification = Notification.objects.create(
                 user=recipient,
+                sender=request.user,
                 tenant=tenant,
                 title=title,
                 message=message,
