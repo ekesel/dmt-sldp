@@ -14,6 +14,7 @@ class Notification(models.Model):
     TYPE_EXCEPTION_APPROVED = 'exception_approved'
     TYPE_AI_INSIGHT = 'ai_insight'
     TYPE_PASSWORD_RESET = 'password_reset'
+    TYPE_QUCIK_UPDATE = 'qucik_update'
 
     TYPE_CHOICES = [
         (TYPE_INFO, 'Info'),
@@ -26,10 +27,12 @@ class Notification(models.Model):
         (TYPE_EXCEPTION_APPROVED, 'DMT Exception Approved'),
         (TYPE_AI_INSIGHT, 'AI Insight'),
         (TYPE_PASSWORD_RESET, 'Password Reset'),
+        (TYPE_QUCIK_UPDATE, 'Qucik Update'),
     ]
 
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
     title = models.CharField(max_length=255, default='Notification')
     message = models.TextField()
     notification_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default=TYPE_INFO)
