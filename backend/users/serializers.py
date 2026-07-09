@@ -5,6 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import RoleTable
+from .models import CustomPermission
 
 User = get_user_model()
 
@@ -13,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
     tenant_slug = serializers.ReadOnlyField(source='tenant.slug')
     avatar_url = serializers.SerializerMethodField()
+    permission = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -21,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 
             'is_staff', 'is_superuser', 'is_manager', 'is_active', 'date_of_join',
             'profile_picture', 'custom_title', 'competitive_title', 
-            'competitive_title_reason', 'avatar_url'
+            'competitive_title_reason', 'avatar_url', 'permission'
         ]
         read_only_fields = ['id', 'avatar_url']
 
@@ -37,6 +39,14 @@ class UserSerializer(serializers.ModelSerializer):
         email = obj.email.lower().encode('utf-8')
         email_hash = hashlib.md5(email).hexdigest()
         return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
+
+    def get_permission(self, obj):
+        
+        if obj.is_superuser:
+            return list(CustomPermission.objects.values_list('permission_code', flat=True))
+        if obj.role:
+            return list(obj.role.permissions.values_list('permission_code', flat=True))
+        return []
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -111,7 +121,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         # Add user info to response
-        data['user'] = UserSerializer(self.user).data
+        data['user'] = UserSerializer(self.user, context=self.context).data
         
         request = self.context.get('request')
         
