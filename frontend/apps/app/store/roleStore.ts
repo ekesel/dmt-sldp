@@ -9,6 +9,7 @@ interface RolesState {
         canAccessCompliance: boolean;
         canAccessMetrics: boolean;
     };
+    permission: string[];
     setRolesFromUser: (user: any | null) => void;
 }
 
@@ -21,9 +22,11 @@ export const useRoleStore = create<RolesState>((set) => ({
         canAccessCompliance: true,
         canAccessMetrics: true,
     },
+    permission: [],
     setRolesFromUser: (user) => set({
         isManager: user?.is_manager || false,
         isStaff: user?.is_staff || false,
         isSuperUser: user?.is_superuser || false,
+        permission: user?.permission || [],
     }),
 }));

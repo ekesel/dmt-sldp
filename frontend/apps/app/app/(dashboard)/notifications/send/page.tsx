@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { users as apiUsers, notifications as apiNotifications, User, DMTNotification } from '@dmt/api';
+import { users as apiUsers, notifications as apiNotifications, User, DMTNotification, getFileUrl } from '@dmt/api';
 import { useWebSocket } from '../../../../hooks/useWebSocket';
+import { toast } from 'react-hot-toast';
 import {
     Send,
     User as UserIcon,
@@ -89,7 +90,7 @@ export default function SendNotificationPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
-    const [type, setType] = useState('info');
+    const [type, setType] = useState('qucik_update');
     const [status, setStatus] = useState<{
         kind: 'success' | 'error' | 'partial';
         message: string;
@@ -97,7 +98,10 @@ export default function SendNotificationPage() {
 
     const [notifications, setNotifications] = useState<DMTNotification[]>([]);
     const [loadingNotifications, setLoadingNotifications] = useState(true);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [highlightId, setHighlightId] = useState<string | null>(null);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
     const searchParams = useSearchParams();
     const { client: socket } = useWebSocket();
 
@@ -106,9 +110,8 @@ export default function SendNotificationPage() {
 
         const onNotification = (payload: any) => {
             const data = payload.data || payload;
-            const manualTypes = ['info', 'success', 'warning', 'error'];
 
-            if (manualTypes.includes(data.notification_type) && !data.data?.post_id) {
+            if (data.notification_type === 'qucik_update' && !data.data?.post_id) {
                 setNotifications(prev => {
                     if (prev.some(n => n.id === data.id)) return prev;
                     return [data, ...prev];
@@ -149,19 +152,26 @@ export default function SendNotificationPage() {
             .then(setUsers)
             .catch(console.error)
             .finally(() => setLoading(false));
-
-        fetchNotifications();
     }, []);
 
-    const fetchNotifications = async () => {
+    useEffect(() => {
+        fetchNotifications(page);
+    }, [page]);
+
+    const fetchNotifications = async (currentPage = 1) => {
         setLoadingNotifications(true);
         try {
-            const data = await apiNotifications.list();
-            const manualTypes = ['info', 'success', 'warning', 'error'];
-            const manualMessages = data.filter(n =>
-                manualTypes.includes(n.notification_type) && !n.data?.post_id
-            );
-            setNotifications(manualMessages);
+            const response = await apiNotifications.quickUpdates({ page: currentPage, page_size: 10 });
+            if (response.data && Array.isArray(response.data)) {
+                setNotifications(response.data);
+                setTotalPages(1);
+            } else if (response.data && response.data.results) {
+                setNotifications(response.data.results);
+                setTotalPages(Math.max(1, Math.ceil(response.data.count / 10)));
+            } else {
+                setNotifications([]);
+                setTotalPages(1);
+            }
         } catch (err) {
             console.error('Failed to fetch notifications', err);
         } finally {
@@ -183,6 +193,7 @@ export default function SendNotificationPage() {
     const someFilteredSelected = selectedFiltered.length > 0 && selectedFiltered.length < filteredIds.length;
 
     const toggleSelectAll = () => {
+        if (status) setStatus(null);
         setSelectedIds((prev) => {
             const next = new Set(prev);
             if (allFilteredSelected) {
@@ -195,6 +206,7 @@ export default function SendNotificationPage() {
     };
 
     const toggleUser = (id: number) => {
+        if (status) setStatus(null);
         setSelectedIds((prev) => {
             const next = new Set(prev);
             next.has(id) ? next.delete(id) : next.add(id);
@@ -220,6 +232,7 @@ export default function SendNotificationPage() {
                 setStatus({ kind: 'partial', message: `Sent to ${result.sent} user${result.sent !== 1 ? 's' : ''}. ${result.failed.length} failed.` });
             } else {
                 setStatus({ kind: 'success', message: `Notification sent to ${result.sent} user${result.sent !== 1 ? 's' : ''} successfully.` });
+                toast.success('Message sent successfully');
                 setTitle('');
                 setMessage('');
                 setSelectedIds(new Set());
@@ -331,7 +344,7 @@ export default function SendNotificationPage() {
                                         >
                                             <Checkbox
                                                 checked={selected}
-                                                onChange={() => {}} // Parent div handles the click event via bubbling
+                                                onChange={() => { }} // Parent div handles the click event via bubbling
                                                 ariaLabel={`Select ${displayName(u)}`}
                                                 size="sm"
                                             />
@@ -386,33 +399,6 @@ export default function SendNotificationPage() {
                                             </button>
                                         </div>
 
-                                        {/* Notification type picker */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                                Notification Type
-                                            </label>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {[
-                                                    { id: 'info', icon: Info, color: 'text-primary', bg: 'bg-white border-gray-200', ring: 'ring-gray-200' },
-                                                    { id: 'success', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50 border-emerald-200', ring: 'ring-emerald-300' },
-                                                    { id: 'warning', icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50 border-amber-200', ring: 'ring-amber-300' },
-                                                    { id: 'error', icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-50 border-rose-200', ring: 'ring-rose-300' },
-                                                ].map((t) => (
-                                                    <button
-                                                        key={t.id}
-                                                        type="button"
-                                                        onClick={() => setType(t.id)}
-                                                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${type === t.id
-                                                            ? `${t.bg} ring-2 ${t.ring} shadow-sm`
-                                                            : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        <t.icon className={`w-5 h-5 ${t.color}`} />
-                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">{t.id}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
 
                                         {/* Title */}
                                         <div>
@@ -424,7 +410,10 @@ export default function SendNotificationPage() {
                                                 placeholder="Brief summary..."
                                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition"
                                                 value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
+                                                onChange={(e) => {
+                                                    setTitle(e.target.value);
+                                                    if (status) setStatus(null);
+                                                }}
                                             />
                                         </div>
 
@@ -438,7 +427,10 @@ export default function SendNotificationPage() {
                                                 rows={5}
                                                 className="flex-1 w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
                                                 value={message}
-                                                onChange={(e) => setMessage(e.target.value)}
+                                                onChange={(e) => {
+                                                    setMessage(e.target.value);
+                                                    if (status) setStatus(null);
+                                                }}
                                                 required
                                             />
                                         </div>
@@ -525,25 +517,52 @@ export default function SendNotificationPage() {
                                         {notifications.map((n) => {
                                             const style = getNotificationStyle(n.notification_type);
 
+                                            const senderName = n.user_name || n.data?.sender_name;
+                                            const initials = senderName
+                                                ? senderName.split(/\\s+/).map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()
+                                                : '';
+                                            const senderUser = users.find(u => {
+                                                const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+                                                return fullName === senderName || u.username === senderName || u.email === senderName;
+                                            });
+                                            const avatarUrl = senderUser?.avatar_url || senderUser?.profile_picture || n.data?.sender_avatar;
+                                            const showImage = avatarUrl && !imageErrors[String(n.id)];
+
                                             return (
                                                 <div
                                                     key={n.id}
                                                     id={`notification-${n.id}`}
-                                                    className={`p-4 flex items-start gap-4 transition-all duration-1000 relative ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
+                                                    className={`p-4 flex items-start gap-3 transition-all duration-1000 relative ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.bg}`}>
-                                                        {n.data?.sender_name ? <UserIcon className="w-5 h-5 text-primary" /> : style.icon}
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${senderName && !showImage ? 'bg-slate-200 text-slate-600' : (!showImage ? style.bg : '')} overflow-hidden`}>
+                                                        {showImage ? (
+                                                            <img
+                                                                src={getFileUrl(avatarUrl)}
+                                                                alt={senderName || 'User'}
+                                                                className="w-full h-full object-cover"
+                                                                onError={() => setImageErrors(prev => ({ ...prev, [String(n.id)]: true }))}
+                                                            />
+                                                        ) : senderName ? (
+                                                            <span className="text-sm font-medium tracking-wide">{initials}</span>
+                                                        ) : (
+                                                            style.icon
+                                                        )}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between mb-1.5 gap-4">
-                                                            <h4 className="text-sm font-bold text-gray-900 break-words">
-                                                                {n.data?.sender_name || n.title || 'System'}
+                                                    <div className="flex-1 min-w-0 pt-0.5">
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <h4 className="text-[15px] font-bold text-gray-900 break-words leading-tight">
+                                                                {senderName || 'System'}
                                                             </h4>
-                                                            <span className="text-[11px] font-medium text-gray-400 whitespace-nowrap shrink-0 mt-0.5">
+                                                            <span className="text-[11px] font-medium text-gray-400 whitespace-nowrap shrink-0">
                                                                 {new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
-                                                        <p className="text-[13.5px] text-gray-600 break-words whitespace-pre-wrap leading-relaxed">{n.message}</p>
+                                                        {(n.title || !senderName) && (
+                                                            <p className="text-[14px] text-gray-500 mb-0.5 leading-snug">
+                                                                {n.title || 'System'}
+                                                            </p>
+                                                        )}
+                                                        <p className="text-[14px] text-gray-800 break-words whitespace-pre-wrap leading-relaxed mt-0.5">{n.message}</p>
                                                     </div>
                                                     {!n.is_read && (
                                                         <div className="shrink-0 pt-2">
@@ -557,7 +576,28 @@ export default function SendNotificationPage() {
                                 )}
                             </div>
 
-
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
+                                    <button
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                        className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span className="text-xs font-medium text-gray-500">
+                                        Page <span className="font-bold text-gray-700">{page}</span> of <span className="font-bold text-gray-700">{totalPages}</span>
+                                    </span>
+                                    <button
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page >= totalPages}
+                                        className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

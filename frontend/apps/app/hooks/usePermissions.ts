@@ -6,10 +6,15 @@ export function usePermissions() {
     const isSuperUser = useRoleStore((state) => state.isSuperUser);
     const features = useRoleStore((state) => state.features);
 
+    const permission = useRoleStore((state) => state.permission);
+
+    const hasPermission = (perm: string) => permission.includes(perm);
+
     return {
         features,
         isManager,
         isStaff,
         isSuperUser,
+        hasPermission,
     };
 }
