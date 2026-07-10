@@ -12,7 +12,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 export default function OnboardingPage() {
     const router = useRouter();
     const { hasPermission } = usePermissions();
-    const canManageOnboarding = hasPermission('UPLOAD_DOCUMENTS') || hasPermission('UPLOAD_ONBOARDING_DOCUMENTS');
+    const canManageOnboarding = hasPermission('UPLOAD_ONBOARDING_DOCUMENTS');
     
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
