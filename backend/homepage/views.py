@@ -280,7 +280,8 @@ class LearningAndDevelopmentAPIView(APIView):
 
 # Onboarding Api
 class OnboardingAPIView(APIView):
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [HasRequiredPermission]
+    required_permission_code = 'UPLOAD_ONBOARDING_DOCUMENTS'
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
