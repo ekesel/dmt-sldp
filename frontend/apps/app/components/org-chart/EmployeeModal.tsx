@@ -77,9 +77,9 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             setState(prev => ({
                 ...prev,
                 name: employeeData ? employeeData.name : '',
-                role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null') ? employeeData.roleId : '',
+                role: (employeeData && employeeData.roleId && employeeData.roleId !== 'null' && rolesList.find(r => String(r.id) === String(employeeData.roleId))) ? employeeData.roleId : '',
                 email: employeeData ? (employeeData.email || '') : '',
-                department: (employeeData && employeeData.department && employeeData.department !== 'null') ? (departmentsList.find(d => String(d.name).toLowerCase() === String(employeeData.department).toLowerCase())?.name || employeeData.department) : '',
+                department: (employeeData && employeeData.department && employeeData.department !== 'null') ? (departmentsList.find(d => String(d.name).toLowerCase() === String(employeeData.department).toLowerCase())?.name || '') : '',
                 parentId: (employeeData && employeeData.parentId && employeeData.parentId !== 'null') ? employeeData.parentId : (defaultParentId || ''),
                 isNotFound: false,
                 autocompleteError: false,
@@ -181,7 +181,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
                             const matchEmail = bestMatch.email || '';
                             const matchRoleName = bestMatch.role || '';
                             const matchDeptRaw = bestMatch.department || 'backend';
-                            const matchDept = departmentsListRef.current.find(d => String(d.name).toLowerCase() === String(matchDeptRaw).toLowerCase())?.name || matchDeptRaw;
+                            const matchDept = departmentsListRef.current.find(d => String(d.name).toLowerCase() === String(matchDeptRaw).toLowerCase())?.name || '';
 
                             if (lastMatchedRef.current?.email !== matchEmail) {
                                 const rList = rolesListRef.current;

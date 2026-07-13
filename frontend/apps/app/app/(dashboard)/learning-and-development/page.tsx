@@ -163,7 +163,7 @@ export default function LearningAndDevelopmentPage() {
                         </div>
                     </div>
 
-                    {/* Upload button on the right - restricted to MANAGER only */}
+                    {/* Upload button on the right - restricted based on permissions */}
                     {canUploadDocuments && (
                         <button
                             onClick={handleUploadClick}
@@ -262,7 +262,7 @@ export default function LearningAndDevelopmentPage() {
                                             View Document
                                         </a>
                                         
-                                        {/* Update Button - restricted to MANAGER only */}
+                                        {/* Update Button - restricted based on permissions */}
                                         {canUploadDocuments && (
                                             <button
                                                 onClick={() => handleUpdateClick(course.id)}

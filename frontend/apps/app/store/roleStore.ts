@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 
+export interface UserRoleData {
+    is_manager?: boolean;
+    is_staff?: boolean;
+    is_superuser?: boolean;
+    permission?: string[];
+}
+
 interface RolesState {
     isManager: boolean;
     isStaff: boolean;
@@ -10,7 +17,7 @@ interface RolesState {
         canAccessMetrics: boolean;
     };
     permission: string[];
-    setRolesFromUser: (user: any | null) => void;
+    setRolesFromUser: (user: UserRoleData | null) => void;
 }
 
 export const useRoleStore = create<RolesState>((set) => ({

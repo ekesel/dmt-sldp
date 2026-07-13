@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useRoleStore } from '../store/roleStore';
 
 export function usePermissions() {
@@ -8,7 +9,7 @@ export function usePermissions() {
 
     const permission = useRoleStore((state) => state.permission);
 
-    const hasPermission = (perm: string) => permission.includes(perm);
+    const hasPermission = useCallback((perm: string) => permission.includes(perm), [permission]);
 
     return {
         features,

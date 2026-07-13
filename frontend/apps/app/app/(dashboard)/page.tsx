@@ -36,11 +36,23 @@ export default function DashboardPage() {
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
     const dashboardRef = useRef<HTMLDivElement>(null);
+    const isDateInvalid = (d: string) => {
+        if (!d) return false;
+        const year = parseInt(d.split('-')[0], 10);
+        return year < 2000 || year > 2100;
+    };
+    const isRangeInvalid = Boolean(startDate && endDate && new Date(startDate) > new Date(endDate));
+    const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate) || isRangeInvalid;
+
     const {
         summary, velocity, compliance, insights, forecast, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
-    } = useDashboardData(selectedProjectId, startDate || null, endDate || null);
+    } = useDashboardData(
+        selectedProjectId,
+        hasInvalidDates ? null : (startDate || null),
+        hasInvalidDates ? null : (endDate || null)
+    );
 
     const handleHelpClick = (id: string) => {
         setActiveHelpId(id);
@@ -327,14 +339,6 @@ export default function DashboardPage() {
                     )}
                     
                     {(() => {
-                        const isDateInvalid = (d: string) => {
-                            if (!d) return false;
-                            const year = parseInt(d.split('-')[0], 10);
-                            return year < 2000 || year > 2100;
-                        };
-                        
-                        const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate);
-                        
                         if (hasInvalidDates) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -461,8 +465,8 @@ export default function DashboardPage() {
                                 <div className="flex justify-between items-start">
                                     <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                 </div>
-                                <p className="text-destructive font-bold mt-4 group-hover:text-black transition-colors">Low Compliance Rate</p>
-                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-black/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
+                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
                             </Card>
                         )}
                         {(!summary || (summary.compliance_rate >= 80)) && (

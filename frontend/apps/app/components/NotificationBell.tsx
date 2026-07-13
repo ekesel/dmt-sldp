@@ -153,10 +153,8 @@ export function NotificationBell() {
                         )}
                     </div>
 
-                    <div className="p-3 bg-muted/30 border-t border-border text-center">
-                        <p></p>
-                    </div>
-                </div>
+                    <div className="p-3 bg-muted/30 border-t border-border text-center"></div>
+                </div> 
             )}
         </div>
     );

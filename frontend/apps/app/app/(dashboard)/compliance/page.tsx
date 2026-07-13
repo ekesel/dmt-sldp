@@ -225,6 +225,7 @@ export default function CompliancePage() {
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
         setSelectedProjectId(projectId);
+        setCurrentPage(1);
         // Sprint will be reset by SprintSelector internally via onSelect
     }, []);
 
@@ -273,7 +274,10 @@ export default function CompliancePage() {
                         <SprintSelector
                             projectId={selectedProjectId}
                             selectedSprintId={selectedSprintId}
-                            onSelect={setSelectedSprintId}
+                            onSelect={(sprintId) => {
+                                setSelectedSprintId(sprintId);
+                                setCurrentPage(1);
+                            }}
                             autoSelectLatest={!workItemId && !paramSprintId}
                         />
                         <ProjectSelector
@@ -283,7 +287,8 @@ export default function CompliancePage() {
                         <ActiveFolderSelector
                             projectId={selectedProjectId}
                             onFolderChanged={() => {
-                                fetchData(selectedProjectId, selectedSprintId);
+                                setCurrentPage(1);
+                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize);
                             }}
                         />
                     </div>

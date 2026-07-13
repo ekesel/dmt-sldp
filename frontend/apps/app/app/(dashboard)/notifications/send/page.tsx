@@ -112,10 +112,7 @@ export default function SendNotificationPage() {
             const data = payload.data || payload;
 
             if (data.notification_type === 'qucik_update' && !data.data?.post_id) {
-                setNotifications(prev => {
-                    if (prev.some(n => n.id === data.id)) return prev;
-                    return [data, ...prev];
-                });
+                fetchNotifications(page);
             }
         };
 
@@ -123,29 +120,35 @@ export default function SendNotificationPage() {
         return () => {
             socket.off('notification_message', onNotification);
         };
-    }, [socket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, page]);
 
     useEffect(() => {
         const id = searchParams.get('notification_id');
-        if (id && notifications.length > 0) {
-            setHighlightId(String(id));
-            const scrollTimer = setTimeout(() => {
-                const el = document.getElementById(`notification-${id}`);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 300);
+        if (id && !loadingNotifications) {
+            const found = notifications.find(n => String(n.id) === id);
+            if (found) {
+                setHighlightId(String(id));
+                const scrollTimer = setTimeout(() => {
+                    const el = document.getElementById(`notification-${id}`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
 
-            const highlightTimer = setTimeout(() => {
-                setHighlightId(null);
-            }, 3000);
+                const highlightTimer = setTimeout(() => {
+                    setHighlightId(null);
+                }, 3000);
 
-            return () => {
-                clearTimeout(scrollTimer);
-                clearTimeout(highlightTimer);
-            };
+                return () => {
+                    clearTimeout(scrollTimer);
+                    clearTimeout(highlightTimer);
+                };
+            } else if (page < totalPages) {
+                setPage(prev => prev + 1);
+            }
         }
-    }, [searchParams, notifications]);
+    }, [searchParams, notifications, loadingNotifications, page, totalPages]);
 
     useEffect(() => {
         apiUsers.list()

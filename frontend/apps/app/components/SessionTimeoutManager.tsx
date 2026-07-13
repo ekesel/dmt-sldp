@@ -32,7 +32,7 @@ export default function SessionTimeoutManager() {
             return;
         }
 
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
         const handleActivity = () => {
             resetTimer();
