@@ -258,7 +258,7 @@ function handleApiError(error: unknown): never {
       axiosErr.message ||
       'An unexpected API error occurred';
     throw new ApiClientError(message, status, data);
-}
+  }
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
 
@@ -623,8 +623,8 @@ export const developers = {
 };
 
 export const compliance = {
-  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null) =>
-    get<any[]>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId })}`),
+  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null, page?: number, pageSize?: number) =>
+    get<any>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId, page, page_size: pageSize })}`),
   resolveFlag: (flagId: string) =>
     post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>
@@ -860,9 +860,10 @@ export const activityLog = {
 
 export interface DMTNotification {
   id: string | number;
+  user_name?: string;
   title?: string;
   message: string;
-  notification_type: 'info' | 'success' | 'warning' | 'error' | string;
+  notification_type: 'info' | 'success' | 'warning' | 'error' | 'qucik_update' | string;
   is_read: boolean;
   created_at: string;
   data?: Record<string, any>;
@@ -873,6 +874,7 @@ export type Notification = DMTNotification;
 
 export const notifications = {
   list: () => get<DMTNotification[]>('/notifications/'),
+  quickUpdates: (params?: { page?: number; page_size?: number }) => get<any>('/notifications/quick-update/', params),
   markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
   markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),

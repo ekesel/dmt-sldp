@@ -18,7 +18,8 @@ interface PolicyData {
 
 export default function PoliciesPage() {
     const router = useRouter();
-    const { isManager } = usePermissions();
+    const { hasPermission } = usePermissions();
+    const canUploadDocuments = hasPermission('UPLOAD_DOCUMENTS');
     const queryClient = useQueryClient();
     
     // Hidden file inputs
@@ -148,7 +149,7 @@ export default function PoliciesPage() {
                     </div>
 
                     {/* Upload button on the right - restricted to MANAGER only */}
-                    {isManager && (
+                    {canUploadDocuments && (
                         <button
                             onClick={handleUploadClick}
                             disabled={uploadMutation.isPending}
@@ -195,7 +196,7 @@ export default function PoliciesPage() {
                                         >
                                             <Download className="w-5 h-5" />
                                         </a>
-                                        {isManager && (
+                                        {canUploadDocuments && (
                                             <button
                                                 onClick={() => handleDeleteClick(policy.id)}
                                                 className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
@@ -236,7 +237,7 @@ export default function PoliciesPage() {
                                         </a>
                                         
                                         {/* Update Button - restricted to MANAGER only */}
-                                        {isManager && (
+                                        {canUploadDocuments && (
                                             <button
                                                 onClick={() => handleUpdateClick(policy.id)}
                                                 className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-accent hover:bg-accent/90 text-accent-foreground transition-all shadow-sm cursor-pointer active:scale-95"
@@ -266,7 +267,7 @@ export default function PoliciesPage() {
                         </div>
                         <h3 className="text-[1.125rem] font-bold text-foreground">No Policies Uploaded</h3>
                         <p className="text-muted-foreground text-[0.875rem] max-w-sm mt-2 font-medium leading-normal">
-                            {isManager 
+                            {canUploadDocuments 
                                 ? 'Get started by uploading your first official company policy document of organization!' 
                                 : 'There are currently no official company policy documents uploaded by management.'
                             }

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { User, Mail, Shield, Building2, BadgeCheck, Key, Upload } from 'lucide-react';
 import { auth } from '@dmt/api';
 import { toast } from 'react-hot-toast';
@@ -9,6 +10,7 @@ import ImageCropperModal from '@/components/ImageCropperModal';
 
 export default function ProfilePage() {
     const { user } = useAuth();
+    const { isManager, isStaff, isSuperUser } = usePermissions();
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(user?.avatar_url || null);
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
@@ -85,11 +87,11 @@ export default function ProfilePage() {
         {
             icon: <Key className="w-4 h-4 text-primary" />,
             label: 'Role',
-            value: user?.is_superuser
+            value: isSuperUser
                 ? 'Super Admin'
-                : user?.is_staff
+                : isStaff
                     ? 'Staff'
-                    : user?.is_manager
+                    : isManager
                         ? 'Manager'
                         : 'Company User',
         },
@@ -97,9 +99,9 @@ export default function ProfilePage() {
 
     const badges = [
         user?.is_platform_admin && { label: 'Platform Admin', color: 'bg-accent/70 text-accent-foreground border-accent/60' },
-        user?.is_superuser && { label: 'Super Admin', color: 'bg-warning/70 text-warning-foreground border-warning/60' },
-        user?.is_staff && { label: 'Staff', color: 'bg-primary/70 text-primary-foreground border-primary/60' },
-        user?.is_manager && { label: 'Manager', color: 'bg-primary/70 text-primary-foreground border-primary/60' },
+        isSuperUser && { label: 'Super Admin', color: 'bg-warning/70 text-warning-foreground border-warning/60' },
+        isStaff && { label: 'Staff', color: 'bg-primary/70 text-primary-foreground border-primary/60' },
+        isManager && { label: 'Manager', color: 'bg-primary/70 text-primary-foreground border-primary/60' },
         user?.custom_title && { label: user.custom_title, color: 'bg-accent/70 text-accent border-accent/60' },
     ].filter(Boolean) as { label: string; color: string }[];
 

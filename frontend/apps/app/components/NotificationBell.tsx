@@ -34,10 +34,8 @@ export function NotificationBell() {
                 return '/sprint-analysis';
             case 'ai_insight':
                 return '/metrics';
-            case 'info':
-            case 'success':
-            case 'warning':
-            case 'error':
+
+            case 'qucik_update':
                 return `/notifications/send?notification_id=${n.id}`;
         }
 
@@ -121,7 +119,7 @@ export function NotificationBell() {
                             </div>
                         ) : (
                             <div className="divide-y divide-border">
-                                {notifications.map((n) => (
+                                {notifications.slice(0, 50).map((n) => (
                                     <div
                                         key={n.id}
                                         className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''} ${getNotificationLink(n) ? 'cursor-pointer' : ''}`}
@@ -155,12 +153,8 @@ export function NotificationBell() {
                         )}
                     </div>
 
-                    <div className="p-3 bg-muted/30 border-t border-border text-center">
-                        <button className="text-xs text-muted-foreground hover:text-foreground transition">
-                            View all activities
-                        </button>
-                    </div>
-                </div>
+                    <div className="p-3 bg-muted/30 border-t border-border text-center"></div>
+                </div> 
             )}
         </div>
     );

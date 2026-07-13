@@ -37,7 +37,8 @@ const getFileViewerUrl = (url: string) => {
 
 export default function LearningAndDevelopmentPage() {
     const router = useRouter();
-    const { isManager } = usePermissions();
+    const { hasPermission } = usePermissions();
+    const canUploadDocuments = hasPermission('UPLOAD_DOCUMENTS');
 
     // Hidden file inputs
     const createFileInputRef = useRef<HTMLInputElement>(null);
@@ -162,8 +163,8 @@ export default function LearningAndDevelopmentPage() {
                         </div>
                     </div>
 
-                    {/* Upload button on the right - restricted to MANAGER only */}
-                    {isManager && (
+                    {/* Upload button on the right - restricted based on permissions */}
+                    {canUploadDocuments && (
                         <button
                             onClick={handleUploadClick}
                             disabled={uploadMutation.isPending}
@@ -220,7 +221,7 @@ export default function LearningAndDevelopmentPage() {
                                         >
                                             <Download className="w-5 h-5" />
                                         </a>
-                                        {isManager && (
+                                        {canUploadDocuments && (
                                             <button
                                                 onClick={() => handleDeleteClick(course.id)}
                                                 className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
@@ -261,8 +262,8 @@ export default function LearningAndDevelopmentPage() {
                                             View Document
                                         </a>
                                         
-                                        {/* Update Button - restricted to MANAGER only */}
-                                        {isManager && (
+                                        {/* Update Button - restricted based on permissions */}
+                                        {canUploadDocuments && (
                                             <button
                                                 onClick={() => handleUpdateClick(course.id)}
                                                 disabled={updateMutation.isPending}
@@ -293,7 +294,7 @@ export default function LearningAndDevelopmentPage() {
                         </div>
                         <h3 className="text-[1.125rem] font-bold text-foreground">No Resources Uploaded</h3>
                         <p className="text-muted-foreground text-[0.875rem] max-w-sm mt-2 font-medium leading-normal">
-                            {isManager 
+                            {canUploadDocuments 
                                 ? 'Get started by uploading your first official training or tech guideline resource of organization!'
                                 : 'There are currently no training or learning resources uploaded by management.'
                             }

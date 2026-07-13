@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { dashboard, search, getFileUrl } from "@dmt/api";
@@ -22,6 +22,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   const [dropdownResults, setDropdownResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const q = searchParams?.get("q") || "";
@@ -224,7 +235,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
 
 
           {/* User Profile */}
-          <div className="relative flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20">
+          <div ref={dropdownRef} className="relative flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20">
             <div className="relative group cursor-pointer" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <div className="w-[2.25rem] h-[2.25rem] md:w-[2.5rem] md:h-[2.5rem] rounded-full border-2 border-primary-foreground/40 overflow-hidden hover:border-primary-foreground transition-colors">
                 {user?.avatar_url ? (

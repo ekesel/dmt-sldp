@@ -3,12 +3,16 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import QueryProvider from '../components/providers/QueryProvider';
+import SessionTimeoutManager from '../components/SessionTimeoutManager';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
     title: 'Elevate',
     description: 'Engineering Analytics & Compliance',
+    icons: {
+        icon: '/assets/image.png',
+    },
 };
 
 import { Toaster } from 'react-hot-toast';
@@ -23,6 +27,7 @@ export default function RootLayout({
             <body className={`${inter.className} min-h-screen bg-background text-foreground`} suppressHydrationWarning>
                 <QueryProvider>
                     <AuthProvider>
+                        <SessionTimeoutManager />
                         {children}
                         <Toaster position="bottom-right" toastOptions={{
                             className: 'bg-popover text-foreground border border-border',

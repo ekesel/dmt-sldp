@@ -11,7 +11,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 
 export default function OnboardingPage() {
     const router = useRouter();
-    const { isManager } = usePermissions();
+    const { hasPermission } = usePermissions();
+    const canManageOnboarding = hasPermission('UPLOAD_ONBOARDING_DOCUMENTS');
     
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
@@ -170,8 +171,8 @@ export default function OnboardingPage() {
                         </div>
                     </div>
 
-                    {/* Upload button on the right - restricted to MANAGER only */} 
-                    {isManager && (
+                    {/* Upload button on the right - restricted based on permissions */} 
+                    {canManageOnboarding && (
                         <button
                             onClick={openCreateModal}
                             className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-[0.875rem] font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-md hover:shadow-lg shrink-0"
@@ -206,7 +207,7 @@ export default function OnboardingPage() {
                                     >
                                         <Download className="w-5 h-5" />
                                     </a>
-                                    {isManager && (
+                                    {canManageOnboarding && (
                                         <button
                                             onClick={() => handleDeleteClick(guide.id)}
                                             className="p-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
@@ -246,8 +247,8 @@ export default function OnboardingPage() {
                                         View Document
                                     </a>
                                     
-                                    {/* Update Button - restricted to MANAGER only */}
-                                    {isManager && (
+                                    {/* Update Button - restricted based on permissions */}
+                                    {canManageOnboarding && (
                                         <button
                                             onClick={() => openUpdateModal(guide.id, guide.title)}
                                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-bold bg-accent hover:bg-accent/90 text-accent-foreground transition-all shadow-sm cursor-pointer active:scale-95"
@@ -267,7 +268,7 @@ export default function OnboardingPage() {
                         </div>
                         <h3 className="text-[1.125rem] font-bold text-foreground">No Guides Uploaded</h3>
                         <p className="text-muted-foreground text-[0.875rem] max-w-sm mt-2 font-medium leading-normal">
-                            {isManager 
+                            {canManageOnboarding 
                                 ? 'Get started by uploading your first official welcome playbook or setup guide!'
                                 : 'There are currently no onboarding welcome guides uploaded by management.'
                             }

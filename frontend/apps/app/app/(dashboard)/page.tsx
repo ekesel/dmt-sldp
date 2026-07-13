@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Card } from "@dmt/ui";
-import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle, CalendarDays, X } from "lucide-react";
+import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle, CalendarDays, X, Loader2 } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { ForecastChart } from "../../components/charts/ForecastChart";
@@ -36,11 +36,23 @@ export default function DashboardPage() {
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
     const dashboardRef = useRef<HTMLDivElement>(null);
+    const isDateInvalid = (d: string) => {
+        if (!d) return false;
+        const year = parseInt(d.split('-')[0], 10);
+        return year < 2000 || year > 2100;
+    };
+    const isRangeInvalid = Boolean(startDate && endDate && new Date(startDate) > new Date(endDate));
+    const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate) || isRangeInvalid;
+
     const {
         summary, velocity, compliance, insights, forecast, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
-    } = useDashboardData(selectedProjectId, startDate || null, endDate || null);
+    } = useDashboardData(
+        selectedProjectId,
+        hasInvalidDates ? null : (startDate || null),
+        hasInvalidDates ? null : (endDate || null)
+    );
 
     const handleHelpClick = (id: string) => {
         setActiveHelpId(id);
@@ -254,6 +266,8 @@ export default function DashboardPage() {
                                     <input
                                         type="date"
                                         value={startDate}
+                                        min="2000-01-01"
+                                        max="2100-12-31"
                                         onChange={e => setStartDate(e.target.value)}
                                         className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
@@ -267,6 +281,8 @@ export default function DashboardPage() {
                                     <input
                                         type="date"
                                         value={endDate}
+                                        min="2000-01-01"
+                                        max="2100-12-31"
                                         onChange={e => setEndDate(e.target.value)}
                                         className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
@@ -312,7 +328,34 @@ export default function DashboardPage() {
                 </header>
 
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                <div className="relative min-h-[400px]">
+                    {loading && summary && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-xl">
+                            <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                <span className="text-sm font-medium text-muted-foreground">Loading analytics...</span>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {(() => {
+                        if (hasInvalidDates) {
+                            return (
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                        <CalendarDays className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-foreground">No Data Available</h3>
+                                    <p className="text-muted-foreground mt-2 max-w-md">
+                                        The selected date range is invalid or out of realistic bounds (e.g. before year 2000). Please select a valid date range to view analytics.
+                                    </p>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className={`space-y-8 transition-opacity duration-200 ${loading && summary ? 'opacity-40 pointer-events-none' : ''}`}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                     <KPICard
                         label="Sprint Velocity"
                         value={`${summary?.velocity || 0} SP`}
@@ -422,8 +465,8 @@ export default function DashboardPage() {
                                 <div className="flex justify-between items-start">
                                     <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                 </div>
-                                <p className="text-destructive font-bold mt-4 group-hover:text-destructive-foreground transition-colors">Low Compliance Rate</p>
-                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
+                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
                             </Card>
                         )}
                         {(!summary || (summary.compliance_rate >= 80)) && (
@@ -478,6 +521,10 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="pt-8 border-t border-border" />
+                            </div>
+                        );
+                    })()}
+                </div>
             </div>
 
             {selectedProjectId && (

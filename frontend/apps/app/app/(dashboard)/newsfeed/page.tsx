@@ -8,6 +8,7 @@ import { useNewsfeedQuery } from '../../../hooks/useNewsfeedQuery';
 import { useCreatePostMutation, useUpdatePostMutation, useDeletePostMutation, useUploadImageMutation } from '../../../hooks/useNewsfeedMutations';
 import { Post } from '../../../types/newsfeed';
 import { useAuth } from '../../../context/AuthContext';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { useSearchParams } from 'next/navigation';
 
 const NewsfeedPage = () => {
@@ -39,9 +40,7 @@ const NewsfeedPage = () => {
     };
 
     // Role-based access control check
-
-    const isManager = user?.is_manager;
-
+    const { isManager } = usePermissions();
 
     const handleEdit = (post: Post) => {
         setEditingPost(post);

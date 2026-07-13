@@ -1,19 +1,27 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
-import { Shield, Mail, Lock, Loader2, AlertCircle, User } from 'lucide-react';
+import { Shield, Mail, Lock, Loader2, AlertCircle, User, Info } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { login, isLoading: isAuthLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
     });
+
+    useEffect(() => {
+        if (searchParams.get('expired') === 'true') {
+            setInfoMessage('Your session has expired due to inactivity. Please log in again.');
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,7 +30,7 @@ export default function LoginPage() {
 
         try {
             await login(formData.username, formData.password, 'company'); // Pass portal='company'
-            router.push('/');
+            router.push('/home');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Invalid credentials. Please make sure you are accessing the correct portal.');
         } finally {
@@ -49,6 +57,12 @@ export default function LoginPage() {
                             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-start gap-3">
                                 <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                                 <p className="text-sm text-destructive">{error}</p>
+                            </div>
+                        )}
+                        {infoMessage && !error && (
+                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start gap-3">
+                                <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-blue-500">{infoMessage}</p>
                             </div>
                         )}
 
@@ -116,5 +130,13 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center p-4"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+            <LoginForm />
+        </Suspense>
     );
 }
