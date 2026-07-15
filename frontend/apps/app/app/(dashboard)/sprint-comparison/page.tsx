@@ -5,7 +5,7 @@ import { ProjectSelector } from '../../../components/ProjectSelector';
 import { SprintSelector } from '../../../components/SprintSelector';
 import { KPICard } from '../../../components/KPISection';
 import { AlertTriangle, Users, Building2 } from 'lucide-react';
-import { RadarChartComponent } from '../../../components/charts/RadarChartComponent';
+import { SprintHealthBarChart } from '../../../components/charts/SprintHealthBarChart';
 import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChart';
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
 import WorkloadDistributionChart from '../../../components/charts/WorkloadDistributionChart';
@@ -240,7 +240,7 @@ export default function SprintComparisonPage() {
                         {/* Charts Grid */}
                         <div className="flex flex-col gap-8">
                             <div className="bg-card p-8 rounded-3xl border border-border w-full">
-                                <RadarChartComponent data={data.charts.radar} sprintA={effectiveBaselineName} sprintB={sprintBName} />
+                                <SprintHealthBarChart data={data.charts.radar} sprintA={effectiveBaselineName} sprintB={sprintBName} />
                             </div>
 
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">

@@ -84,14 +84,14 @@ export default function CompliancePage() {
 
     const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null, page: number = 1, pageSize: number = 10) => {
         const currentRequestId = ++requestCounter.current;
-        
+
         setLoading(true);
         setSummaryLoading(true);
         setFixedLaterLoading(true);
 
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
-        
+
         compliance.listFlags(projectId, sprintId, effectiveWorkItemId, page, pageSize)
             .then(res => {
                 if (requestCounter.current === currentRequestId) {
@@ -157,21 +157,21 @@ export default function CompliancePage() {
 
         const attemptScroll = () => {
             if (loading || fixedLaterLoading) return;
-            
+
             // First try strict match by workItemId
             let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId) || fixedLaterItems.find(f => f.work_item_id?.toString() === workItemId);
-            
+
             // If strict match fails, try matching by notification title or message (case-insensitive and robust)
             if (!targetFlag && (nTitle || nMessage)) {
                 const sanitize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const sNTitle = sanitize(nTitle);
                 const sNMessage = sanitize(nMessage);
-                
+
                 const matchFlag = (f: ComplianceFlag) => {
                     const sTitle = sanitize(f.work_item_title);
                     return sTitle.length > 3 && (sNTitle.includes(sTitle) || sNMessage.includes(sTitle));
                 };
-                
+
                 targetFlag = flags.find(matchFlag) || fixedLaterItems.find(matchFlag);
             }
 
@@ -199,7 +199,7 @@ export default function CompliancePage() {
                 console.log(`[Compliance] Element found for ${searchId}, scrolling...`);
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 element.classList.add('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]', 'transition-all', 'duration-500');
-                
+
                 classRemovalTimer = window.setTimeout(() => {
                     if (element) {
                         element.classList.remove('!bg-accent/20', '!border-accent', 'ring-4', 'ring-accent/50', 'shadow-2xl', 'scale-[1.02]');
@@ -288,7 +288,6 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             onFolderChanged={() => {
                                 setCurrentPage(1);
-                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize);
                             }}
                         />
                     </div>
@@ -325,8 +324,8 @@ export default function CompliancePage() {
                         className="cursor-pointer select-none"
                     >
                         <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
-                                ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                             }`}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
@@ -359,8 +358,8 @@ export default function CompliancePage() {
                         className="cursor-pointer select-none"
                     >
                         <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'warning'
-                                ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                                : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                            ? 'border-warning ring-2 ring-warning/30 shadow-lg'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                             }`}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
@@ -423,8 +422,8 @@ export default function CompliancePage() {
                             Active Violations
                             {activeFilter && (
                                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${activeFilter === 'critical'
-                                        ? 'bg-destructive/10 text-destructive border-destructive/30'
-                                        : 'bg-warning/10 text-warning border-warning/30'
+                                    ? 'bg-destructive/10 text-destructive border-destructive/30'
+                                    : 'bg-warning/10 text-warning border-warning/30'
                                     }`}>
                                     {activeFilter === 'critical' ? 'Critical only' : 'Warnings only'}
                                 </span>
@@ -563,7 +562,7 @@ export default function CompliancePage() {
                             >
                                 <ChevronLeft size={16} />
                             </button>
-                            
+
                             <div className="flex items-center gap-1 px-2">
                                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                     let pageNum = currentPage;
@@ -571,9 +570,9 @@ export default function CompliancePage() {
                                     else if (currentPage <= 3) pageNum = i + 1;
                                     else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
                                     else pageNum = currentPage - 2 + i;
-                                    
+
                                     if (pageNum < 1 || pageNum > totalPages) return null;
-                                    
+
                                     return (
                                         <button
                                             key={pageNum}
