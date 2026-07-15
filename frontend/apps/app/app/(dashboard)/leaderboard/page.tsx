@@ -37,12 +37,10 @@ const CategoryCard = ({
         const sorted = [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const maxScore = Math.max(...sorted.map(h => h.score), 1);
         return (
-            <div className="flex items-end gap-1 h-8 mt-2 opacity-80" title="Recent Sprint History">
+            <div className="flex items-end gap-1 h-8 mt-2 opacity-80">
                 {sorted.map((h, i) => (
-                    <div key={i} className="flex flex-col justify-end items-center group relative cursor-help h-full">
-                        <div className="absolute -top-8 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 transition-opacity">
-                            {h.date}: {h.score}
-                        </div>
+                    <div key={i} className="flex flex-col justify-end items-center group relative cursor-default h-full">
+
                         <div
                             className={`w-3 rounded-t-sm transition-all duration-500 ${colorClass.replace('text-', 'bg-')} opacity-60 hover:opacity-100`}
                             style={{ height: `${Math.max((h.score / maxScore) * 100, 10)}%` }}

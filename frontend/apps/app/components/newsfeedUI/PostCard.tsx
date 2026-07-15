@@ -216,7 +216,10 @@ const PostCard = ({
           <span className="ml-1 group-hover:underline">{reactions[post.post_id]?.total_reactions || 0}</span>
         </div>
         <div className="flex gap-3">
-          <span className="hover:underline cursor-pointer">
+          <span 
+            className="hover:underline cursor-pointer"
+            onClick={() => setShowComments(!showComments)}
+          >
             {displayCommentCount} comments
           </span>
         </div>

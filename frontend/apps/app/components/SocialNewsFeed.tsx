@@ -148,7 +148,7 @@ export const SocialNewsFeed: React.FC = () => {
                         className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] group"
                     >
                         <MessageSquare className="w-4 h-4 group-hover:fill-muted-foreground/10 transition-all" />
-                        <span>Comments</span>
+                        <span>Comments{commentCount > 0 ? ` (${commentCount})` : ''}</span>
                     </button>
                 </div>
             </div>
