@@ -87,6 +87,16 @@ export default function MetricsPage() {
                             <div key={i} className="h-48 bg-card border border-border rounded-2xl animate-pulse" />
                         ))}
                     </div>
+                ) : filteredDevelopers.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-center bg-muted/20 rounded-3xl border-2 border-dashed border-border mt-8 shadow-sm">
+                        <div className="bg-primary/10 p-5 rounded-full mb-5">
+                            <Search className="w-10 h-10 text-primary opacity-80" />
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">No developers found</h3>
+                        <p className="text-muted-foreground font-medium max-w-md mx-auto text-sm">
+                            We couldn't find any developers matching &quot;{searchTerm}&quot;. Please try a different name or email.
+                        </p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {filteredDevelopers.map((dev) => {

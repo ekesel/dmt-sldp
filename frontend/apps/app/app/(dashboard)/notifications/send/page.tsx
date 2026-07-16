@@ -157,14 +157,25 @@ export default function SendNotificationPage() {
             .finally(() => setLoading(false));
     }, []);
 
+    const fetchSeq = useRef(0);
+
+    useEffect(() => {
+        return () => {
+            fetchSeq.current = -1; // Prevent updates after unmount
+        };
+    }, []);
+
     useEffect(() => {
         fetchNotifications(page);
     }, [page]);
 
     const fetchNotifications = async (currentPage = 1) => {
+        const seq = ++fetchSeq.current;
         setLoadingNotifications(true);
         try {
             const response = await apiNotifications.quickUpdates({ page: currentPage, page_size: 10 });
+            if (seq !== fetchSeq.current) return; // Ignore if a newer request has started or component unmounted
+
             if (response.data && Array.isArray(response.data)) {
                 setNotifications(response.data);
                 setTotalPages(1);
@@ -176,9 +187,12 @@ export default function SendNotificationPage() {
                 setTotalPages(1);
             }
         } catch (err) {
+            if (seq !== fetchSeq.current) return;
             console.error('Failed to fetch notifications', err);
         } finally {
-            setLoadingNotifications(false);
+            if (seq === fetchSeq.current) {
+                setLoadingNotifications(false);
+            }
         }
     };
 

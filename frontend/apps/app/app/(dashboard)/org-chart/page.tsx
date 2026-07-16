@@ -438,7 +438,7 @@ function OrgChartPageContent() {
     useEffect(() => {
         if (nodes.length === 0) return;
         const timer = setTimeout(() => {
-            fitView({ padding: 0.3, duration: 600, minZoom: 0.5, maxZoom: 1 });
+            fitView({ padding: 0.3, duration: 600, minZoom: 0.1, maxZoom: 1 });
         }, 150);
         return () => clearTimeout(timer);
     }, [nodes.length, fitView, layoutDirection]);
@@ -640,6 +640,7 @@ function OrgChartPageContent() {
                         nodesDraggable={true}
                         zoomOnScroll={false}
                         panOnScroll={true}
+                        proOptions={{ hideAttribution: true }}
                     >
                         <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
                         <MiniMap

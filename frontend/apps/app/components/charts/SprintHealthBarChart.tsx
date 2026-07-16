@@ -11,13 +11,13 @@ import {
     Legend
 } from 'recharts';
 
-interface RadarChartProps {
+interface SprintHealthBarChartProps {
     data: any[];
     sprintA: string;
     sprintB: string;
 }
 
-export const RadarChartComponent: React.FC<RadarChartProps> = ({ data, sprintA, sprintB }) => {
+export const SprintHealthBarChart: React.FC<SprintHealthBarChartProps> = ({ data, sprintA, sprintB }) => {
     if (!data || data.length === 0) return null;
 
     return (

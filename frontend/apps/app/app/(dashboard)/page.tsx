@@ -337,7 +337,7 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     )}
-                    
+
                     {(() => {
                         if (hasInvalidDates) {
                             return (
@@ -356,171 +356,171 @@ export default function DashboardPage() {
                         return (
                             <div className={`space-y-8 transition-opacity duration-200 ${loading && summary ? 'opacity-40 pointer-events-none' : ''}`}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                    <KPICard
-                        label="Sprint Velocity"
-                        value={`${summary?.velocity || 0} SP`}
-                        trend={{ direction: 'neutral', value: 'Avg' }}
-                        description={<span className="text-primary">Average of {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
-                        valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                        helpId="velocity"
-                        onHelpClick={handleHelpClick}
-                    />
-                    <KPICard
-                        label="Cycle Time"
-                        value={`${summary?.cycle_time || 0} Days`}
-                        trend={{ direction: 'neutral', value: 'Avg' }}
-                        description={<span className="text-primary">Average resolution duration</span>}
-                        valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                        helpId="cycle_time"
-                        onHelpClick={handleHelpClick}
-                    />
-                    <KPICard
-                        label="DMT Compliance"
-                        value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
-                        trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
-                        description={<span className="text-primary">Minimum Threshold: 80%</span>}
-                        valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                        helpId="compliance"
-                        onHelpClick={handleHelpClick}
-                    />
-                    <KPICard
-                        label="Objective AI"
-                        value={`${(summary?.code_ai_usage_percent || 0).toFixed(1)}%`}
-                        trend={{ direction: 'neutral', value: 'Analyzed' }}
-                        description={<span className="text-primary">PR-based AI evaluation</span>}
-                        icon={<Sparkles size={16} className="text-brand-primary" />}
-                        valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                        helpId="objective_ai"
-                        onHelpClick={handleHelpClick}
-                    />
-                    <KPICard
-                        label="Bugs Resolved"
-                        value={(summary?.bugs_resolved || 0).toString()}
-                        trend={{ direction: 'neutral', value: 'Total' }}
-                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
-                        valueClassName="text-accent !text-2xl"
-                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                        helpId="bugs_resolved"
-                        onHelpClick={handleHelpClick}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                        <div className="flex items-center justify-between mb-10">
-                            <div>
-                                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                    <BarChart3 className="text-primary" />
-                                    Velocity History
-                                </h2>
-                                <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
-                            </div>
-                        </div>
-                        <div className="flex-1 w-full bg-muted/10 rounded-2xl border border-border p-4">
-                            <VelocityChart data={velocity} />
-                        </div>
-                    </Card>
-
-                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                <TrendingUp className="text-primary" />
-                                Delivery Forecast
-                                <button
-                                    onClick={() => handleHelpClick('forecast')}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none ml-2"
-                                    title="Learn more about this metric"
-                                >
-                                    <HelpCircle size={20} />
-                                </button>
-                            </h2>
-                            <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
-                        </div>
-                        <div className="flex-1 w-full flex items-center justify-center text-muted-foreground">
-                            {forecast ? (
-                                <ForecastChart data={forecast} />
-                            ) : (
-                                "Forecast data unavailable (insufficient historical records)"
-                            )}
-                        </div>
-                    </Card>
-
-                    {/* Critical Alerts - Simplified logic based on compliance */}
-                    <div className="lg:col-span-3 space-y-6">
-                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            <AlertCircle className="text-destructive" />
-                            Compliance Alerts
-                        </h2>
-                        {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
-                                <div className="flex justify-between items-start">
-                                    <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
+                                    <KPICard
+                                        label="Sprint Velocity"
+                                        value={`${summary?.velocity || 0} SP`}
+                                        trend={{ direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">Average of {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        helpId="velocity"
+                                        onHelpClick={handleHelpClick}
+                                    />
+                                    <KPICard
+                                        label="Cycle Time"
+                                        value={`${summary?.cycle_time || 0} Days`}
+                                        trend={{ direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">Average resolution duration</span>}
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        helpId="cycle_time"
+                                        onHelpClick={handleHelpClick}
+                                    />
+                                    <KPICard
+                                        label="DMT Compliance"
+                                        value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
+                                        trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
+                                        description={<span className="text-primary">Minimum Threshold: 80%</span>}
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        helpId="compliance"
+                                        onHelpClick={handleHelpClick}
+                                    />
+                                    <KPICard
+                                        label="Objective AI"
+                                        value={`${(summary?.code_ai_usage_percent || 0).toFixed(1)}%`}
+                                        trend={{ direction: 'neutral', value: 'Analyzed' }}
+                                        description={<span className="text-primary">PR-based AI evaluation</span>}
+                                        icon={<Sparkles size={16} className="text-brand-primary" />}
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        helpId="objective_ai"
+                                        onHelpClick={handleHelpClick}
+                                    />
+                                    <KPICard
+                                        label="Bugs Resolved"
+                                        value={(summary?.bugs_resolved || 0).toString()}
+                                        trend={{ direction: 'neutral', value: 'Total' }}
+                                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
+                                        valueClassName="text-accent !text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
+                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        helpId="bugs_resolved"
+                                        onHelpClick={handleHelpClick}
+                                    />
                                 </div>
-                                <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
-                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
-                            </Card>
-                        )}
-                        {(!summary || (summary.compliance_rate >= 80)) && (
-                            <p className="text-muted-foreground">No critical alerts at this time.</p>
-                        )}
-                    </div>
-                </div>
 
-                {/* Assignee Distribution Card */}
-                {assigneeDistribution.length > 0 && (
-                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate)} />
-                )}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
+                                        <div className="flex items-center justify-between mb-10">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                                    <BarChart3 className="text-primary" />
+                                                    Velocity History
+                                                </h2>
+                                                <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 w-full bg-muted/10 rounded-2xl border border-border p-4">
+                                            <VelocityChart data={velocity} />
+                                        </div>
+                                    </Card>
 
-                <div className="pt-8 border-t border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <Share2 className="text-primary w-5 h-5" />
-                            <h2 className="text-2xl font-bold text-foreground">
-                                {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
-                            </h2>
-                        </div>
-                        <button
-                            onClick={refreshInsights}
-                            disabled={isRefreshingInsights}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
-                            {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
-                        </button>
-                    </div>
+                                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
+                                        <div className="mb-8">
+                                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                                <TrendingUp className="text-primary" />
+                                                Delivery Forecast
+                                                <button
+                                                    onClick={() => handleHelpClick('forecast')}
+                                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none ml-2"
+                                                    title="Learn more about this metric"
+                                                >
+                                                    <HelpCircle size={20} />
+                                                </button>
+                                            </h2>
+                                            <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
+                                        </div>
+                                        <div className="flex-1 w-full flex items-center justify-center text-muted-foreground">
+                                            {forecast ? (
+                                                <ForecastChart data={forecast} />
+                                            ) : (
+                                                "Forecast data unavailable (insufficient historical records)"
+                                            )}
+                                        </div>
+                                    </Card>
 
-                    {isRefreshingInsights ? (
-                        <AIThinkingOverlay progress={aiProgress} status={aiStatus} />
-                    ) : insights.length > 0 ? (
-                        <>
-                            <AIInsightsList
-                                insightId={insights[0].id}
-                                suggestions={insights[0].suggestions}
-                                onAllHandled={refreshInsights}
-                            />
-                            <div className="mt-4 p-4 bg-muted/20 rounded-xl border border-border">
-                                <h4 className="text-sm font-bold text-foreground/80 mb-2">AI Summary</h4>
-                                <p className="text-sm text-muted-foreground leading-relaxed">{insights[0].summary}</p>
-                            </div>
-                        </>
-                    ) : (
-                        <Card className="p-8 bg-card border-dashed border-border flex flex-col items-center justify-center text-center shadow-none">
-                            <TrendingUp className="text-muted-foreground/60 mb-4" size={32} />
-                            <p className="text-muted-foreground font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
-                        </Card>
-                    )}
-                </div>
+                                    {/* Critical Alerts - Simplified logic based on compliance */}
+                                    <div className="lg:col-span-3 space-y-6">
+                                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                            <AlertCircle className="text-destructive" />
+                                            Compliance Alerts
+                                        </h2>
+                                        {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
+                                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
+                                                </div>
+                                                <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
+                                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                            </Card>
+                                        )}
+                                        {(!summary || (summary.compliance_rate >= 80)) && (
+                                            <p className="text-muted-foreground">No critical alerts at this time.</p>
+                                        )}
+                                    </div>
+                                </div>
 
-                <div className="pt-8 border-t border-border" />
+                                {/* Assignee Distribution Card */}
+                                {assigneeDistribution.length > 0 && (
+                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate)} />
+                                )}
+
+                                <div className="pt-8 border-t border-border">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Share2 className="text-primary w-5 h-5" />
+                                            <h2 className="text-2xl font-bold text-foreground">
+                                                {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
+                                            </h2>
+                                        </div>
+                                        <button
+                                            onClick={refreshInsights}
+                                            disabled={isRefreshingInsights}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
+                                            {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
+                                        </button>
+                                    </div>
+
+                                    {isRefreshingInsights ? (
+                                        <AIThinkingOverlay progress={aiProgress} status={aiStatus} />
+                                    ) : insights.length > 0 ? (
+                                        <>
+                                            <AIInsightsList
+                                                insightId={insights[0].id}
+                                                suggestions={insights[0].suggestions}
+                                                onAllHandled={refreshInsights}
+                                            />
+                                            <div className="mt-4 p-4 bg-muted/20 rounded-xl border border-border">
+                                                <h4 className="text-sm font-bold text-foreground/80 mb-2">AI Summary</h4>
+                                                <p className="text-sm text-muted-foreground leading-relaxed">{insights[0].summary}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <Card className="p-8 bg-card border-dashed border-border flex flex-col items-center justify-center text-center shadow-none">
+                                            <TrendingUp className="text-muted-foreground/60 mb-4" size={32} />
+                                            <p className="text-muted-foreground font-medium whitespace-pre-wrap">No AI insights available for this project yet.{"\n"}Click "Refresh Insights" to generate performance-based recommendations.</p>
+                                        </Card>
+                                    )}
+                                </div>
+
+                                <div className="pt-8 border-t border-border" />
                             </div>
                         );
                     })()}

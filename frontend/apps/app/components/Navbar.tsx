@@ -160,8 +160,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
                 }
               }}
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <Search className="w-4 h-4 text-primary-foreground/60" />
+            <div 
+              className={`absolute inset-y-0 right-0 flex items-center pr-3 ${searchValue.trim() ? 'cursor-pointer' : 'pointer-events-none'}`}
+              onClick={() => {
+                if (searchValue.trim()) {
+                  setShowDropdown(false);
+                  router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+                }
+              }}
+            >
+              <Search className="w-4 h-4 text-primary-foreground/60 hover:text-primary-foreground transition-colors" />
             </div>
 
             {/* Dropdown for search results */}
