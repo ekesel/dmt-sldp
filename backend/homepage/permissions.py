@@ -70,10 +70,15 @@ class HasRequiredPermission(BasePermission):
             self.message = "No permission code configured for this view."
             return False
         
-        print("req", request.user, request.user.role, perm_code)
+        #  Allow only super adminadmins for write actions
+        if (
+            getattr(request.user, 'is_platform_admin', False) or
+            getattr(request.user, 'is_superuser', False)
+        ):
+            return True
+    
 
         user_role = getattr(request.user, 'role', None)
-        print(f"User Role: {user_role}, Permission Code: {perm_code}")
         if user_role:
             has_perm = user_role.permissions.filter(permission_code=perm_code).exists()
             if has_perm:

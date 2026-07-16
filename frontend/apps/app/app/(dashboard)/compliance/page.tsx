@@ -91,7 +91,6 @@ export default function CompliancePage() {
 
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
-
         compliance.listFlags(projectId, sprintId, effectiveWorkItemId, page, pageSize)
             .then(res => {
                 if (requestCounter.current === currentRequestId) {
@@ -288,6 +287,7 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             onFolderChanged={() => {
                                 setCurrentPage(1);
+                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize);
                             }}
                         />
                     </div>
@@ -562,7 +562,6 @@ export default function CompliancePage() {
                             >
                                 <ChevronLeft size={16} />
                             </button>
-
                             <div className="flex items-center gap-1 px-2">
                                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                     let pageNum = currentPage;
