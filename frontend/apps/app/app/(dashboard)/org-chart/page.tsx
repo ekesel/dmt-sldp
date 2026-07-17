@@ -553,7 +553,7 @@ function OrgChartPageContent() {
                         <div className="flex items-center gap-2">
                             <Network className="w-7 h-7 text-primary" strokeWidth={2.5} />
                             <h1 className="text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
-                                Organization Chart
+                                Organisation Chart
                             </h1>
                         </div>
                        

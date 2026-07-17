@@ -59,6 +59,11 @@ const menuItems: MenuItem[] = [
         href: '/activity',
     },
     {
+        icon: Building2,
+        label: 'Company Baseline',
+        href: '/company-baseline',
+    },
+    {
         icon: Settings,
         label: 'Settings',
         href: '/settings',
