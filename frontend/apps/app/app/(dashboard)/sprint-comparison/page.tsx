@@ -8,12 +8,46 @@ import { AlertTriangle, Users, Building2 } from 'lucide-react';
 import { SprintHealthBarChart } from '../../../components/charts/SprintHealthBarChart';
 import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChart';
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
-import WorkloadDistributionChart from '../../../components/charts/WorkloadDistributionChart';
+import WorkloadDistributionChart, { WorkloadData } from '../../../components/charts/WorkloadDistributionChart';
 import { HelpSidebar } from '../../../components/HelpSidebar';
 import { getCompanyBaseline } from './actions';
 
+export interface CompanyBaselineData {
+    name: string;
+    description?: string;
+    last_updated?: string;
+    kpis: {
+        item_volume?: {
+            total: number;
+            completed: number;
+        };
+        [key: string]: number | { total: number; completed: number } | undefined;
+    };
+}
+
+export interface KPIData {
+    a: number;
+    sub_a?: number;
+    b?: number;
+    sub_b?: number;
+    variance?: number;
+}
+
+export interface SprintComparisonData {
+    kpis: Record<string, KPIData>;
+    charts: {
+        radar: unknown[];
+        sideBySide?: unknown[];
+        blockedTime?: unknown[];
+        workload?: unknown[];
+        planned_vs_completed?: unknown[];
+        blocked_time?: unknown[];
+        workload_distribution?: WorkloadData[];
+    };
+    [key: string]: unknown;
+}
 export default function SprintComparisonPage() {
-    const [companyBaseline, setCompanyBaseline] = useState<any>(null);
+    const [companyBaseline, setCompanyBaseline] = useState<CompanyBaselineData | null>(null);
 
     useEffect(() => {
         getCompanyBaseline().then(setCompanyBaseline).catch(console.error);
@@ -25,10 +59,10 @@ export default function SprintComparisonPage() {
     const [sprintBId, setSprintBId] = useState<number | null>(null);
     const [sprintBName, setSprintBName] = useState<string>('');
     const [developerId, setDeveloperId] = useState<string | null>(null);
-    const [devsList, setDevsList] = useState<any[]>([]);
+    const [devsList, setDevsList] = useState<Array<{ id: string; developer_name: string; [key: string]: unknown }>>([]);
     const [useCompanyBaseline, setUseCompanyBaseline] = useState(false);
 
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<SprintComparisonData | null>(null);
     const [loading, setLoading] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
@@ -63,7 +97,7 @@ export default function SprintComparisonPage() {
         developers.list(projectId).then(setDevsList).catch(console.error);
     }, [projectId]);
 
-    const [availableSprints, setAvailableSprints] = useState<any[]>([]);
+    const [availableSprints, setAvailableSprints] = useState<Array<{ id: number; name: string; [key: string]: unknown }>>([]);
 
     useEffect(() => {
         import('@dmt/api').then(({ sprints }) => {
@@ -204,7 +238,7 @@ export default function SprintComparisonPage() {
 
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                            {Object.entries(data.kpis).map(([key, vals]: [string, any]) => {
+                            {Object.entries(data.kpis).map(([key, vals]: [string, KPIData]) => {
                                 const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
                                 const displayValue = key === 'item_volume'
@@ -314,19 +348,19 @@ export default function SprintComparisonPage() {
     );
 }
 
-function applyCompanyBaseline(apiData: any, baseline: typeof companyBaseline): any {
-    const result = { ...apiData, kpis: {} as Record<string, any> };
+function applyCompanyBaseline(apiData: SprintComparisonData, baseline: CompanyBaselineData): SprintComparisonData {
+    const result: SprintComparisonData = { ...apiData, kpis: {} };
 
-    for (const [key, vals] of Object.entries(apiData.kpis) as [string, any][]) {
+    for (const [key, vals] of Object.entries(apiData.kpis)) {
         const bVal = vals.b ?? vals.a;
 
         if (key === 'item_volume') {
             const baseTotal = baseline.kpis.item_volume?.total ?? vals.a;
-            const baseCompleted = baseline.kpis.item_volume?.completed ?? vals.sub_a;
-            const variance = baseCompleted !== 0 ? ((vals.sub_b - baseCompleted) / Math.abs(baseCompleted)) * 100 : 0;
+            const baseCompleted = baseline.kpis.item_volume?.completed ?? vals.sub_a ?? 0;
+            const variance = baseCompleted !== 0 && vals.sub_b !== undefined ? ((vals.sub_b - baseCompleted) / Math.abs(baseCompleted)) * 100 : 0;
             result.kpis[key] = { a: baseTotal, sub_a: baseCompleted, b: vals.b, sub_b: vals.sub_b, variance };
         } else {
-            const baseVal = (baseline.kpis as any)[key] ?? vals.a;
+            const baseVal = (baseline.kpis[key] as number) ?? vals.a;
             const variance = baseVal !== 0 ? ((bVal - baseVal) / Math.abs(baseVal)) * 100 : 0;
             result.kpis[key] = { a: baseVal, b: bVal, variance };
         }
@@ -335,7 +369,7 @@ function applyCompanyBaseline(apiData: any, baseline: typeof companyBaseline): a
     return result;
 }
 
-function $(val: any) {
+function $(val: number | string | undefined | null) {
     if (typeof val === 'number') {
         const formatted = val >= 1000 ? (val / 1000).toFixed(1) + 'k' : (Number.isInteger(val) ? val.toString() : val.toFixed(1));
         return formatted;

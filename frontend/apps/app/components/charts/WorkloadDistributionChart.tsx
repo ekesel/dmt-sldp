@@ -13,7 +13,7 @@ import {
     Cell
 } from 'recharts';
 
-interface WorkloadData {
+export interface WorkloadData {
     name: string;
     points_a: number;
     points_b: number;
