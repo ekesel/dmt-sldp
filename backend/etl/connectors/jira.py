@@ -336,6 +336,10 @@ class JiraConnector(BaseConnector):
             tenant=tenant,
         )
 
+        # Fallback assignee_email to the resolved user's email if JIRA hid the email address
+        if not assignee_email and resolved_assignee and resolved_assignee.email:
+            assignee_email = resolved_assignee.email
+
         # Extract sprint from custom fields
         sprint_obj = None
         if sprint_map:
