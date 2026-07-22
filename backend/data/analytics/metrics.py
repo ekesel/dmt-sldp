@@ -360,6 +360,9 @@ class MetricService:
         else:
             sprint_start = sprint.start_date
             
+        # Delete existing metrics for this sprint before populating to ensure stale entries are removed
+        DeveloperMetrics.objects.filter(sprint_name=sprint.name).delete()
+
         # Get all projects
         projects = list(Project.objects.all())
         

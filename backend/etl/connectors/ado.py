@@ -399,7 +399,7 @@ class AzureDevOpsConnector(BaseConnector):
         """
         wiql_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/wiql?api-version=6.0"
         query = {
-            "query": "Select [System.Id] From WorkItems"
+            "query": f"Select [System.Id] From WorkItems WHERE [System.TeamProject] = '{project_name}'"
         }
         
         wiql_resp = requests.post(wiql_url, headers=headers, json=query)
