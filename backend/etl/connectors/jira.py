@@ -166,6 +166,7 @@ class JiraConnector(BaseConnector):
                 'summary', 'description', 'status', 'priority', 'issuetype', 
                 'creator', 'assignee', 'created', 'updated', 'resolutiondate',
                 'project',
+                'parent',             # Get subtask parent relationship fields
                 'customfield_10016',  # Standard Story Points field fallback
                 'customfield_10020',  # Standard Sprint field fallback
                 'customfield_10403'   # Standard AI Usage (%) field fallback
@@ -227,6 +228,9 @@ class JiraConnector(BaseConnector):
     
             # 1. Sync issues (already handled in loop)
             
+            # Resolve parent-child subtask relationships
+            self._post_sync_linking(source_id)
+            
             # 2. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
             self._post_sync_attribution(source_id)
     
@@ -238,6 +242,43 @@ class JiraConnector(BaseConnector):
         finally:
             post_save.connect(work_item_telemetry_signal, sender=WorkItem)
             post_save.connect(notify_compliance_issue, sender=WorkItem)
+
+    def _post_sync_linking(self, source_id: int):
+        """
+        Link JIRA subtasks to their parent stories after all issues are synced.
+        """
+        from data.models import WorkItem
+
+        # Find all synced items that do not have a parent linked yet, but have parent data in JIRA fields
+        broken_links = WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=True
+        )
+        
+        for item in broken_links:
+            raw_fields = (item.raw_source_data or {}).get('fields', {})
+            parent_data = raw_fields.get('parent')
+            if parent_data:
+                parent_key = parent_data.get('key')
+                if parent_key:
+                    parent_obj = WorkItem.objects.filter(
+                        source_config_id=source_id,
+                        external_id=parent_key
+                    ).first()
+                    if parent_obj:
+                        item.parent = parent_obj
+                        item.save()
+
+        # Clear compliance/violations from subtasks (compliance rules only apply to root-level parent stories)
+        WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=False,
+        ).update(
+            dmt_compliant=True,
+            compliance_failures=[],
+            had_violations=False,
+            violation_history=[]
+        )
 
     def _infer_unassigned_assignees(self, source_id: int):
         """
