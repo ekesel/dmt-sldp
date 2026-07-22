@@ -460,9 +460,14 @@ class AzureDevOpsConnector(BaseConnector):
                     sprint_name = parts[-1]
                     sprint_obj = Sprint.objects.filter(name=sprint_name).order_by('-end_date').first()
                     
-        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint
+        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint for this source
         if not sprint_obj and (started_at or resolved_at):
+             project_sprint_ids = WorkItem.objects.filter(
+                 source_config_id=source_id,
+                 sprint__isnull=False
+             ).values_list('sprint_id', flat=True).distinct()
              sprint_obj = Sprint.objects.filter(
+                id__in=project_sprint_ids,
                 status__in=['active', 'completed']
             ).order_by('-end_date').first()
 

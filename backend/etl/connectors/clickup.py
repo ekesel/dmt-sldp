@@ -109,6 +109,7 @@ class ClickupConnector(BaseConnector):
         
         all_lists = []
         sprint_lists = {} # list_id -> Sprint object
+        self.sprint_lists = sprint_lists
 
         for i, space in enumerate(spaces):
             space_id = space['id']
@@ -325,6 +326,23 @@ class ClickupConnector(BaseConnector):
         """
         from users.resolver import UserResolver
         from etl.transformers import ComplianceEngine
+
+        # Resolve sprint from the task's primary list or secondary lists (for Tasks in Multiple Lists - TIML)
+        # to prevent overwriting sprint to None when syncing non-sprint lists.
+        resolved_sprint = None
+        primary_list_id = task.get('list', {}).get('id')
+        if primary_list_id and hasattr(self, 'sprint_lists') and primary_list_id in self.sprint_lists:
+            resolved_sprint = self.sprint_lists[primary_list_id]
+            
+        if not resolved_sprint and hasattr(self, 'sprint_lists'):
+            for secondary_lst in task.get('lists', []):
+                sec_id = secondary_lst.get('id')
+                if sec_id in self.sprint_lists:
+                    resolved_sprint = self.sprint_lists[sec_id]
+                    break
+                    
+        if resolved_sprint:
+            sprint_obj = resolved_sprint
 
         external_id = task['id']
         
