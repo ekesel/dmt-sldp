@@ -75,7 +75,10 @@ class UserResolver:
 
         # 2. Email match
         if user is None and email:
-            user = User.objects.filter(email=email).first()
+            # Prefer active users first
+            user = User.objects.filter(email=email, is_active=True).first()
+            if not user:
+                user = User.objects.filter(email=email).first()
 
         # 3. Name match (only when email is blank — rough fallback)
         if user is None and name and not email:
@@ -83,10 +86,17 @@ class UserResolver:
             first = parts[0]
             last = parts[1] if len(parts) > 1 else ''
             if first and last:
+                # Prefer active users first
                 user = User.objects.filter(
                     first_name__iexact=first,
                     last_name__iexact=last,
+                    is_active=True
                 ).first()
+                if not user:
+                    user = User.objects.filter(
+                        first_name__iexact=first,
+                        last_name__iexact=last
+                    ).first()
 
         # 4. Create a new portal-ready user (inactive until admin invites)
         if user is None:
