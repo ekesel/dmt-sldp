@@ -167,12 +167,13 @@ class JiraConnector(BaseConnector):
                 'creator', 'assignee', 'created', 'updated', 'resolutiondate',
                 'project',
                 'customfield_10016',  # Standard Story Points field fallback
-                'customfield_10020'   # Standard Sprint field fallback
+                'customfield_10020',  # Standard Sprint field fallback
+                'customfield_10403'   # Standard AI Usage (%) field fallback
             ]
             for custom_field_key in [
                 'pr_link_id', 'ac_quality_id', 'reviewer_dmt_signoff_id', 
                 'unit_testing_status_id', 'pm_name_id', 'tech_lead_name_id', 
-                'story_points_id'
+                'story_points_id', 'ai_usage_id'
             ]:
                 field_id = config_mapping.get(custom_field_key)
                 if field_id:
@@ -432,6 +433,24 @@ class JiraConnector(BaseConnector):
             except (ValueError, TypeError):
                 pass
 
+        # AI Usage mapping and extraction
+        ai_usage_val = get_jira_cf_val(config_mapping.get('ai_usage_id'))
+        if ai_usage_val is None:
+            # Fallback to standard Jira AI Usage (%) custom field
+            ai_usage_val = fields.get('customfield_10403')
+            
+        ai_usage_percent = None
+        if ai_usage_val is not None:
+            try:
+                val = float(ai_usage_val)
+                # If value is <= 1.0, assume it represents a decimal percentage (e.g. 0.8 -> 80.0)
+                if val <= 1.0:
+                    ai_usage_percent = val * 100.0
+                else:
+                    ai_usage_percent = val
+            except (ValueError, TypeError):
+                pass
+
         # Prepare data for model and compliance check
         work_item_data = {
             'source_config_id': source_id,
@@ -443,6 +462,7 @@ class JiraConnector(BaseConnector):
             'status_category': status_category,
             'priority': priority.lower(),
             'story_points': story_points,
+            'ai_usage_percent': ai_usage_percent,
             'creator_email': self.identity_resolver.resolve(fields.get('creator', {}).get('emailAddress')),
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,
