@@ -446,16 +446,16 @@ class AzureDevOpsConnector(BaseConnector):
         
         # Determine status category
         state_lower = state.lower()
-        if state_lower in ['done', 'closed', 'completed', 'resolved']:
+        if state_lower in ['new', 'to do', 'proposed', 'to-do']:
+            status_category = 'todo'
+            resolved_at = None
+        elif state_lower in ['in progress', 'doing', 'development / in progress', 'blocked', 'blocker', 'on hold']:
+            status_category = 'in_progress'
+            resolved_at = None
+        else:
             status_category = 'done'
             if not resolved_at:
                 resolved_at = timezone.now() # Fallback
-        elif state_lower in ['new', 'to do', 'proposed']:
-            status_category = 'todo'
-            resolved_at = None
-        else:
-            status_category = 'in_progress'
-            resolved_at = None
             
         # Priority
         prio = str(fields.get('Microsoft.VSTS.Common.Priority', '3'))

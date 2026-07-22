@@ -996,10 +996,14 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics) ---
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
+        # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics/features) ---
         items_qs = WorkItem.objects.filter(
+            story_filter,
             status_category__in=['todo', 'in_progress', 'done']
-        ).exclude(item_type__in=['subtask', 'epic'])
+        )
         if project_id and project_id not in ['null', 'undefined', '']:
             from configuration.models import SourceConfiguration
             source_config_ids = SourceConfiguration.objects.filter(
@@ -1048,10 +1052,14 @@ class ComplianceFixedLaterView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
         items = WorkItem.objects.filter(
+            story_filter,
             had_violations=True,
             dmt_compliant=True,
-        ).exclude(item_type__in=['subtask', 'epic']).order_by('-violations_cleared_at')
+        ).order_by('-violations_cleared_at')
 
         if project_id and project_id not in ['null', 'undefined', '']:
             from configuration.models import SourceConfiguration
