@@ -151,11 +151,11 @@ class BaseConnector(ABC):
         from data.models import WorkItem
         from etl.transformers import ComplianceEngine
 
+        # Root/Story items are the story-level tasks (exclude subtasks and epics to prevent double-counting or skipping)
         root_items = WorkItem.objects.filter(
             source_config_id=source_id,
-            parent__isnull=True,
             deleted_at__isnull=True,
-        ).prefetch_related('subtasks')
+        ).exclude(item_type__in=['subtask', 'epic']).prefetch_related('subtasks')
 
         for item in root_items:
             children = [c for c in item.subtasks.all() if not c.deleted_at]
