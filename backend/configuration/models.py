@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from configuration.tasks import perform_sync_task
 
 class Project(models.Model):
     """
@@ -99,6 +98,7 @@ class SourceConfiguration(models.Model):
             # Trigger a background sync and metric recalculation 
             # (imported locally to avoid circular imports)
             try:
+                from configuration.tasks import perform_sync_task
                 perform_sync_task.delay(self.id)
             except Exception as e:
                 import logging
