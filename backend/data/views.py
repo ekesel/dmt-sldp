@@ -25,6 +25,10 @@ from configuration.models import SourceConfiguration
 from .analytics.identity_resolver import IdentityResolver
 from users.models import User
 
+from .models import Sprint
+from configuration.models import SourceConfiguration
+from .models import WorkItem
+
 # --- Restored Views ---
 class MetricDashboardView(APIView):
     permission_classes = [IsAuthenticated]
@@ -488,9 +492,18 @@ class DeveloperMetricsView(APIView):
             sprint_obj = None
             if sprint_id and sprint_id not in ['null', 'undefined', '']:
                 try:
-                    from .models import Sprint
-                    sprint_obj = Sprint.objects.get(id=sprint_id)
-                    sprint_metric = next((m for m in metrics if m.sprint_name == sprint_obj.name), None)
+                    
+                    
+                    temp_sprint_obj = Sprint.objects.get(id=sprint_id)
+                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    sprint_in_project = WorkItem.objects.filter(
+                        source_config_id__in=sc_ids,
+                        sprint=temp_sprint_obj
+                    ).exists()
+                    
+                    if sprint_in_project:
+                        sprint_obj = temp_sprint_obj
+                        sprint_metric = next((m for m in metrics if m.sprint_name == sprint_obj.name), None)
                     
                     if not sprint_metric:
                         # Fetch it if it exists but wasn't in top 5
@@ -663,13 +676,21 @@ class DeveloperComparisonView(APIView):
 
             if sprint_id and sprint_id not in ['null', 'undefined', '']:
                 try:
-                    from .models import Sprint
-                    sprint_obj = Sprint.objects.get(id=sprint_id)
-                    requested_sprint_name = sprint_obj.name
-                    last_sprint = SprintMetrics.objects.filter(
-                        project_id=project_id,
-                        sprint_name=sprint_obj.name
-                    ).first()
+                    
+                    temp_sprint_obj = Sprint.objects.get(id=sprint_id)
+                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    sprint_in_project = WorkItem.objects.filter(
+                        source_config_id__in=sc_ids,
+                        sprint=temp_sprint_obj
+                    ).exists()
+                    
+                    if sprint_in_project:
+                        sprint_obj = temp_sprint_obj
+                        requested_sprint_name = sprint_obj.name
+                        last_sprint = SprintMetrics.objects.filter(
+                            project_id=project_id,
+                            sprint_name=sprint_obj.name
+                        ).first()
                 except Sprint.DoesNotExist:
                     pass
 

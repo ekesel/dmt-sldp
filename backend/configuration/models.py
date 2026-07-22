@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from configuration.tasks import perform_sync_task
 
 class Project(models.Model):
     """
@@ -90,19 +91,50 @@ class SourceConfiguration(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         
-        # Check if active_folder_id changed
+        # Check if active_folder_id changed or if it's a new active configuration
         old_folder = self._original_config_json.get('active_folder_id')
         new_folder = (self.config_json or {}).get('active_folder_id')
         
-        if not is_new and old_folder != new_folder:
+        if (is_new and self.is_active) or (not is_new and old_folder != new_folder):
             # Trigger a background sync and metric recalculation 
             # (imported locally to avoid circular imports)
             try:
-                from configuration.tasks import perform_sync_task
                 perform_sync_task.delay(self.id)
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).error(f"Failed to trigger sync on folder change: {e}")
+                logging.getLogger(__name__).error(f"Failed to trigger sync: {e}")
                 
         # Update original state for next save
         self._original_config_json = dict(self.config_json) if self.config_json else {}
+
+
+class CompanyBaseline(models.Model):
+    """
+    Model to store the company baseline values (organization-wide) in the public schema.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='company_baselines'
+    )
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    velocity = models.FloatField(default=400.0)
+    compliance_rate = models.FloatField(default=80.0)
+    cycle_time = models.FloatField(default=4.0)
+    defect_density = models.FloatField(default=5.0)
+    pr_review_speed = models.FloatField(default=24.0)
+    ai_usage = models.FloatField(default=30.0)
+    
+    item_volume_total = models.IntegerField(default=20)
+    item_volume_completed = models.IntegerField(default=16)
+
+    class Meta:
+        db_table = 'company_baselines'
+
+    def __str__(self):
+        return f"Company Baseline for {self.tenant} (last updated {self.last_updated.strftime('%Y-%m-%d') if self.last_updated else 'New'})"
+
