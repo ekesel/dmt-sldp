@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { Shield, Mail, Lock, User, Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { tenants } from '@dmt/api';
+import { PasswordInput } from '@dmt/ui';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -161,34 +162,26 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                <input
-                                    id="password"
-                                    type="password"
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
-                                    placeholder="••••••••"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                />
-                            </div>
+                            <PasswordInput
+                                id="password"
+                                required
+                                icon={<Lock className="w-5 h-5" />}
+                                placeholder="••••••••"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            />
                         </div>
 
                         <div className="space-y-1.5">
                             <label htmlFor="password2" className="text-sm font-medium text-muted-foreground">Confirm Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                <input
-                                    id="password2"
-                                    type="password"
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
-                                    placeholder="••••••••"
-                                    value={formData.password2}
-                                    onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
-                                />
-                            </div>
+                            <PasswordInput
+                                id="password2"
+                                required
+                                icon={<Lock className="w-5 h-5" />}
+                                placeholder="••••••••"
+                                value={formData.password2}
+                                onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
+                            />
                         </div>
 
                         <button

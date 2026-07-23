@@ -127,12 +127,24 @@ export const WelcomeBanner: React.FC = () => {
                 <div className="mt-3 w-full flex flex-col items-center gap-1.5">
                   <div className="text-[0.75rem] font-bold text-muted-foreground flex items-center gap-1">
                     <span>Task Done:</span>
-                    <span className="text-[#f59e0b]">{completedTasks}</span>
+                    <span className="text-[var(--color-accent)]">{completedTasks}</span>
                     <span>/ {totalTasks}</span>
                   </div>
-                  <div className="w-[120px] h-[1.125rem] bg-orange-100 dark:bg-orange-950/30 rounded-full relative flex items-center">
-                    <div className="absolute top-0 left-0 h-full bg-[#f97316] rounded-full flex items-center justify-end pr-2" style={{ width: `${percentage}%` }}>
-                      <span className="text-[0.65rem] font-bold text-white leading-none">
+                  <div className="w-[120px] h-[1.125rem] rounded-full relative flex items-center bg-[var(--color-accent)]/20 overflow-hidden">
+                    <div className="absolute inset-0 bg-[var(--color-accent)] opacity-20 dark:opacity-30 mix-blend-multiply dark:mix-blend-screen rounded-full" />
+                    <div className="absolute top-0 left-0 h-full bg-[var(--color-accent)] rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
+                    <div className="absolute top-0 left-0 h-full w-full flex items-center">
+                      <span 
+                        className={`text-[0.65rem] font-bold leading-none absolute transition-all duration-500 ${
+                          percentage >= 25 
+                            ? 'text-accent-foreground' 
+                            : 'text-accent'
+                        }`}
+                        style={{ 
+                          left: percentage >= 25 ? `calc(${percentage}% - 0.5rem)` : `calc(${percentage}% + 0.5rem)`,
+                          transform: percentage >= 25 ? 'translateX(-100%)' : 'none'
+                        }}
+                      >
                         {percentage}%
                       </span>
                     </div>
