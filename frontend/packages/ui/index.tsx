@@ -23,3 +23,5 @@ export const Button = ({ children, className, ...props }: React.ButtonHTMLAttrib
         {children}
     </button>
 );
+
+export * from './PasswordInput';

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { integrations } from '@dmt/api';
 import { toast } from 'react-hot-toast';
+import { PasswordInput } from '@dmt/ui';
 
 interface IntegrationModalProps {
     isOpen: boolean;
@@ -232,13 +233,12 @@ export const IntegrationModal: React.FC<IntegrationModalProps> = ({
                                 <label className="block text-sm font-medium text-foreground mb-1">
                                     API Key / Token {mode === 'create' && <span className="text-destructive">*</span>}
                                 </label>
-                                <input
-                                    type="password"
+                                <PasswordInput
                                     name="api_key"
                                     required={mode === 'create'} // Required only on create
                                     value={formData.api_key}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                    className="bg-muted/50 px-3 py-2"
                                     placeholder={mode === 'edit' ? 'Leave blank to keep current' : 'Enter API Key'}
                                 />
                             </div>

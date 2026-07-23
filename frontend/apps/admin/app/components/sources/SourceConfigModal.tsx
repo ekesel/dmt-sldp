@@ -5,6 +5,7 @@ import { Modal, Badge } from '../UIComponents';
 import { sources as sourcesApi } from '@dmt/api';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { PasswordInput } from '@dmt/ui';
 
 interface SourceConfigModalProps {
     isOpen: boolean;
@@ -204,11 +205,10 @@ export function SourceConfigModal({ isOpen, onClose, projectId, source, onSucces
 
                 <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1.5">API Token / Key</label>
-                    <input
-                        type="password"
+                    <PasswordInput
                         value={formData.api_key}
                         onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                        className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                        className="bg-muted/50 px-4 py-2"
                         placeholder={source ? "Leave blank to keep unchanged" : "Enter API Token"}
                         required={!source}
                     />

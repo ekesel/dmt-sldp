@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth as authApi } from '@dmt/api';
 import { Shield, Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { PasswordInput } from '@dmt/ui';
 
 function SetPasswordForm() {
     const router = useRouter();
@@ -111,34 +112,26 @@ function SetPasswordForm() {
 
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium text-muted-foreground">New Password</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                    <input
-                                        type="password"
-                                        required
-                                        disabled={!uid || !token || success}
-                                        className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none disabled:opacity-50"
-                                        placeholder="••••••••"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                    />
-                                </div>
+                                <PasswordInput
+                                    required
+                                    disabled={!uid || !token || success}
+                                    icon={<Lock className="w-5 h-5" />}
+                                    placeholder="••••••••"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                />
                             </div>
 
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                    <input
-                                        type="password"
-                                        required
-                                        disabled={!uid || !token || success}
-                                        className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none disabled:opacity-50"
-                                        placeholder="••••••••"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                    />
-                                </div>
+                                <PasswordInput
+                                    required
+                                    disabled={!uid || !token || success}
+                                    icon={<Lock className="w-5 h-5" />}
+                                    placeholder="••••••••"
+                                    value={formData.confirmPassword}
+                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                />
                             </div>
 
                             <button
