@@ -229,14 +229,9 @@ class BaseConnector(ABC):
                 if not children_with_assignees:
                     continue
 
-                total_subtask_sp = sum(c.story_points or 0 for c in children_with_assignees)
-                fallback_sp = round(
-                    (item.story_points or 0) / max(len(children_with_assignees), 1), 2
-                ) if not total_subtask_sp else 0
-
                 for c in children_with_assignees:
                     c._role_hint = 'developer'
-                    c._sp_override = c.story_points if c.story_points else fallback_sp
+                    c._sp_override = c.story_points if c.story_points else 0
 
                 contributions, dmt_updates = self._collect_from_leaves(
                     children_with_assignees, use_sp_override=True
