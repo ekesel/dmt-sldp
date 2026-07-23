@@ -77,6 +77,12 @@ class UserViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(is_active=False)
         else:
             queryset = queryset.filter(is_active=True)
+
+        # Filter by email domain (only @samta.ai emails)
+        queryset = queryset.filter(email__iendswith='@samta.ai')
+
+        # Sort alphabetically (first_name, last_name, email)
+        queryset = queryset.order_by('first_name', 'last_name', 'email')
         
         return queryset
 

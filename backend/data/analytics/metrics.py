@@ -108,8 +108,9 @@ class MetricService:
         
         results = []
         for project in projects:
-            # 1. Base query for this sprint — exclude sub-tasks to avoid double-counting
-            work_items = WorkItem.objects.filter(sprint=sprint, parent__isnull=True)
+            # 1. Base query for this sprint — exclude sub-tasks and epics/features to avoid double-counting
+            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+            work_items = WorkItem.objects.filter(story_filter, sprint=sprint)
             
             # Apply project and folder filtering
             if project:
@@ -360,6 +361,9 @@ class MetricService:
         else:
             sprint_start = sprint.start_date
             
+        # Delete existing metrics for this sprint before populating to ensure stale entries are removed
+        DeveloperMetrics.objects.filter(sprint_name=sprint.name).delete()
+
         # Get all projects
         projects = list(Project.objects.all())
         
@@ -367,18 +371,19 @@ class MetricService:
         for project in projects:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
-            # 1. Collect developer emails from root items only (no sub-tasks)
+            # 1. Collect developer emails from root/story items (exclude subtasks and epics/features)
+            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
             raw_emails = set(WorkItem.objects.filter(
+                story_filter,
                 sprint=sprint,
                 source_config_id__in=source_conf_ids,
-                parent__isnull=True,
             ).values_list('assignee_email', flat=True).distinct())
 
             # Also include developers who appear only as sub-task contributors
             for contrib_item in WorkItem.objects.filter(
+                story_filter,
                 sprint=sprint,
                 source_config_id__in=source_conf_ids,
-                parent__isnull=True,
             ).exclude(assignee_contributions=[]).only('assignee_contributions'):
                 for c in (contrib_item.assignee_contributions or []):
                     if c.get('email'):
@@ -396,11 +401,16 @@ class MetricService:
                 sources = SourceConfiguration.objects.filter(project=project)
                 source_conf_ids = sources.values_list('id', flat=True)
 
+                # Get tasks where developer is either the direct assignee OR a contributor
+                contrib_filter = Q(assignee_email__in=aliases)
+                for email in aliases:
+                    contrib_filter |= Q(assignee_contributions__contains=[{'email': email}])
+
                 dev_work_items = WorkItem.objects.filter(
+                    story_filter,
+                    contrib_filter,
                     sprint=sprint,
-                    assignee_email__in=aliases,
                     source_config_id__in=source_conf_ids,
-                    parent__isnull=True,
                 )
                 
                 # Active Folder Filtering

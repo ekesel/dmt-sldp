@@ -196,6 +196,9 @@ class AzureDevOpsConnector(BaseConnector):
             # 4. Sync Pull Requests
             self._sync_pull_requests(p_name, source_id, headers, progress_callback)
             
+        # Resolve parent-child subtask relationships
+        self._post_sync_linking(source_id)
+
         # 5. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
         self._post_sync_attribution(source_id)
 
@@ -203,6 +206,44 @@ class AzureDevOpsConnector(BaseConnector):
         self._infer_unassigned_assignees(source_id)
 
         return {'item_count': item_count}
+
+    def _post_sync_linking(self, source_id: int):
+        """
+        Link ADO sub-tasks to parent stories.
+        """
+        from data.models import WorkItem
+
+        # Resolve Parent Linkage for ADO tasks using 'System.LinkTypes.Hierarchy-Reverse' relationship
+        broken_links = WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=True
+        )
+        for item in broken_links:
+            relations = (item.raw_source_data or {}).get('relations', []) or []
+            for rel in relations:
+                if rel.get('rel') == 'System.LinkTypes.Hierarchy-Reverse':
+                    parent_url = rel.get('url')
+                    if parent_url:
+                        parent_ext_id = parent_url.split('/')[-1]
+                        parent_obj = WorkItem.objects.filter(
+                            source_config_id=source_id,
+                            external_id=parent_ext_id
+                        ).first()
+                        if parent_obj:
+                            item.parent = parent_obj
+                            item.save()
+                            break
+
+        # Clear compliance metrics from ADO tasks (compliance rules apply only to stories/issues, not leaf tasks)
+        WorkItem.objects.filter(
+            source_config_id=source_id,
+            item_type='task',
+        ).update(
+            dmt_compliant=True,
+            compliance_failures=[],
+            had_violations=False,
+            violation_history=[]
+        )
 
     def _infer_unassigned_assignees(self, source_id: int):
         """
@@ -358,7 +399,7 @@ class AzureDevOpsConnector(BaseConnector):
         """
         wiql_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/wiql?api-version=6.0"
         query = {
-            "query": "Select [System.Id] From WorkItems"
+            "query": f"Select [System.Id] From WorkItems WHERE [System.TeamProject] = '{project_name}'"
         }
         
         wiql_resp = requests.post(wiql_url, headers=headers, json=query)
@@ -380,7 +421,7 @@ class AzureDevOpsConnector(BaseConnector):
             chunk = ids[i:i + chunk_size]
             ids_str = ",".join(chunk)
             # Remove the &fields= parameter so ADO returns all custom fields for compliance checking
-            details_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/workitems?ids={ids_str}&api-version=6.0"
+            details_url = f"{self.api_base}/{quote(project_name)}/_apis/wit/workitems?ids={ids_str}&$expand=relations&api-version=6.0"
             
             d_resp = requests.get(details_url, headers=headers)
             if d_resp.status_code == 200:
@@ -405,16 +446,16 @@ class AzureDevOpsConnector(BaseConnector):
         
         # Determine status category
         state_lower = state.lower()
-        if state_lower in ['done', 'closed', 'completed', 'resolved']:
+        if state_lower in ['new', 'to do', 'proposed', 'to-do']:
+            status_category = 'todo'
+            resolved_at = None
+        elif state_lower in ['in progress', 'doing', 'development / in progress', 'blocked', 'blocker', 'on hold']:
+            status_category = 'in_progress'
+            resolved_at = None
+        else:
             status_category = 'done'
             if not resolved_at:
                 resolved_at = timezone.now() # Fallback
-        elif state_lower in ['new', 'to do', 'proposed']:
-            status_category = 'todo'
-            resolved_at = None
-        else:
-            status_category = 'in_progress'
-            resolved_at = None
             
         # Priority
         prio = str(fields.get('Microsoft.VSTS.Common.Priority', '3'))
@@ -460,9 +501,14 @@ class AzureDevOpsConnector(BaseConnector):
                     sprint_name = parts[-1]
                     sprint_obj = Sprint.objects.filter(name=sprint_name).order_by('-end_date').first()
                     
-        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint
+        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint for this source
         if not sprint_obj and (started_at or resolved_at):
+             project_sprint_ids = WorkItem.objects.filter(
+                 source_config_id=source_id,
+                 sprint__isnull=False
+             ).values_list('sprint_id', flat=True).distinct()
              sprint_obj = Sprint.objects.filter(
+                id__in=project_sprint_ids,
                 status__in=['active', 'completed']
             ).order_by('-end_date').first()
 

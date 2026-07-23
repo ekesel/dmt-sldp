@@ -27,6 +27,17 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'avatar_url']
 
+    def validate_email(self, value):
+        if not value:
+            return value
+        # Check if email already exists, excluding the user instance being edited
+        qs = User.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(id=self.instance.id)
+        if qs.exists():
+            raise serializers.ValidationError("A user with this email address already registered.")
+        return value
+
     def get_avatar_url(self, obj):
         if obj.profile_picture:
             request = self.context.get('request')
