@@ -789,19 +789,17 @@ class ComplianceFlagListView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        # 1. Query root work items that are active and not compliant
+        # 1. Query root/story work items that are active and not compliant (exclude subtasks and epics)
         items = WorkItem.objects.filter(
             dmt_compliant=False,
-            parent__isnull=True,
             status_category__in=['todo', 'in_progress', 'done']
-        ).order_by('-updated_at')
+        ).exclude(item_type__in=['subtask', 'epic']).order_by('-updated_at')
 
-        # 2. Query root work items that had violations but are now compliant (fixed later)
+        # 2. Query root/story work items that had violations but are now compliant (fixed later)
         fixed_later_items = WorkItem.objects.filter(
             had_violations=True,
             dmt_compliant=True,
-            parent__isnull=True
-        ).order_by('-violations_cleared_at')
+        ).exclude(item_type__in=['subtask', 'epic']).order_by('-violations_cleared_at')
 
         # Apply same project filters
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -998,9 +996,12 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        # --- Live violation counts from WorkItems (filtered by sprint, root items only) ---
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
+        # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics/features) ---
         items_qs = WorkItem.objects.filter(
-            parent__isnull=True,
+            story_filter,
             status_category__in=['todo', 'in_progress', 'done']
         )
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -1051,10 +1052,13 @@ class ComplianceFixedLaterView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
         items = WorkItem.objects.filter(
+            story_filter,
             had_violations=True,
             dmt_compliant=True,
-            parent__isnull=True,
         ).order_by('-violations_cleared_at')
 
         if project_id and project_id not in ['null', 'undefined', '']:
