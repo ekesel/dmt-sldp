@@ -280,22 +280,56 @@ function OrgChartPageContent() {
     // Graph state variables
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-    const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>('TB');
-    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-    const shouldAutoLayoutRef = useRef(true);
+    const [layoutDirection, setLayoutDirection] = useState<'TB' | 'LR'>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('orgChartLayoutDirection');
+            if (saved === 'TB' || saved === 'LR') return saved;
+        }
+        return 'TB';
+    });
+
+    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(null as any);
+    if (!nodePositionsRef.current) {
+        let initialPositions = new Map<string, { x: number; y: number }>();
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('orgChartNodePositions');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    initialPositions = new Map(Object.entries(parsed));
+                } catch (e) {
+                    console.error("Failed to parse orgChartNodePositions", e);
+                }
+            }
+        }
+        nodePositionsRef.current = initialPositions;
+    }
+
+    const shouldAutoLayoutRef = useRef(nodePositionsRef.current.size === 0);
 
     const handleNodesChange = useCallback(
         (changes: NodeChange[]) => {
             onNodesChange(changes);
             changes.forEach((change) => {
                 if (change.type !== 'position') return;
-                if (change.dragging) return;
                 if (!change.position) return;
                 nodePositionsRef.current.set(change.id, change.position);
             });
         },
         [onNodesChange]
     );
+
+    const onNodeDragStop = useCallback((_: any, node: Node) => {
+        if (!isManager) return;
+        
+        if (node.position) {
+            nodePositionsRef.current.set(node.id, node.position);
+            if (typeof window !== 'undefined') {
+                const positionsObject = Object.fromEntries(nodePositionsRef.current);
+                localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
+            }
+        }
+    }, [isManager]);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -357,6 +391,8 @@ function OrgChartPageContent() {
 
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
+        let hasNewPositions = false;
+        
         // Build React Flow nodes
         const rfNodes: Node[] = employees.map((emp) => {
             const existingPos = nodePositionsRef.current.get(emp.id);
@@ -368,6 +404,11 @@ function OrgChartPageContent() {
                 if (parentPos) return { x: parentPos.x, y: parentPos.y + 150 };
                 return { x: 0, y: 0 };
             })();
+            
+            if (!existingPos) {
+                nodePositionsRef.current.set(emp.id, fallbackPos);
+                hasNewPositions = true;
+            }
 
             return {
                 id: emp.id,
@@ -409,7 +450,7 @@ function OrgChartPageContent() {
                 }
             }));
 
-        if (shouldAutoLayoutRef.current || nodes.length === 0) {
+        if (shouldAutoLayoutRef.current) {
             const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
                 rfNodes,
                 rfEdges,
@@ -418,10 +459,20 @@ function OrgChartPageContent() {
 
             layoutedNodes.forEach((n) => nodePositionsRef.current.set(n.id, n.position));
             shouldAutoLayoutRef.current = false;
+            
+            if (typeof window !== 'undefined') {
+                const positionsObject = Object.fromEntries(nodePositionsRef.current);
+                localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
+            }
 
             setNodes(layoutedNodes);
             setEdges(layoutedEdges);
             return;
+        }
+        
+        if (hasNewPositions && typeof window !== 'undefined') {
+            const positionsObject = Object.fromEntries(nodePositionsRef.current);
+            localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
         }
 
         // Preserve existing positions and only update node data + edges
@@ -447,6 +498,9 @@ function OrgChartPageContent() {
     const handleAutoArrange = (dir: 'TB' | 'LR') => {
         shouldAutoLayoutRef.current = true;
         setLayoutDirection(dir);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('orgChartLayoutDirection', dir);
+        }
         toast.success(`Chart rearranged ${dir === 'TB' ? 'Vertically' : 'Horizontally'}!`);
     };
 
@@ -526,6 +580,11 @@ function OrgChartPageContent() {
     const handleResetChart = () => {
         shouldAutoLayoutRef.current = true;
         nodePositionsRef.current.clear();
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('orgChartNodePositions');
+            localStorage.setItem('orgChartLayoutDirection', 'TB');
+        }
+        setLayoutDirection('TB');
         fetchOrgChart();
         setTimeout(() => fitView({ padding: 0.3, duration: 600 }), 150);
         toast.success('Chart layout reset successfully.');
@@ -623,6 +682,7 @@ function OrgChartPageContent() {
                         nodes={nodes}
                         edges={edges}
                         onNodesChange={handleNodesChange}
+                        onNodeDragStop={onNodeDragStop}
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         nodeTypes={nodeTypes}
@@ -637,7 +697,7 @@ function OrgChartPageContent() {
                         maxZoom={1.5}
                         connectOnClick={isManager}
                         nodesConnectable={isManager}
-                        nodesDraggable={true}
+                        nodesDraggable={isManager}
                         zoomOnScroll={false}
                         panOnScroll={true}
                         proOptions={{ hideAttribution: true }}

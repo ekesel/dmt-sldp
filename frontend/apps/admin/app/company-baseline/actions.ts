@@ -13,15 +13,7 @@ export async function getBaseline() {
         return JSON.parse(data);
     } catch (e) {
         console.error('Failed to read company baseline:', e);
-        // Fallback to absolute path just in case
-        try {
-            const fallbackPath = 'c:\\Users\\Divya Sharma\\Documents\\DMT\\dmt-sldp\\frontend\\apps\\app\\constants\\company-baseline.json';
-            const data = await fs.readFile(fallbackPath, 'utf8');
-            return JSON.parse(data);
-        } catch (err) {
-            console.error('Fallback read also failed:', err);
-            return null;
-        }
+        return null;
     }
 }
 
@@ -32,13 +24,6 @@ export async function updateBaseline(data: any) {
         return { success: true };
     } catch (e) {
         console.error('Failed to update company baseline:', e);
-         try {
-            const fallbackPath = 'c:\\Users\\Divya Sharma\\Documents\\DMT\\dmt-sldp\\frontend\\apps\\app\\constants\\company-baseline.json';
-            await fs.writeFile(fallbackPath, JSON.stringify(data, null, 2), 'utf8');
-            return { success: true };
-        } catch (err) {
-            console.error('Fallback write also failed:', err);
-            return { success: false, error: 'Failed to save baseline' };
-        }
+        return { success: false, error: 'Failed to save baseline' };
     }
 }

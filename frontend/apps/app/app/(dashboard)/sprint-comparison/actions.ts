@@ -13,17 +13,9 @@ export async function getCompanyBaseline() {
         return JSON.parse(data);
     } catch (e) {
         console.error('Failed to read company baseline:', e);
-        try {
-            const fallbackPath = 'c:\\Users\\Divya Sharma\\Documents\\DMT\\dmt-sldp\\frontend\\apps\\app\\constants\\company-baseline.json';
-            const data = await fs.readFile(fallbackPath, 'utf8');
-            return JSON.parse(data);
-        } catch (err) {
-            console.error('Fallback read also failed:', err);
-            // Return a default object so the page doesn't crash
-            return {
-                name: "Company Baseline",
-                kpis: {}
-            };
-        }
+        return {
+            name: "Company Baseline",
+            kpis: {}
+        };
     }
 }

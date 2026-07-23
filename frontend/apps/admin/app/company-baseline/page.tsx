@@ -5,11 +5,30 @@ import { getBaseline, updateBaseline } from './actions';
 import { Save, RefreshCcw, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+export interface CompanyBaselineData {
+    name?: string;
+    description?: string;
+    last_updated?: string;
+    kpis: {
+        item_volume?: {
+            total: number;
+            completed: number;
+        };
+        velocity?: number;
+        compliance_rate?: number;
+        cycle_time?: number;
+        defect_density?: number;
+        pr_review_speed?: number;
+        ai_usage?: number;
+        [key: string]: number | { total: number; completed: number } | undefined;
+    };
+}
+
 export default function CompanyBaselinePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [baseline, setBaseline] = useState<any>(null);
+    const [baseline, setBaseline] = useState<CompanyBaselineData | null>(null);
 
     useEffect(() => {
         loadData();
@@ -33,35 +52,44 @@ export default function CompanyBaselinePage() {
     };
 
     const handleKpiChange = (key: string, value: string | number) => {
-        setBaseline((prev: any) => ({
-            ...prev,
-            kpis: {
-                ...prev.kpis,
-                [key]: typeof value === 'string' ? parseFloat(value) || 0 : value
-            }
-        }));
+        setBaseline((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                kpis: {
+                    ...prev.kpis,
+                    [key]: typeof value === 'string' ? parseFloat(value) || 0 : value
+                }
+            };
+        });
         setHasUnsavedChanges(true);
     };
 
     const handleItemVolumeChange = (field: 'total' | 'completed', value: string | number) => {
-        setBaseline((prev: any) => ({
-            ...prev,
-            kpis: {
-                ...prev.kpis,
-                item_volume: {
-                    ...prev.kpis.item_volume,
-                    [field]: typeof value === 'string' ? parseInt(value) || 0 : value
+        setBaseline((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                kpis: {
+                    ...prev.kpis,
+                    item_volume: {
+                        ...(prev.kpis.item_volume || { total: 0, completed: 0 }),
+                        [field]: typeof value === 'string' ? parseInt(value) || 0 : value
+                    }
                 }
-            }
-        }));
+            };
+        });
         setHasUnsavedChanges(true);
     };
 
-    const handleMetaChange = (key: string, value: string) => {
-        setBaseline((prev: any) => ({
-            ...prev,
-            [key]: value
-        }));
+    const handleMetaChange = (key: keyof Omit<CompanyBaselineData, 'kpis'>, value: string) => {
+        setBaseline((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                [key]: value
+            };
+        });
         setHasUnsavedChanges(true);
     };
 

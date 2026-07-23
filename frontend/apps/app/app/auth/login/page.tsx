@@ -97,7 +97,7 @@ function LoginForm() {
                                     type={showPassword ? "text" : "password"}
                                     required
                                     className="w-full bg-background border border-border rounded-lg pl-10 pr-10 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
-                                    placeholder="••••••••"
+                                    placeholder="********"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
