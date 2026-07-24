@@ -67,13 +67,14 @@ class JiraConnector(BaseConnector):
 
     def fetch_work_items(self, last_sync=None):
         """Fetch Jira issues using JQL."""
-        url = f"{self.config['base_url']}/rest/api/3/search"
+        url = f"{self.config['base_url']}/rest/api/3/search/jql"
         headers = self._get_headers()
         
         # Simplified JQL for demonstration
         params = {
             "jql": "updated >= -1w" if not last_sync else f"updated >= '{last_sync.strftime('%Y-%m-%d %H:%M')}'",
-            "maxResults": 100
+            "maxResults": 100,
+            "fields": "*all"
         }
 
         try:

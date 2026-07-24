@@ -11,7 +11,9 @@ from data.views import (
     ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, ComplianceFixedLaterView, SprintListView, AIInsightListView,
     AssigneeDistributionView, AIInsightRefreshView
 )
+from django.conf.urls.static import static
 from data.sprint_comparison_views import SprintComparisonView
+from data.company_baseline_views import CompanyBaselineView
 from data.leaderboard_views import LeaderboardView
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from data.identity_views import UserIdentityMappingViewSet
@@ -61,6 +63,7 @@ urlpatterns = [
     path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
     path('api/dashboard/assignee-distribution/', AssigneeDistributionView.as_view(), name='assignee_distribution'),
     path('api/dashboard/sprint-comparison/', SprintComparisonView.as_view(), name='sprint_comparison'),
+    path('api/admin/company-baseline/', CompanyBaselineView.as_view(), name='company_baseline'),
     path('api/dashboard/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     
     # User management
@@ -152,5 +155,4 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    from django.conf.urls.static import static
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

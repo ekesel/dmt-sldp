@@ -25,6 +25,10 @@ from configuration.models import SourceConfiguration
 from .analytics.identity_resolver import IdentityResolver
 from users.models import User
 
+from .models import Sprint
+from configuration.models import SourceConfiguration
+from .models import WorkItem
+
 # --- Restored Views ---
 class MetricDashboardView(APIView):
     permission_classes = [IsAuthenticated]
@@ -488,9 +492,18 @@ class DeveloperMetricsView(APIView):
             sprint_obj = None
             if sprint_id and sprint_id not in ['null', 'undefined', '']:
                 try:
-                    from .models import Sprint
-                    sprint_obj = Sprint.objects.get(id=sprint_id)
-                    sprint_metric = next((m for m in metrics if m.sprint_name == sprint_obj.name), None)
+                    
+                    
+                    temp_sprint_obj = Sprint.objects.get(id=sprint_id)
+                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    sprint_in_project = WorkItem.objects.filter(
+                        source_config_id__in=sc_ids,
+                        sprint=temp_sprint_obj
+                    ).exists()
+                    
+                    if sprint_in_project:
+                        sprint_obj = temp_sprint_obj
+                        sprint_metric = next((m for m in metrics if m.sprint_name == sprint_obj.name), None)
                     
                     if not sprint_metric:
                         # Fetch it if it exists but wasn't in top 5
@@ -663,13 +676,21 @@ class DeveloperComparisonView(APIView):
 
             if sprint_id and sprint_id not in ['null', 'undefined', '']:
                 try:
-                    from .models import Sprint
-                    sprint_obj = Sprint.objects.get(id=sprint_id)
-                    requested_sprint_name = sprint_obj.name
-                    last_sprint = SprintMetrics.objects.filter(
-                        project_id=project_id,
-                        sprint_name=sprint_obj.name
-                    ).first()
+                    
+                    temp_sprint_obj = Sprint.objects.get(id=sprint_id)
+                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                    sprint_in_project = WorkItem.objects.filter(
+                        source_config_id__in=sc_ids,
+                        sprint=temp_sprint_obj
+                    ).exists()
+                    
+                    if sprint_in_project:
+                        sprint_obj = temp_sprint_obj
+                        requested_sprint_name = sprint_obj.name
+                        last_sprint = SprintMetrics.objects.filter(
+                            project_id=project_id,
+                            sprint_name=sprint_obj.name
+                        ).first()
                 except Sprint.DoesNotExist:
                     pass
 
@@ -768,19 +789,17 @@ class ComplianceFlagListView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        # 1. Query root work items that are active and not compliant
+        # 1. Query root/story work items that are active and not compliant (exclude subtasks and epics)
         items = WorkItem.objects.filter(
             dmt_compliant=False,
-            parent__isnull=True,
             status_category__in=['todo', 'in_progress', 'done']
-        ).order_by('-updated_at')
+        ).exclude(item_type__in=['subtask', 'epic']).order_by('-updated_at')
 
-        # 2. Query root work items that had violations but are now compliant (fixed later)
+        # 2. Query root/story work items that had violations but are now compliant (fixed later)
         fixed_later_items = WorkItem.objects.filter(
             had_violations=True,
             dmt_compliant=True,
-            parent__isnull=True
-        ).order_by('-violations_cleared_at')
+        ).exclude(item_type__in=['subtask', 'epic']).order_by('-violations_cleared_at')
 
         # Apply same project filters
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -977,9 +996,12 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        # --- Live violation counts from WorkItems (filtered by sprint, root items only) ---
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
+        # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics/features) ---
         items_qs = WorkItem.objects.filter(
-            parent__isnull=True,
+            story_filter,
             status_category__in=['todo', 'in_progress', 'done']
         )
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -1030,10 +1052,13 @@ class ComplianceFixedLaterView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
+        from django.db.models import Q
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+
         items = WorkItem.objects.filter(
+            story_filter,
             had_violations=True,
             dmt_compliant=True,
-            parent__isnull=True,
         ).order_by('-violations_cleared_at')
 
         if project_id and project_id not in ['null', 'undefined', '']:

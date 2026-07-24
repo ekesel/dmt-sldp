@@ -17,6 +17,29 @@ class JiraConnector(BaseConnector):
         self.email = config.get('username', '')
         self.api_token = config.get('api_token', '') or config.get('api_key', '')
 
+        # Extract project key from URL if workspace_id is not explicitly provided
+        original_url = config.get('base_url', '')
+        if not self.config.get('workspace_id') and original_url:
+            match = re.search(r'/projects/([^/]+)', original_url)
+            if match:
+                self.config['workspace_id'] = match.group(1)
+
+        # Extract board ID from URL if present
+        if original_url:
+            board_match = re.search(r'/boards/(\d+)', original_url)
+            if board_match:
+                self.config['board_id'] = board_match.group(1)
+
+        # Clean base_url to be just the API root domain (scheme + netloc)
+        if self.base_url:
+            from urllib.parse import urlparse
+            url_to_parse = self.base_url
+            if not url_to_parse.startswith(('http://', 'https://')):
+                url_to_parse = f"https://{url_to_parse}"
+            parsed = urlparse(url_to_parse)
+            if parsed.scheme and parsed.netloc:
+                self.base_url = f"{parsed.scheme}://{parsed.netloc}"
+
     def _get_auth_header(self) -> Dict[str, str]:
         """
         Jira Cloud uses Basic Auth with Email and API Token.
@@ -56,98 +79,206 @@ class JiraConnector(BaseConnector):
         """
         Fetch issues from Jira using JQL and sync to WorkItem model.
         """
-        headers = self._get_auth_header()
-        item_count = 0
+        from django.db.models.signals import post_save
+        from data.signals import work_item_telemetry_signal, notify_compliance_issue
+        from data.models import WorkItem
         
-        def report(pct, msg):
-            if progress_callback:
-                progress_callback(pct, msg)
-
-        # Build JQL
-        # workspace_id in SourceConfiguration can be used for Jira Project Key
-        project_key = self.config.get('workspace_id')
-        jql = f"project = '{project_key}'" if project_key else "order by updated desc"
+        # Disconnect signals to speed up bulk database inserts and prevent flooding
+        post_save.disconnect(work_item_telemetry_signal, sender=WorkItem)
+        post_save.disconnect(notify_compliance_issue, sender=WorkItem)
         
-        report(10, f"Starting Jira sync with JQL: {jql}")
-        
-        # 0. Sync Sprints first
-        report(15, "Discovering Jira Agile boards and Sprints...")
-        sprint_map = {} # external_id -> Sprint object
         try:
-            boards_url = f"{self.base_url.rstrip('/')}/rest/agile/1.0/board"
-            boards_params = {'projectKeyOrId': project_key} if project_key else {}
-            boards_resp = requests.get(boards_url, headers=headers, params=boards_params)
-            if boards_resp.status_code == 200:
-                boards = boards_resp.json().get('values', [])
-                for board in boards:
-                    board_id = board['id']
-                    sprints_url = f"{self.base_url.rstrip('/')}/rest/agile/1.0/board/{board_id}/sprint"
-                    sprints_resp = requests.get(sprints_url, headers=headers)
-                    if sprints_resp.status_code == 200:
-                        sprints = sprints_resp.json().get('values', [])
-                        for s in sprints:
-                            s_start = self._parse_date(s.get('startDate'))
-                            s_end = self._parse_date(s.get('endDate'))
-                            s_comp = self._parse_date(s.get('completeDate'))
-                            
-                            sprint_ext_id = f"jira_sprint_{s['id']}"
-                            sprint_obj, _ = Sprint.objects.update_or_create(
-                                external_id=sprint_ext_id,
-                                defaults={
-                                    'name': s['name'],
-                                    'start_date': s_start,
-                                    'end_date': s_end,
-                                    'completed_at': s_comp,
-                                    'status': s['state'] # active, closed, future
-                                }
-                            )
-                            sprint_map[str(s['id'])] = sprint_obj
-        except Exception as e:
-            logger.warning(f"Failed to sync Jira sprints: {e}")
-        
-        batch_size = 50
-        start_at = 0
-        total = 1 # Initial value to enter loop
-        
-        while start_at < total:
-            url = f"{self.base_url.rstrip('/')}/rest/api/3/search"
-            params = {
-                'jql': jql,
-                'startAt': start_at,
-                'maxResults': batch_size,
-                'fields': 'summary,description,status,priority,issuetype,creator,assignee,created,updated,resolutiondate',
-                'expand': 'changelog'
-            }
+            headers = self._get_auth_header()
+            item_count = 0
             
-            resp = requests.get(url, headers=headers, params=params)
-            if resp.status_code != 200:
-                raise Exception(f"Failed to search Jira issues: {resp.text}")
+            def report(pct, msg):
+                if progress_callback:
+                    progress_callback(pct, msg)
+    
+            # Build JQL
+            # workspace_id in SourceConfiguration can be used for Jira Project Key
+            project_key = self.config.get('workspace_id')
+            jql = f"project = '{project_key}'" if project_key else "order by updated desc"
             
-            data = resp.json()
-            issues = data.get('issues', [])
-            total = data.get('total', 0)
+            report(10, f"Starting Jira sync with JQL: {jql}")
             
-            if not issues:
-                break
+            # 0. Sync Sprints first
+            report(15, "Discovering Jira Agile boards and Sprints...")
+            sprint_map = {} # external_id -> Sprint object
+            try:
+                board_id = self.config.get('board_id')
+                if board_id:
+                    boards = [{'id': int(board_id)}]
+                else:
+                    boards_url = f"{self.base_url.rstrip('/')}/rest/agile/1.0/board"
+                    boards_params = {'projectKeyOrId': project_key} if project_key else {}
+                    boards_resp = requests.get(boards_url, headers=headers, params=boards_params)
+                    boards = boards_resp.json().get('values', []) if boards_resp.status_code == 200 else []
                 
-            for issue in issues:
-                self._sync_issue(issue, source_id, sprint_map)
-                item_count += 1
+                for board in boards:
+                    board_id_val = board['id']
+                    s_start_at = 0
+                    s_total = 1
+                    s_max_results = 50
+                    
+                    while s_start_at < s_total:
+                        sprints_url = f"{self.base_url.rstrip('/')}/rest/agile/1.0/board/{board_id_val}/sprint"
+                        sprints_params = {
+                            'startAt': s_start_at,
+                            'maxResults': s_max_results
+                        }
+                        sprints_resp = requests.get(sprints_url, headers=headers, params=sprints_params)
+                        if sprints_resp.status_code == 200:
+                            sprints_data = sprints_resp.json()
+                            sprints = sprints_data.get('values', [])
+                            s_total = sprints_data.get('total', 0)
+                            
+                            if not sprints:
+                                break
+                                
+                            for s in sprints:
+                                s_start = self._parse_date(s.get('startDate'))
+                                s_end = self._parse_date(s.get('endDate'))
+                                s_comp = self._parse_date(s.get('completeDate'))
+                                
+                                sprint_ext_id = f"jira_sprint_{s['id']}"
+                                sprint_obj, _ = Sprint.objects.update_or_create(
+                                    external_id=sprint_ext_id,
+                                    defaults={
+                                        'name': s['name'],
+                                        'start_date': s_start,
+                                        'end_date': s_end,
+                                        'completed_at': s_comp,
+                                        'status': s['state'] # active, closed, future
+                                    }
+                                )
+                                sprint_map[str(s['id'])] = sprint_obj
+                            
+                            s_start_at += len(sprints)
+                        else:
+                            break
+            except Exception as e:
+                logger.warning(f"Failed to sync Jira sprints: {e}")
             
-            start_at += len(issues)
-            pct = 10 + int((start_at / total) * 80) if total > 0 else 90
-            report(min(pct, 95), f"Processed {start_at}/{total} Jira issues...")
+            # Dynamically build the exact list of fields to fetch to speed up search API
+            config_mapping = self.config.get('field_mapping', {})
+            fields_to_fetch = [
+                'summary', 'description', 'status', 'priority', 'issuetype', 
+                'creator', 'assignee', 'created', 'updated', 'resolutiondate',
+                'project',
+                'parent',             # Get subtask parent relationship fields
+                'customfield_10016',  # Standard Story Points field fallback
+                'customfield_10020',  # Standard Sprint field fallback
+                'customfield_10403'   # Standard AI Usage (%) field fallback
+            ]
+            for custom_field_key in [
+                'pr_link_id', 'ac_quality_id', 'reviewer_dmt_signoff_id', 
+                'unit_testing_status_id', 'pm_name_id', 'tech_lead_name_id', 
+                'story_points_id', 'ai_usage_id'
+            ]:
+                field_id = config_mapping.get(custom_field_key)
+                if field_id:
+                    fields_to_fetch.append(field_id)
+            
+            fields_str = ','.join(list(set(fields_to_fetch)))
+    
+            batch_size = 50
+            start_at = 0
+            is_last = False
+            
+            board_id = self.config.get('board_id')
+            
+            while not is_last:
+                if board_id:
+                    url = f"{self.base_url.rstrip('/')}/rest/agile/1.0/board/{board_id}/issue"
+                else:
+                    url = f"{self.base_url.rstrip('/')}/rest/api/3/search/jql"
+                
+                params = {
+                    'startAt': start_at,
+                    'maxResults': batch_size,
+                    'fields': fields_str,
+                    'expand': 'changelog'
+                }
+                if not board_id:
+                    params['jql'] = jql
+                
+                resp = requests.get(url, headers=headers, params=params)
+                if resp.status_code != 200:
+                    raise Exception(f"Failed to search Jira issues: {resp.text}")
+                
+                data = resp.json()
+                issues = data.get('issues', [])
+                
+                # Support both isLast boolean and total-based calculation
+                is_last = data.get('isLast')
+                if is_last is None:
+                    total_val = data.get('total', 0)
+                    is_last = (start_at + len(issues) >= total_val)
+                
+                if not issues:
+                    break
+                    
+                for issue in issues:
+                    self._sync_issue(issue, source_id, sprint_map)
+                    item_count += 1
+                
+                start_at += len(issues)
+                report(90, f"Processed {start_at} Jira issues...")
+    
+            # 1. Sync issues (already handled in loop)
+            
+            # Resolve parent-child subtask relationships
+            self._post_sync_linking(source_id)
+            
+            # 2. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
+            self._post_sync_attribution(source_id)
+    
+            # 3. Post-sync: Infer assignees from PRs for unassigned work items
+            self._infer_unassigned_assignees(source_id)
+    
+            report(100, f"Sync complete. Processed {item_count} items.")
+            return {'item_count': item_count}
+        finally:
+            post_save.connect(work_item_telemetry_signal, sender=WorkItem)
+            post_save.connect(notify_compliance_issue, sender=WorkItem)
 
-        # 1. Sync issues (already handled in loop)
+    def _post_sync_linking(self, source_id: int):
+        """
+        Link JIRA subtasks to their parent stories after all issues are synced.
+        """
+        from data.models import WorkItem
+
+        # Find all synced items that do not have a parent linked yet, but have parent data in JIRA fields
+        broken_links = WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=True
+        )
         
-        # 2. Post-sync: Resolve multi-assignee attribution and bubble DMT fields
-        self._post_sync_attribution(source_id)
+        for item in broken_links:
+            raw_fields = (item.raw_source_data or {}).get('fields', {})
+            parent_data = raw_fields.get('parent')
+            if parent_data:
+                parent_key = parent_data.get('key')
+                if parent_key:
+                    parent_obj = WorkItem.objects.filter(
+                        source_config_id=source_id,
+                        external_id=parent_key
+                    ).first()
+                    if parent_obj:
+                        item.parent = parent_obj
+                        item.save()
 
-        # 3. Post-sync: Infer assignees from PRs for unassigned work items
-        self._infer_unassigned_assignees(source_id)
-
-        report(100, f"Sync complete. Processed {item_count} items.")
-        return {'item_count': item_count}
+        # Clear compliance/violations from subtasks (compliance rules only apply to root-level parent stories)
+        WorkItem.objects.filter(
+            source_config_id=source_id,
+            parent__isnull=False,
+        ).update(
+            dmt_compliant=True,
+            compliance_failures=[],
+            had_violations=False,
+            violation_history=[]
+        )
 
     def _infer_unassigned_assignees(self, source_id: int):
         """
@@ -247,6 +378,10 @@ class JiraConnector(BaseConnector):
             tenant=tenant,
         )
 
+        # Fallback assignee_email to the resolved user's email if JIRA hid the email address
+        if not assignee_email and resolved_assignee and resolved_assignee.email:
+            assignee_email = resolved_assignee.email
+
         # Extract sprint from custom fields
         sprint_obj = None
         if sprint_map:
@@ -326,6 +461,37 @@ class JiraConnector(BaseConnector):
         jira_tl_name, jira_tl_email_raw = self._extract_person_field(get_jira_cf_val(config_mapping.get('tech_lead_name_id')))
         jira_tech_lead_email = self.identity_resolver.resolve(jira_tl_email_raw) if jira_tl_email_raw else None
 
+        # Story Points mapping and extraction
+        story_points_val = get_jira_cf_val(config_mapping.get('story_points_id'))
+        if story_points_val is None:
+            # Fallback to standard Jira Cloud Story Points custom field
+            story_points_val = fields.get('customfield_10016')
+            
+        story_points = None
+        if story_points_val is not None:
+            try:
+                story_points = float(story_points_val)
+            except (ValueError, TypeError):
+                pass
+
+        # AI Usage mapping and extraction
+        ai_usage_val = get_jira_cf_val(config_mapping.get('ai_usage_id'))
+        if ai_usage_val is None:
+            # Fallback to standard Jira AI Usage (%) custom field
+            ai_usage_val = fields.get('customfield_10403')
+            
+        ai_usage_percent = None
+        if ai_usage_val is not None:
+            try:
+                val = float(ai_usage_val)
+                # If value is <= 1.0, assume it represents a decimal percentage (e.g. 0.8 -> 80.0)
+                if val <= 1.0:
+                    ai_usage_percent = val * 100.0
+                else:
+                    ai_usage_percent = val
+            except (ValueError, TypeError):
+                pass
+
         # Prepare data for model and compliance check
         work_item_data = {
             'source_config_id': source_id,
@@ -336,6 +502,8 @@ class JiraConnector(BaseConnector):
             'status': raw_status,
             'status_category': status_category,
             'priority': priority.lower(),
+            'story_points': story_points,
+            'ai_usage_percent': ai_usage_percent,
             'creator_email': self.identity_resolver.resolve(fields.get('creator', {}).get('emailAddress')),
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,
