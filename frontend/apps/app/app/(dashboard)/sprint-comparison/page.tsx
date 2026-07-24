@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { dashboard, developers } from '@dmt/api';
+import { dashboard, developers, companyBaseline } from '@dmt/api';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { SprintSelector } from '../../../components/SprintSelector';
 import { KPICard } from '../../../components/KPISection';
@@ -10,7 +10,6 @@ import { SideBySideBarChart } from '../../../components/charts/SideBySideBarChar
 import { BlockedTimeChart } from '../../../components/charts/BlockedTimeChart';
 import WorkloadDistributionChart, { WorkloadData } from '../../../components/charts/WorkloadDistributionChart';
 import { HelpSidebar } from '../../../components/HelpSidebar';
-import { getCompanyBaseline } from './actions';
 
 export interface CompanyBaselineData {
     name: string;
@@ -47,10 +46,12 @@ export interface SprintComparisonData {
     [key: string]: unknown;
 }
 export default function SprintComparisonPage() {
-    const [companyBaseline, setCompanyBaseline] = useState<CompanyBaselineData | null>(null);
+    const [baselineData, setBaselineData] = useState<CompanyBaselineData | null>(null);
 
     useEffect(() => {
-        getCompanyBaseline().then(setCompanyBaseline).catch(console.error);
+        companyBaseline.getBaseline().then(res => {
+            if (res && res.data) setBaselineData(res.data);
+        }).catch(console.error);
     }, []);
 
     const [projectId, setProjectId] = useState<number | null>(null);
@@ -115,7 +116,7 @@ export default function SprintComparisonPage() {
     const baselineReady = useCompanyBaseline ? !!sprintBName : !!sprintAName && !!sprintBName;
 
     useEffect(() => {
-        if (!baselineReady || !sprintBName || (useCompanyBaseline && !companyBaseline)) return;
+        if (!baselineReady || !sprintBName || (useCompanyBaseline && !baselineData)) return;
 
         setLoading(true);
 
@@ -124,16 +125,16 @@ export default function SprintComparisonPage() {
         dashboard.getSprintComparison(fetchName, sprintBName, projectId, developerId)
             .then(res => {
                 if (useCompanyBaseline) {
-                    setData(applyCompanyBaseline(res, companyBaseline));
+                    setData(applyCompanyBaseline(res, baselineData));
                 } else {
                     setData(res);
                 }
             })
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [sprintAName, sprintBName, projectId, developerId, useCompanyBaseline, baselineReady, companyBaseline]);
+    }, [sprintAName, sprintBName, projectId, developerId, useCompanyBaseline, baselineReady, baselineData]);
 
-    const effectiveBaselineName = useCompanyBaseline ? (companyBaseline?.name || 'Company Baseline') : sprintAName;
+    const effectiveBaselineName = useCompanyBaseline ? (baselineData?.name || 'Company Baseline') : sprintAName;
     const pendingSelection = useCompanyBaseline ? !sprintBId : (!sprintAId || !sprintBId);
 
     return (
@@ -180,7 +181,7 @@ export default function SprintComparisonPage() {
                             {useCompanyBaseline ? (
                                 <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20 h-8">
                                     <Building2 size={12} className="text-primary" />
-                                    <span className="text-xs font-bold text-primary">{companyBaseline?.name || 'Company Baseline'}</span>
+                                    <span className="text-xs font-bold text-primary">{baselineData?.name || 'Company Baseline'}</span>
                                 </div>
                             ) : (
                                 <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} className="px-3 h-8 text-xs" />
@@ -232,7 +233,7 @@ export default function SprintComparisonPage() {
                         {useCompanyBaseline && (
                             <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border border-primary/20 rounded-xl text-sm text-muted-foreground">
                                 <Building2 size={16} className="text-primary shrink-0" />
-                                <span>Comparing <strong className="text-foreground">{sprintBName}</strong> against the <strong className="text-foreground">{companyBaseline?.name || 'Company Baseline'}</strong>. {companyBaseline?.description || ''}</span>
+                                <span>Comparing <strong className="text-foreground">{sprintBName}</strong> against the <strong className="text-foreground">{baselineData?.name || 'Company Baseline'}</strong>. {baselineData?.description || ''}</span>
                             </div>
                         )}
 

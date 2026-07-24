@@ -1062,5 +1062,9 @@ export const orgChart = {
   getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
   createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
 };
+export const companyBaseline = {
+  getBaseline: () => get<any>('/admin/company-baseline/'),
+  updateBaseline: (data: any) => post<any, any>('/admin/company-baseline/', data),
+};
 
 export default api;
