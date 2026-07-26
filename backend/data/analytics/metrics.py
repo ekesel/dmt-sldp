@@ -109,7 +109,7 @@ class MetricService:
         results = []
         for project in projects:
             # 1. Base query for this sprint — exclude sub-tasks and epics/features to avoid double-counting
-            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
             work_items = WorkItem.objects.filter(story_filter, sprint=sprint)
             
             # Apply project and folder filtering
@@ -372,7 +372,7 @@ class MetricService:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
             # 1. Collect developer emails from root/story items (exclude subtasks and epics/features)
-            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
             raw_emails = set(WorkItem.objects.filter(
                 story_filter,
                 sprint=sprint,

@@ -59,6 +59,25 @@ class UserSerializer(serializers.ModelSerializer):
             return list(obj.role.permissions.values_list('permission_code', flat=True))
         return []
 
+class SimpleUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar_url']
+
+    def get_avatar_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        
+        import hashlib
+        email = obj.email.lower().encode('utf-8')
+        email_hash = hashlib.md5(email).hexdigest()
+        return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
