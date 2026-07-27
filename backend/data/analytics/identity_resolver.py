@@ -1,5 +1,8 @@
 import logging
 from data.models import UserIdentityMapping
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,6 @@ def get_inactive_user_emails_expanded(tenant=None):
     """
     Returns a set of all inactive emails including their mapped aliases.
     """
-    from django.contrib.auth import get_user_model
     User = get_user_model()
     
     qs = User.objects.filter(is_active=False)
@@ -84,8 +86,7 @@ def get_non_developer_user_emails_expanded(tenant=None):
     """
     Returns a set of all non-developer emails (PMs, QA, Managers) including their mapped aliases.
     """
-    from django.contrib.auth import get_user_model
-    from django.db.models import Q
+    
     User = get_user_model()
     
     # Check both role_code and role_name for non-developer roles
