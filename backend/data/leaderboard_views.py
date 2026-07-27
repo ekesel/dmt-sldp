@@ -13,10 +13,12 @@ class LeaderboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_winners_from_qs(self, base_qs, project_id, request):
-        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded, get_non_developer_user_emails_expanded
         inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        non_dev_emails = get_non_developer_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
         
-        base_qs = base_qs.exclude(developer_email__in=inactive_user_emails)
+        exclude_emails = set(inactive_user_emails).union(set(non_dev_emails))
+        base_qs = base_qs.exclude(developer_email__in=list(exclude_emails))
         
         if project_id:
             base_qs = base_qs.filter(project_id=project_id)
@@ -65,7 +67,10 @@ class LeaderboardView(APIView):
         def map_winner(w, category, metric_name, field_name, agg='avg'):
             email = w['developer_email']
             user = User.objects.filter(email__iexact=email).first()
-
+            val = w['score']
+            if field_name == 'story_points_completed':
+                val = int(round(val)) if val is not None else 0
+            
             if user:
                 ser = UserSerializer(user, context={'request': request})
                 name = user.get_full_name() or user.username

@@ -128,8 +128,8 @@ class VelocityView(APIView):
                 
             data.append({
                 "sprint_name": label,
-                "velocity": m.velocity,
-                "total_story_points_completed": m.total_story_points_completed
+                "velocity": int(round(m.velocity or 0)),
+                "total_story_points_completed": int(round(m.total_story_points_completed or 0))
             })
         
         if not metrics and SprintMetrics.objects.count() == 0:
@@ -154,8 +154,8 @@ class VelocityView(APIView):
                  
                  data.append({
                      "sprint_name": sprint_label,
-                     "velocity": velocity,
-                     "total_story_points_completed": velocity
+                     "velocity": int(round(velocity or 0)),
+                     "total_story_points_completed": int(round(velocity or 0))
                  })
              data.reverse() # Oldest to newest for graph
              return Response(data)
@@ -270,11 +270,14 @@ class DeveloperListView(APIView):
         resolver.load()
         project_id = request.query_params.get('project_id')
         
-        from data.analytics.identity_resolver import get_inactive_user_emails_expanded
+        from data.analytics.identity_resolver import get_inactive_user_emails_expanded, get_non_developer_user_emails_expanded
         inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        non_dev_emails = get_non_developer_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
         
         queryset = DeveloperMetrics.objects.exclude(developer_email__isnull=True).exclude(developer_email='')
-        queryset = queryset.exclude(developer_email__in=inactive_user_emails)
+        
+        exclude_emails = set(inactive_user_emails).union(set(non_dev_emails))
+        queryset = queryset.exclude(developer_email__in=list(exclude_emails))
         
         if project_id and project_id not in ['null', 'undefined', '']:
             queryset = queryset.filter(project_id=project_id)
@@ -381,7 +384,7 @@ def _get_combined_metrics(developer_email):
 
     # 3. Aggregate in Python for absolute accuracy
     combined = {
-        'story_points_completed': sum(r.story_points_completed for r in current_rows),
+        'story_points_completed': int(round(sum(r.story_points_completed for r in current_rows))),
         'items_completed': sum(r.items_completed for r in current_rows),
         'commits_count': sum(r.commits_count for r in current_rows),
         'prs_authored': sum(r.prs_authored for r in current_rows),
@@ -420,17 +423,29 @@ def _inject_workload(data_list, resolved_id, project_id=None):
     for item in data_list:
         sprint_name = item.get('sprint_name')
         
-        # Find the globally latest active sprint if 'All Projects (Current)' is specified
         if sprint_name == 'All Projects (Current)':
-            latest_active_sprint = Sprint.objects.exclude(status='backlog').order_by('-end_date', '-start_date').first()
-            sprint_name = latest_active_sprint.name if latest_active_sprint else None
+            from .models import DeveloperMetrics
+            # Find the latest sprint name for each project this developer is in
+            latest_metrics = DeveloperMetrics.objects.filter(
+                developer_email__in=developer_emails
+            ).order_by('project_id', '-sprint_end_date').distinct('project_id')
             
-        if not sprint_name:
-            item['workload'] = None
-            continue
+            latest_sprint_names = [m.sprint_name for m in latest_metrics if m.sprint_name]
             
-        # 3. Fetch all WorkItems assigned to the developer in this sprint
-        tasks = WorkItem.objects.filter(sprint__name=sprint_name, assignee_email__in=developer_emails)
+            if not latest_sprint_names:
+                item['workload'] = {
+                    'total': 0, 'in_progress': 0, 'completed': 0, 'todo': 0, 'status': 'Underutilised'
+                }
+                continue
+                
+            tasks = WorkItem.objects.filter(sprint__name__in=latest_sprint_names, assignee_email__in=developer_emails)
+        else:
+            if not sprint_name:
+                item['workload'] = None
+                continue
+            
+            # 3. Fetch tasks for the specific sprint name
+            tasks = WorkItem.objects.filter(sprint__name=sprint_name, assignee_email__in=developer_emails)
         if project_source_ids is not None:
             tasks = tasks.filter(source_config_id__in=project_source_ids)
             
@@ -558,11 +573,12 @@ class DeveloperMetricsView(APIView):
                 # Inject workload stats
                 _inject_workload(data, resolved_id, project_id)
 
-                # Inject is_selected field into the serialized output
-                if sprint_obj:
-                    for item in data:
-                        if item['sprint_name'] == sprint_obj.name:
-                            item['is_selected'] = True
+                # Inject is_selected field into the serialized output and format integers
+                for item in data:
+                    if 'story_points_completed' in item and item['story_points_completed'] is not None:
+                        item['story_points_completed'] = int(round(item['story_points_completed']))
+                    if sprint_obj and item.get('sprint_name') == sprint_obj.name:
+                        item['is_selected'] = True
                 return Response(data)
             return Response(metrics)
 
@@ -600,6 +616,10 @@ class DeveloperMetricsView(APIView):
         
         # Inject workload stats
         _inject_workload(result, resolved_id, project_id)
+        
+        for item in result:
+            if 'story_points_completed' in item and item['story_points_completed'] is not None:
+                item['story_points_completed'] = int(round(item['story_points_completed']))
 
         return Response(result)
 
@@ -996,8 +1016,8 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        from django.db.models import Q
-        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+        
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
 
         # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics/features) ---
         items_qs = WorkItem.objects.filter(
@@ -1052,8 +1072,8 @@ class ComplianceFixedLaterView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        from django.db.models import Q
-        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+        
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
 
         items = WorkItem.objects.filter(
             story_filter,

@@ -1,5 +1,8 @@
 import logging
 from data.models import UserIdentityMapping
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,6 @@ def get_inactive_user_emails_expanded(tenant=None):
     """
     Returns a set of all inactive emails including their mapped aliases.
     """
-    from django.contrib.auth import get_user_model
     User = get_user_model()
     
     qs = User.objects.filter(is_active=False)
@@ -79,3 +81,40 @@ def get_inactive_user_emails_expanded(tenant=None):
             
     return list(expanded)
 
+
+def get_non_developer_user_emails_expanded(tenant=None):
+    """
+    Returns a set of all non-developer emails (PMs, QA, Managers) including their mapped aliases.
+    """
+    
+    User = get_user_model()
+    
+    # Check both role_code and role_name for non-developer roles
+    qs = User.objects.filter(
+        Q(role__role_code__in=[
+            'PM', 'QA', 'TESTER', 'PROJECT_MANAGER', 'PRODUCT_MANAGER', 
+            'SCRUM_MASTER', 'MANAGER', 'LEAD', 'QA_TEAM_LEAD', 
+            'QA_ENGINEER', 'QA_INTERN'
+        ]) | 
+        Q(role__role_name__icontains='pm') |
+        Q(role__role_name__icontains='tester') |
+        Q(role__role_name__icontains='manager') |
+        Q(role__role_name__icontains='qa') |
+        Q(role__role_name__icontains='scrum')
+    )
+    if tenant:
+        qs = qs.filter(tenant=tenant)
+        
+    base_emails = list(qs.values_list('email', flat=True))
+    
+    resolver = IdentityResolver()
+    resolver.load()
+    
+    expanded = set()
+    for email in base_emails:
+        if email:
+            canonical = resolver.resolve(email)
+            expanded.update(resolver.all_aliases(canonical))
+            expanded.add(email)
+            
+    return list(expanded)
