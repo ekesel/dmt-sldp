@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Callable
 import logging
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class BaseConnector(ABC):
         from etl.transformers import ComplianceEngine
 
         # Root/Story items are the story-level tasks (exclude subtasks and epics/features)
-        from django.db.models import Q
+        
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
         
         root_items = WorkItem.objects.filter(
