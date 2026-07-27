@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from users.serializers import UserSerializer, SimpleUserSerializer
 from .models import Post, Comment, Reaction
+import hashlib
 
 class PostSerializer(serializers.ModelSerializer):
     media_file = serializers.SerializerMethodField()
@@ -63,7 +64,7 @@ class ReactionSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.user.profile_picture.url)
             return obj.user.profile_picture.url
         
-        import hashlib
+        
         email = (obj.user.email or '').lower().encode('utf-8')
         email_hash = hashlib.md5(email).hexdigest()
         return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
