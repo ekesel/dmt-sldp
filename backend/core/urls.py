@@ -17,7 +17,7 @@ from data.company_baseline_views import CompanyBaselineView
 from data.leaderboard_views import LeaderboardView
 from data.exports import ExportSprintView, ExportDeveloperView, ExportComplianceView
 from data.identity_views import UserIdentityMappingViewSet
-from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView
+from tenants.views import TenantViewSet, SystemHealthView, ActivityLogView, SystemSettingsView, ServiceDetailView, ServiceRestartView, CheckTenantView
 from users.views import (
     RegisterView, CustomTokenObtainPairView, UserProfileView, LogoutView, 
     UserViewSet, InviteUserView, PasswordResetRequestView,ResetPasswordConfirmView,UploadUserDataView
@@ -42,6 +42,7 @@ router.register(r'notifications', NotificationViewSet, basename='notifications')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/check-tenant/', CheckTenantView.as_view(), name='check_tenant'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

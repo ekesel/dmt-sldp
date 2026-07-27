@@ -381,3 +381,22 @@ class ServiceRestartView(APIView):
             'message': f'Restart sequence for {service_name} has been initiated.',
             'estimated_time': '30s'
         })
+
+class CheckTenantView(APIView):
+    """
+    Public endpoint for frontend middleware to check if a tenant exists.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        name = request.query_params.get('name')
+        if not name:
+            return Response({"valid": False, "error": "Name parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from django.db import models
+        # Exclude the public schema/tenant from normal validation if needed, or allow it
+        exists = Tenant.objects.filter(
+            models.Q(schema_name__iexact=name) | models.Q(slug__iexact=name)
+        ).exists()
+        
+        return Response({"valid": exists}, status=status.HTTP_200_OK)
