@@ -14,6 +14,7 @@ from django.core.cache import cache
 from core.celery import app as celery_app
 import datetime
 import os
+from django.db import models
 
 
 class TenantSerializer(serializers.ModelSerializer):
@@ -393,7 +394,7 @@ class CheckTenantView(APIView):
         if not name:
             return Response({"valid": False, "error": "Name parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        from django.db import models
+        
         # Exclude the public schema/tenant from normal validation if needed, or allow it
         exists = Tenant.objects.filter(
             models.Q(schema_name__iexact=name) | models.Q(slug__iexact=name)
