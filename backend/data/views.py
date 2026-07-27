@@ -1016,7 +1016,7 @@ class ComplianceSummaryView(APIView):
 
         overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
 
-        from django.db.models import Q
+        
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
 
         # --- Live violation counts from WorkItems (filtered by sprint, exclude subtasks and epics/features) ---
@@ -1072,7 +1072,7 @@ class ComplianceFixedLaterView(APIView):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
 
-        from django.db.models import Q
+        
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
 
         items = WorkItem.objects.filter(
