@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import RoleTable
 from .models import CustomPermission
+import hashlib
 
 User = get_user_model()
 
@@ -46,7 +47,6 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.profile_picture.url
         
         # Fallback to Gravatar
-        import hashlib
         email = obj.email.lower().encode('utf-8')
         email_hash = hashlib.md5(email).hexdigest()
         return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
@@ -73,7 +73,7 @@ class SimpleUserSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.profile_picture.url)
             return obj.profile_picture.url
         
-        import hashlib
+        
         email = obj.email.lower().encode('utf-8')
         email_hash = hashlib.md5(email).hexdigest()
         return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
