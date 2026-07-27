@@ -39,14 +39,30 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='quick-update')
     def quick_update(self, request):
-        queryset = self.get_queryset().filter(notification_type='qucik_update')
+        from django.db.models import Q
+        queryset = Notification.objects.filter(
+            Q(user=request.user) | Q(sender=request.user),
+            notification_type='qucik_update'
+        ).select_related('user', 'sender').order_by('-created_at')
+        
+        # Group by conversation partner to only show the latest message per person
+        seen_users = set()
+        unique_conversations = []
+        for msg in queryset:
+            other_user = msg.user if msg.sender == request.user else msg.sender
+            if not other_user:
+                continue
+            if other_user.id not in seen_users:
+                seen_users.add(other_user.id)
+                unique_conversations.append(msg)
+                
         paginator = QuickUpdateNotificationPagination()
-        page = paginator.paginate_queryset(queryset, request, view=self)
+        page = paginator.paginate_queryset(unique_conversations, request, view=self)
         if page is not None:
-            serializer = QuickUpdateNotificationSerializer(page, many=True)
+            serializer = QuickUpdateNotificationSerializer(page, many=True, context={'request': request})
             return paginator.get_paginated_response(serializer.data)
             
-        serializer = QuickUpdateNotificationSerializer(queryset, many=True)
+        serializer = QuickUpdateNotificationSerializer(unique_conversations, many=True, context={'request': request})
         return Response({
             'status_code': 200,
             'message': 'success',
@@ -58,6 +74,41 @@ class NotificationViewSet(viewsets.ModelViewSet):
             },
             'data': serializer.data
         })
+
+    @action(detail=False, methods=['get'], url_path='chat-history')
+    def chat_history(self, request):
+        from django.db.models import Q
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id query parameter is required.'}, status=400)
+            
+        queryset = Notification.objects.filter(
+            Q(user=request.user, sender_id=user_id) | Q(user_id=user_id, sender=request.user),
+            notification_type='qucik_update'
+        ).order_by('-created_at')
+        
+        paginator = QuickUpdateNotificationPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        
+        from .serializers import ChatHistorySerializer
+        
+        if page is not None:
+            serializer = ChatHistorySerializer(page, many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
+            
+        serializer = ChatHistorySerializer(queryset, many=True, context={'request': request})
+        return Response({
+            'status_code': 200,
+            'message': 'success',
+            'pagination': {
+                'current_page': 1,
+                'page_size': len(serializer.data),
+                'total_pages': 1,
+                'total_count': len(serializer.data)
+            },
+            'data': serializer.data
+        })
+
 
     @action(detail=True, methods=['post'], url_path='mark-as-read')
     def mark_as_read(self, request, pk=None):
