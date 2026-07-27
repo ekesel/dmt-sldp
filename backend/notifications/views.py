@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from .models import Notification
 from .serializers import NotificationSerializer, QuickUpdateNotificationSerializer
+from django.db.models import Q
+from .serializers import ChatHistorySerializer
 
 class QuickUpdateNotificationPagination(PageNumberPagination):
     page_size = 10
@@ -39,7 +41,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='quick-update')
     def quick_update(self, request):
-        from django.db.models import Q
+        
         queryset = Notification.objects.filter(
             Q(user=request.user) | Q(sender=request.user),
             notification_type='qucik_update'
@@ -77,7 +79,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='chat-history')
     def chat_history(self, request):
-        from django.db.models import Q
+        
         user_id = request.query_params.get('user_id')
         if not user_id:
             return Response({'error': 'user_id query parameter is required.'}, status=400)
@@ -90,7 +92,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
         paginator = QuickUpdateNotificationPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
         
-        from .serializers import ChatHistorySerializer
         
         if page is not None:
             serializer = ChatHistorySerializer(page, many=True, context={'request': request})
