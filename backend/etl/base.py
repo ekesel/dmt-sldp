@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Callable
 import logging
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -152,8 +153,8 @@ class BaseConnector(ABC):
         from etl.transformers import ComplianceEngine
 
         # Root/Story items are the story-level tasks (exclude subtasks and epics/features)
-        from django.db.models import Q
-        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio'])
+        
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
         
         root_items = WorkItem.objects.filter(
             story_filter,
@@ -228,10 +229,13 @@ class BaseConnector(ABC):
                 children_with_assignees = [c for c in children if c.assignee_email]
                 if not children_with_assignees:
                     continue
+                
+                parent_sp = item.story_points or 0
+                total_assigned_subtasks = len(children_with_assignees)
 
                 for c in children_with_assignees:
                     c._role_hint = 'developer'
-                    c._sp_override = c.story_points if c.story_points else 0
+                    c._sp_override = round(parent_sp / total_assigned_subtasks, 2)
 
                 contributions, dmt_updates = self._collect_from_leaves(
                     children_with_assignees, use_sp_override=True

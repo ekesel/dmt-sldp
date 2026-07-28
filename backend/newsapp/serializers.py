@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from users.serializers import UserSerializer
+from users.serializers import UserSerializer, SimpleUserSerializer
 from .models import Post, Comment, Reaction
+import hashlib
 
 class PostSerializer(serializers.ModelSerializer):
     media_file = serializers.SerializerMethodField()
@@ -39,7 +40,31 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ReactionSerializer(serializers.ModelSerializer):
     """Serializer for Post reactions."""
+    username = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = Reaction
-        fields = ["reaction_id", "post", "user", "reaction_type", "created_at"]
+        fields = ["reaction_id", "post", "user", "username", "avatar_url", "reaction_type", "created_at"]
         read_only_fields = ["user"]
+
+    def get_username(self, obj):
+        if not obj.user:
+            return ""
+        if obj.user.first_name or obj.user.last_name:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return obj.user.username
+
+    def get_avatar_url(self, obj):
+        if not obj.user:
+            return None
+        if obj.user.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.user.profile_picture.url)
+            return obj.user.profile_picture.url
+        
+        
+        email = (obj.user.email or '').lower().encode('utf-8')
+        email_hash = hashlib.md5(email).hexdigest()
+        return f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=200"
