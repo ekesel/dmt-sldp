@@ -11,6 +11,7 @@ import { useReactions } from "../../hooks/useReactions";
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
 import { getFileUrl } from "@dmt/api";
 import { useSearchParams } from "next/navigation";
+import ReactionUsersModal from "./ReactionUsersModal";
 
 
 const PostCard = ({
@@ -26,6 +27,7 @@ const PostCard = ({
   const { isManager } = usePermissions();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showReactionsModal, setShowReactionsModal] = useState(false);
   const { reactions, toggleReaction } = useReactions(post.post_id);
   const searchParams = useSearchParams();
 
@@ -188,7 +190,10 @@ const PostCard = ({
 
       {/* Post Footer Stats */}
       <div className="px-4 py-2.5 flex items-center justify-between text-muted-foreground text-sm border-b border-border/50">
-        <div className="flex items-center gap-1 group cursor-pointer">
+        <div 
+          className="flex items-center gap-1 group cursor-pointer"
+          onClick={() => setShowReactionsModal(true)}
+        >
           <div className="flex -space-x-1">
             <div className="bg-primary rounded-full p-1 border-2 border-card z-20 shadow-sm">
               <svg
@@ -252,6 +257,12 @@ const PostCard = ({
           <CommentSection postId={post.post_id} postAuthor={post.author} />
         )}
       </div>
+
+      <ReactionUsersModal
+        isOpen={showReactionsModal}
+        onClose={() => setShowReactionsModal(false)}
+        reactions={reactions[post.post_id]?.reactions || []}
+      />
     </div>
   );
 };

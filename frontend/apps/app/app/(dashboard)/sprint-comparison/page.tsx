@@ -230,12 +230,7 @@ export default function SprintComparisonPage() {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-12">
-                        {useCompanyBaseline && (
-                            <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border border-primary/20 rounded-xl text-sm text-muted-foreground">
-                                <Building2 size={16} className="text-primary shrink-0" />
-                                <span>Comparing <strong className="text-foreground">{sprintBName}</strong> against the <strong className="text-foreground">{baselineData?.name || 'Company Baseline'}</strong>. {baselineData?.description || ''}</span>
-                            </div>
-                        )}
+
 
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">

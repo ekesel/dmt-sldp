@@ -12,10 +12,10 @@ interface ReactionBarProps {
 const ReactionBar: React.FC<ReactionBarProps> = ({ postId, summary, toggleReaction }) => {
 
   const reactions = [
-    { type: 'like' as ReactionType, icon: <ThumbsUp className="w-4 h-4" />, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { type: 'love' as ReactionType, icon: <Heart className="w-4 h-4" />, color: 'text-red-500', bg: 'bg-red-500/10' },
-    { type: 'haha' as ReactionType, icon: <Laugh className="w-4 h-4" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-    { type: 'sad' as ReactionType, icon: <Frown className="w-4 h-4" />, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { type: 'like' as ReactionType, icon: <ThumbsUp className="w-4 h-4" />, color: 'text-primary', bg: 'bg-primary/10' },
+    { type: 'love' as ReactionType, icon: <Heart className="w-4 h-4" />, color: 'text-destructive', bg: 'bg-destructive/10' },
+    { type: 'haha' as ReactionType, icon: <Laugh className="w-4 h-4" />, color: 'text-warning', bg: 'bg-warning/10' },
+    { type: 'sad' as ReactionType, icon: <Frown className="w-4 h-4" />, color: 'text-accent', bg: 'bg-accent/10' },
   ];
 
   return (

@@ -3,17 +3,7 @@ import { reactions as reactionsApi, ReactionSummary, ReactionType } from '@dmt/a
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
-type ReactionUserRef = number | string | { id: number | string };
 
-interface ReactionItem {
-  user: ReactionUserRef;
-  reaction_type: ReactionType;
-}
-
-type ReactionSummaryApiResponse =
-  Omit<ReactionSummary, 'reactions'> & {
-    reactions?: ReactionItem[];
-  };
 
 export function useReactions(postId: number) {
   const [reactions, setReactions] = useState<Record<number, ReactionSummary>>({});
@@ -40,11 +30,11 @@ export function useReactions(postId: number) {
     setLoading(true);
 
     try {
-      const data = (await reactionsApi.getSummary(id)) as ReactionSummaryApiResponse;
+      const data = await reactionsApi.getSummary(id);
 
       const loggedInUserReaction = data.reactions?.find(
         (r) => {
-          const rUserId = typeof r.user === 'object' && r.user !== null ? r.user.id : r.user;
+          const rUserId = r.user && typeof r.user === 'object' ? (r.user as unknown as { id: number }).id : r.user;
           return Number(rUserId) === Number(userId);
         }
       );

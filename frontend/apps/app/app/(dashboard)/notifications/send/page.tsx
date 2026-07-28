@@ -30,6 +30,27 @@ const NOTIFICATION_STYLES: Record<string, { icon: React.ReactNode; bg: string }>
 
 const getNotificationStyle = (type: string) => NOTIFICATION_STYLES[type] || NOTIFICATION_STYLES.info;
 
+interface ChatMessage {
+    is_sent_by_me?: boolean | string | number;
+    user_name?: string;
+    title?: string;
+    message?: string;
+    created_at?: string;
+    [key: string]: unknown;
+}
+
+interface NotificationPayload {
+    data?: {
+        notification_type?: string;
+        data?: {
+            post_id?: string | number;
+        };
+        [key: string]: unknown;
+    };
+    notification_type?: string;
+    [key: string]: unknown;
+}
+
 /* ── Custom checkbox ─────────────────────────────────────────── */
 interface CheckboxProps {
     checked: boolean;
@@ -45,7 +66,7 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
         if (ref.current) ref.current.indeterminate = indeterminate;
     }, [indeterminate]);
 
-    const dim = size === 'sm' ? 'w-4 h-4' : 'w-[18px] h-[18px]';
+    const dim = size === 'sm' ? 'w-4 h-4' : 'w-[1.125rem] h-[1.125rem]';
 
     return (
         <span className="relative flex-shrink-0" style={{ display: 'inline-flex' }}>
@@ -61,7 +82,7 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                 onClick={onChange}
                 aria-hidden="true"
                 className={`
-                    ${dim} flex items-center justify-center rounded-[5px] cursor-pointer
+                    ${dim} flex items-center justify-center rounded-[0.3125rem] cursor-pointer
                     border transition-all duration-150
                     ${checked || indeterminate
                         ? 'bg-primary/90 border-primary ring-2 ring-primary/30'
@@ -70,12 +91,12 @@ function Checkbox({ checked, indeterminate = false, onChange, ariaLabel, size = 
                 `}
             >
                 {checked && !indeterminate && (
-                    <svg viewBox="0 0 10 8" fill="none" className="w-[9px] h-[7px]">
+                    <svg viewBox="0 0 10 8" fill="none" className="w-[0.5625rem] h-[0.4375rem]">
                         <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 )}
                 {indeterminate && (
-                    <span className="w-[8px] h-[1.5px] rounded-full bg-white" />
+                    <span className="w-[0.5rem] h-[0.09375rem] rounded-full bg-white" />
                 )}
             </span>
         </span>
@@ -102,13 +123,19 @@ export default function SendNotificationPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [highlightId, setHighlightId] = useState<string | null>(null);
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+
+    const [chatHistoryModal, setChatHistoryModal] = useState<{ isOpen: boolean; other_user_id?: number, user_name?: string }>({ isOpen: false });
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+
     const searchParams = useSearchParams();
     const { client: socket } = useWebSocket();
 
     useEffect(() => {
         if (!socket) return;
 
-        const onNotification = (payload: any) => {
+        const onNotification = (payload: NotificationPayload) => {
             const data = payload.data || payload;
 
             if (data.notification_type === 'qucik_update' && !data.data?.post_id) {
@@ -120,7 +147,7 @@ export default function SendNotificationPage() {
         return () => {
             socket.off('notification_message', onNotification);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, page]);
 
     useEffect(() => {
@@ -158,10 +185,12 @@ export default function SendNotificationPage() {
     }, []);
 
     const fetchSeq = useRef(0);
+    const chatReqRef = useRef(0);
 
     useEffect(() => {
         return () => {
             fetchSeq.current = -1; // Prevent updates after unmount
+            chatReqRef.current = -1;
         };
     }, []);
 
@@ -195,6 +224,39 @@ export default function SendNotificationPage() {
             }
         }
     };
+
+    const handleProfileClick = async (n: DMTNotification & { other_user_id?: number; sender?: { id: number }; user?: { id: number } }, senderName: string) => {
+        const otherUserId = n.other_user_id || n.sender?.id || n.user?.id;
+        if (!otherUserId) {
+            toast.error('Could not identify user for chat history.');
+            return;
+        }
+
+        const seq = ++chatReqRef.current;
+        setChatHistoryModal({ isOpen: true, other_user_id: otherUserId, user_name: senderName });
+        setLoadingHistory(true);
+        try {
+            const res = await apiNotifications.chatHistory(otherUserId, 1);
+            if (seq !== chatReqRef.current) return;
+
+            if (res?.data && Array.isArray(res.data)) {
+                setChatHistory([...res.data].reverse());
+            } else if (res?.data?.data && Array.isArray(res.data.data)) {
+                setChatHistory([...res.data.data].reverse());
+            } else {
+                setChatHistory([]);
+            }
+        } catch (err) {
+            if (seq !== chatReqRef.current) return;
+            console.error('Failed to fetch chat history', err);
+            toast.error('Failed to load chat history.');
+        } finally {
+            if (seq === chatReqRef.current) {
+                setLoadingHistory(false);
+            }
+        }
+    };
+
 
     const filteredUsers = users.filter(
         (u) =>
@@ -255,8 +317,9 @@ export default function SendNotificationPage() {
                 setSelectedIds(new Set());
                 setSearchQuery('');
             }
-        } catch (err: any) {
-            setStatus({ kind: 'error', message: err.message || 'Failed to send notification' });
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to send notification';
+            setStatus({ kind: 'error', message: errorMessage });
         } finally {
             setSending(false);
         }
@@ -297,7 +360,7 @@ export default function SendNotificationPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* ── User list panel ── */}
-                    <div className="lg:col-span-1 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[770px]">
+                    <div className="lg:col-span-1 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[48.125rem]">
 
                         {/* Panel header */}
                         <div className="px-4 py-3 bg-primary/90 flex items-center gap-2">
@@ -381,7 +444,7 @@ export default function SendNotificationPage() {
                     </div>
 
                     {/* ── Right side panels ── */}
-                    <div className="lg:col-span-2 flex flex-col gap-6 h-[770px]">
+                    <div className="lg:col-span-2 flex flex-col gap-6 h-[48.125rem]">
 
                         {/* ── Compose panel ── */}
                         <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -402,7 +465,7 @@ export default function SendNotificationPage() {
                                                 <Users className="w-5 h-5 text-white" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[10px] text-primary uppercase font-bold tracking-wider">
+                                                <p className="text-[0.625rem] text-primary uppercase font-bold tracking-wider">
                                                     {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
                                                 </p>
                                                 <p className="text-sm font-bold text-gray-800 truncate">{recipientLabel()}</p>
@@ -506,7 +569,7 @@ export default function SendNotificationPage() {
                         </div>
 
                         {/* ── Received Notifications panel ── */}
-                        <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[250px] max-h-[375px]">
+                        <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[15.625rem] max-h-[23.4375rem]">
                             {/* Panel header */}
                             <div className="px-6 py-3 bg-primary/90 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -549,7 +612,8 @@ export default function SendNotificationPage() {
                                                 <div
                                                     key={n.id}
                                                     id={`notification-${n.id}`}
-                                                    className={`p-4 flex items-start gap-3 transition-all duration-1000 relative ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
+                                                    onClick={() => handleProfileClick(n, senderName || 'System')}
+                                                    className={`p-4 flex items-start gap-3 transition-all duration-1000 relative cursor-pointer ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
                                                 >
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${senderName && !showImage ? 'bg-slate-200 text-slate-600' : (!showImage ? style.bg : '')} overflow-hidden`}>
                                                         {showImage ? (
@@ -567,19 +631,19 @@ export default function SendNotificationPage() {
                                                     </div>
                                                     <div className="flex-1 min-w-0 pt-0.5">
                                                         <div className="flex items-start justify-between gap-4">
-                                                            <h4 className="text-[15px] font-bold text-gray-900 break-words leading-tight">
+                                                            <h4 className="text-[0.9375rem] font-bold text-gray-900 break-words leading-tight">
                                                                 {senderName || 'System'}
                                                             </h4>
-                                                            <span className="text-[11px] font-medium text-gray-400 whitespace-nowrap shrink-0">
+                                                            <span className="text-[0.6875rem] font-medium text-gray-400 whitespace-nowrap shrink-0">
                                                                 {new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
                                                         {(n.title || !senderName) && (
-                                                            <p className="text-[14px] text-gray-500 mb-0.5 leading-snug">
+                                                            <p className="text-[0.875rem] text-gray-500 mb-0.5 leading-snug">
                                                                 {n.title || 'System'}
                                                             </p>
                                                         )}
-                                                        <p className="text-[14px] text-gray-800 break-words whitespace-pre-wrap leading-relaxed mt-0.5">{n.message}</p>
+                                                        <p className="text-[0.875rem] text-gray-800 break-words whitespace-pre-wrap leading-relaxed mt-0.5">{n.message}</p>
                                                     </div>
                                                     {!n.is_read && (
                                                         <div className="shrink-0 pt-2">
@@ -619,6 +683,87 @@ export default function SendNotificationPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Chat History Modal */}
+            {chatHistoryModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-[37.5rem] max-h-[85vh] animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white relative z-10 shadow-sm shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shadow-inner">
+                                    <MessageSquare className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-base">Chat History</h3>
+                                    <p className="text-xs text-gray-500 font-medium">with <span className="text-primary-dark">{chatHistoryModal.user_name}</span></p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setChatHistoryModal({ isOpen: false })}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                            >
+                                <XCircle className="w-6 h-6 text-gray-400 group-hover:text-rose-500 transition-colors" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FAFB] custom-scrollbar flex flex-col gap-4">
+                            {loadingHistory ? (
+                                <div className="flex flex-col items-center justify-center flex-1 py-12 gap-3 h-full">
+                                    <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                    <span className="text-sm font-medium text-gray-500 animate-pulse">Loading history...</span>
+                                </div>
+                            ) : chatHistory.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-80">
+                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-100">
+                                        <MessageSquare className="w-8 h-8 text-gray-300" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">No messages yet.</p>
+                                </div>
+                            ) : (
+                                chatHistory.map((item, idx) => {
+                                    const isSentByMe = item.is_sent_by_me === true || item.is_sent_by_me === 'true' || item.is_sent_by_me === 1;
+
+                                    return (
+                                        <div key={idx} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${isSentByMe
+                                                    ? 'bg-primary text-white rounded-tr-sm'
+                                                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                                                }`}>
+                                                {!isSentByMe && (
+                                                    <div className="text-[0.6875rem] font-bold text-primary-dark mb-1">
+                                                        {item.user_name || chatHistoryModal.user_name || 'User'}
+                                                    </div>
+                                                )}
+                                                {item.title && (
+                                                    <div className={`text-[0.8125rem] font-bold mb-1 ${isSentByMe ? 'text-white' : 'text-gray-900'}`}>
+                                                        {item.title}
+                                                    </div>
+                                                )}
+                                                {item.message && (
+                                                    <p className={`text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
+                                                        {item.message}
+                                                    </p>
+                                                )}
+                                                {!item.title && !item.message && (
+                                                    <p className={`text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
+                                                        {JSON.stringify(item)}
+                                                    </p>
+                                                )}
+                                                <div className={`text-[0.625rem] mt-1.5 text-right ${isSentByMe ? 'text-white/70' : 'text-gray-400'}`}>
+                                                    {item.created_at ? new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
+
