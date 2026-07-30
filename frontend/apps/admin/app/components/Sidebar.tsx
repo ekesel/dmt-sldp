@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useCurrentTenant } from '../context/TenantContext';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -13,6 +13,8 @@ import {
     Shield,
     ActivitySquare,
     FolderKanban,
+    Target,
+    Wrench,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -59,7 +61,7 @@ const menuItems: MenuItem[] = [
         href: '/activity',
     },
     {
-        icon: Building2,
+        icon: Target,
         label: 'Company Baseline',
         href: '/company-baseline',
     },
@@ -72,13 +74,8 @@ const menuItems: MenuItem[] = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
-    const router = useRouter();
     const { currentTenantId } = useCurrentTenant();
     const { user: currentUser } = useAuth();
-
-
-
-
 
     // Dynamic Navigation Logic
     const tenantMatch = pathname?.match(/\/tenants\/([^\/]+)/);
@@ -109,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (projectId) {
         // We might want to link back to the parent tenant projects too, but for now just add Sources
         dynamicItems.push({
-            icon: Settings,
+            icon: Wrench,
             label: 'Methods',
             href: `/projects/${projectId}/sources`,
             section: 'Project'
@@ -144,7 +141,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <nav className="p-4 space-y-2">
                     {allItems.map((item) => {
                         const Icon = item.icon;
-                        const isActive = pathname === item.href || pathname === item.href + '/';
+                        const isActive = item.href === '/' 
+                            ? pathname === '/' 
+                            : pathname?.startsWith(item.href);
 
                         return (
                             <Link
@@ -172,16 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     })}
                 </nav>
 
-                {/* Sidebar Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-gradient-to-t from-muted to-transparent">
-                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                        <Shield className="w-5 h-5 text-primary mb-2" />
-                        <p className="text-sm font-medium text-foreground">Admin Portal</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Manage platform tenants and configurations
-                        </p>
-                    </div>
-                </div>
+                
             </aside>
         </>
     );

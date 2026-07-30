@@ -256,6 +256,7 @@ export default function DeveloperDetailsPage({
                               key={p.id}
                               onClick={() => {
                                 setSelectedProjectId(String(p.id));
+                                setSelectedSprintId(null);
                                 setDropdownOpen(false);
                               }}
                               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
@@ -553,54 +554,56 @@ export default function DeveloperDetailsPage({
               </div>
             </div>
             <Card className="bg-card border-border overflow-hidden rounded-3xl">
-              <table className="w-full text-left">
-                <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
-                    <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border font-medium">
-                  {metrics.map((m, idx) => (
-                    <tr
-                      key={idx}
-                      className="hover:bg-gray-100 transition-all group"
-                    >
-                      <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
-                        {m.sprint_name}
-                      </td>
-                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
-                      <td className="px-3 py-4 lg:px-6 lg:py-6">
-                        <span className="text-blue-400 font-bold">
-                          {m.code_ai_usage_percent?.toFixed(1) || 0}%
-                        </span>
-                        <span className="text-[10px] text-slate-500 ml-1">
-                          ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
-                        </span>
-                      </td>
-                      <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
-                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
-                        {m.prs_reviewed || 0}
-                      </td>
-                      <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
-                            <div
-                              className="h-full bg-primary"
-                              style={{ width: `${m.dmt_compliance_rate}%` }}
-                            />
-                          </div>
-                          {m.dmt_compliance_rate?.toFixed(0)}%
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left whitespace-nowrap">
+                  <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border font-medium">
+                    {metrics.map((m, idx) => (
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-100 transition-all group"
+                      >
+                        <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
+                          {m.sprint_name}
+                        </td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6">
+                          <span className="text-blue-400 font-bold">
+                            {m.code_ai_usage_percent?.toFixed(1) || 0}%
+                          </span>
+                          <span className="text-[10px] text-slate-500 ml-1">
+                            ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
+                          </span>
+                        </td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
+                          {m.prs_reviewed || 0}
+                        </td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
+                              <div
+                                className="h-full bg-primary"
+                                style={{ width: `${m.dmt_compliance_rate}%` }}
+                              />
+                            </div>
+                            {m.dmt_compliance_rate?.toFixed(0)}%
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           </div>
 

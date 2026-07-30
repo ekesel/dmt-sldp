@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '../components/DashboardLayout';
-import { getBaseline, updateBaseline } from './actions';
+import { companyBaseline } from '@dmt/api';
 import { Save, RefreshCcw, Building2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -37,9 +37,9 @@ export default function CompanyBaselinePage() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await getBaseline();
-            if (data) {
-                setBaseline(data);
+            const response = await companyBaseline.getBaseline();
+            if (response && response.data) {
+                setBaseline(response.data);
             } else {
                 toast.error('Failed to load company baseline data');
             }
@@ -97,17 +97,19 @@ export default function CompanyBaselinePage() {
         if (!baseline) return;
         setSaving(true);
         try {
-            const res = await updateBaseline(baseline);
-            if (res.success) {
+            const res = await companyBaseline.updateBaseline(baseline);
+            if (res && (res.status_code === 200 || res.status_code === 201)) {
                 toast.success('Company baseline updated successfully');
                 setHasUnsavedChanges(false);
-                // Reload to get the newly stamped last_updated date
-                await loadData();
+                // Use the returned data instead of making a second API call
+                if (res.data) {
+                    setBaseline(res.data);
+                }
             } else {
-                toast.error(res.error || 'Failed to update');
+                toast.error(res?.message || 'Failed to update');
             }
-        } catch (error) {
-            toast.error('Error saving baseline');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Error saving baseline');
         } finally {
             setSaving(false);
         }

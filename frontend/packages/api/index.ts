@@ -875,6 +875,7 @@ export type Notification = DMTNotification;
 export const notifications = {
   list: () => get<DMTNotification[]>('/notifications/'),
   quickUpdates: (params?: { page?: number; page_size?: number }) => get<any>('/notifications/quick-update/', params),
+  chatHistory: (userId: string | number, page: number = 1) => get<any>(`/notifications/chat-history/?user_id=${userId}&page=${page}`),
   markAsRead: (id: string | number) => post<{ status: string }>(`/notifications/${id}/mark-as-read/`),
   markAllAsRead: () => post<{ status: string }>('/notifications/mark-all-as-read/'),
   delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/notifications/${id}/`),
@@ -954,9 +955,19 @@ export const comments = {
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'sad';
 
+export interface ReactionItem {
+  reaction_id: number;
+  post: number;
+  reaction_type: ReactionType;
+  user: number;
+  username?: string;
+  avatar_url?: string;
+  created_at?: string;
+}
+
 export interface ReactionSummary {
   total_reactions: number;
-  reactions: any[];
+  reactions: ReactionItem[];
   types: Record<ReactionType, number>;
   user_reaction?: ReactionType;
 }
@@ -1061,6 +1072,10 @@ export const orgChart = {
   createRole: (role_name: string) => post<{ id: number; role_name: string; dep_name?: string;[key: string]: unknown }, { role_name: string }>('/roles/', { role_name }),
   getDepartments: () => get<{ status: boolean; data: { id: number; name: string }[] }>('/org-departments/'),
   createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
+};
+export const companyBaseline = {
+  getBaseline: () => get<any>('/admin/company-baseline/'),
+  updateBaseline: (data: any) => post<any, any>('/admin/company-baseline/', data),
 };
 
 export default api;
