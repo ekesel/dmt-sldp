@@ -149,6 +149,7 @@ class ClickupConnector(BaseConnector):
                                 status = 'active'
 
                             sprint_obj, _ = Sprint.objects.update_or_create(
+                                source_config_id=source_id,
                                 external_id=sprint_ext_id,
                                 defaults={
                                     'name': lst['name'],

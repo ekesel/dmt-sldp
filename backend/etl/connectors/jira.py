@@ -143,6 +143,7 @@ class JiraConnector(BaseConnector):
                                 
                                 sprint_ext_id = f"jira_sprint_{s['id']}"
                                 sprint_obj, _ = Sprint.objects.update_or_create(
+                                    source_config_id=source_id,
                                     external_id=sprint_ext_id,
                                     defaults={
                                         'name': s['name'],
