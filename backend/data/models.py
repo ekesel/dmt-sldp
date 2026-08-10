@@ -17,7 +17,8 @@ class SoftDeleteMixin(models.Model):
 
 
 class Sprint(SoftDeleteMixin, models.Model):
-    external_id = models.CharField(max_length=100, unique=True)
+    external_id = models.CharField(max_length=100)
+    source_config_id = models.IntegerField(db_index=True, null=True, blank=True) # ID of SourceConfiguration in public schema
     name = models.CharField(max_length=255)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
@@ -26,6 +27,10 @@ class Sprint(SoftDeleteMixin, models.Model):
     # multiple sprints can be 'active' simultaneously
     status = models.CharField(max_length=50, default='active', db_index=True)
     
+    class Meta:
+        db_table = 'data_sprint'
+        unique_together = ('source_config_id', 'external_id')
+
     def __str__(self):
         return self.name
 

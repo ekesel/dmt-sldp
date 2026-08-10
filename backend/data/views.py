@@ -147,7 +147,7 @@ class VelocityView(APIView):
                      wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
                      sprint_label = sprint.name
                  else:
-                     sprint_label = f"{sprint.project.name} - {sprint.name}" if sprint.project else sprint.name
+                     sprint_label = sprint.name
                  
                  # Using story_points sum
                  velocity = wi_qs.aggregate(Sum('story_points'))['story_points__sum'] or 0
@@ -347,12 +347,14 @@ class DeveloperListView(APIView):
         
         result = []
         for email_key, dev in sorted(dev_map.items()):
-            result.append({
-                'developer_email': dev['developer_email'],
-                'developer_name': dev['developer_name'],
-                'id': dev['id'],
-                'projects': list(dev['projects'].values())
-            })
+            # Only include developers with a @samta.ai email address
+            if dev['developer_email'].endswith('@samta.ai'):
+                result.append({
+                    'developer_email': dev['developer_email'],
+                    'developer_name': dev['developer_name'],
+                    'id': dev['id'],
+                    'projects': list(dev['projects'].values())
+                })
             
         return Response(result)
 
@@ -510,11 +512,8 @@ class DeveloperMetricsView(APIView):
                     
                     
                     temp_sprint_obj = Sprint.objects.get(id=sprint_id)
-                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-                    sprint_in_project = WorkItem.objects.filter(
-                        source_config_id__in=sc_ids,
-                        sprint=temp_sprint_obj
-                    ).exists()
+                    sc_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
+                    sprint_in_project = temp_sprint_obj.source_config_id in sc_ids
                     
                     if sprint_in_project:
                         sprint_obj = temp_sprint_obj
@@ -674,15 +673,15 @@ class DeveloperComparisonView(APIView):
                         avg_compliance=Avg('dmt_compliance_rate'),
                     )
                 )
-                team_avg_points = round(sum(d['total_points'] or 0 for d in per_dev) / len(per_dev), 1) if per_dev else 0
-                team_avg_compliance = round(sum(d['avg_compliance'] or 0 for d in per_dev) / len(per_dev), 1) if per_dev else 0
+                team_avg_points = round(sum(d['total_points'] or 0 for d in per_dev) / len(per_dev), 2) if per_dev else 0
+                team_avg_compliance = round(sum(d['avg_compliance'] or 0 for d in per_dev) / len(per_dev), 2) if per_dev else 0
             else:
                 team_avg_points = 0
                 team_avg_compliance = 0
 
             res_data = {
-                "velocity": {"you": dev_points, "team_avg": team_avg_points},
-                "compliance": {"you": round(dev_compliance, 1), "team_avg": team_avg_compliance},
+                "velocity": {"you": round(dev_points, 2), "team_avg": team_avg_points},
+                "compliance": {"you": round(dev_compliance, 2), "team_avg": team_avg_compliance},
                 "sprint_name": "All Projects (Current)",
             }
             _inject_workload([res_data], resolved_id, project_id)
@@ -698,11 +697,8 @@ class DeveloperComparisonView(APIView):
                 try:
                     
                     temp_sprint_obj = Sprint.objects.get(id=sprint_id)
-                    sc_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-                    sprint_in_project = WorkItem.objects.filter(
-                        source_config_id__in=sc_ids,
-                        sprint=temp_sprint_obj
-                    ).exists()
+                    sc_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
+                    sprint_in_project = temp_sprint_obj.source_config_id in sc_ids
                     
                     if sprint_in_project:
                         sprint_obj = temp_sprint_obj
@@ -752,13 +748,13 @@ class DeveloperComparisonView(APIView):
             ).exclude(developer_email__in=inactive_user_emails).values('developer_email').annotate(
                 total_points=Sum('story_points_completed')
             ).aggregate(avg_points=Avg('total_points'))
-            team_avg_points = round(team_agg['avg_points'] or 0, 1)
+            team_avg_points = round(team_agg['avg_points'] or 0, 2)
 
             res_data = {
-                "velocity": {"you": dev_points, "team_avg": team_avg_points},
+                "velocity": {"you": round(dev_points, 2), "team_avg": team_avg_points},
                 "compliance": {
-                    "you": round(dev_compliance, 1),
-                    "team_avg": round(last_sprint.compliance_rate_percent, 1),
+                    "you": round(dev_compliance, 2),
+                    "team_avg": round(last_sprint.compliance_rate_percent, 2),
                 },
                 "sprint_name": last_sprint.sprint_name,
             }
@@ -775,22 +771,18 @@ class SprintListView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
 
+        from django.db.models import F
         if project_id and project_id not in ['null', 'undefined', '']:
             from configuration.models import SourceConfiguration
             source_config_ids = SourceConfiguration.objects.filter(
                 project_id=project_id
             ).values_list('id', flat=True)
-            # Sprints linked to work items that belong to this project
-            sprint_ids = WorkItem.objects.filter(
-                source_config_id__in=source_config_ids,
-                sprint__isnull=False
-            ).values_list('sprint_id', flat=True).distinct()
             sprints = Sprint.objects.filter(
-                id__in=sprint_ids
-            ).order_by('-end_date', '-start_date')
+                source_config_id__in=source_config_ids
+            ).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
         else:
             # All-projects mode: return the single latest sprint
-            sprints = Sprint.objects.order_by('-end_date', '-start_date')[:1]
+            sprints = Sprint.objects.order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))[:1]
 
         data = [{
             'id': s.id,
@@ -808,18 +800,29 @@ class ComplianceFlagListView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        
+        severity_filter = request.query_params.get('severity')
+        if severity_filter:
+            severity_filter = severity_filter.lower().strip()
+            if severity_filter == 'warnings':
+                severity_filter = 'warning'
 
-        # 1. Query root/story work items that are active and not compliant (exclude subtasks and epics)
+
+        # 1. Query root/story work items that are active and not compliant (exclude subtasks, epics, and bugs)
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+        
         items = WorkItem.objects.filter(
+            story_filter,
             dmt_compliant=False,
             status_category__in=['todo', 'in_progress', 'done']
-        ).exclude(item_type__in=['subtask', 'epic']).order_by('-updated_at')
+        ).order_by('-updated_at')
 
         # 2. Query root/story work items that had violations but are now compliant (fixed later)
         fixed_later_items = WorkItem.objects.filter(
+            story_filter,
             had_violations=True,
             dmt_compliant=True,
-        ).exclude(item_type__in=['subtask', 'epic']).order_by('-violations_cleared_at')
+        ).order_by('-violations_cleared_at')
 
         # Apply same project filters
         if project_id and project_id not in ['null', 'undefined', '']:
@@ -878,12 +881,17 @@ class ComplianceFlagListView(APIView):
                     responsible_role = None
                     responsible_name = None
 
+                severity = "critical" if item.status_category == 'done' else "warning"
+                
+                if severity_filter and severity_filter != severity:
+                    continue
+
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
                     "work_item_title": item.title,
                     "flag_type": failure,
-                    "severity": "critical" if item.status_category == 'done' else "warning",
+                    "severity": severity,
                     "created_at": item.updated_at,
                     "project_name": project_name,
                     "assignee_name": assignee_names[0],
@@ -920,12 +928,17 @@ class ComplianceFlagListView(APIView):
                     responsible_role = None
                     responsible_name = None
 
+                severity = "critical" if item.status_category == 'done' else "warning"
+                
+                if severity_filter and severity_filter != severity:
+                    continue
+
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
                     "work_item_title": item.title,
                     "flag_type": failure,
-                    "severity": "critical" if item.status_category == 'done' else "warning",
+                    "severity": severity,
                     "created_at": item.updated_at,
                     "project_name": project_name,
                     "assignee_name": assignee_names[0],
@@ -1238,62 +1251,47 @@ class AssigneeDistributionView(APIView):
         from django.db.models import Q
         from collections import defaultdict
 
-        # Identify sprints — use date range when provided, otherwise last 5
+        # Identify sprints — use date range when provided, otherwise latest 1 sprint
+        from django.db.models import F
         try:
             if project_id and project_id not in ['null', 'undefined']:
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
-                sm_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+                sprint_qs = Sprint.objects.filter(source_config_id__in=source_ids).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
                 if start_date:
-                    sm_qs = sm_qs.filter(sprint_end_date__gte=start_date)
+                    sprint_qs = sprint_qs.filter(end_date__gte=start_date)
                 if end_date:
-                    sm_qs = sm_qs.filter(sprint_end_date__lte=end_date)
+                    sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                 if not date_filtered:
-                    sm_qs = sm_qs[:5]
-                relevant_sprint_names = list(sm_qs.values_list('sprint_name', flat=True))
+                    sprint_qs = sprint_qs[:1]
+                    
+                relevant_sprint_ids = list(sprint_qs.values_list('id', flat=True))
 
-                if not relevant_sprint_names:
-                    sprint_qs = Sprint.objects.filter(
-                        work_items__source_config_id__in=source_ids
-                    ).distinct().order_by('-end_date')
-                    if start_date:
-                        sprint_qs = sprint_qs.filter(end_date__gte=start_date)
-                    if end_date:
-                        sprint_qs = sprint_qs.filter(end_date__lte=end_date)
-                    if not date_filtered:
-                        sprint_qs = sprint_qs[:5]
-                    relevant_sprint_names = list(sprint_qs.values_list('name', flat=True))
-
-                if relevant_sprint_names:
-                    work_items = WorkItem.objects.filter(
-                        source_config_id__in=source_ids,
-                        sprint__name__in=relevant_sprint_names
-                    )
+                if relevant_sprint_ids:
+                    work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
                 else:
                     work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
             else:
-                # Global view
-                sm_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
-                if start_date:
-                    sm_qs = sm_qs.filter(sprint_end_date__gte=start_date)
-                if end_date:
-                    sm_qs = sm_qs.filter(sprint_end_date__lte=end_date)
-                if not date_filtered:
-                    sm_qs = sm_qs[:5]
-                relevant_sprint_names = list(sm_qs.values_list('sprint_name', flat=True))
-
-                if not relevant_sprint_names:
-                    sprint_qs = Sprint.objects.all().order_by('-end_date')
+                # Global view: grab the 1 latest sprint per active project
+                source_ids = list(SourceConfiguration.objects.values_list('id', flat=True))
+                relevant_sprint_ids = []
+                
+                for sid in source_ids:
+                    sprint_qs = Sprint.objects.filter(source_config_id=sid).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
                     if start_date:
                         sprint_qs = sprint_qs.filter(end_date__gte=start_date)
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
+                        
                     if not date_filtered:
-                        sprint_qs = sprint_qs[:5]
-                    relevant_sprint_names = list(sprint_qs.values_list('name', flat=True))
+                        latest = sprint_qs.first()
+                        if latest:
+                            relevant_sprint_ids.append(latest.id)
+                    else:
+                        relevant_sprint_ids.extend(list(sprint_qs.values_list('id', flat=True)))
 
-                if relevant_sprint_names:
-                    work_items = WorkItem.objects.filter(sprint__name__in=relevant_sprint_names)
+                if relevant_sprint_ids:
+                    work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
                 else:
                     work_items = WorkItem.objects.none()
         except Exception:
