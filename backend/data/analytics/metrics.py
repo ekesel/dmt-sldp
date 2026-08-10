@@ -1,6 +1,9 @@
 from __future__ import annotations
 from ..models import WorkItem, Sprint, DailyMetric, AIInsight
 from django.db.models import Avg, Sum, Count, F
+from .identity_resolver import get_inactive_user_emails_expanded
+from django.db import connection
+from tenants.models import Tenant
 
 class MetricService:
     @staticmethod
@@ -364,6 +367,10 @@ class MetricService:
         # Delete existing metrics for this sprint before populating to ensure stale entries are removed
         DeveloperMetrics.objects.filter(sprint_name=sprint.name).delete()
 
+        
+        tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
+        inactive_emails = set(get_inactive_user_emails_expanded(tenant=tenant))
+
         # Get all projects
         projects = list(Project.objects.all())
         
@@ -397,6 +404,9 @@ class MetricService:
                 canonical_to_raw.setdefault(canonical, []).append(e)
 
             for canonical_email, aliases in canonical_to_raw.items():
+                if canonical_email in inactive_emails:
+                    continue
+                
                 # Apply project and folder filtering
                 sources = SourceConfiguration.objects.filter(project=project)
                 source_conf_ids = sources.values_list('id', flat=True)

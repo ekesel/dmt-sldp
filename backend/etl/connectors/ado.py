@@ -187,7 +187,7 @@ class AzureDevOpsConnector(BaseConnector):
                 progress_callback(int((i/total_projects)*10), f"Syncing Project: {p_name}...")
             
             # 2. Sync Sprints (Iterations)
-            self._sync_sprints(p_name, headers)
+            self._sync_sprints(p_name, source_id, headers)
 
             # 3. Sync Work Items
             count = self._sync_work_items(p_name, source_id, headers)
@@ -319,7 +319,7 @@ class AzureDevOpsConnector(BaseConnector):
                     logger.warning(f"Could not parse date: {date_str}")
                     return None
 
-    def _sync_sprints(self, project_name: str, headers: Dict):
+    def _sync_sprints(self, project_name: str, source_id: int, headers: Dict):
         """
         Fetch and save Iterations as Sprints.
         Using teamsettings/iterations to get dates.
@@ -381,6 +381,7 @@ class AzureDevOpsConnector(BaseConnector):
                              status = 'active'
 
                         Sprint.objects.update_or_create(
+                            source_config_id=source_id,
                             external_id=it_id,
                             defaults={
                                 'name': name,
@@ -490,7 +491,7 @@ class AzureDevOpsConnector(BaseConnector):
         iteration_info = fields.get('System.IterationId') or item.get('id') # fallback
         sprint_obj = None
         if iteration_info:
-             sprint_obj = Sprint.objects.filter(external_id=str(iteration_info)).first()
+             sprint_obj = Sprint.objects.filter(source_config_id=source_id, external_id=str(iteration_info)).first()
         
         # Fallback to name-based matching if ID fails or IterationPath is provided
         if not sprint_obj:
@@ -499,7 +500,7 @@ class AzureDevOpsConnector(BaseConnector):
                 parts = iteration_path.split('\\')
                 if len(parts) > 1:
                     sprint_name = parts[-1]
-                    sprint_obj = Sprint.objects.filter(name=sprint_name).order_by('-end_date').first()
+                    sprint_obj = Sprint.objects.filter(source_config_id=source_id, name=sprint_name).order_by('-end_date').first()
                     
         # If still no sprint and it's resolved/started, map to the most recently completed/active sprint for this source
         if not sprint_obj and (started_at or resolved_at):
