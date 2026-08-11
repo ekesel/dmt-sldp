@@ -14,6 +14,13 @@ import { useSearchParams } from "next/navigation";
 import ReactionUsersModal from "./ReactionUsersModal";
 
 
+const REACTION_EMOJI_MAP: Record<string, string> = {
+  like: "👍",
+  love: "❤️",
+  haha: "😆",
+  sad: "😢",
+};
+
 const PostCard = ({
   post,
   onEdit,
@@ -194,31 +201,31 @@ const PostCard = ({
           className="flex items-center gap-1 group cursor-pointer"
           onClick={() => setShowReactionsModal(true)}
         >
-          <div className="flex -space-x-1">
-            <div className="bg-primary rounded-full p-1 border-2 border-card z-20 shadow-sm">
-              <svg
-                className="w-2.5 h-2.5 text-primary-foreground"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-              </svg>
-            </div>
-            <div className="bg-destructive rounded-full p-1 border-2 border-card z-10 shadow-sm">
-              <svg
-                className="w-2.5 h-2.5 text-destructive-foreground"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </div>
-          <span className="ml-1 group-hover:underline">{reactions[post.post_id]?.total_reactions || 0}</span>
+          {(() => {
+            const postReactions = reactions[post.post_id];
+            const total = postReactions?.total_reactions || 0;
+
+            const activeReactionTypes = postReactions?.types
+              ? Object.entries(postReactions.types)
+                  .filter(([_, count]) => count > 0)
+                  .map(([type]) => type)
+              : [];
+
+            return (
+              <div className="flex items-center gap-1">
+                {total > 0 && (
+                  <div className="flex items-center gap-0.5 mr-1">
+                    {activeReactionTypes.map((type) => (
+                      <span key={type} className="text-sm select-none">
+                        {REACTION_EMOJI_MAP[type] || ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <span className="group-hover:underline">{total}</span>
+              </div>
+            );
+          })()}
         </div>
         <div className="flex gap-3">
           <span 

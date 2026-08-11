@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import { users } from '@dmt/api';
 import { cn, formatTimestamp } from "@/lib/utils";
 import { useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+
 
 // Cache promise to prevent N+1 API calls for users
 let usersPromise: Promise<Record<number, User>> | null = null;
@@ -41,13 +43,13 @@ interface CommentItemProps {
   onReply: (text: string, parentId: number) => Promise<void>;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ 
-  comment, 
+const CommentItem: React.FC<CommentItemProps> = ({
+  comment,
   postAuthor,
-  depth = 0, 
-  onUpdate, 
-  onDelete, 
-  onReply 
+  depth = 0,
+  onUpdate,
+  onDelete,
+  onReply
 }) => {
   const { user: currentUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -55,13 +57,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const commentUserId = typeof comment.user === 'object' ? comment.user.id : comment.user;
   const isCommentOwner = currentUser?.id === commentUserId;
   const isPostAuthor = currentUser && postAuthor && currentUser.id === postAuthor.id;
   const canDelete = isCommentOwner || isPostAuthor;
   const isAuthor = isCommentOwner; // Keep for edit permission check
-  
+
   const [resolvedUser, setResolvedUser] = useState<{ username: string; avatar_url: string } | null>(null);
 
   useEffect(() => {
@@ -81,8 +83,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
     return () => { isMounted = false; };
   }, [comment.user, commentUserId]);
-  
+
   const handleUpdate = async () => {
+    if (!editText.trim()) {
+      toast.error("Comment cannot be empty");
+      return;
+    }
     if (editText.trim() === comment.comment_text) {
       setIsEditing(false);
       return;
@@ -180,17 +186,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
 
       <div className="flex items-center gap-4 ml-11 text-xs text-muted-foreground">
-        <button 
+        <button
           onClick={() => setIsReplying(!isReplying)}
           className="hover:underline flex items-center gap-1 transition-colors"
         >
           <Reply className="w-3 h-3" /> Reply
         </button>
-        
+
         {canDelete && (
           <>
             {isAuthor && (
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 disabled={isDeleting}
                 className="hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50"
@@ -198,10 +204,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <Edit2 className="w-3 h-3" /> Edit
               </button>
             )}
-            <button 
+            <button
               onClick={async () => {
                 if (!comment.comment_id) return;
-                if(window.confirm("Are you sure you want to delete this comment?")) {
+                if (window.confirm("Are you sure you want to delete this comment?")) {
                   setIsDeleting(true);
                   try {
                     await onDelete(comment.comment_id);
@@ -234,14 +240,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
             placeholder="Write a reply..."
             className="flex-1 bg-muted/50 border-none rounded-full px-4 py-1.5 text-xs focus:ring-1 focus:ring-primary"
           />
-          <button 
+          <button
             disabled={!replyText.trim()}
             onClick={handleReply}
             className="p-2 text-primary hover:bg-primary/10 rounded-full disabled:opacity-50"
           >
             <Check className="w-4 h-4" />
           </button>
-          <button 
+          <button
             onClick={() => setIsReplying(false)}
             className="p-2 text-muted-foreground hover:bg-muted rounded-full"
           >
@@ -253,9 +259,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
       {comment.replies && comment.replies.length > 0 && (
         <div className="flex flex-col">
           {comment.replies.map((reply, idx) => (
-            <CommentItem 
-              key={reply.comment_id || `reply-${idx}`} 
-              comment={reply} 
+            <CommentItem
+              key={reply.comment_id || `reply-${idx}`}
+              comment={reply}
               postAuthor={postAuthor}
               depth={depth + 1}
               onUpdate={onUpdate}

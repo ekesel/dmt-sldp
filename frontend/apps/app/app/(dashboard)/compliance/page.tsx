@@ -8,6 +8,7 @@ import { ProjectSelector } from "../../../components/ProjectSelector";
 import { SprintSelector } from "../../../components/SprintSelector";
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 import { HelpSidebar } from "../../../components/HelpSidebar";
+import { toast } from 'react-hot-toast';
 
 interface ComplianceFlag {
     id: string;
@@ -70,6 +71,7 @@ export default function CompliancePage() {
 
     const toggleFilter = useCallback((f: 'critical' | 'warning') => {
         setActiveFilter(prev => prev === f ? null : f);
+        setCurrentPage(1);
     }, []);
     const handleHelpClick = useCallback((id: string) => {
         setActiveHelpId(id);
@@ -82,7 +84,7 @@ export default function CompliancePage() {
 
     const requestCounter = React.useRef(0);
 
-    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null, page: number = 1, pageSize: number = 10) => {
+    const fetchData = useCallback((projectId: number | null, sprintId: number | null, workItemId: string | null = null, page: number = 1, pageSize: number = 10, severity: 'critical' | 'warning' | null = null) => {
         const currentRequestId = ++requestCounter.current;
 
         setLoading(true);
@@ -91,7 +93,7 @@ export default function CompliancePage() {
 
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
-        compliance.listFlags(projectId, sprintId, effectiveWorkItemId, page, pageSize)
+        compliance.listFlags(projectId, sprintId, effectiveWorkItemId, page, pageSize, severity)
             .then(res => {
                 if (requestCounter.current === currentRequestId) {
                     if (res && res.data && Array.isArray(res.data)) {
@@ -109,7 +111,10 @@ export default function CompliancePage() {
                     }
                 }
             })
-            .catch(err => console.error("Failed to fetch compliance flags:", err))
+            .catch(err => {
+                console.error("Failed to fetch compliance flags:", err);
+                toast.error("Failed to load compliance flags");
+            })
             .finally(() => {
                 if (requestCounter.current === currentRequestId) setLoading(false);
             });
@@ -118,7 +123,10 @@ export default function CompliancePage() {
             .then(data => {
                 if (requestCounter.current === currentRequestId) setSummary(data);
             })
-            .catch(err => console.error("Failed to fetch compliance summary:", err))
+            .catch(err => {
+                console.error("Failed to fetch compliance summary:", err);
+                toast.error("Failed to load compliance summary");
+            })
             .finally(() => {
                 if (requestCounter.current === currentRequestId) setSummaryLoading(false);
             });
@@ -127,16 +135,19 @@ export default function CompliancePage() {
             .then(data => {
                 if (requestCounter.current === currentRequestId) setFixedLaterItems(data);
             })
-            .catch(err => console.error("Failed to fetch fixed-later items:", err))
+            .catch(err => {
+                console.error("Failed to fetch fixed-later items:", err);
+                toast.error("Failed to load deferred compliance items");
+            })
             .finally(() => {
                 if (requestCounter.current === currentRequestId) setFixedLaterLoading(false);
             });
     }, []);
 
-    // Refetch whenever project OR sprint changes
+    // Refetch whenever project, sprint, activeFilter, page, or page size changes
     useEffect(() => {
-        fetchData(selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize);
-    }, [selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize, fetchData]);
+        fetchData(selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize, activeFilter);
+    }, [selectedProjectId, selectedSprintId, workItemId, currentPage, pageSize, activeFilter, fetchData]);
 
     useEffect(() => {
         setSelectedProjectId(paramProjectId ? Number(paramProjectId) : null);
@@ -287,7 +298,7 @@ export default function CompliancePage() {
                             projectId={selectedProjectId}
                             onFolderChanged={() => {
                                 setCurrentPage(1);
-                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize);
+                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize, activeFilter);
                             }}
                         />
                     </div>
@@ -438,7 +449,10 @@ export default function CompliancePage() {
                         </h2>
                         {activeFilter && (
                             <button
-                                onClick={() => setActiveFilter(null)}
+                                onClick={() => {
+                                    setActiveFilter(null);
+                                    setCurrentPage(1);
+                                }}
                                 className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border hover:border-foreground/30 bg-muted"
                             >
                                 Clear filter
@@ -453,23 +467,23 @@ export default function CompliancePage() {
                                 ))}
                             </div>
                         ) : flags.length === 0 ? (
-                            <div className="p-12 text-center bg-green/5 rounded-3xl border border-green/20 shadow-inner">
-                                <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green/20">
-                                    <CheckCircle className="text-green" size={32} />
-                                </div>
-                                <h3 className="text-xl font-black text-foreground tracking-tight">Compliance Maintained</h3>
-                                <p className="text-emerald-200/60 mt-2 font-medium">No active compliance violations detected for this context.</p>
-                            </div>
-                        ) : (() => {
-                            const visibleFlags = activeFilter ? flags.filter(f => f.severity === activeFilter) : flags;
-                            if (visibleFlags.length === 0) return (
+                            activeFilter ? (
                                 <div className="p-8 text-center bg-muted/30 rounded-2xl border border-border">
                                     <p className="text-muted-foreground text-sm font-medium">
                                         No {activeFilter} violations in this sprint.
                                     </p>
                                 </div>
-                            );
-                            return visibleFlags.map((flag) => (
+                            ) : (
+                                <div className="p-12 text-center bg-green/5 rounded-3xl border border-green/20 shadow-inner">
+                                    <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green/20">
+                                        <CheckCircle className="text-green" size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-foreground tracking-tight">Compliance Maintained</h3>
+                                    <p className="text-emerald-200/60 mt-2 font-medium">No active compliance violations detected for this context.</p>
+                                </div>
+                            )
+                        ) : (() => {
+                            return flags.map((flag) => (
                                 <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
                                     <div className="space-y-4">
                                         <div className="flex flex-wrap items-center gap-3">

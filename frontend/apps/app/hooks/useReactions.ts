@@ -13,7 +13,7 @@ export function useReactions(postId: number) {
   // Using a ref avoids putting `reactions` in the effect dep array, which would
   // cause a re-fetch loop on every setReactions() call.
   const fetchedIds = useRef<Set<number>>(new Set());
-  
+
   const { user } = useAuth();
   const userId = user?.id;
   const prevUserIdRef = useRef<number | string | undefined>(userId);
@@ -40,6 +40,15 @@ export function useReactions(postId: number) {
       );
       const userReaction = loggedInUserReaction?.reaction_type;
 
+      const computedTypes: Record<ReactionType, number> = { like: 0, love: 0, haha: 0, sad: 0 };
+      if (Array.isArray(data.reactions)) {
+        data.reactions.forEach((r: any) => {
+          if (r && r.reaction_type) {
+            computedTypes[r.reaction_type as ReactionType] = (computedTypes[r.reaction_type as ReactionType] || 0) + 1;
+          }
+        });
+      }
+
       setReactions(prev => {
         const current = prev[id];
 
@@ -54,9 +63,9 @@ export function useReactions(postId: number) {
           ...prev,
           [id]: {
             ...current, // Keep previous state if any
-            types: { like: 0, love: 0, haha: 0, sad: 0 }, // fallback defaults
             reactions: [], // fallback defaults
             ...data, // overwrite with actual API data
+            types: data.types || computedTypes,
             user_reaction: userReaction
           }
         };

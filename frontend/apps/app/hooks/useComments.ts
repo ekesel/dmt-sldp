@@ -132,6 +132,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
   };
 
   const updateComment = async (commentId: number, text: string) => {
+    if (!text.trim()) {
+      return;
+    }
     try {
       const updated = await commentsApi.update(commentId, { comment_text: text });
       const current = commentsCache[postId] || { list: [], total: 0 };

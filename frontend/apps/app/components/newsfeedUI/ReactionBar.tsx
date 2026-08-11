@@ -20,25 +20,6 @@ const ReactionBar: React.FC<ReactionBarProps> = ({ postId, summary, toggleReacti
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      {/* Reaction Summary */}
-      {summary && summary.total_reactions > 0 && (
-        <div className="flex items-center gap-2 px-4 py-1 text-xs text-muted-foreground border-b border-border/50">
-          <div className="flex -space-x-1">
-            {Object.entries(summary.types || {})
-              .filter(([_, count]) => count > 0)
-              .map(([type]) => {
-                const reaction = reactions.find(r => r.type === type);
-                return (
-                  <div key={type} className={cn("p-1 rounded-full border border-card z-10", reaction?.bg)}>
-                    {reaction?.icon}
-                  </div>
-                );
-              })}
-          </div>
-
-        </div>
-      )}
-
       {/* Action Buttons */}
       <div className="flex items-center justify-between px-1 py-1">
         <div className="flex-1 flex gap-1">
