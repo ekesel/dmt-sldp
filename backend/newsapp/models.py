@@ -19,6 +19,7 @@ class Post(models.Model):
     media_file = models.FileField(upload_to=get_post_media_upload_path, blank=True, null=True)
     category = models.CharField(max_length=100) # news, events, promotions, announcement, etc
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    is_updated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -38,7 +39,9 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     comment_text = models.TextField()
+    is_updated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Comment"
