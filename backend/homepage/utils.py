@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 # Checking today is any one birthday or not
 def get_birthday_info(tenant):
     today = date.today()
-    birthday_people = User.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day, tenant=tenant)
+    birthday_people = User.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day, tenant=tenant, is_active=True)
     return birthday_people
 
 # checking today is any one anniversary or not
 def get_anniversary_info(tenant):
     today = date.today()
-    anniversary_people = User.objects.filter(date_of_join__month=today.month, date_of_join__day=today.day, tenant=tenant)
+    anniversary_people = User.objects.filter(date_of_join__month=today.month, date_of_join__day=today.day, tenant=tenant, is_active=True)
     TodayAnniversaryList = []
     for obj in anniversary_people:
         total_year = today.year - obj.date_of_join.year
@@ -29,7 +29,7 @@ def get_anniversary_info(tenant):
 
 def upcoming_birthday_info(tenant):
     today = date.today()
-    users = User.objects.filter(tenant=tenant)
+    users = User.objects.filter(tenant=tenant, is_active=True)
     upcoming = []
     for user in users:
         if not user.date_of_birth:
@@ -60,11 +60,11 @@ def upcoming_birthday_info(tenant):
                 "next_birthday": next_birthday,
                 "days_left": days_left
             })
-    return upcoming
+    return sorted(upcoming, key=lambda x: x['days_left'])
 
 def upcoming_anniversary_info(tenant):
     today = date.today()
-    users = User.objects.filter(tenant=tenant)
+    users = User.objects.filter(tenant=tenant, is_active=True)
     upcoming = []
     for user in users:
         if not user.date_of_join:
