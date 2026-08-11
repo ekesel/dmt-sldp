@@ -21,7 +21,8 @@ class SprintComparisonView(APIView):
         # Build filter kwargs
         filter_kwargs_a = {'sprint_name': sprint_a_name}
         filter_kwargs_b = {'sprint_name': sprint_b_name}
-        if project_id:
+        is_valid_project = project_id and str(project_id).lower() not in ['null', 'undefined', 'all']
+        if is_valid_project:
             filter_kwargs_a['project_id'] = project_id
             filter_kwargs_b['project_id'] = project_id
 

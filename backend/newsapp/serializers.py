@@ -29,7 +29,9 @@ class CommentSerializer(serializers.ModelSerializer):
             "user",
             "parent_comment",
             "comment_text",
+            "is_updated",
             "created_at",
+            "updated_at",
             "replies"
         ]
         read_only_fields = ["user"]
