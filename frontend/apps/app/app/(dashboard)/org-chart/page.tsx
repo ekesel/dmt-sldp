@@ -321,7 +321,7 @@ function OrgChartPageContent() {
 
     const onNodeDragStop = useCallback((_: any, node: Node) => {
         if (!isManager) return;
-        
+
         if (node.position) {
             nodePositionsRef.current.set(node.id, node.position);
             if (typeof window !== 'undefined') {
@@ -392,7 +392,7 @@ function OrgChartPageContent() {
     // Compile node list for React Flow based on raw employees dataset
     const compileNodesAndEdges = useCallback(() => {
         let hasNewPositions = false;
-        
+
         // Build React Flow nodes
         const rfNodes: Node[] = employees.map((emp) => {
             const existingPos = nodePositionsRef.current.get(emp.id);
@@ -404,7 +404,7 @@ function OrgChartPageContent() {
                 if (parentPos) return { x: parentPos.x, y: parentPos.y + 150 };
                 return { x: 0, y: 0 };
             })();
-            
+
             if (!existingPos) {
                 nodePositionsRef.current.set(emp.id, fallbackPos);
                 hasNewPositions = true;
@@ -459,7 +459,7 @@ function OrgChartPageContent() {
 
             layoutedNodes.forEach((n) => nodePositionsRef.current.set(n.id, n.position));
             shouldAutoLayoutRef.current = false;
-            
+
             if (typeof window !== 'undefined') {
                 const positionsObject = Object.fromEntries(nodePositionsRef.current);
                 localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
@@ -469,7 +469,7 @@ function OrgChartPageContent() {
             setEdges(layoutedEdges);
             return;
         }
-        
+
         if (hasNewPositions && typeof window !== 'undefined') {
             const positionsObject = Object.fromEntries(nodePositionsRef.current);
             localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
@@ -496,11 +496,13 @@ function OrgChartPageContent() {
 
     // Layout arrangement reset trigger
     const handleAutoArrange = (dir: 'TB' | 'LR') => {
+        if (layoutDirection === dir) return;
         shouldAutoLayoutRef.current = true;
         setLayoutDirection(dir);
         if (typeof window !== 'undefined') {
             localStorage.setItem('orgChartLayoutDirection', dir);
         }
+        toast.dismiss();
         toast.success(`Chart rearranged ${dir === 'TB' ? 'Vertically' : 'Horizontally'}!`);
     };
 
@@ -615,7 +617,7 @@ function OrgChartPageContent() {
                                 Organisation Chart
                             </h1>
                         </div>
-                       
+
                     </div>
                 </div>
 
@@ -635,7 +637,7 @@ function OrgChartPageContent() {
             <div
                 ref={reactFlowWrapper}
                 className="w-full bg-card rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
-                style={{ height: 'calc(100vh - 320px)', minHeight: '500px' }}
+                style={{ height: 'calc(100vh - 240px)', minHeight: '580px' }}
             >
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full w-full space-y-4">

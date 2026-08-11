@@ -623,8 +623,8 @@ export const developers = {
 };
 
 export const compliance = {
-  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null, page?: number, pageSize?: number) =>
-    get<any>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId, page, page_size: pageSize })}`),
+  listFlags: (projectId?: string | number | null, sprintId?: string | number | null, workItemId?: string | number | null, page?: number, pageSize?: number, severity?: string | null) =>
+    get<any>(`/compliance-flags/${buildQuery({ project_id: projectId, sprint_id: sprintId, work_item_id: workItemId, page, page_size: pageSize, severity })}`),
   resolveFlag: (flagId: string) =>
     post<any>(`/compliance-flags/${flagId}/resolve/`, {}),
   getSummary: (projectId?: string | number | null, sprintId?: string | number | null) =>

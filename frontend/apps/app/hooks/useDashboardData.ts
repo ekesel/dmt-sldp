@@ -117,12 +117,14 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
     return () => clearTimeout(timeoutId);
   }, [fetchData]);
 
+  const lastProcessedMessageRef = useRef<any>(null);
+
   useEffect(() => {
-    if (lastMessage) {
+    if (lastMessage && lastMessage !== lastProcessedMessageRef.current) {
+      lastProcessedMessageRef.current = lastMessage;
       if (lastMessage.type === 'metrics_update') {
         debouncedFetchData();
       } else if (lastMessage.type === 'ai_insight_update') {
-
         setIsRefreshingInsights(false);
         setAiProgress(100);
         setAiStatus('Complete');

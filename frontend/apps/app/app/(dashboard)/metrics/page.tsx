@@ -123,7 +123,10 @@ export default function MetricsPage() {
                                             </span>
                                         ))}
                                         {projectCount > 2 && (
-                                            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20">
+                                            <span 
+                                                title={dev.projects?.slice(2).map((p: { name: string }) => p.name).join(', ')}
+                                                className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20 cursor-pointer"
+                                            >
                                                 +{projectCount - 2} more
                                             </span>
                                         )}
