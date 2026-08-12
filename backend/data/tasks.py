@@ -11,6 +11,7 @@ from core.telemetry.models import DataSyncPayload
 from core.celery_utils import tenant_aware_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -310,9 +311,12 @@ def analyze_pr_ai_usage(source_id, schema_name=None):
                                 
             # Fallback
             if not matched_prs:
+                
                 matches = PullRequest.objects.filter(
-                    source_config_id__in=project_source_ids,
-                    pr_url__icontains=item.external_id
+                    Q(title__icontains=item.external_id) | 
+                    Q(source_branch__icontains=item.external_id) |
+                    Q(pr_url__icontains=item.external_id),
+                    source_config_id__in=project_source_ids
                 )
                 for m in matches:
                     if m not in matched_prs:

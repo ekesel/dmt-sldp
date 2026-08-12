@@ -4,6 +4,7 @@ from django.db.models import Avg, Sum, Count, F
 from .identity_resolver import get_inactive_user_emails_expanded
 from django.db import connection
 from tenants.models import Tenant
+from django.db.models import Q
 
 class MetricService:
     @staticmethod
@@ -416,12 +417,12 @@ class MetricService:
                 for email in aliases:
                     contrib_filter |= Q(assignee_contributions__contains=[{'email': email}])
 
-                dev_work_items = WorkItem.objects.filter(
-                    story_filter,
+                base_work_items = WorkItem.objects.filter(
                     contrib_filter,
                     sprint=sprint,
                     source_config_id__in=source_conf_ids,
                 )
+                dev_work_items = base_work_items.filter(story_filter)
                 
                 # Active Folder Filtering
                 filters = Q()
@@ -453,6 +454,9 @@ class MetricService:
                     sources_with_folders = sources.filter(
                         config_json__active_folder_id__isnull=False
                     ).exclude(config_json__active_folder_id='').values_list('id', flat=True)
+                    base_work_items = base_work_items.filter(
+                        ~Q(source_config_id__in=sources_with_folders) | filters
+                    )
                     dev_work_items = dev_work_items.filter(
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
@@ -462,7 +466,7 @@ class MetricService:
                 all_known_aliases = list(set(resolver.all_aliases(canonical_email)) | set(aliases))
 
                 # Filter PRs for this developer in this sprint (approximate by date if not linked)
-                from django.db.models import Q
+                
                 pr_filter = Q(
                     author_email__in=all_known_aliases,
                     source_config_id__in=source_conf_ids,
@@ -494,7 +498,7 @@ class MetricService:
                 compliance_rate = (compliant_count / total_compliance_target * 100) if total_compliance_target > 0 else 0
                 
                 # Quality
-                defects = dev_work_items.filter(item_type='bug').count()
+                defects = base_work_items.filter(item_type__iexact='bug').count()
                 avg_coverage = dev_work_items.aggregate(avg=Avg('coverage_percent'))['avg']
                 avg_ai_usage = dev_work_items.aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
                 avg_code_ai = dev_prs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
