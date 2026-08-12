@@ -295,6 +295,7 @@ class NewsConsumer(AsyncJsonWebsocketConsumer):
                     temp.file.delete(save=False)
                     temp.delete()
                 
+                post.is_updated = True
                 post.save()
                 return PostSerializer(post).data
 

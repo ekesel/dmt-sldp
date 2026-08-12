@@ -21,7 +21,8 @@ class SprintComparisonView(APIView):
         # Build filter kwargs
         filter_kwargs_a = {'sprint_name': sprint_a_name}
         filter_kwargs_b = {'sprint_name': sprint_b_name}
-        if project_id:
+        is_valid_project = project_id and str(project_id).lower() not in ['null', 'undefined', 'all']
+        if is_valid_project:
             filter_kwargs_a['project_id'] = project_id
             filter_kwargs_b['project_id'] = project_id
 
@@ -275,7 +276,7 @@ class SprintComparisonView(APIView):
     def _build_workload_distribution(self, charts, name_a, name_b, project_id):
         
         from data.analytics.identity_resolver import get_inactive_user_emails_expanded
-        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
+        inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(self.request.user, 'tenant', None))
 
         # Get all developer metrics for these two sprints
         filter_a = Q(sprint_name=name_a)
