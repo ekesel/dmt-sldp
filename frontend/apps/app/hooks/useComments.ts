@@ -143,7 +143,12 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
         if (!Array.isArray(list)) return [];
         return list.map(c => {
           if (c.comment_id === commentId) {
-            return { ...c, comment_text: updated.comment_text, updated_at: updated.updated_at };
+            return {
+              ...c,
+              comment_text: updated.comment_text,
+              updated_at: updated.updated_at,
+              is_updated: updated.is_updated !== undefined ? updated.is_updated : true
+            };
           }
           if (c.replies && c.replies.length > 0) {
             return { ...c, replies: updateList(c.replies) };
