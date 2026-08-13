@@ -6,6 +6,7 @@ from .models import DeveloperMetrics, WorkItem
 from users.serializers import UserSerializer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import hashlib
 
 User = get_user_model()
 
@@ -17,50 +18,52 @@ class LeaderboardView(APIView):
         inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
         non_dev_emails = get_non_developer_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
         
+        registered_user_emails = list(User.objects.filter(is_active=True).values_list('email', flat=True))
         exclude_emails = set(inactive_user_emails).union(set(non_dev_emails))
-        base_qs = base_qs.exclude(developer_email__in=list(exclude_emails))
+        
+        base_qs = base_qs.filter(developer_email__in=registered_user_emails).exclude(developer_email__in=list(exclude_emails))
         
         if project_id:
             base_qs = base_qs.filter(project_id=project_id)
 
         # 1. Highest DMT Compliance
-        quality_winners = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
+        quality_winners = base_qs.filter(items_completed__gt=0).values('developer_email').annotate(
             score=Avg('dmt_compliance_rate'),
             coverage=Avg('coverage_avg_percent')
         ).order_by('-score', '-coverage')[:3]
 
         # 2. Most Story Points
-        velocity_winners = base_qs.values('developer_email', 'developer_name').annotate(
+        velocity_winners = base_qs.values('developer_email').annotate(
             score=Sum('story_points_completed')
         ).order_by('-score')[:3]
 
         # 3. Most PRs Reviewed
-        reviewer_winners = base_qs.values('developer_email', 'developer_name').annotate(
+        reviewer_winners = base_qs.values('developer_email').annotate(
             score=Sum('prs_reviewed')
         ).order_by('-score')[:3]
 
         # 4. Highest Subjective AI Usage
-        ai_winners = base_qs.values('developer_email', 'developer_name').annotate(
+        ai_winners = base_qs.values('developer_email').annotate(
             score=Avg('ai_usage_percent')
         ).order_by('-score')[:3]
 
         # 5. Highest Objective (PR-Analyzed) AI Usage
-        objective_ai_winners = base_qs.filter(code_ai_usage_percent__gt=0).values('developer_email', 'developer_name').annotate(
+        objective_ai_winners = base_qs.filter(code_ai_usage_percent__gt=0).values('developer_email').annotate(
             score=Avg('code_ai_usage_percent')
         ).order_by('-score')[:3]
 
         # 6. Most Items Completed (Throughput)
-        throughput_winners = base_qs.values('developer_email', 'developer_name').annotate(
+        throughput_winners = base_qs.values('developer_email').annotate(
             score=Sum('items_completed')
         ).order_by('-score')[:3]
 
         # 7. Highest Code Coverage
-        coverage_winners = base_qs.filter(coverage_avg_percent__isnull=False).values('developer_email', 'developer_name').annotate(
+        coverage_winners = base_qs.filter(coverage_avg_percent__isnull=False).values('developer_email').annotate(
             score=Avg('coverage_avg_percent')
         ).order_by('-score')[:3]
 
         # 8. Fewest Defects Attributed (Clean Coder) — must have completed work
-        clean_coder_winners = base_qs.filter(items_completed__gt=0).values('developer_email', 'developer_name').annotate(
+        clean_coder_winners = base_qs.filter(items_completed__gt=0).values('developer_email').annotate(
             score=Sum('defects_attributed')
         ).order_by('score')[:3]  # ascending: fewer defects = better
 
@@ -84,9 +87,10 @@ class LeaderboardView(APIView):
                 full_reason = getattr(user, 'competitive_title_reason', None)
                 reason = full_reason if full_reason and user.competitive_title == category else f"Top performer in {metric_name}."
             else:
-                name = w['developer_name'] or email
+                dev_metric = DeveloperMetrics.objects.filter(developer_email=email).exclude(developer_name='').order_by('-sprint_end_date').first()
+                name = dev_metric.developer_name if dev_metric else email
                 title = category
-                import hashlib
+                
                 email_hash = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
                 avatar = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon"
                 reason = f"Top performer in {metric_name}."
