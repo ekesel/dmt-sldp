@@ -74,22 +74,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   }, [searchValue, isFocused]);
 
   useEffect(() => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    let timeoutId: NodeJS.Timeout;
     const updateTime = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      };
-
-      // Format: Oct 23, 2023 - 10:15 AM
-      const formatted = new Intl.DateTimeFormat('en-US', options).format(now);
-      const [date, time] = formatted.split(', ');
-      // The split/reformat might vary by locale, let's use a simpler approach
-      const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(now);
+      const parts = formatter.formatToParts(now);
       const month = parts.find(p => p.type === 'month')?.value;
       const day = parts.find(p => p.type === 'day')?.value;
       const year = parts.find(p => p.type === 'year')?.value;
@@ -98,11 +95,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
       const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value;
 
       setCurrentTime(`${month} ${day}, ${year} - ${hour}:${minute} ${dayPeriod}`);
+      
+      const msUntilNextSecond = 1000 - new Date().getMilliseconds();
+      timeoutId = setTimeout(updateTime, msUntilNextSecond);
     };
 
     updateTime();
-    const timer = setInterval(updateTime, 60000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleLogout = async () => {

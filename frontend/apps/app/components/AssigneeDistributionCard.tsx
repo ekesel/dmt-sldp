@@ -75,7 +75,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     if (barWidth > 80) {
                         workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
                         barColor = '#ef4444'; // red-500
-                    } else if (barWidth >= 60 && barWidth <= 80) { 
+                    } else if (barWidth >= 60 && barWidth <= 80) {
                         workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
                         barColor = '#22c55e'; // green-500
                     } else {
@@ -142,15 +142,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                 />
                             </div>
 
-                            {/* In-progress sub-bar overlay */}
-                            {person.in_progress > 0 && (
-                                <div className="ml-12 mt-0.5 h-0.5 bg-warning/30 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full rounded-full bg-warning"
-                                        style={{ width: `${inProgressPct}%` }}
-                                    />
-                                </div>
-                            )}
+
                         </div>
                     );
                 })}

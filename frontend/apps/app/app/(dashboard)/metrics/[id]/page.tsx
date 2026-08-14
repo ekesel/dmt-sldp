@@ -561,6 +561,7 @@ export default function DeveloperDetailsPage({
                       <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">Custom AI Usage</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
@@ -580,8 +581,10 @@ export default function DeveloperDetailsPage({
                           <span className="text-blue-400 font-bold">
                             {m.code_ai_usage_percent?.toFixed(1) || 0}%
                           </span>
-                          <span className="text-[10px] text-slate-500 ml-1">
-                            ({m.ai_usage_percent?.toFixed(0) || 0}% cust)
+                        </td>
+                        <td className="px-3 py-4 lg:px-6 lg:py-6">
+                          <span className="text-blue-400 font-bold">
+                            {m.ai_usage_percent?.toFixed(0) || 0}%
                           </span>
                         </td>
                         <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
@@ -590,12 +593,6 @@ export default function DeveloperDetailsPage({
                         </td>
                         <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="w-10 h-1 lg:w-12 bg-muted rounded-full overflow-hidden shrink-0">
-                              <div
-                                className="h-full bg-primary"
-                                style={{ width: `${m.dmt_compliance_rate}%` }}
-                              />
-                            </div>
                             {m.dmt_compliance_rate?.toFixed(0)}%
                           </div>
                         </td>

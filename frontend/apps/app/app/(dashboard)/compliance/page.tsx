@@ -445,7 +445,7 @@ export default function CompliancePage() {
                             </button>
                         )}
                     </div>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 max-h-[650px] overflow-y-auto pr-2">
                         {loading ? (
                             <div className="flex flex-col gap-4">
                                 {[1, 2, 3].map(i => (

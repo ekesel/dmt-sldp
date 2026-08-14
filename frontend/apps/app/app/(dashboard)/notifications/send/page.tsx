@@ -574,7 +574,7 @@ export default function SendNotificationPage() {
                             <div className="px-6 py-3 bg-primary/90 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Bell className="w-4 h-4 text-white/80" />
-                                    <span className="text-white font-semibold text-sm">Received Messages</span>
+                                    <span className="text-white font-semibold text-sm">Messages</span>
                                 </div>
                                 {notifications.filter(n => !n.is_read).length > 0 && (
                                     <span className="bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">
