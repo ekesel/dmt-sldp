@@ -100,7 +100,7 @@ export const SocialNewsFeed: React.FC = () => {
                                     latestPost.author.username
                                 ) : "Unknown User"}
                             </span>
-                            <span className="text-[0.5625rem] sm:text-[0.625rem] text-muted-foreground font-medium truncate mt-0.5">
+                             <span className="text-[0.5625rem] sm:text-[0.625rem] text-muted-foreground font-medium truncate mt-0.5">
                                 {formatTimestamp(latestPost.created_at)}
                             </span>
                         </div>

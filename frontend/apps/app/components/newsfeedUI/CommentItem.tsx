@@ -156,7 +156,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
               {displayUser.username}
             </span>
             <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
-              {formatTimestamp(comment.created_at, 'Just now', false)}
+              {comment.is_updated ? (
+                <>
+                  Edited • {formatTimestamp(comment.updated_at, 'Just now', false)}
+                </>
+              ) : (
+                formatTimestamp(comment.created_at, 'Just now', false)
+              )}
             </span>
           </div>
 

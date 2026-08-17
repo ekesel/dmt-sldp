@@ -73,6 +73,18 @@ export default function DashboardPage() {
 
             if (!JsPDF) throw new Error('Could not load jsPDF library');
 
+            const pdf = new JsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: 'a4'
+            });
+
+            const margin = 40;
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const pWidth = pdfWidth - (margin * 2);
+            const pHeight = pdfHeight - (margin * 2);
+
             const element = dashboardRef.current;
 
             // Create off-screen clone to prevent layout shift for the user
@@ -107,19 +119,26 @@ export default function DashboardPage() {
             if (parent) {
                 cloneWrapper.className = parent.className;
             }
+            // Override height and overflow constraints that would collapse or truncate the clone
             cloneWrapper.style.position = 'absolute';
             cloneWrapper.style.left = '-9999px';
             cloneWrapper.style.top = '0';
             cloneWrapper.style.width = '1400px';
             cloneWrapper.style.minWidth = '1400px';
+            cloneWrapper.style.height = 'auto';
+            cloneWrapper.style.minHeight = 'none';
+            cloneWrapper.style.maxHeight = 'none';
+            cloneWrapper.style.overflow = 'visible';
 
-            // Apply desktop constraints to clone
+            // Apply desktop constraints to clone and override any collapsing styles
             clone.style.width = '1400px';
             clone.style.minWidth = '1400px';
             clone.style.maxWidth = 'none';
             clone.style.margin = '0';
             clone.style.padding = '0';
             clone.style.height = 'auto';
+            clone.style.minHeight = 'none';
+            clone.style.maxHeight = 'none';
             clone.style.overflow = 'visible';
 
             cloneWrapper.appendChild(clone);
@@ -136,38 +155,71 @@ export default function DashboardPage() {
                 width: 1400,
             });
 
-            // Clean up clone from DOM
+            // Calculate page breaks using clone's laid out elements while it is still in the DOM
+            const cssPageHeight = (pHeight * 1400) / pWidth;
+            const scale = mainCanvas.width / 1400;
+            const cloneHeight = clone.offsetHeight || (mainCanvas.height / scale);
+            const pageBreaks: number[] = [];
+            let currentCssY = 0;
+
+            const avoidElements = Array.from(clone.querySelectorAll('tr, .rounded-3xl, .rounded-2xl, .p-8, h2, h3, [data-page-break-avoid]'));
+            const cloneRect = clone.getBoundingClientRect();
+
+            const elementRanges = avoidElements
+                .map(el => {
+                    const rect = el.getBoundingClientRect();
+                    return {
+                        top: rect.top - cloneRect.top,
+                        bottom: rect.bottom - cloneRect.top
+                    };
+                })
+                .filter(range => range.bottom > range.top);
+
+            while (currentCssY < cloneHeight) {
+                let nextBreakY = currentCssY + cssPageHeight;
+                if (nextBreakY >= cloneHeight) {
+                    pageBreaks.push(cloneHeight);
+                    break;
+                }
+
+                // Check if nextBreakY falls inside any element that we want to avoid breaking
+                const overlappingElement = elementRanges.find(r => r.top < nextBreakY && r.bottom > nextBreakY);
+                if (overlappingElement) {
+                    const elementHeight = overlappingElement.bottom - overlappingElement.top;
+                    if (elementHeight <= cssPageHeight && overlappingElement.top > currentCssY) {
+                        nextBreakY = overlappingElement.top;
+                    }
+                }
+
+                pageBreaks.push(nextBreakY);
+                currentCssY = nextBreakY;
+            }
+
+            // Clean up clone from DOM now that measurements are complete
             document.body.removeChild(cloneWrapper);
 
-            const pdf = new JsPDF({
-                orientation: 'landscape',
-                unit: 'px',
-                format: 'a4'
-            });
+            if (pageBreaks.length === 0) {
+                let tempY = 0;
+                while (tempY < cloneHeight) {
+                    tempY += cssPageHeight;
+                    pageBreaks.push(Math.min(tempY, cloneHeight));
+                }
+            }
 
-            const margin = 40;
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const pWidth = pdfWidth - (margin * 2);
-            const pHeight = pdfHeight - (margin * 2);
+            const canvasPageBreaks = pageBreaks.map(y => Math.round(y * scale));
 
-            // Calculate how much of the canvas height fits into one printable page height
-            const canvasPageHeight = (pHeight * mainCanvas.width) / pWidth;
-            let currentY = 0;
+            let lastCanvasY = 0;
             let pageNum = 1;
 
+            for (const breakY of canvasPageBreaks) {
+                const sliceHeight = breakY - lastCanvasY;
+                if (sliceHeight <= 0) continue;
 
-
-            while (currentY < mainCanvas.height) {
                 if (pageNum > 1) pdf.addPage();
 
                 // Set page background
                 pdf.setFillColor('#f9fafa');
                 pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
-
-                // Determine the height of this slice
-                const remainingHeight = mainCanvas.height - currentY;
-                const sliceHeight = Math.min(canvasPageHeight, remainingHeight);
 
                 // Create a temporary canvas for this page to ensure no background bleed or overlap
                 const pageCanvas = document.createElement('canvas');
@@ -178,7 +230,7 @@ export default function DashboardPage() {
                 if (pageCtx) {
                     pageCtx.drawImage(
                         mainCanvas,
-                        0, currentY, mainCanvas.width, sliceHeight, // Source
+                        0, lastCanvasY, mainCanvas.width, sliceHeight, // Source
                         0, 0, mainCanvas.width, sliceHeight         // Destination
                     );
 
@@ -189,7 +241,7 @@ export default function DashboardPage() {
                     pdf.addImage(pageImgData, 'PNG', margin, margin, pWidth, displayHeight);
                 }
 
-                currentY += canvasPageHeight;
+                lastCanvasY = breakY;
                 pageNum++;
             }
 
@@ -259,32 +311,32 @@ export default function DashboardPage() {
                             onSelect={setSelectedProjectId}
                         />
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-10">
-                                <CalendarDays size={16} className="text-primary shrink-0" />
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-4 py-2 rounded-lg transition-all duration-300 w-56 h-12">
+                                <CalendarDays size={18} className="text-primary shrink-0" />
                                 <div className="flex flex-col flex-1 justify-center">
-                                    <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">From</span>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-0.5">From</span>
                                     <input
                                         type="date"
                                         value={startDate}
                                         min="2000-01-01"
                                         max="2100-12-31"
                                         onChange={e => setStartDate(e.target.value)}
-                                        className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
+                                        className="bg-transparent font-medium text-sm text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
                                 </div>
                             </div>
                             <span className="text-muted-foreground text-sm font-bold">→</span>
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-3 py-1.5 rounded-lg transition-all duration-300 w-48 h-10">
-                                <CalendarDays size={16} className="text-primary shrink-0" />
+                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-4 py-2 rounded-lg transition-all duration-300 w-56 h-12">
+                                <CalendarDays size={18} className="text-primary shrink-0" />
                                 <div className="flex flex-col flex-1 justify-center">
-                                    <span className="text-[9px] uppercase font-bold text-muted-foreground leading-none mb-0.5">To</span>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-0.5">To</span>
                                     <input
                                         type="date"
                                         value={endDate}
                                         min="2000-01-01"
                                         max="2100-12-31"
                                         onChange={e => setEndDate(e.target.value)}
-                                        className="bg-transparent font-medium text-[13px] text-foreground outline-none leading-none cursor-pointer w-full"
+                                        className="bg-transparent font-medium text-sm text-foreground outline-none leading-none cursor-pointer w-full"
                                     />
                                 </div>
                             </div>

@@ -46,10 +46,8 @@ const FLAG_TYPE_LABELS: Record<string, string> = {
 export default function CompliancePage() {
     const [flags, setFlags] = useState<ComplianceFlag[]>([]);
     const [summary, setSummary] = useState<ComplianceSummary | null>(null);
-    const [fixedLaterItems, setFixedLaterItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [summaryLoading, setSummaryLoading] = useState(true);
-    const [fixedLaterLoading, setFixedLaterLoading] = useState(true);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeHelpId, setActiveHelpId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<'critical' | 'warning' | null>(null);
@@ -89,7 +87,6 @@ export default function CompliancePage() {
 
         setLoading(true);
         setSummaryLoading(true);
-        setFixedLaterLoading(true);
 
         // Always use workItemId if provided in URL to ensure the specific flag is fetched
         const effectiveWorkItemId = workItemId;
@@ -131,17 +128,6 @@ export default function CompliancePage() {
                 if (requestCounter.current === currentRequestId) setSummaryLoading(false);
             });
 
-        compliance.listFixedLater(projectId, sprintId)
-            .then(data => {
-                if (requestCounter.current === currentRequestId) setFixedLaterItems(data);
-            })
-            .catch(err => {
-                console.error("Failed to fetch fixed-later items:", err);
-                toast.error("Failed to load deferred compliance items");
-            })
-            .finally(() => {
-                if (requestCounter.current === currentRequestId) setFixedLaterLoading(false);
-            });
     }, []);
 
     // Refetch whenever project, sprint, activeFilter, page, or page size changes
@@ -166,10 +152,10 @@ export default function CompliancePage() {
         let retryCount = 0;
 
         const attemptScroll = () => {
-            if (loading || fixedLaterLoading) return;
+            if (loading) return;
 
             // First try strict match by workItemId
-            let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId) || fixedLaterItems.find(f => f.work_item_id?.toString() === workItemId);
+            let targetFlag = flags.find(f => f.work_item_id?.toString() === workItemId);
 
             // If strict match fails, try matching by notification title or message (case-insensitive and robust)
             if (!targetFlag && (nTitle || nMessage)) {
@@ -182,7 +168,7 @@ export default function CompliancePage() {
                     return sTitle.length > 3 && (sNTitle.includes(sTitle) || sNMessage.includes(sTitle));
                 };
 
-                targetFlag = flags.find(matchFlag) || fixedLaterItems.find(matchFlag);
+                targetFlag = flags.find(matchFlag);
             }
 
             // Also try to find by extracting any numbers from the notification title
@@ -190,7 +176,7 @@ export default function CompliancePage() {
                 const numbersInTitle = nTitle.match(/\d+/g);
                 if (numbersInTitle) {
                     const extractedId = numbersInTitle[0];
-                    targetFlag = flags.find(f => f.work_item_title.includes(extractedId)) || fixedLaterItems.find(f => f.work_item_title.includes(extractedId));
+                    targetFlag = flags.find(f => f.work_item_title.includes(extractedId));
                 }
             }
 
@@ -222,7 +208,7 @@ export default function CompliancePage() {
             }
         };
 
-        if (workItemId && (!loading && !fixedLaterLoading)) {
+        if (workItemId && !loading) {
             scrollTimer = window.setTimeout(attemptScroll, 500);
         }
 
@@ -230,7 +216,7 @@ export default function CompliancePage() {
             if (scrollTimer) window.clearTimeout(scrollTimer);
             if (classRemovalTimer) window.clearTimeout(classRemovalTimer);
         };
-    }, [loading, fixedLaterLoading, flags, fixedLaterItems, workItemId, nTitle, nMessage]);
+    }, [loading, flags, workItemId, nTitle, nMessage]);
 
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
@@ -281,15 +267,17 @@ export default function CompliancePage() {
                         <p className="text-muted-foreground mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap justify-end">
-                        <SprintSelector
-                            projectId={selectedProjectId}
-                            selectedSprintId={selectedSprintId}
-                            onSelect={(sprintId) => {
-                                setSelectedSprintId(sprintId);
-                                setCurrentPage(1);
-                            }}
-                            autoSelectLatest={!workItemId && !paramSprintId}
-                        />
+                        {selectedProjectId !== null && (
+                            <SprintSelector
+                                projectId={selectedProjectId}
+                                selectedSprintId={selectedSprintId}
+                                onSelect={(sprintId) => {
+                                    setSelectedSprintId(sprintId);
+                                    setCurrentPage(1);
+                                }}
+                                autoSelectLatest={!workItemId && !paramSprintId}
+                            />
+                        )}
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={handleProjectChange}
@@ -459,7 +447,7 @@ export default function CompliancePage() {
                             </button>
                         )}
                     </div>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 max-h-[650px] overflow-y-auto pr-2">
                         {loading ? (
                             <div className="flex flex-col gap-4">
                                 {[1, 2, 3].map(i => (
@@ -500,7 +488,7 @@ export default function CompliancePage() {
                                                 {formatDateTime(flag.created_at)}
                                             </span>
                                             {flag.fixed_later && flag.violations_cleared_at && (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green/10 text-green px-3 py-1 rounded-full border border-green/20">
+                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-3 py-1 rounded-full border border-green shadow-sm">
                                                     <CheckCircle size={12} />
                                                     Fixed: {formatDateTime(flag.violations_cleared_at)}
                                                 </span>
@@ -538,7 +526,7 @@ export default function CompliancePage() {
                 </div>
 
                 {/* Pagination Controls */}
-                {!loading && totalPages > 1 && (
+                {!loading && (totalPages > 1 || totalCount > 10) && (
                     <div className="flex flex-wrap items-center justify-between gap-4 py-3 px-6 bg-card border border-border rounded-xl mt-4 shadow-sm">
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-muted-foreground">Rows per page</span>
@@ -628,66 +616,7 @@ export default function CompliancePage() {
                         </div>
                     </div>
                 )}
-                {/* Fixed Later Section */}
-                <div className="space-y-4 mt-10">
-                    <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
-                        <Clock size={20} className="text-green" />
-                        Fixed Later
-                        <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
-                            Items that had violations but are now compliant
-                        </span>
-                    </h2>
-                    <div className="grid gap-4">
-                        {fixedLaterLoading ? (
-                            <div className="flex flex-col gap-4">
-                                {[1, 2].map(i => (
-                                    <div key={i} className="h-20 w-full bg-muted border border-border rounded-xl animate-pulse" />
-                                ))}
-                            </div>
-                        ) : fixedLaterItems.length === 0 ? (
-                            <div className="p-8 text-center bg-muted/30 rounded-2xl border border-border">
-                                <p className="text-muted-foreground text-sm font-medium">No items with cleared violations in this sprint.</p>
-                            </div>
-                        ) : (
-                            fixedLaterItems.map((item) => (
-                                <Card key={item.id} id={`work-item-${item.work_item_id}-${item.id}`} className="p-5 bg-card border-2 border-green/20 hover:ring-2 hover:ring-inset hover:ring-green hover:bg-green/5 shadow-sm transition-all group rounded-2xl">
-                                    <div className="flex flex-wrap items-center gap-3 mb-3">
-                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green/15 text-green border border-green/30">
-                                            Fixed Later
-                                        </span>
-                                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
-                                            <Folder size={10} />
-                                            {item.project_name}
-                                        </span>
-                                        {item.violations_cleared_at && (
-                                            <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
-                                                <CheckCircle size={12} className="text-green" />
-                                                Cleared {formatDateTime(item.violations_cleared_at)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h3 className="text-base font-black text-foreground group-hover:text-green transition-colors tracking-tight">
-                                        {item.work_item_title}
-                                    </h3>
-                                    {item.violation_history?.length > 0 && (
-                                        <p className="text-muted-foreground text-xs mt-1.5 font-medium">
-                                            Had {item.violation_history.length} violation period{item.violation_history.length > 1 ? 's' : ''} &mdash;{' '}
-                                            {item.violation_history[item.violation_history.length - 1]?.failures?.map((f: string) =>
-                                                FLAG_TYPE_LABELS[f] || f
-                                            ).join(', ')}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-3 text-muted-foreground text-xs bg-muted/50 w-fit px-4 py-2 rounded-xl border border-border shadow-inner mt-3">
-                                        <div className="w-5 h-5 rounded-full bg-green/20 flex items-center justify-center">
-                                            <User size={12} className="text-green" />
-                                        </div>
-                                        <span className="font-bold text-foreground/80">{item.assignee_name}</span>
-                                    </div>
-                                </Card>
-                            ))
-                        )}
-                    </div>
-                </div>
+
             </div>
 
             <HelpSidebar

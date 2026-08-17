@@ -923,6 +923,7 @@ export interface Comment {
   replies?: Comment[];
   created_at: string;
   updated_at: string;
+  is_updated?: boolean;
 }
 
 export interface CommentSummary {
