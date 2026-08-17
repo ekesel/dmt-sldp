@@ -295,15 +295,13 @@ export default function DeveloperDetailsPage({
                     window.location.reload();
                   }}
                 />
-                <SprintSelector
-                  projectId={
-                    selectedProjectId === "all"
-                      ? null
-                      : parseInt(selectedProjectId)
-                  }
-                  selectedSprintId={selectedSprintId}
-                  onSelect={setSelectedSprintId}
-                />
+                {selectedProjectId !== "all" && (
+                  <SprintSelector
+                    projectId={parseInt(selectedProjectId)}
+                    selectedSprintId={selectedSprintId}
+                    onSelect={setSelectedSprintId}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -727,10 +725,19 @@ export default function DeveloperDetailsPage({
 
             {latestMetrics.workload && (
               <Card className="p-8 bg-blue-600/10 border-blue-500/20 rounded-3xl">
-                <h3 className="text-lg font-black flex items-center gap-2 mb-4">
-                  <Briefcase className="text-blue-400" size={20} />
-                  Workload
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-black flex items-center gap-2">
+                    <Briefcase className="text-blue-400" size={20} />
+                    Workload
+                  </h3>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleHelpClick('workload'); }}
+                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                    title="Learn more about this metric"
+                  >
+                    <HelpCircle size={16} />
+                  </button>
+                </div>
                 <div className="space-y-3">
                   {[
                     { label: "Total", value: latestMetrics.workload.total ?? 0 },

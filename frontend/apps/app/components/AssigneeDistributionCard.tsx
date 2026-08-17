@@ -50,7 +50,17 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
 
     if (uniqueAssignees.length === 0) return null;
 
-    const maxTotal = Math.max(...uniqueAssignees.map((a) => a.total), 1);
+    // Sort by visible workload descending (completed + in_progress) so the
+    // ranking matches exactly what the user sees in the card stats
+    const sortedAssignees = [...uniqueAssignees].sort((a, b) => {
+        const aWork = a.completed + a.in_progress;
+        const bWork = b.completed + b.in_progress;
+        if (bWork !== aWork) return bWork - aWork;
+        return b.completed - a.completed; // tiebreak: more completed = higher rank
+    });
+
+    // maxTotal uses the same metric as barWidth: completed + in_progress
+    const maxTotal = Math.max(...sortedAssignees.map((a) => a.completed + a.in_progress), 1);
 
     return (
         <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6">
@@ -65,10 +75,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
             </div>
 
             <div className="space-y-4">
-                {uniqueAssignees.map((person) => {
+                {sortedAssignees.map((person) => {
                     const color = avatarColor(person.name);
-                    const barWidth = Math.round((person.total / maxTotal) * 100);
-                    const inProgressPct = person.total > 0 ? Math.round((person.in_progress / person.total) * 100) : 0;
+                    const visibleWork = person.completed + person.in_progress;
+                    const barWidth = Math.round((visibleWork / maxTotal) * 100);
+                    const inProgressPct = visibleWork > 0 ? Math.round((person.in_progress / visibleWork) * 100) : 0;
 
                     let workloadStatus = null;
                     let barColor = color;

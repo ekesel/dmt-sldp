@@ -267,15 +267,17 @@ export default function CompliancePage() {
                         <p className="text-muted-foreground mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap justify-end">
-                        <SprintSelector
-                            projectId={selectedProjectId}
-                            selectedSprintId={selectedSprintId}
-                            onSelect={(sprintId) => {
-                                setSelectedSprintId(sprintId);
-                                setCurrentPage(1);
-                            }}
-                            autoSelectLatest={!workItemId && !paramSprintId}
-                        />
+                        {selectedProjectId !== null && (
+                            <SprintSelector
+                                projectId={selectedProjectId}
+                                selectedSprintId={selectedSprintId}
+                                onSelect={(sprintId) => {
+                                    setSelectedSprintId(sprintId);
+                                    setCurrentPage(1);
+                                }}
+                                autoSelectLatest={!workItemId && !paramSprintId}
+                            />
+                        )}
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={handleProjectChange}
@@ -486,7 +488,7 @@ export default function CompliancePage() {
                                                 {formatDateTime(flag.created_at)}
                                             </span>
                                             {flag.fixed_later && flag.violations_cleared_at && (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green/10 text-green px-3 py-1 rounded-full border border-green/20">
+                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-3 py-1 rounded-full border border-green shadow-sm">
                                                     <CheckCircle size={12} />
                                                     Fixed: {formatDateTime(flag.violations_cleared_at)}
                                                 </span>
