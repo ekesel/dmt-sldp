@@ -21,14 +21,9 @@ from core.utils.ai_client import AIClient
 from tenants.models import Tenant
 from .analytics.metrics import MetricService
 from .analytics.forecasting import ForecastingService
-from configuration.models import SourceConfiguration
+from configuration.models import SourceConfiguration, Project
 from .analytics.identity_resolver import IdentityResolver
 from users.models import User
-
-from .models import Sprint
-from configuration.models import SourceConfiguration
-from .models import WorkItem
-from configuration.models import Project
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -113,7 +108,6 @@ class VelocityView(APIView):
                 })
         else:
             # Global view: Group by project and aggregate velocity across each project's last 5 sprints
-            from configuration.models import Project
             projects = Project.objects.all()
             
             for proj in projects:
@@ -1287,7 +1281,7 @@ class AssigneeDistributionView(APIView):
                     work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
             else:
                 # Global view: grab the last 5 sprints per active project
-                from configuration.models import Project
+            
                 projects = Project.objects.all()
                 relevant_sprint_ids = []
                 
