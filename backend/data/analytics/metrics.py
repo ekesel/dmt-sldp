@@ -10,6 +10,7 @@ from ..models import UserIdentityMapping
 from django.contrib.auth import get_user_model
 from datetime import timedelta
 from homepage.models import Holiday
+from configuration.models import Project
 
 class MetricService:
     @staticmethod
@@ -281,7 +282,7 @@ class MetricService:
             # When viewing global dashboard (all projects), gather the last 5 sprints for EVERY project
             # so bugs_resolved sums all bugs resolved across each project's last 5 sprints,
             # and velocities/cycle times average appropriately across all projects' recent sprints.
-            from configuration.models import Project
+            
             projects = Project.objects.all()
             last_5_metrics = []
             
