@@ -8,12 +8,12 @@ from django.db.models import Q
 from configuration.models import SourceConfiguration, Project
 from ..models import UserIdentityMapping
 from django.contrib.auth import get_user_model
+from datetime import timedelta
+from homepage.models import Holiday
 
 class MetricService:
     @staticmethod
     def calculate_velocity(sprint_id, project_id=None):
-        from configuration.models import SourceConfiguration
-        from django.db.models import Q
         
         # Base query
         completed_items = WorkItem.objects.filter(sprint_id=sprint_id, status_category='done')
@@ -65,27 +65,52 @@ class MetricService:
     @staticmethod
     def calculate_cycle_time(items_qs):
         """
-        Calculate average cycle time for a set of items.
+        Calculate average cycle time in working days (excluding weekends & holidays).
         Cycle Time = resolved_at - started_at.
         Fallback to Lead Time = resolved_at - created_at if started_at is missing.
         """
+
         # Filter only done items with resolved_at
         items = items_qs.filter(status_category='done', resolved_at__isnull=False)
         if not items.exists():
             return 0
-            
+
+        # Pre-fetch all holiday dates for fast set lookup
+        try:
+            holiday_dates = set(Holiday.objects.values_list('date', flat=True))
+        except Exception:
+            holiday_dates = set()
+
         durations = []
         for item in items:
-            # Prefer started_at, fallback to created_at (Lead Time)
             start = item.started_at or item.created_at
             if start and item.resolved_at:
-                delta = item.resolved_at - start
-                # Use total_seconds to handle microsecond precision and convert to days
-                durations.append(delta.total_seconds() / 86400.0)
-        
+                curr_date = start.date()
+                end_date = item.resolved_at.date()
+
+                if curr_date > end_date:
+                    continue
+
+                if curr_date == end_date:
+                    # Same day: count fraction if Mon-Fri and not holiday
+                    if curr_date.weekday() < 5 and curr_date not in holiday_dates:
+                        delta_sec = (item.resolved_at - start).total_seconds()
+                        durations.append(delta_sec / 86400.0)
+                    else:
+                        durations.append(0.0)
+                else:
+                    working_days = 0.0
+                    step = curr_date
+                    while step <= end_date:
+                        # Mon-Fri (0..4) and not a registered holiday
+                        if step.weekday() < 5 and step not in holiday_dates:
+                            working_days += 1.0
+                        step += timedelta(days=1)
+                    durations.append(working_days)
+
         if not durations:
             return 0
-            
+
         return round(sum(durations) / len(durations), 1)
 
     @staticmethod
@@ -246,16 +271,37 @@ class MetricService:
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
-            sprints_qs = sprints_qs.filter(project_id=project_id)
+            sprints_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+            if start_date:
+                sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
+            if end_date:
+                sprints_qs = sprints_qs.filter(sprint_end_date__lte=end_date)
+            last_5_metrics = list(sprints_qs) if (start_date or end_date) else list(sprints_qs[:5])
         else:
-            sprints_qs = sprints_qs.filter(project__isnull=True)
-
-        if start_date:
-            sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
-        if end_date:
-            sprints_qs = sprints_qs.filter(sprint_end_date__lte=end_date)
-
-        last_5_metrics = list(sprints_qs) if (start_date or end_date) else list(sprints_qs[:5])
+            # When viewing global dashboard (all projects), gather the last 5 sprints for EVERY project
+            # so bugs_resolved sums all bugs resolved across each project's last 5 sprints,
+            # and velocities/cycle times average appropriately across all projects' recent sprints.
+            from configuration.models import Project
+            projects = Project.objects.all()
+            last_5_metrics = []
+            
+            for proj in projects:
+                proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
+                if start_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__lte=end_date)
+                
+                last_5_metrics.extend(list(proj_qs[:5]) if not (start_date or end_date) else list(proj_qs))
+            
+            # If no per-project SprintMetrics exist, fallback to project__isnull=True metrics
+            if not last_5_metrics:
+                global_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                if start_date:
+                    global_qs = global_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    global_qs = global_qs.filter(sprint_end_date__lte=end_date)
+                last_5_metrics = list(global_qs[:5]) if not (start_date or end_date) else list(global_qs)
         
         latest_insight_qs = AIInsight.objects.order_by('-created_at')
         if project_id:

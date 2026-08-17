@@ -28,6 +28,7 @@ from users.models import User
 from .models import Sprint
 from configuration.models import SourceConfiguration
 from .models import WorkItem
+from configuration.models import Project
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -92,57 +93,72 @@ class VelocityView(APIView):
         project_id = request.query_params.get('project_id')
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
-        metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
-        if project_id:
-            metrics_qs = metrics_qs.filter(project_id=project_id)
-        else:
-            metrics_qs = metrics_qs.filter(project__isnull=True)
-
-        if start_date:
-            metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
-        if end_date:
-            metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
-
-        metrics = metrics_qs if (start_date or end_date) else metrics_qs[:5]
-        
         data = []
-        for m in metrics:
-            # Strip date suffix like " (2/18 - 3/3)" from DB string
-            base_sprint = m.sprint_name.split(' (')[0]
+
+        if project_id and project_id not in ['null', 'undefined']:
+            metrics_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+            if start_date:
+                metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
+            if end_date:
+                metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
+            metrics = list(metrics_qs) if (start_date or end_date) else list(metrics_qs[:5])
+
+            for m in metrics:
+                base_sprint = m.sprint_name.split(' (')[0]
+                data.append({
+                    "sprint_name": base_sprint,
+                    "velocity": int(round(m.velocity or 0)),
+                    "total_story_points_completed": int(round(m.total_story_points_completed or 0))
+                })
+        else:
+            # Global view: Group by project and aggregate velocity across each project's last 5 sprints
+            from configuration.models import Project
+            projects = Project.objects.all()
             
-            if project_id:
-                label = base_sprint
-            else:
-                # Find which projects contributed to this global sprint metric
-                contributing_projects = SprintMetrics.objects.filter(
-                    sprint_name=m.sprint_name, 
-                    project__isnull=False
-                ).values_list('project__name', flat=True)
+            for proj in projects:
+                proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
+                if start_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__lte=end_date)
                 
-                if contributing_projects:
-                    proj_names = ", ".join(contributing_projects)
-                    label = f"{base_sprint}\n({proj_names})"
-                else:
-                    label = base_sprint
-                
-            data.append({
-                "sprint_name": label,
-                "velocity": int(round(m.velocity or 0)),
-                "total_story_points_completed": int(round(m.total_story_points_completed or 0))
-            })
+                last_5 = list(proj_qs[:5]) if not (start_date or end_date) else list(proj_qs)
+                if last_5:
+                    avg_vel = sum(m.velocity or 0 for m in last_5) / len(last_5)
+                    total_pts = sum(m.total_story_points_completed or m.velocity or 0 for m in last_5)
+                    data.append({
+                        "sprint_name": proj.name,
+                        "velocity": int(round(avg_vel)),
+                        "total_story_points_completed": int(round(total_pts))
+                    })
+            
+            # Fallback if no per-project metrics exist
+            if not data:
+                global_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                if start_date:
+                    global_qs = global_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    global_qs = global_qs.filter(sprint_end_date__lte=end_date)
+                metrics = list(global_qs[:5]) if not (start_date or end_date) else list(global_qs)
+                for m in metrics:
+                    base_sprint = m.sprint_name.split(' (')[0]
+                    data.append({
+                        "sprint_name": base_sprint,
+                        "velocity": int(round(m.velocity or 0)),
+                        "total_story_points_completed": int(round(m.total_story_points_completed or 0))
+                    })
         
-        if not metrics and SprintMetrics.objects.count() == 0:
+        if not data and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
              from .models import Sprint, WorkItem
              
              # Get last 5 sprints
              sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
-             data = []
              
              for sprint in sprints:
                  wi_qs = WorkItem.objects.filter(sprint=sprint, status_category='done')
-                 if project_id:
+                 if project_id and project_id not in ['null', 'undefined']:
                      source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
                      wi_qs = wi_qs.filter(source_config_id__in=source_config_ids)
                      sprint_label = sprint.name
@@ -157,8 +173,6 @@ class VelocityView(APIView):
                      "velocity": int(round(velocity or 0)),
                      "total_story_points_completed": int(round(velocity or 0))
                  })
-             data.reverse() # Oldest to newest for graph
-             return Response(data)
 
         data.reverse() # Oldest to newest for graph
         return Response(data)
@@ -1263,7 +1277,7 @@ class AssigneeDistributionView(APIView):
                 if end_date:
                     sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                 if not date_filtered:
-                    sprint_qs = sprint_qs[:1]
+                    sprint_qs = sprint_qs[:5]
                     
                 relevant_sprint_ids = list(sprint_qs.values_list('id', flat=True))
 
@@ -1272,21 +1286,23 @@ class AssigneeDistributionView(APIView):
                 else:
                     work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
             else:
-                # Global view: grab the 1 latest sprint per active project
-                source_ids = list(SourceConfiguration.objects.values_list('id', flat=True))
+                # Global view: grab the last 5 sprints per active project
+                from configuration.models import Project
+                projects = Project.objects.all()
                 relevant_sprint_ids = []
                 
-                for sid in source_ids:
-                    sprint_qs = Sprint.objects.filter(source_config_id=sid).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+                for proj in projects:
+                    proj_source_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
+                    if not proj_source_ids:
+                        continue
+                    sprint_qs = Sprint.objects.filter(source_config_id__in=proj_source_ids).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
                     if start_date:
                         sprint_qs = sprint_qs.filter(end_date__gte=start_date)
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                         
                     if not date_filtered:
-                        latest = sprint_qs.first()
-                        if latest:
-                            relevant_sprint_ids.append(latest.id)
+                        relevant_sprint_ids.extend(list(sprint_qs[:5].values_list('id', flat=True)))
                     else:
                         relevant_sprint_ids.extend(list(sprint_qs.values_list('id', flat=True)))
 
