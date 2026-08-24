@@ -381,7 +381,12 @@ class StarPerformerAPIView(APIView):
         
         for category in categories:
             winners = active_data.get(category, [])
-            top_performers[category] = [winners[0]] if winners and len(winners) > 0 else []
+            if winners and len(winners) > 0:
+                top_score = winners[0].get('score')
+                top_performers[category] = [w for w in winners if w.get('score') == top_score]
+            else:
+                top_performers[category] = []
+
 
         return Response({
             "message": message,
