@@ -30,42 +30,43 @@ class LeaderboardView(APIView):
         quality_winners = base_qs.filter(items_completed__gt=0).values('developer_email').annotate(
             score=Avg('dmt_compliance_rate'),
             coverage=Avg('coverage_avg_percent')
-        ).order_by('-score', '-coverage')[:3]
+        ).order_by('-score', '-coverage')[:10]
 
         # 2. Most Story Points
         velocity_winners = base_qs.values('developer_email').annotate(
             score=Sum('story_points_completed')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 3. Most PRs Reviewed
         reviewer_winners = base_qs.values('developer_email').annotate(
             score=Sum('prs_reviewed')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 4. Highest Subjective AI Usage
         ai_winners = base_qs.values('developer_email').annotate(
             score=Avg('ai_usage_percent')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 5. Highest Objective (PR-Analyzed) AI Usage
         objective_ai_winners = base_qs.filter(code_ai_usage_percent__gt=0).values('developer_email').annotate(
             score=Avg('code_ai_usage_percent')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 6. Most Items Completed (Throughput)
         throughput_winners = base_qs.values('developer_email').annotate(
             score=Sum('items_completed')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 7. Highest Code Coverage
         coverage_winners = base_qs.filter(coverage_avg_percent__isnull=False).values('developer_email').annotate(
             score=Avg('coverage_avg_percent')
-        ).order_by('-score')[:3]
+        ).order_by('-score')[:10]
 
         # 8. Fewest Defects Attributed (Clean Coder) — must have completed work
         clean_coder_winners = base_qs.filter(items_completed__gt=0).values('developer_email').annotate(
             score=Sum('defects_attributed')
-        ).order_by('score')[:3]  # ascending: fewer defects = better
+        ).order_by('score')[:10]  # ascending: fewer defects = better
+
 
         def map_winner(w, category, metric_name, field_name, agg='avg'):
             email = w['developer_email']
