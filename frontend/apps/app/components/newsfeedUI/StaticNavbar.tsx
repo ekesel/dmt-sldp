@@ -2,6 +2,7 @@ import React from 'react';
 
 import { Author } from '../../types/newsfeed';
 import { getFileUrl } from '@dmt/api';
+import { getUserDisplayName } from '@/lib/utils';
 
 export interface NavItem {
     icon: string;
@@ -97,10 +98,10 @@ const StaticNavbar = ({
                         />
                     ) : (
                         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs uppercase">
-                            {userProfile?.username?.charAt(0) || userProfile?.first_name?.charAt(0) || 'U'}
+                            {userProfile?.first_name?.charAt(0) || userProfile?.last_name?.charAt(0) || userProfile?.username?.charAt(0) || 'U'}
                         </div>
                     )}
-                    <span className="text-sm font-semibold text-foreground">{userProfile?.first_name || userProfile?.username || 'User'}</span>
+                    <span className="text-sm font-semibold text-foreground">{getUserDisplayName(userProfile, 'User')}</span>
                 </button>
 
                 {actionItems.map((item, idx) => (

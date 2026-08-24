@@ -45,3 +45,25 @@ export function getFileViewerUrl(url: string) {
     }
     return url;
 }
+
+export function getUserDisplayName(
+  user?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    username?: string | null;
+    email?: string | null;
+  } | null,
+  fallback: string = "Unknown User"
+): string {
+  if (!user) return fallback;
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+  if (fullName) return fullName;
+  if (user.username) {
+    return user.username.includes("@") ? user.username.split("@")[0] : user.username;
+  }
+  if (user.email) {
+    return user.email.split("@")[0];
+  }
+  return fallback;
+}
+

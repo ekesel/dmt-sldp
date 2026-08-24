@@ -8,7 +8,7 @@ import { useNewsfeedQuery } from '../hooks/useNewsfeedQuery';
 import { useReactions } from '../hooks/useReactions';
 import { useComments } from '../hooks/useComments';
 import { getMediaUrl } from '../lib/media';
-import { formatTimestamp } from '../lib/utils';
+import { formatTimestamp, getUserDisplayName } from '../lib/utils';
 import { getFileUrl } from '@dmt/api';
 
 /**
@@ -86,7 +86,7 @@ export const SocialNewsFeed: React.FC = () => {
                         <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border flex-shrink-0">
                             <Image
                                 src={latestPost.author?.avatar_url ? getFileUrl(latestPost.author.avatar_url) : `https://i.pravatar.cc/150?u=${latestPost.author?.id || 'user'}`}
-                                alt={latestPost.author?.username || "Author"}
+                                alt={getUserDisplayName(latestPost.author, "Author")}
                                 fill
                                 className="object-cover"
                                 unoptimized
@@ -94,11 +94,7 @@ export const SocialNewsFeed: React.FC = () => {
                         </div>
                         <div className="flex flex-col overflow-hidden">
                             <span className="text-[0.75rem] sm:text-[0.8125rem] font-black text-card-foreground leading-tight truncate hover:underline">
-                                {latestPost.author ? (
-                                    `${latestPost.author.first_name || ''} ${latestPost.author.last_name || ''}`.trim() ||
-                                    latestPost.author.email ||
-                                    latestPost.author.username
-                                ) : "Unknown User"}
+                                {getUserDisplayName(latestPost.author, "Unknown User")}
                             </span>
                              <span className="text-[0.5625rem] sm:text-[0.625rem] text-muted-foreground font-medium truncate mt-0.5">
                                 {formatTimestamp(latestPost.created_at)}

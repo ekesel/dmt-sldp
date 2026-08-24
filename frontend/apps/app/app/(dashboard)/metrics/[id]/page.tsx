@@ -418,7 +418,7 @@ export default function DeveloperDetailsPage({
                   <AlertCircle size={20} />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Quality Gap
+                  Bugs
                 </span>
               </div>
               <button

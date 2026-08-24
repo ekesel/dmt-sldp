@@ -150,15 +150,15 @@ const CATEGORIES: Array<{
     helpId: string;
     lowerIsBetter?: boolean;
 }> = [
-    { key: 'velocity',     title: 'Velocity King',          icon: Zap,          colorClass: 'text-blue-500',    scoreLabel: 'Points',       calculationText: 'Highest total Story Points completed', helpId: 'velocity_king' },
-    { key: 'quality',      title: 'Quality Champion',       icon: Shield,       colorClass: 'text-emerald-500', scoreLabel: 'Compliance %', calculationText: 'Highest average DMT Compliance & Coverage', helpId: 'quality_champion' },
-    { key: 'reviewer',     title: 'Top Reviewer',           icon: GitPullRequest, colorClass: 'text-purple-500', scoreLabel: 'PRs',         calculationText: 'Most Pull Requests reviewed', helpId: 'top_reviewer' },
-    { key: 'throughput',   title: 'Throughput Champion',    icon: BarChart2,    colorClass: 'text-orange-500',  scoreLabel: 'Items',        calculationText: 'Most work items completed', helpId: 'throughput_champion' },
-    { key: 'coverage',     title: 'Coverage Champion',      icon: CheckCircle2, colorClass: 'text-teal-500',    scoreLabel: 'Coverage %',   calculationText: 'Highest average code coverage', helpId: 'coverage_champion' },
-    { key: 'ai',           title: 'AI Specialist',          icon: Sparkles,     colorClass: 'text-cyan-500',    scoreLabel: 'Usage %',      calculationText: 'Highest self-reported AI tool usage', helpId: 'ai_specialist' },
-    { key: 'objective_ai', title: 'Objective AI Master',    icon: Bot,          colorClass: 'text-indigo-500',  scoreLabel: 'Code AI %',    calculationText: 'Highest PR-analyzed AI code contribution', helpId: 'objective_ai_master' },
-    { key: 'clean_coder',  title: 'Clean Coder',            icon: Bug,          colorClass: 'text-rose-500',    scoreLabel: 'Defects',      calculationText: 'Fewest defects attributed', helpId: 'clean_coder', lowerIsBetter: true },
-];
+        { key: 'velocity', title: 'Velocity King', icon: Zap, colorClass: 'text-blue-500', scoreLabel: 'Points', calculationText: 'Highest total Story Points completed', helpId: 'velocity_king' },
+        { key: 'quality', title: 'Quality Champion', icon: Shield, colorClass: 'text-emerald-500', scoreLabel: 'Compliance %', calculationText: 'Highest average DMT Compliance & Coverage', helpId: 'quality_champion' },
+        { key: 'reviewer', title: 'Top Reviewer', icon: GitPullRequest, colorClass: 'text-purple-500', scoreLabel: 'PRs', calculationText: 'Most Pull Requests reviewed', helpId: 'top_reviewer' },
+        { key: 'throughput', title: 'Throughput Champion', icon: BarChart2, colorClass: 'text-orange-500', scoreLabel: 'Items', calculationText: 'Most work items completed', helpId: 'throughput_champion' },
+        { key: 'coverage', title: 'Coverage Champion', icon: CheckCircle2, colorClass: 'text-teal-500', scoreLabel: 'Coverage %', calculationText: 'Highest average code coverage', helpId: 'coverage_champion' },
+        { key: 'ai', title: 'AI Specialist', icon: Sparkles, colorClass: 'text-cyan-500', scoreLabel: 'Usage %', calculationText: 'Highest self-reported AI tool usage', helpId: 'ai_specialist' },
+        { key: 'objective_ai', title: 'Objective AI Master', icon: Bot, colorClass: 'text-indigo-500', scoreLabel: 'Code AI %', calculationText: 'Highest PR-analyzed AI code contribution', helpId: 'objective_ai_master' },
+        { key: 'clean_coder', title: 'Clean Coder', icon: Bug, colorClass: 'text-rose-500', scoreLabel: 'Defects', calculationText: 'Fewest defects attributed', helpId: 'clean_coder', lowerIsBetter: true },
+    ];
 
 export default function LeaderboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);

@@ -4,7 +4,7 @@ import { Author } from '../../types/newsfeed';
 import { Edit2, Trash2, Reply, Check, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { users } from '@dmt/api';
-import { cn, formatTimestamp } from "@/lib/utils";
+import { cn, formatTimestamp, getUserDisplayName } from "@/lib/utils";
 import { useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -74,7 +74,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           const u = userMap[Number(commentUserId)];
           if (isMounted && u) {
             setResolvedUser({
-              username: u.username || u.first_name || `User #${commentUserId}`,
+              username: getUserDisplayName(u, `User #${commentUserId}`),
               avatar_url: u.avatar_url || u.profile_picture || ''
             });
           }
@@ -115,10 +115,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
       username: resolvedUser.username || displayUser.username,
       avatar_url: resolvedUser.avatar_url || displayUser.avatar_url
     };
-  } else if (typeof comment.user === 'object' && comment.user.username) {
+  } else if (typeof comment.user === 'object' && comment.user) {
     displayUser = {
-      username: comment.user.username,
-      avatar_url: comment.user.avatar_url || displayUser.avatar_url
+      username: getUserDisplayName(comment.user as any, displayUser.username),
+      avatar_url: (comment.user as any).avatar_url || displayUser.avatar_url
     };
   } else if (comment.user_name) {
     displayUser = {
@@ -132,12 +132,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // If IDs match with current session or post author, we might have fresher data
   if (currentUser && commentUserId === currentUser.id) {
     displayUser = {
-      username: currentUser.username || displayUser.username,
+      username: getUserDisplayName(currentUser, displayUser.username),
       avatar_url: currentUser.avatar_url || displayUser.avatar_url
     };
   } else if (postAuthor && commentUserId === postAuthor.id) {
     displayUser = {
-      username: postAuthor.username || displayUser.username,
+      username: getUserDisplayName(postAuthor, displayUser.username),
       avatar_url: postAuthor.avatar_url || displayUser.avatar_url
     };
   }
