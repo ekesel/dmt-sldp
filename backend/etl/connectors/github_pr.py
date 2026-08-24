@@ -199,11 +199,52 @@ class GitHubPRConnector(BaseConnector):
                 }
             )
             
-            # Sync Reviews
+            # Sync Reviews & Commits
             self._sync_pr_reviews(repo, pr_id, pr_obj, headers)
+            self._sync_pr_commits(repo, pr_id, source_id, headers)
             count += 1
             
         return count
+
+    def _sync_pr_commits(self, repo: str, pr_number: str, source_id: int, headers: Dict):
+        """
+        Fetch commits for a specific PR and store them in the Commit model.
+        """
+        url = f"{self.api_base}/repos/{repo}/pulls/{pr_number}/commits"
+        resp = requests.get(url, headers=headers)
+        
+        if resp.status_code == 200:
+            commits = resp.json()
+            for c in commits:
+                sha = c.get('sha')
+                if not sha: continue
+                commit_data = c.get('commit', {})
+                author_data = commit_data.get('author', {})
+                github_author = c.get('author') or {}
+                
+                raw_email = author_data.get('email') or github_author.get('login') or ''
+                email = self.identity_resolver.resolve(raw_email)
+                name = author_data.get('name') or github_author.get('login') or ''
+                message = commit_data.get('message', '')
+                date_str = author_data.get('date')
+                
+                committed_at = self._parse_date(date_str) or timezone.now()
+                resolved_author = UserResolver.resolve_by_identity('github', email)
+                
+                Commit.objects.update_or_create(
+                    external_id=sha,
+                    source_config_id=source_id,
+                    defaults={
+                        'repository_name': repo,
+                        'author_email': email,
+                        'author_name': name,
+                        'resolved_author': resolved_author,
+                        'message': message[:2000],
+                        'committed_at': committed_at,
+                        'additions': 0,
+                        'deletions': 0
+                    }
+                )
 
     def _sync_pr_reviews(self, repo: str, pr_number: str, pr_obj: PullRequest, headers: Dict):
         """

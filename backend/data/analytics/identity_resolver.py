@@ -25,14 +25,33 @@ class IdentityResolver:
         self._reverse_cache = {}  # canonical_email -> set of all alias emails
         try:
             for mapping in UserIdentityMapping.objects.all():
-                all_emails = set()
-                for identity in mapping.source_identities:
-                    email = identity.get('email')
-                    if email:
-                        self._cache[email.lower()] = mapping.canonical_email
-                        all_emails.add(email.lower())
-                all_emails.add(mapping.canonical_email.lower())
-                self._reverse_cache[mapping.canonical_email.lower()] = all_emails
+                canonical = mapping.canonical_email.lower()
+                all_identities = set()
+                
+                identities_data = mapping.source_identities or {}
+                if isinstance(identities_data, dict):
+                    for k, val in identities_data.items():
+                        if isinstance(val, list):
+                            for item in val:
+                                if isinstance(item, str):
+                                    all_identities.add(item.lower())
+                        elif isinstance(val, str):
+                            all_identities.add(val.lower())
+                elif isinstance(identities_data, list):
+                    for item in identities_data:
+                        if isinstance(item, dict) and item.get('email'):
+                            all_identities.add(item['email'].lower())
+                        elif isinstance(item, str):
+                            all_identities.add(item.lower())
+                
+                if mapping.canonical_name:
+                    all_identities.add(mapping.canonical_name.lower())
+
+                for identity in all_identities:
+                    self._cache[identity] = mapping.canonical_email
+
+                all_identities.add(canonical)
+                self._reverse_cache[canonical] = all_identities
         except Exception as exc:
             logger.debug("IdentityResolver could not load mappings: %s", exc)
 

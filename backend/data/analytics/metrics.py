@@ -5,12 +5,16 @@ from .identity_resolver import get_inactive_user_emails_expanded
 from django.db import connection
 from tenants.models import Tenant
 from django.db.models import Q
+from configuration.models import SourceConfiguration, Project
+from ..models import UserIdentityMapping
+from django.contrib.auth import get_user_model
+from datetime import timedelta
+from homepage.models import Holiday
+from configuration.models import Project
 
 class MetricService:
     @staticmethod
     def calculate_velocity(sprint_id, project_id=None):
-        from configuration.models import SourceConfiguration
-        from django.db.models import Q
         
         # Base query
         completed_items = WorkItem.objects.filter(sprint_id=sprint_id, status_category='done')
@@ -62,27 +66,52 @@ class MetricService:
     @staticmethod
     def calculate_cycle_time(items_qs):
         """
-        Calculate average cycle time for a set of items.
+        Calculate average cycle time in working days (excluding weekends & holidays).
         Cycle Time = resolved_at - started_at.
         Fallback to Lead Time = resolved_at - created_at if started_at is missing.
         """
+
         # Filter only done items with resolved_at
         items = items_qs.filter(status_category='done', resolved_at__isnull=False)
         if not items.exists():
             return 0
-            
+
+        # Pre-fetch all holiday dates for fast set lookup
+        try:
+            holiday_dates = set(Holiday.objects.values_list('date', flat=True))
+        except Exception:
+            holiday_dates = set()
+
         durations = []
         for item in items:
-            # Prefer started_at, fallback to created_at (Lead Time)
             start = item.started_at or item.created_at
             if start and item.resolved_at:
-                delta = item.resolved_at - start
-                # Use total_seconds to handle microsecond precision and convert to days
-                durations.append(delta.total_seconds() / 86400.0)
-        
+                curr_date = start.date()
+                end_date = item.resolved_at.date()
+
+                if curr_date > end_date:
+                    continue
+
+                if curr_date == end_date:
+                    # Same day: count fraction if Mon-Fri and not holiday
+                    if curr_date.weekday() < 5 and curr_date not in holiday_dates:
+                        delta_sec = (item.resolved_at - start).total_seconds()
+                        durations.append(delta_sec / 86400.0)
+                    else:
+                        durations.append(0.0)
+                else:
+                    working_days = 0.0
+                    step = curr_date
+                    while step <= end_date:
+                        # Mon-Fri (0..4) and not a registered holiday
+                        if step.weekday() < 5 and step not in holiday_dates:
+                            working_days += 1.0
+                        step += timedelta(days=1)
+                    durations.append(working_days)
+
         if not durations:
             return 0
-            
+
         return round(sum(durations) / len(durations), 1)
 
     @staticmethod
@@ -168,19 +197,25 @@ class MetricService:
             points_stats = completed_items.aggregate(total_points=Sum('story_points'))
             velocity = points_stats['total_points'] or 0
             
-            # 3. Throughput
-            throughput_stats = completed_items.aggregate(
-                total_count=Count('id'),
-                stories=Count('id', filter=Q(item_type='story')),
-                bugs=Count('id', filter=Q(item_type='bug'))
-            )
+            # 3. Throughput & Bugs (query all sprint work_items directly for bugs so ~Q(item_type__iexact='bug') in story_filter doesn't exclude them)
+            all_sprint_items = WorkItem.objects.filter(sprint=sprint)
+            if project:
+                all_sprint_items = all_sprint_items.filter(source_config_id__in=source_conf_ids)
+                if has_folder_filters:
+                    all_sprint_items = all_sprint_items.filter(
+                        ~Q(source_config_id__in=sources_with_folders) | filters
+                    )
+            
+            completed_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').count()
+            completed_stories = completed_items.filter(item_type__iexact='story').count()
+            
             # 4. Compliance (Standardized to ALL work items for dashboard consistency)
             total_count = work_items.count()
             compliant_count = work_items.filter(dmt_compliant=True).count()
             compliance_rate = (compliant_count / total_count * 100) if total_count > 0 else 0
             
             # 5. Quality
-            defects = work_items.filter(item_type='bug').count()
+            defects = all_sprint_items.filter(item_type__iexact='bug').count()
             
             # 6. Cycle Time
             avg_cycle_time = MetricService.calculate_cycle_time(work_items)
@@ -201,9 +236,9 @@ class MetricService:
                     'sprint_start_date': sprint_start.date(),
                     'total_story_points_completed': velocity,
                     'velocity': velocity,
-                    'items_completed': throughput_stats['total_count'] or 0,
-                    'stories_completed': throughput_stats['stories'] or 0,
-                    'bugs_completed': throughput_stats['bugs'] or 0,
+                    'items_completed': completed_items.count(),
+                    'stories_completed': completed_stories,
+                    'bugs_completed': completed_bugs,
                     'total_items': total_count,
                     'compliant_items': compliant_count,
                     'compliance_rate_percent': round(compliance_rate, 2),
@@ -237,16 +272,37 @@ class MetricService:
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
-            sprints_qs = sprints_qs.filter(project_id=project_id)
+            sprints_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+            if start_date:
+                sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
+            if end_date:
+                sprints_qs = sprints_qs.filter(sprint_end_date__lte=end_date)
+            last_5_metrics = list(sprints_qs) if (start_date or end_date) else list(sprints_qs[:5])
         else:
-            sprints_qs = sprints_qs.filter(project__isnull=True)
-
-        if start_date:
-            sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
-        if end_date:
-            sprints_qs = sprints_qs.filter(sprint_end_date__lte=end_date)
-
-        last_5_metrics = list(sprints_qs) if (start_date or end_date) else list(sprints_qs[:5])
+            # When viewing global dashboard (all projects), gather the last 5 sprints for EVERY project
+            # so bugs_resolved sums all bugs resolved across each project's last 5 sprints,
+            # and velocities/cycle times average appropriately across all projects' recent sprints.
+            
+            projects = Project.objects.all()
+            last_5_metrics = []
+            
+            for proj in projects:
+                proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
+                if start_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    proj_qs = proj_qs.filter(sprint_end_date__lte=end_date)
+                
+                last_5_metrics.extend(list(proj_qs[:5]) if not (start_date or end_date) else list(proj_qs))
+            
+            # If no per-project SprintMetrics exist, fallback to project__isnull=True metrics
+            if not last_5_metrics:
+                global_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                if start_date:
+                    global_qs = global_qs.filter(sprint_end_date__gte=start_date)
+                if end_date:
+                    global_qs = global_qs.filter(sprint_end_date__lte=end_date)
+                last_5_metrics = list(global_qs[:5]) if not (start_date or end_date) else list(global_qs)
         
         latest_insight_qs = AIInsight.objects.order_by('-created_at')
         if project_id:
@@ -365,15 +421,21 @@ class MetricService:
         else:
             sprint_start = sprint.start_date
             
-        # Delete existing metrics for this sprint before populating to ensure stale entries are removed
-        DeveloperMetrics.objects.filter(sprint_name=sprint.name).delete()
-
         
+        
+        # A Sprint belongs to a specific source_config, which belongs to a specific Project.
+        source_config = SourceConfiguration.objects.filter(id=sprint.source_config_id).first()
+        if source_config and source_config.project:
+            # Delete existing metrics for this sprint AND project before populating
+            DeveloperMetrics.objects.filter(sprint_name=sprint.name, project=source_config.project).delete()
+            projects = [source_config.project]
+        else:
+            # Fallback if sprint has no source config (shouldn't happen)
+            DeveloperMetrics.objects.filter(sprint_name=sprint.name).delete()
+            projects = list(Project.objects.all())
+
         tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
         inactive_emails = set(get_inactive_user_emails_expanded(tenant=tenant))
-
-        # Get all projects
-        projects = list(Project.objects.all())
         
         results = []
         for project in projects:
@@ -397,14 +459,30 @@ class MetricService:
                     if c.get('email'):
                         raw_emails.add(c['email'])
 
-            # Map raw emails to canonical emails: canonical_email -> list of raw_emails
+            # Include developers with PR activity (authored PRs or PR reviews) during this sprint
+            all_project_source_ids = list(SourceConfiguration.objects.filter(project=project).values_list('id', flat=True))
+            if sprint.start_date and sprint.end_date:
+                pr_authors = PullRequest.objects.filter(
+                    source_config_id__in=all_project_source_ids,
+                    created_at__range=(sprint.start_date, sprint.end_date)
+                ).values_list('author_email', flat=True).distinct()
+                raw_emails.update(e for e in pr_authors if e)
+
+                pr_reviewers = PullRequestReviewer.objects.filter(
+                    pull_request__source_config_id__in=all_project_source_ids,
+                    reviewed_at__range=(sprint.start_date, sprint.end_date)
+                ).values_list('reviewer_email', flat=True).distinct()
+                raw_emails.update(e for e in pr_reviewers if e)
+
+            # Map raw emails to canonical emails: canonical_email -> set of raw_emails
             canonical_to_raw = {}
             for e in raw_emails:
                 if not e: continue
                 canonical = resolver.resolve(e)
-                canonical_to_raw.setdefault(canonical, []).append(e)
+                canonical_to_raw.setdefault(canonical, set()).add(e)
 
-            for canonical_email, aliases in canonical_to_raw.items():
+            for canonical_email, raw_aliases_list in canonical_to_raw.items():
+                aliases = list(set(raw_aliases_list) | set(resolver.all_aliases(canonical_email)))
                 if canonical_email in inactive_emails:
                     continue
                 
@@ -461,17 +539,37 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
                 
-                # Expand aliases to include all known identities (e.g. ADO email vs ClickUp email)
-                # Defined here so dev_prs and downstream queries all use the full alias set
-                all_known_aliases = list(set(resolver.all_aliases(canonical_email)) | set(aliases))
-
-                # Filter PRs for this developer in this sprint (approximate by date if not linked)
+                # Expand aliases to include all known identities (e.g. ADO email, GitHub login username, no-reply emails)
                 
+                User = get_user_model()
+                
+                user_mapping = UserIdentityMapping.objects.filter(canonical_email=canonical_email).first()
+                user_obj = User.objects.filter(email__iexact=canonical_email).first()
+                
+                additional_identities = []
+                if user_mapping:
+                    if user_mapping.canonical_name:
+                        additional_identities.append(user_mapping.canonical_name)
+                    if user_mapping.source_identities:
+                        for v in user_mapping.source_identities.values():
+                            if isinstance(v, list):
+                                additional_identities.extend(v)
+                            elif isinstance(v, str):
+                                additional_identities.append(v)
+                if user_obj:
+                    if user_obj.username:
+                        additional_identities.append(user_obj.username)
+                    if user_obj.get_full_name():
+                        additional_identities.append(user_obj.get_full_name())
+                        
+                all_known_aliases = list(set(resolver.all_aliases(canonical_email)) | set(aliases) | set(additional_identities))
+
+                all_project_source_ids = list(SourceConfiguration.objects.filter(project=project).values_list('id', flat=True))
+
                 pr_filter = Q(
-                    author_email__in=all_known_aliases,
-                    source_config_id__in=source_conf_ids,
+                    source_config_id__in=all_project_source_ids,
                     created_at__lte=sprint_end
-                )
+                ) & (Q(author_email__in=all_known_aliases) | Q(resolved_author__email__in=all_known_aliases))
                 if sprint_start:
                     pr_filter &= Q(created_at__gte=sprint_start)
 
@@ -518,23 +616,28 @@ class MetricService:
                 # Fetch reviews done by this developer in this sprint (vote != 0 = actually reviewed)
                 prs_reviewed = PullRequestReviewer.objects.filter(
                     reviewer_email__in=all_known_aliases,
-                    pull_request__source_config_id__in=source_conf_ids,
+                    pull_request__source_config_id__in=all_project_source_ids,
                     reviewed_at__range=(sprint_start, sprint_end),
                 ).exclude(vote=0).count() if sprint_start else 0
 
                 # Fetch commits by this developer in this sprint
                 commits_count = Commit.objects.filter(
                     author_email__in=all_known_aliases,
-                    source_config_id__in=source_conf_ids,
+                    source_config_id__in=all_project_source_ids,
                     committed_at__range=(sprint_start, sprint_end)
                 ).count() if sprint_start else 0
 
                 # Average Review Time integration could be added here later.
 
-                # Name (Use canonical name if mapping exists, else best fragment)
-                from ..models import UserIdentityMapping
+                # Name (Use Django User full_name first, then canonical mapping, else best fragment)
+                
+                User = get_user_model()
+                user_obj = User.objects.filter(email__iexact=canonical_email).first()
                 mapping = UserIdentityMapping.objects.filter(canonical_email=canonical_email).first()
-                if mapping:
+                
+                if user_obj and user_obj.get_full_name():
+                    dev_name = user_obj.get_full_name()
+                elif mapping and mapping.canonical_name:
                     dev_name = mapping.canonical_name
                 else:
                     dev_name = dev_work_items.order_by('-updated_at').values_list('assignee_name', flat=True).first() or canonical_email
