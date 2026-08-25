@@ -29,7 +29,11 @@ from configuration.views import ProjectViewSet, SourceConfigurationViewSet
 from notifications.views import NotificationViewSet
 
 from users.views import RoleViewSet
-from users.views import UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView, GetAllDepartmentsDropdown, UserSprintTaskSummaryAPIView
+from users.views import (
+    UserHierarchyAPIView, GetAllRolesDropdown, UserAutocompleteAPIView, GetAllDepartmentsDropdown, UserSprintTaskSummaryAPIView,
+    AllocationDeveloperListAPIView, AllocationProjectListAPIView, ResourceAllocationSaveAPIView, ResourceAllocationPublishAPIView, ResourceAllocationOverviewAPIView
+)
+
 
 router = DefaultRouter()
 
@@ -151,7 +155,15 @@ urlpatterns = [
     path('api/org-departments/', GetAllDepartmentsDropdown.as_view()),
 
     # get user sprint task summary -
-    path('api/user-sprint-task-summary/', UserSprintTaskSummaryAPIView.as_view())
+    path('api/user-sprint-task-summary/', UserSprintTaskSummaryAPIView.as_view()),
+
+    # Resource Allocation APIs
+    path('api/allocations/developers/', AllocationDeveloperListAPIView.as_view(), name='allocation_developers'),
+    path('api/allocations/projects/', AllocationProjectListAPIView.as_view(), name='allocation_projects'),
+    path('api/allocations/', ResourceAllocationSaveAPIView.as_view(), name='allocation_save'),
+    path('api/allocations/publish/', ResourceAllocationPublishAPIView.as_view(), name='allocation_publish'),
+    path('api/allocations/overview/', ResourceAllocationOverviewAPIView.as_view(), name='allocation_overview'),
+
 
 ]
 

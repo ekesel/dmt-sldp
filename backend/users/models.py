@@ -68,6 +68,12 @@ class CustomPermission(models.Model):
 class RoleTable(models.Model):
     role_name = models.CharField(max_length=50) 
     role_code = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    role_category = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Role Category e.g. DEVELOPER, QA, DESIGNER, DEVOPS, etc."
+    )
     dep_name  = models.CharField(
         max_length=100,
         null=True,
@@ -85,7 +91,66 @@ class RoleTable(models.Model):
     def save(self, *args, **kwargs):
         if not self.role_code and self.role_name:
             self.role_code = self.role_name.upper().replace(' ', '_')
+        if not self.role_category:
+            name_code = f"{self.role_name} {self.role_code or ''}".lower()
+            if 'qa' in name_code or 'test' in name_code:
+                self.role_category = 'QA'
+            elif any(k in name_code for k in ['dev', 'eng', 'software', 'backend', 'frontend', 'fullstack', 'python', 'java', 'react']):
+                self.role_category = 'DEVELOPER'
         super().save(*args, **kwargs)
+
+
+
+
+class MonthlyAllocationStatus(models.Model):
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('PUBLISHED', 'Published'),
+    ]
+    month = models.IntegerField()
+    year = models.IntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='published_allocations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'monthly_allocation_statuses'
+        unique_together = ('month', 'year')
+        indexes = [
+            models.Index(fields=['year', 'month', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.year}-{self.month:02d}: {self.status}"
+
+
+class ResourceAllocation(models.Model):
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('PUBLISHED', 'Published'),
+    ]
+    developer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='resource_allocations')
+    project = models.ForeignKey('configuration.Project', on_delete=models.CASCADE, related_name='resource_allocations')
+    month = models.IntegerField()
+    year = models.IntegerField()
+    percentage_allocated = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'resource_allocations'
+        unique_together = ('developer', 'project', 'month', 'year')
+        indexes = [
+            models.Index(fields=['developer', 'year', 'month', 'status']),
+            models.Index(fields=['year', 'month', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.developer.email} -> {self.project.name} ({self.year}-{self.month:02d}): {self.percentage_allocated}% [{self.status}]"
+
 
 
 
