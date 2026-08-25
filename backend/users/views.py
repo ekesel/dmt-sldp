@@ -31,10 +31,15 @@ from django.db.models import Q
 from .models import Department
 from .utils import get_user_sprint_task_summary
 
+from users.models import ResourceAllocation, MonthlyAllocationStatus
+from configuration.models import Project
+from decimal import Decimal
+from django.utils import timezone
 
-
+from django.db import transaction
 from .models import User, RoleTable
 User = get_user_model()
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -911,3 +916,400 @@ class UserSprintTaskSummaryAPIView(APIView):
                 "done": summary["total_done_tasks"]
             }
         }, status=status.HTTP_200_OK)
+
+
+# ==========================================
+# RESOURCE ALLOCATION APIS
+# ==========================================
+
+class AllocationDeveloperListAPIView(APIView):
+    """
+    API 1: Developer List API
+    Returns all active developer users whose email ends with @samta.ai.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('search', '').strip()
+        role_filter = request.query_params.get('role_type', '').strip().upper() # 'DEVELOPER', 'QA', or empty for both
+
+        # Filter active samta.ai users
+        developers = User.objects.filter(
+            is_active=True,
+            email__iendswith='@samta.ai'
+        ).select_related('role').order_by('first_name', 'last_name', 'email')
+
+        # Filter by role_category in ['DEVELOPER', 'QA'] or unassigned role
+        if role_filter in ['DEVELOPER', 'QA']:
+            developers = developers.filter(
+                Q(role__role_category=role_filter) |
+                Q(role__isnull=True)
+            )
+        else:
+            developers = developers.filter(
+                Q(role__isnull=True) |
+                Q(role__role_category__in=['DEVELOPER', 'QA'])
+            )
+
+        if query:
+            developers = developers.filter(
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query) |
+                Q(username__icontains=query)
+            )
+
+        data = []
+
+        for dev in developers:
+            # Determine unified role category ('Developer', 'QA', or 'Other/Unassigned')
+            r_name = dev.role.role_name if dev.role else ''
+            r_code = dev.role.role_code if dev.role else ''
+            combined_role = f"{r_name} {r_code}".lower()
+
+            if 'qa' in combined_role or 'test' in combined_role:
+                category = 'QA'
+            elif 'dev' in combined_role or 'eng' in combined_role or 'software' in combined_role:
+                category = 'Developer'
+            else:
+                category = 'Developer'  # Default technical role classification
+
+            data.append({
+                "id": dev.id,
+                "full_name": f"{dev.first_name} {dev.last_name}".strip() or dev.username,
+            })
+
+
+
+        return Response({
+            "status": True,
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+
+
+class AllocationProjectListAPIView(APIView):
+    """
+    API 2: Project List API
+    Returns all projects available in the system for resource allocation.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        projects = Project.objects.filter(is_active=True).order_by('name')
+
+        data = []
+        for proj in projects:
+            data.append({
+                "id": proj.id,
+                "name": proj.name
+            })
+
+
+        return Response({
+            "status": True,
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+
+class ResourceAllocationSaveAPIView(APIView):
+    """
+    API 3: Save/Update Developer Resource Allocations
+    Allows admin to set project percentages for a developer in a given month & year.
+    Enforces total capacity <= 100%.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+    
+        user_id = request.data.get('user_id')
+        month = request.data.get('month')
+        year = request.data.get('year')
+        allocations = request.data.get('allocations', [])
+        req_status = request.data.get('status', 'DRAFT').upper()
+
+        if not user_id or not month or not year:
+            return Response({
+                "status": False,
+                "message": "user_id, month, and year are required fields."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            month = int(month)
+            year = int(year)
+        except ValueError:
+            return Response({
+                "status": False,
+                "message": "month and year must be integers."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not (1 <= month <= 12):
+            return Response({
+                "status": False,
+                "message": "month must be between 1 and 12."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate target user
+        try:
+            developer = User.objects.get(id=user_id, is_active=True)
+        except User.DoesNotExist:
+            return Response({
+                "status": False,
+                "message": f"Developer with ID {user_id} does not exist."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if not developer.email.lower().endswith('@samta.ai'):
+            return Response({
+                "status": False,
+                "message": "Resource allocation is only permitted for @samta.ai email addresses."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Calculate sum and validate capacity <= 100%
+        total_percentage = Decimal('0.00')
+        valid_allocations = []
+        for item in allocations:
+            proj_id = item.get('project_id')
+            pct = item.get('percentage_allocated', 0)
+            try:
+                pct_dec = Decimal(str(pct))
+            except Exception:
+                return Response({
+                    "status": False,
+                    "message": f"Invalid percentage format: {pct}"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if pct_dec < Decimal('0.00'):
+                return Response({
+                    "status": False,
+                    "message": "Percentage allocation cannot be negative."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if pct_dec > Decimal('0.00'):
+                total_percentage += pct_dec
+                valid_allocations.append({
+                    'project_id': proj_id,
+                    'percentage': pct_dec
+                })
+
+        if total_percentage > Decimal('100.00'):
+            return Response({
+                "status": False,
+                "message": f"Total allocation percentage for {developer.get_full_name() or developer.email} exceeds 100%. Current sum: {total_percentage}%"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch or create monthly status record
+        month_status_obj, _ = MonthlyAllocationStatus.objects.get_or_create(
+            month=month,
+            year=year,
+            defaults={'status': 'DRAFT'}
+        )
+
+        effective_status = req_status if req_status in ['DRAFT', 'PUBLISHED'] else month_status_obj.status
+
+        # Update allocations atomically
+        with transaction.atomic():
+            # Delete zero or removed allocations for this dev, month, year
+            ResourceAllocation.objects.filter(
+                developer=developer,
+                month=month,
+                year=year
+            ).delete()
+
+            saved_records = []
+            for item in valid_allocations:
+                try:
+                    proj = Project.objects.get(id=item['project_id'])
+                except Project.DoesNotExist:
+                    continue
+
+                record = ResourceAllocation.objects.create(
+                    developer=developer,
+                    project=proj,
+                    month=month,
+                    year=year,
+                    percentage_allocated=item['percentage'],
+                    status=effective_status
+                )
+                saved_records.append({
+                    "id": record.id,
+                    "project_id": proj.id,
+                    "project_name": proj.name,
+                    "project_key": proj.key,
+                    "percentage_allocated": float(record.percentage_allocated)
+                })
+
+        return Response({
+            "status": True,
+            "message": "Resource allocation updated successfully.",
+            "data": {
+                "user_id": developer.id,
+                "user_email": developer.email,
+                "month": month,
+                "year": year,
+                "status": effective_status,
+                "total_allocation_percentage": float(total_percentage),
+                "allocations": saved_records
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class ResourceAllocationPublishAPIView(APIView):
+    """
+    API 4: Publish Resource Allocations for a Target Month
+    Transitions draft allocations to PUBLISHED for the given month and year.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        
+        month = request.data.get('month')
+        year = request.data.get('year')
+
+        if not month or not year:
+            return Response({
+                "status": False,
+                "message": "month and year are required fields."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            month = int(month)
+            year = int(year)
+        except ValueError:
+            return Response({
+                "status": False,
+                "message": "month and year must be integers."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        
+        with transaction.atomic():
+            monthly_status, _ = MonthlyAllocationStatus.objects.get_or_create(
+                month=month,
+                year=year
+            )
+            monthly_status.status = 'PUBLISHED'
+            monthly_status.published_at = timezone.now()
+            monthly_status.published_by = request.user
+            monthly_status.save()
+
+            # Mark all allocations for this month as PUBLISHED
+            ResourceAllocation.objects.filter(
+                month=month,
+                year=year
+            ).update(status='PUBLISHED')
+
+        return Response({
+            "status": True,
+            "message": f"Resource allocations for {year}-{month:02d} have been successfully published.",
+            "data": {
+                "month": month,
+                "year": year,
+                "status": "PUBLISHED",
+                "published_at": monthly_status.published_at
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class ResourceAllocationOverviewAPIView(APIView):
+    """
+    API 5: Pivot Matrix Overview API
+    Returns Developers x Projects grid matrix data for display and editing.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        now = timezone.now()
+        month = request.query_params.get('month', now.month)
+        year = request.query_params.get('year', now.year)
+        view_status = request.query_params.get('status', 'ALL').upper()
+
+        try:
+            month = int(month)
+            year = int(year)
+        except ValueError:
+            return Response({
+                "status": False,
+                "message": "month and year must be integers."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get monthly status
+        m_status_obj = MonthlyAllocationStatus.objects.filter(month=month, year=year).first()
+        current_monthly_status = m_status_obj.status if m_status_obj else 'DRAFT'
+
+        # Active projects (columns)
+        projects = Project.objects.filter(is_active=True).order_by('name')
+        project_list = [{"id": p.id, "name": p.name, "key": p.key} for p in projects]
+
+        # Active developers (rows) - Filtered for Technical roles (Dev / QA / Eng / Software)
+        # Excludes HR, CEO, CFO, Sales, etc.
+        developers = User.objects.filter(
+            is_active=True,
+            email__iendswith='@samta.ai'
+        ).select_related('role').filter(
+            Q(role__role_name__icontains='dev') |
+            Q(role__role_name__icontains='tester') |
+            Q(role__role_code__icontains='DEV') |
+            Q(role__role_code__icontains='QA') 
+        ).exclude(
+            Q(role__role_name__icontains='hr') |
+            Q(role__role_name__icontains='ceo') |
+            Q(role__role_name__icontains='cfo') |
+            Q(role__role_name__icontains='cto') |
+            Q(role__role_name__icontains='recruiter') |
+            Q(role__role_name__icontains='accountant') |
+            Q(role__role_name__icontains='sales')
+        ).order_by('first_name', 'last_name', 'email')
+
+        # Fetch existing allocations for month/year
+        alloc_qs = ResourceAllocation.objects.filter(month=month, year=year)
+        if view_status in ['DRAFT', 'PUBLISHED']:
+            alloc_qs = alloc_qs.filter(status=view_status)
+
+        # Build mapping: (dev_id, project_id) -> percentage
+        alloc_map = {}
+        for alloc in alloc_qs:
+            alloc_map[(alloc.developer_id, alloc.project_id)] = float(alloc.percentage_allocated)
+
+        developer_rows = []
+        for dev in developers:
+            dev_allocations = {}
+            total_pct = 0.0
+
+            for proj in projects:
+                pct = alloc_map.get((dev.id, proj.id), 0.0)
+                dev_allocations[proj.id] = pct
+                total_pct += pct
+
+            # Determine unified role category ('Developer' or 'QA')
+            r_name = dev.role.role_name if dev.role else ''
+            r_code = dev.role.role_code if dev.role else ''
+            combined_role = f"{r_name} {r_code}".lower()
+
+            if 'qa' in combined_role or 'test' in combined_role:
+                category = 'QA'
+            else:
+                category = 'Developer'
+
+            developer_rows.append({
+                "developer_id": dev.id,
+                "developer_name": f"{dev.first_name} {dev.last_name}".strip() or dev.username,
+                "total_allocated_percentage": total_pct,
+                "remaining_capacity_percentage": max(0.0, 100.0 - total_pct),
+                "is_over_capacity": total_pct > 100.0,
+                "allocations": dev_allocations
+            })
+
+
+
+        return Response({
+            "status": True,
+            "data": {
+                "month": month,
+                "year": year,
+                "monthly_status": current_monthly_status,
+                "projects": project_list,
+                "developers": developer_rows
+            }
+        }, status=status.HTTP_200_OK)
+
