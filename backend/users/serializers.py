@@ -181,3 +181,33 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoleTable
         fields = '__all__'
+
+
+class ResourceAllocationSerializer(serializers.ModelSerializer):
+    developer_email = serializers.ReadOnlyField(source='developer.email')
+    developer_name = serializers.ReadOnlyField(source='developer.get_full_name')
+    project_name = serializers.ReadOnlyField(source='project.name')
+    project_key = serializers.ReadOnlyField(source='project.key')
+
+    class Meta:
+        from .models import ResourceAllocation
+        model = ResourceAllocation
+        fields = [
+            'id', 'developer', 'developer_email', 'developer_name',
+            'project', 'project_name', 'project_key',
+            'month', 'year', 'percentage_allocated', 'status',
+            'created_at', 'updated_at'
+        ]
+
+
+class MonthlyAllocationStatusSerializer(serializers.ModelSerializer):
+    published_by_email = serializers.ReadOnlyField(source='published_by.email')
+
+    class Meta:
+        from .models import MonthlyAllocationStatus
+        model = MonthlyAllocationStatus
+        fields = [
+            'id', 'month', 'year', 'status',
+            'published_at', 'published_by', 'published_by_email',
+            'created_at', 'updated_at'
+        ]
