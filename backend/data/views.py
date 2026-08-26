@@ -428,13 +428,15 @@ class DeveloperListView(APIView):
             target_year = now.year
 
         
+        # Fetch PUBLISHED resource allocations for target month & year to flag project active state
         alloc_qs = ResourceAllocation.objects.filter(
             month=target_month,
             year=target_year,
+            status='PUBLISHED',
             percentage_allocated__gt=0
         ).select_related('developer', 'project')
 
-        # Fallback to most recent published allocations if target month has no allocations saved
+        # Fallback to most recent published allocations if target month has no published allocations
         if not alloc_qs.exists():
             fallback_pub = ResourceAllocation.objects.filter(
                 status='PUBLISHED',
@@ -451,11 +453,15 @@ class DeveloperListView(APIView):
                     percentage_allocated__gt=0
                 ).select_related('developer', 'project')
 
+
         # Build mapping: (developer_email.lower(), project_id) -> True
         allocated_dev_projects = set()
         for alloc in alloc_qs:
             if alloc.developer and alloc.developer.email:
-                allocated_dev_projects.add((alloc.developer.email.strip().lower(), alloc.project_id))
+                c_email = resolver.resolve(alloc.developer.email.strip().lower())
+                all_dev_aliases = set(resolver.all_aliases(c_email)) | {c_email, alloc.developer.email.strip().lower()}
+                for a_email in all_dev_aliases:
+                    allocated_dev_projects.add((a_email.lower(), alloc.project_id))
 
         result = []
         for email_key, dev in sorted(dev_map.items()):
@@ -480,6 +486,7 @@ class DeveloperListView(APIView):
                     'id': dev['id'],
                     'projects': project_list
                 })
+
             
         return Response(result)
 
