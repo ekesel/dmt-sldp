@@ -55,9 +55,11 @@ class DashboardSummaryView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
         
         if start_date and not end_date:
             end_date = timezone.now().date().strftime('%Y-%m-%d')
+
 
         from .analytics.metrics import MetricService
         from .models import PullRequest
