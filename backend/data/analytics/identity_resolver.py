@@ -91,14 +91,18 @@ def get_inactive_user_emails_expanded(tenant=None):
     resolver = IdentityResolver()
     resolver.load()
     
+    active_emails = set(User.objects.filter(is_active=True).values_list('email', flat=True))
+    
     expanded = set()
     for email in base_emails:
         if email:
             canonical = resolver.resolve(email)
-            expanded.update(resolver.all_aliases(canonical))
-            expanded.add(email)
+            aliases = set(resolver.all_aliases(canonical)) | {email, canonical}
+            # Only add aliases that do NOT belong to an active user account
+            expanded.update(e for e in aliases if e not in active_emails)
             
     return list(expanded)
+
 
 
 def get_non_developer_user_emails_expanded(tenant=None):
