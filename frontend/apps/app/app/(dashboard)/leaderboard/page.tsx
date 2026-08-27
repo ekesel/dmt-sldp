@@ -29,8 +29,25 @@ const CategoryCard = ({
     onHelpClick: (id: string) => void;
     lowerIsBetter?: boolean;
 }) => {
-    const topWinner = winners?.[0];
-    const contenders = winners?.slice(1) || [];
+    // Determine ranking with ties supported (show top 3 people only)
+    const rankedList = (winners || []).slice(0, 3).map((item, idx, list) => {
+        let rank = 1;
+        if (idx > 0) {
+            if (item.score === list[idx - 1].score) {
+                let firstIdx = idx;
+                while (firstIdx > 0 && list[firstIdx - 1].score === item.score) {
+                    firstIdx--;
+                }
+                rank = firstIdx + 1;
+            } else {
+                rank = idx + 1;
+            }
+        }
+        return { ...item, rank };
+    });
+
+    const topWinners = rankedList.filter(item => item.rank === 1);
+    const contenders = rankedList.filter(item => item.rank > 1);
 
     const renderHistory = (history?: { date: string; score: number }[]) => {
         if (!history || history.length === 0) return null;
@@ -79,33 +96,37 @@ const CategoryCard = ({
                 </div>
             </div>
 
-            {topWinner ? (
-                <div className="bg-accent/50 rounded-2xl p-6 border border-border relative mb-6">
-                    <div className="absolute top-0 right-6 -translate-y-1/2">
-                        <div className="bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1">
-                            <Trophy size={12} />
-                            Winner
+            {topWinners.length > 0 ? (
+                <div className="space-y-4 mb-6">
+                    {topWinners.map((topWinner, idx) => (
+                        <div key={idx} className="bg-accent/50 rounded-2xl p-6 border border-border relative">
+                            <div className="absolute top-0 right-6 -translate-y-1/2">
+                                <div className="bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1">
+                                    <Trophy size={12} />
+                                    Winner
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <img
+                                    src={topWinner.avatar ? getFileUrl(topWinner.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinner.name)}&background=random`}
+                                    alt={topWinner.name}
+                                    className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg object-cover"
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-lg font-bold text-foreground truncate">{topWinner.name}</h4>
+                                    <p className="text-sm font-medium text-amber-500/90 truncate">{topWinner.title}</p>
+                                    {topWinner.reason && (
+                                        <p className="text-xs text-muted-foreground mt-1 italic">&quot;{topWinner.reason}&quot;</p>
+                                    )}
+                                </div>
+                                <div className="text-right flex flex-col items-end">
+                                    <div className="text-2xl font-black text-foreground">{topWinner.score}</div>
+                                    <div className="text-xs font-medium text-muted-foreground uppercase mb-1">{scoreLabel}</div>
+                                    {renderHistory(topWinner.history)}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <img
-                            src={topWinner.avatar ? getFileUrl(topWinner.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinner.name)}&background=random`}
-                            alt={topWinner.name}
-                            className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg"
-                        />
-                        <div className="flex-1 min-w-0">
-                            <h4 className="text-lg font-bold text-foreground truncate">{topWinner.name}</h4>
-                            <p className="text-sm font-medium text-amber-500/90 truncate">{topWinner.title}</p>
-                            {topWinner.reason && (
-                                <p className="text-xs text-muted-foreground mt-1 italic">&quot;{topWinner.reason}&quot;</p>
-                            )}
-                        </div>
-                        <div className="text-right flex flex-col items-end">
-                            <div className="text-2xl font-black text-foreground">{topWinner.score}</div>
-                            <div className="text-xs font-medium text-muted-foreground uppercase mb-1">{scoreLabel}</div>
-                            {renderHistory(topWinner.history)}
-                        </div>
-                    </div>
+                    ))}
                 </div>
             ) : (
                 <div className="bg-muted/30 rounded-2xl p-6 border border-border text-center mb-6">
@@ -118,11 +139,11 @@ const CategoryCard = ({
                     <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Top Contenders</h5>
                     {contenders.map((contender, idx) => (
                         <div key={idx} className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors">
-                            <div className="text-lg font-bold text-muted-foreground w-4">{idx + 2}</div>
+                            <div className="text-lg font-bold text-muted-foreground w-4">{contender.rank}</div>
                             <img
                                 src={contender.avatar ? getFileUrl(contender.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(contender.name)}&background=random`}
                                 alt={contender.name}
-                                className="w-10 h-10 rounded-full"
+                                className="w-10 h-10 rounded-full object-cover"
                             />
                             <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold text-foreground truncate">{contender.name}</h4>
