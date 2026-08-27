@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, User as UserIcon, Mail } from 'lucide-react';
+import { X, Shield, User as UserIcon, Mail, Briefcase } from 'lucide-react';
 import { users as usersApi } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -17,6 +17,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
         first_name: '',
         last_name: '',
         role: 'Admin',
+        designation: '',
         is_active: true,
         custom_title: '',
     });
@@ -35,6 +36,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: user.first_name || '',
                 last_name: user.last_name || '',
                 role: role,
+                designation: user.designation || user.role_name || user.role?.role_name || '',
                 is_active: user.is_active ?? true,
                 custom_title: user.custom_title || '',
             });
@@ -61,6 +63,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 is_active: formData.is_active,
+                designation: formData.designation,
                 custom_title: formData.custom_title,
                 ...roleFlags
             });
@@ -81,8 +84,8 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-            <div className="bg-popover border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className="bg-popover border border-border rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+                <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
                     <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                         <UserIcon className="text-primary" size={20} />
                         Edit User
@@ -96,7 +99,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                     {error && (
                         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                             {error}
@@ -151,6 +154,21 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                 <option value="Manager">Manager</option>
                                 <option value="User">User</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Designation</label>
+                        <div className="relative">
+                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                            <input
+                                type="text"
+                                name="designation"
+                                value={formData.designation}
+                                onChange={handleChange}
+                                className="w-full bg-muted border border-border rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                                placeholder="e.g. Senior Software Engineer"
+                            />
                         </div>
                     </div>
 

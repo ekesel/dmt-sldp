@@ -403,7 +403,7 @@ export function ResourceAllocationMatrix() {
       if (res.status) {
         toast.success(
           res.message ||
-            `Resource allocations for ${selectedYear}-${String(selectedMonth).padStart(2, '0')} published successfully!`
+          `Resource allocations for ${selectedYear}-${String(selectedMonth).padStart(2, '0')} published successfully!`
         );
         setShowPublishModal(false);
         setMonthlyStatus('PUBLISHED');
@@ -477,6 +477,7 @@ export function ResourceAllocationMatrix() {
       (d) => d.total_allocated_percentage < 100
     ).length;
     const overAllocated = developers.filter((d) => d.is_over_capacity).length;
+    const dirtyCount = developers.filter((d) => d.isDirty).length;
 
     // Project aggregate totals
     const projectTotals: Record<number, number> = {};
@@ -491,13 +492,18 @@ export function ResourceAllocationMatrix() {
       });
     });
 
-    const dirtyCount = developers.filter((d) => d.isDirty).length;
+    const unallocatedDevs = developers.filter(
+      (d) => (d.total_allocated_percentage || 0) === 0
+    );
+    const unallocatedCount = unallocatedDevs.length;
 
     return {
       totalDevs,
       fullyAllocated,
       underAllocated,
       overAllocated,
+      unallocatedDevs,
+      unallocatedCount,
       projectTotals,
       dirtyCount,
     };
@@ -602,11 +608,10 @@ export function ResourceAllocationMatrix() {
               metrics.dirtyCount > 0 ||
               monthlyStatus === 'PUBLISHED'
             }
-            className={`flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-xl shadow transition ${
-              monthlyStatus === 'PUBLISHED'
+            className={`flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-xl shadow transition ${monthlyStatus === 'PUBLISHED'
                 ? 'bg-success/20 text-success border border-success/30 cursor-not-allowed'
                 : 'bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50'
-            }`}
+              }`}
           >
             <Send className="w-4 h-4" />
             <span>{monthlyStatus === 'PUBLISHED' ? 'Published' : 'Publish Allocations'}</span>
@@ -707,13 +712,13 @@ export function ResourceAllocationMatrix() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[400px]">
             <table className="w-full text-left border-collapse min-w-max">
               {/* Header */}
               <thead>
-                <tr className="border-b border-border bg-muted/40 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                  {/* Developer Name Column (Sticky left) */}
-                  <th className="sticky left-0 z-20 bg-muted/80 backdrop-blur-md px-4 py-3.5 min-w-56 max-w-64 border-r border-border">
+                <tr className="border-b border-border bg-muted text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+                  {/* Developer Name Column (Sticky top-left) */}
+                  <th className="sticky top-0 left-0 z-30 bg-muted px-4 py-3.5 min-w-56 max-w-64 border-r border-b border-border">
                     Developer (Rows)
                   </th>
 
@@ -721,7 +726,7 @@ export function ResourceAllocationMatrix() {
                   {projects.map((proj) => (
                     <th
                       key={proj.id}
-                      className="px-4 py-3.5 text-center min-w-32 border-r border-border/50"
+                      className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-32 border-r border-b border-border/50"
                     >
                       <div className="font-semibold text-foreground truncate" title={proj.name}>
                         {proj.name}
@@ -733,17 +738,19 @@ export function ResourceAllocationMatrix() {
                   ))}
 
                   {/* Total Allocated Column */}
-                  <th className="px-4 py-3.5 text-center min-w-36 border-r border-border/50">
+                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-36 border-r border-b border-border/50">
                     Total Capacity
                   </th>
 
                   {/* Remaining Column */}
-                  <th className="px-4 py-3.5 text-center min-w-24 border-r border-border/50">
+                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-r border-b border-border/50">
                     Remaining
                   </th>
 
                   {/* Row Actions */}
-                  <th className="px-4 py-3.5 text-center min-w-24">Actions</th>
+                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-b border-border">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
@@ -761,20 +768,18 @@ export function ResourceAllocationMatrix() {
                     >
                       {/* Sticky Developer Row Header */}
                       <td
-                        className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${
-                          isOver
+                        className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${isOver
                             ? 'bg-destructive/10'
                             : 'bg-card'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           {/* Avatar Initials */}
                           <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${
-                              isOver
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isOver
                                 ? 'bg-destructive/20 text-destructive border border-destructive/30'
                                 : 'bg-primary/10 text-primary border border-primary/20'
-                            }`}
+                              }`}
                           >
                             {dev.developer_name
                               .split(' ')
@@ -793,9 +798,6 @@ export function ResourceAllocationMatrix() {
                                   title="Unsaved changes"
                                 />
                               )}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground">
-                              ID: #{dev.developer_id}
                             </div>
                           </div>
                         </div>
@@ -872,11 +874,10 @@ export function ResourceAllocationMatrix() {
                       {/* Remaining Capacity */}
                       <td className="px-4 py-3.5 text-center border-r border-border/50">
                         <span
-                          className={`text-xs font-medium ${
-                            dev.remaining_capacity_percentage > 0
+                          className={`text-xs font-medium ${dev.remaining_capacity_percentage > 0
                               ? 'text-warning'
                               : 'text-muted-foreground'
-                          }`}
+                            }`}
                         >
                           {dev.remaining_capacity_percentage}%
                         </span>
@@ -906,38 +907,38 @@ export function ResourceAllocationMatrix() {
 
               {/* Table Footer: Column Summary */}
               <tfoot>
-                <tr className="bg-muted/60 border-t-2 border-border font-semibold text-xs text-foreground">
-                  <td className="sticky left-0 z-10 bg-muted px-4 py-3.5 border-r border-border">
+                <tr className="bg-muted border-t-2 border-border font-semibold text-xs text-foreground">
+                  <td className="sticky bottom-0 left-0 z-30 bg-muted px-4 py-3.5 border-r border-t-2 border-border">
                     Project Workload Sum
                   </td>
                   {projects.map((proj) => (
                     <td
                       key={proj.id}
-                      className="px-4 py-3.5 text-center border-r border-border/50 font-bold text-primary"
+                      className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 font-bold text-primary"
                     >
                       {metrics.projectTotals[proj.id] || 0}%
                     </td>
                   ))}
-                  <td className="px-4 py-3.5 text-center border-r border-border/50">
+                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50">
                     <span className="text-muted-foreground font-normal">
                       Avg / Dev:{' '}
                       {developers.length > 0
                         ? Math.round(
-                            (developers.reduce(
-                              (acc, d) => acc + d.total_allocated_percentage,
-                              0
-                            ) /
-                              developers.length) *
-                              10
-                          ) / 10
+                          (developers.reduce(
+                            (acc, d) => acc + d.total_allocated_percentage,
+                            0
+                          ) /
+                            developers.length) *
+                          10
+                        ) / 10
                         : 0}
                       %
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-center border-r border-border/50 text-muted-foreground font-normal">
+                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 text-muted-foreground font-normal">
                     —
                   </td>
-                  <td className="px-4 py-3.5 text-center text-muted-foreground font-normal">
+                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-t-2 border-border text-muted-foreground font-normal">
                     {metrics.dirtyCount > 0 ? `${metrics.dirtyCount} unsaved` : 'All saved'}
                   </td>
                 </tr>
@@ -982,6 +983,31 @@ export function ResourceAllocationMatrix() {
                 <span className="font-semibold text-foreground">{projects.length}</span>
               </div>
             </div>
+
+            {/* Warning for unallocated developers */}
+            {metrics.unallocatedCount > 0 && (
+              <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl space-y-2 text-xs">
+                <div className="flex items-start gap-2 text-warning font-semibold">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Warning: {metrics.unallocatedCount}{' '}
+                    {metrics.unallocatedCount === 1 ? 'user is' : 'users are'} not allocated to any project (0% capacity):
+                  </span>
+                </div>
+                <div className="max-h-28 overflow-y-auto pl-6 space-y-1">
+                  {metrics.unallocatedDevs.map((dev) => (
+                    <div key={dev.developer_id} className="text-muted-foreground flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-warning/70 flex-shrink-0" />
+                      <span className="font-medium text-foreground">{dev.developer_name}</span>
+                      <span className="text-[11px] text-muted-foreground">(0% allocated)</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground pl-6">
+                  Publishing will proceed with zero allocation for {metrics.unallocatedCount === 1 ? 'this user' : 'these users'}.
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-2">
               <button

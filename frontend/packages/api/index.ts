@@ -650,6 +650,7 @@ export interface User {
   username: string;
   email: string;
   role?: string;
+  designation?: string;
   status?: string;
   first_name?: string;
   last_name?: string;

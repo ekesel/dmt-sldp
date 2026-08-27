@@ -202,7 +202,17 @@ export function UserList() {
                                                         <p className="text-foreground font-medium">
                                                             {user.first_name} {user.last_name || user.username}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                            <span>{user.email}</span>
+                                                            {(user.designation || (user.role as any)?.role_name) && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span className="text-primary/90 font-medium">
+                                                                        {user.designation || (user.role as any)?.role_name}
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
