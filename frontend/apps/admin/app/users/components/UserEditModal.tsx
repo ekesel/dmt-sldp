@@ -36,7 +36,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: user.first_name || '',
                 last_name: user.last_name || '',
                 role: role,
-                designation: user.designation || user.role_name || user.role?.role_name || '',
+                designation: user.designation || (user.role_name as string) || (typeof user.role === 'object' && user.role ? user.role.role_name : undefined) || '',
                 is_active: user.is_active ?? true,
                 custom_title: user.custom_title || '',
             });

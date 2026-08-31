@@ -204,11 +204,11 @@ export function UserList() {
                                                         </p>
                                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                             <span>{user.email}</span>
-                                                            {(user.designation || (user.role as any)?.role_name) && (
+                                                            {(user.designation || (typeof user.role === 'object' && user.role ? user.role.role_name : undefined)) && (
                                                                 <>
                                                                     <span>•</span>
                                                                     <span className="text-primary/90 font-medium">
-                                                                        {user.designation || (user.role as any)?.role_name}
+                                                                        {user.designation || (typeof user.role === 'object' && user.role ? user.role.role_name : undefined)}
                                                                     </span>
                                                                 </>
                                                             )}

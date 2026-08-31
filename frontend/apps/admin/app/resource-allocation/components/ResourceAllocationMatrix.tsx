@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getOverviewQueryOptions } from '../queries/query-options';
+import { useSaveAllocationsMutation, usePublishAllocationsMutation } from '../queries/mutation-options';
 import {
   Layers,
   Calendar,
@@ -20,6 +23,7 @@ import {
   DeveloperMatrixRow,
   ResourceAllocationOverviewData,
   SaveAllocationItemPayload,
+  AllocationDeveloperSummary,
 } from '@dmt/api';
 
 const MONTH_NAMES = [
@@ -115,8 +119,6 @@ export function ResourceAllocationMatrix() {
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const [isBulkSaving, setIsBulkSaving] = useState<boolean>(false);
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
@@ -126,42 +128,70 @@ export function ResourceAllocationMatrix() {
   const [developers, setDevelopers] = useState<EditableDeveloperRow[]>([]);
   const [monthlyStatus, setMonthlyStatus] = useState<'DRAFT' | 'PUBLISHED' | string>('DRAFT');
 
-  // Fetch matrix data from API
-  const fetchOverview = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setLoadError(null);
-      const res = await resourceAllocations.getOverview({
-        month: selectedMonth,
-        year: selectedYear,
-      });
+  // Fetch matrix data from API using React Query
+  const {
+    data: queryData,
+    isLoading,
+    error: queryError,
+    refetch: fetchOverview,
+  } = useQuery(getOverviewQueryOptions(selectedMonth, selectedYear));
 
-      if (res && res.status && res.data) {
-        setProjects(res.data.projects || []);
-        setDevelopers(
-          (res.data.developers || []).map((dev) => ({
-            ...dev,
-            allocations: { ...dev.allocations },
-            isDirty: false,
-            isSaving: false,
-          }))
-        );
-        setMonthlyStatus(res.data.monthly_status || 'DRAFT');
-        setLoadError(null);
-      }
-    } catch (error: unknown) {
-      console.error('Failed to load resource allocations:', error);
-      const errMsg = getErrorMessage(error, 'Failed to load allocation matrix.');
-      setLoadError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedMonth, selectedYear]);
+  const saveMutation = useSaveAllocationsMutation(selectedMonth, selectedYear);
+  const publishMutation = usePublishAllocationsMutation(selectedMonth, selectedYear);
+
+  const loadError = queryError ? getErrorMessage(queryError, 'Failed to load allocation matrix.') : null;
 
   useEffect(() => {
-    fetchOverview();
-  }, [fetchOverview]);
+    if (queryError) {
+      console.error('Failed to load resource allocations:', queryError);
+      toast.error(loadError || 'Failed to load allocation matrix.');
+    }
+  }, [queryError, loadError]);
+
+  // Sync React Query data into local state for editing
+  useEffect(() => {
+    if (queryData) {
+      const { overviewRes, developersRes, projectsRes } = queryData;
+      if (overviewRes && overviewRes.status && overviewRes.data) {
+        // Use master projects list if available, fallback to overview
+        const masterProjects = (projectsRes && projectsRes.status && projectsRes.data) ? projectsRes.data : overviewRes.data.projects || [];
+        setProjects(masterProjects);
+
+        // Get allocations lookup from overview
+        const overviewDevelopersMap = new Map(
+          (overviewRes.data.developers || []).map((d) => [d.developer_id, d])
+        );
+
+        // Map over master developers list if available, else overview developers
+        const masterDevelopers = (developersRes && developersRes.status && developersRes.data) ? developersRes.data : overviewRes.data.developers || [];
+        
+        const mappedDevelopers = masterDevelopers.map((dev: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => {
+          const devId = dev.id || dev.developer_id!;
+          const devName = dev.full_name || dev.developer_name!;
+          const overviewDev = overviewDevelopersMap.get(devId) || {
+            total_allocated_percentage: 0,
+            remaining_capacity_percentage: 100,
+            is_over_capacity: false,
+            allocations: {},
+          };
+
+          return {
+            developer_id: devId,
+            developer_name: devName,
+            total_allocated_percentage: overviewDev.total_allocated_percentage,
+            remaining_capacity_percentage: overviewDev.remaining_capacity_percentage,
+            is_over_capacity: overviewDev.is_over_capacity,
+            allocations: { ...overviewDev.allocations },
+            isDirty: false,
+            isSaving: false,
+          };
+        });
+
+        setDevelopers(mappedDevelopers);
+        setMonthlyStatus(overviewRes.data.monthly_status || 'DRAFT');
+      }
+    }
+  }, [queryData]);
 
   // Guard against accidental tab close or page reload when unsaved changes exist
   useEffect(() => {
@@ -255,7 +285,7 @@ export function ResourceAllocationMatrix() {
           percentage_allocated: parseFloat(String(pct)) || 0,
         }));
 
-      const res = await resourceAllocations.save({
+      const res = await saveMutation.mutateAsync({
         user_id: dev.developer_id,
         month: selectedMonth,
         year: selectedYear,
@@ -322,7 +352,7 @@ export function ResourceAllocationMatrix() {
           percentage_allocated: parseFloat(String(pct)) || 0,
         }));
 
-      const res = await resourceAllocations.save({
+      const res = await saveMutation.mutateAsync({
         user_id: dev.developer_id,
         month: selectedMonth,
         year: selectedYear,
@@ -395,7 +425,7 @@ export function ResourceAllocationMatrix() {
 
     try {
       setIsPublishing(true);
-      const res = await resourceAllocations.publish({
+      const res = await publishMutation.mutateAsync({
         month: selectedMonth,
         year: selectedYear,
       });
@@ -514,6 +544,299 @@ export function ResourceAllocationMatrix() {
     currentDate.getFullYear(),
     currentDate.getFullYear() + 1,
   ];
+
+  const renderMatrixContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground font-medium">
+            Loading allocation matrix for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}...
+          </p>
+        </div>
+      );
+    }
+    
+    if (loadError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <div className="p-3.5 bg-destructive/10 text-destructive rounded-2xl mb-3 border border-destructive/20">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">Failed to Load Allocations</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mt-1">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => fetchOverview()}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Loading</span>
+          </button>
+        </div>
+      );
+    }
+
+    if (projects.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <Briefcase className="w-12 h-12 text-muted-foreground/40 mb-3" />
+          <h3 className="text-lg font-semibold text-foreground">No Active Projects Found</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mt-1">
+            There are no active projects configured in the system for resource allocation.
+          </p>
+        </div>
+      );
+    }
+
+    if (developers.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <Users className="w-12 h-12 text-muted-foreground/40 mb-3" />
+          <h3 className="text-lg font-semibold text-foreground">No Developers Found</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mt-1">
+            No active technical developers found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[400px]">
+        <table className="w-full text-left border-collapse min-w-max">
+          {/* Header */}
+          <thead>
+            <tr className="border-b border-border bg-muted text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+              {/* Developer Name Column (Sticky top-left) */}
+              <th className="sticky top-0 left-0 z-30 bg-muted px-4 py-3.5 min-w-56 max-w-64 border-r border-b border-border">
+                Developer (Rows)
+              </th>
+
+              {/* Dynamic Project Columns */}
+              {projects.map((proj) => (
+                <th
+                  key={proj.id}
+                  className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-32 border-r border-b border-border/50"
+                >
+                  <div className="font-semibold text-foreground truncate" title={proj.name}>
+                    {proj.name}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground lowercase">
+                    {metrics.projectTotals[proj.id] || 0}% total
+                  </div>
+                </th>
+              ))}
+
+              {/* Total Allocated Column */}
+              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-36 border-r border-b border-border/50">
+                Total Capacity
+              </th>
+
+              {/* Remaining Column */}
+              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-r border-b border-border/50">
+                Remaining
+              </th>
+
+              {/* Row Actions */}
+              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-b border-border">
+                Actions
+              </th>
+            </tr>
+          </thead>
+
+          {/* Body */}
+          <tbody className="divide-y divide-border/60 text-sm">
+            {developers.map((dev) => {
+              const total = dev.total_allocated_percentage;
+              const isOver = dev.is_over_capacity;
+              const isFull = total === 100;
+
+              return (
+                <tr
+                  key={dev.developer_id}
+                  className={`transition-colors hover:bg-muted/30 ${getRowBgClass(isOver, dev.isDirty)}`}
+                >
+                  {/* Sticky Developer Row Header */}
+                  <td
+                    className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${isOver
+                        ? 'bg-destructive/10'
+                        : 'bg-card'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Avatar Initials */}
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isOver
+                            ? 'bg-destructive/20 text-destructive border border-destructive/30'
+                            : 'bg-primary/10 text-primary border border-primary/20'
+                          }`}
+                      >
+                        {dev.developer_name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+                          <span>{dev.developer_name}</span>
+                          {dev.isDirty && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-primary"
+                              title="Unsaved changes"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Project Allocation Cells */}
+                  {projects.map((proj) => {
+                    const rawVal = dev.allocations[proj.id] ?? 0;
+                    const hasAllocation = (parseFloat(String(rawVal)) || 0) > 0;
+
+                    return (
+                      <td
+                        key={proj.id}
+                        className="px-3 py-2.5 text-center border-r border-border/50"
+                      >
+                        <div className="relative inline-flex items-center justify-center group">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="any"
+                            value={rawVal === 0 || rawVal === '0' ? '' : rawVal}
+                            placeholder="0"
+                            onChange={(e) =>
+                              handleAllocationChange(
+                                dev.developer_id,
+                                proj.id,
+                                e.target.value
+                              )
+                            }
+                            onBlur={() =>
+                              handleAllocationBlur(
+                                dev.developer_id,
+                                proj.id
+                              )
+                            }
+                            className={`w-16 text-center text-sm font-semibold rounded-lg px-1.5 py-1.5 border transition ${getCellInputClasses(
+                              isOver,
+                              hasAllocation
+                            )}`}
+                          />
+                          <span className="ml-1 text-xs text-muted-foreground font-medium">
+                            %
+                          </span>
+                        </div>
+                      </td>
+                    );
+                  })}
+
+                  {/* Total Allocation Progress Bar */}
+                  <td className="px-4 py-3.5 border-r border-border/50">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className={getCapacityTextClass(isOver, isFull)}>
+                          {total}%
+                        </span>
+                        {isFull && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-success/20 text-success rounded font-bold uppercase">
+                            100%
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${getProgressBarFillClass(isOver, isFull)}`}
+                          style={{ width: `${Math.min(100, total)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Remaining Capacity */}
+                  <td className="px-4 py-3.5 text-center border-r border-border/50">
+                    <span
+                      className={`text-xs font-medium ${dev.remaining_capacity_percentage > 0
+                          ? 'text-warning'
+                          : 'text-muted-foreground'
+                        }`}
+                    >
+                      {dev.remaining_capacity_percentage}%
+                    </span>
+                  </td>
+
+                  {/* Row Action: Save or Status */}
+                  <td className="px-4 py-3.5 text-center">
+                    {dev.isDirty ? (
+                      <button
+                        onClick={() => saveDeveloperRow(dev)}
+                        disabled={dev.isSaving || dev.is_over_capacity}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium rounded-lg shadow-sm transition disabled:opacity-50"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{dev.isSaving ? 'Saving...' : 'Save'}</span>
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/70 inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success" /> Synced
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+
+          {/* Table Footer: Column Summary */}
+          <tfoot>
+            <tr className="bg-muted border-t-2 border-border font-semibold text-xs text-foreground">
+              <td className="sticky bottom-0 left-0 z-30 bg-muted px-4 py-3.5 border-r border-t-2 border-border">
+                Project Workload Sum
+              </td>
+              {projects.map((proj) => (
+                <td
+                  key={proj.id}
+                  className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 font-bold text-primary"
+                >
+                  {metrics.projectTotals[proj.id] || 0}%
+                </td>
+              ))}
+              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50">
+                <span className="text-muted-foreground font-normal">
+                  Avg / Dev:{' '}
+                  {developers.length > 0
+                    ? Math.round(
+                      (developers.reduce(
+                        (acc, d) => acc + d.total_allocated_percentage,
+                        0
+                      ) /
+                        developers.length) *
+                      10
+                    ) / 10
+                    : 0}
+                  %
+                </span>
+              </td>
+              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 text-muted-foreground font-normal">
+                —
+              </td>
+              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-t-2 border-border text-muted-foreground font-normal">
+                {metrics.dirtyCount > 0 ? `${metrics.dirtyCount} unsaved` : 'All saved'}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -672,280 +995,7 @@ export function ResourceAllocationMatrix() {
 
       {/* Matrix Table Container */}
       <div className="bg-card/50 border border-border rounded-2xl shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <RefreshCw className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground font-medium">
-              Loading allocation matrix for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}...
-            </p>
-          </div>
-        ) : loadError ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-            <div className="p-3.5 bg-destructive/10 text-destructive rounded-2xl mb-3 border border-destructive/20">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">Failed to Load Allocations</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mt-1">{loadError}</p>
-            <button
-              type="button"
-              onClick={() => fetchOverview()}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow transition"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Loading</span>
-            </button>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-            <Briefcase className="w-12 h-12 text-muted-foreground/40 mb-3" />
-            <h3 className="text-lg font-semibold text-foreground">No Active Projects Found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              There are no active projects configured in the system for resource allocation.
-            </p>
-          </div>
-        ) : developers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-            <Users className="w-12 h-12 text-muted-foreground/40 mb-3" />
-            <h3 className="text-lg font-semibold text-foreground">No Developers Found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              No active technical developers found.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[400px]">
-            <table className="w-full text-left border-collapse min-w-max">
-              {/* Header */}
-              <thead>
-                <tr className="border-b border-border bg-muted text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                  {/* Developer Name Column (Sticky top-left) */}
-                  <th className="sticky top-0 left-0 z-30 bg-muted px-4 py-3.5 min-w-56 max-w-64 border-r border-b border-border">
-                    Developer (Rows)
-                  </th>
-
-                  {/* Dynamic Project Columns */}
-                  {projects.map((proj) => (
-                    <th
-                      key={proj.id}
-                      className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-32 border-r border-b border-border/50"
-                    >
-                      <div className="font-semibold text-foreground truncate" title={proj.name}>
-                        {proj.name}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground lowercase">
-                        {metrics.projectTotals[proj.id] || 0}% total
-                      </div>
-                    </th>
-                  ))}
-
-                  {/* Total Allocated Column */}
-                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-36 border-r border-b border-border/50">
-                    Total Capacity
-                  </th>
-
-                  {/* Remaining Column */}
-                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-r border-b border-border/50">
-                    Remaining
-                  </th>
-
-                  {/* Row Actions */}
-                  <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-b border-border">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              {/* Body */}
-              <tbody className="divide-y divide-border/60 text-sm">
-                {developers.map((dev) => {
-                  const total = dev.total_allocated_percentage;
-                  const isOver = dev.is_over_capacity;
-                  const isFull = total === 100;
-
-                  return (
-                    <tr
-                      key={dev.developer_id}
-                      className={`transition-colors hover:bg-muted/30 ${getRowBgClass(isOver, dev.isDirty)}`}
-                    >
-                      {/* Sticky Developer Row Header */}
-                      <td
-                        className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${isOver
-                            ? 'bg-destructive/10'
-                            : 'bg-card'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Avatar Initials */}
-                          <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isOver
-                                ? 'bg-destructive/20 text-destructive border border-destructive/30'
-                                : 'bg-primary/10 text-primary border border-primary/20'
-                              }`}
-                          >
-                            {dev.developer_name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join('')
-                              .toUpperCase()}
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
-                              <span>{dev.developer_name}</span>
-                              {dev.isDirty && (
-                                <span
-                                  className="w-2 h-2 rounded-full bg-primary"
-                                  title="Unsaved changes"
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Project Allocation Cells */}
-                      {projects.map((proj) => {
-                        const rawVal = dev.allocations[proj.id] ?? 0;
-                        const hasAllocation = (parseFloat(String(rawVal)) || 0) > 0;
-
-                        return (
-                          <td
-                            key={proj.id}
-                            className="px-3 py-2.5 text-center border-r border-border/50"
-                          >
-                            <div className="relative inline-flex items-center justify-center group">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="any"
-                                value={rawVal === 0 || rawVal === '0' ? '' : rawVal}
-                                placeholder="0"
-                                onChange={(e) =>
-                                  handleAllocationChange(
-                                    dev.developer_id,
-                                    proj.id,
-                                    e.target.value
-                                  )
-                                }
-                                onBlur={() =>
-                                  handleAllocationBlur(
-                                    dev.developer_id,
-                                    proj.id
-                                  )
-                                }
-                                className={`w-16 text-center text-sm font-semibold rounded-lg px-1.5 py-1.5 border transition ${getCellInputClasses(
-                                  isOver,
-                                  hasAllocation
-                                )}`}
-                              />
-                              <span className="ml-1 text-xs text-muted-foreground font-medium">
-                                %
-                              </span>
-                            </div>
-                          </td>
-                        );
-                      })}
-
-                      {/* Total Allocation Progress Bar */}
-                      <td className="px-4 py-3.5 border-r border-border/50">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs font-semibold">
-                            <span className={getCapacityTextClass(isOver, isFull)}>
-                              {total}%
-                            </span>
-                            {isFull && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-success/20 text-success rounded font-bold uppercase">
-                                100%
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Progress bar */}
-                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-300 ${getProgressBarFillClass(isOver, isFull)}`}
-                              style={{ width: `${Math.min(100, total)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Remaining Capacity */}
-                      <td className="px-4 py-3.5 text-center border-r border-border/50">
-                        <span
-                          className={`text-xs font-medium ${dev.remaining_capacity_percentage > 0
-                              ? 'text-warning'
-                              : 'text-muted-foreground'
-                            }`}
-                        >
-                          {dev.remaining_capacity_percentage}%
-                        </span>
-                      </td>
-
-                      {/* Row Action: Save or Status */}
-                      <td className="px-4 py-3.5 text-center">
-                        {dev.isDirty ? (
-                          <button
-                            onClick={() => saveDeveloperRow(dev)}
-                            disabled={dev.isSaving || dev.is_over_capacity}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium rounded-lg shadow-sm transition disabled:opacity-50"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            <span>{dev.isSaving ? 'Saving...' : 'Save'}</span>
-                          </button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/70 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-success" /> Synced
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-
-              {/* Table Footer: Column Summary */}
-              <tfoot>
-                <tr className="bg-muted border-t-2 border-border font-semibold text-xs text-foreground">
-                  <td className="sticky bottom-0 left-0 z-30 bg-muted px-4 py-3.5 border-r border-t-2 border-border">
-                    Project Workload Sum
-                  </td>
-                  {projects.map((proj) => (
-                    <td
-                      key={proj.id}
-                      className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 font-bold text-primary"
-                    >
-                      {metrics.projectTotals[proj.id] || 0}%
-                    </td>
-                  ))}
-                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50">
-                    <span className="text-muted-foreground font-normal">
-                      Avg / Dev:{' '}
-                      {developers.length > 0
-                        ? Math.round(
-                          (developers.reduce(
-                            (acc, d) => acc + d.total_allocated_percentage,
-                            0
-                          ) /
-                            developers.length) *
-                          10
-                        ) / 10
-                        : 0}
-                      %
-                    </span>
-                  </td>
-                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 text-muted-foreground font-normal">
-                    —
-                  </td>
-                  <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-t-2 border-border text-muted-foreground font-normal">
-                    {metrics.dirtyCount > 0 ? `${metrics.dirtyCount} unsaved` : 'All saved'}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
+        {renderMatrixContent()}
       </div>
 
       {/* Publish Confirmation Modal */}

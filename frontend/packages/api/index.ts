@@ -645,11 +645,16 @@ export const search = {
 
 /** ---------- users ---------- */
 
+export interface UserRole {
+  role_name?: string;
+  [key: string]: unknown;
+}
+
 export interface User {
   id: string | number;
   username: string;
   email: string;
-  role?: string;
+  role?: string | UserRole;
   designation?: string;
   status?: string;
   first_name?: string;
