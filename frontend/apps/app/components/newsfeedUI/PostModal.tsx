@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 
 import { Author, Post } from "../../types/newsfeed";
 import { getFileUrl } from "@dmt/api";
+import { getUserDisplayName } from "@/lib/utils";
 
 interface StaticPostModalProps {
   isOpen: boolean;
@@ -217,19 +218,20 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
             {userProfile?.avatar_url ? (
               <img
                 src={getFileUrl(userProfile.avatar_url)}
-                alt={userProfile.username}
+                alt={getUserDisplayName(userProfile, "User")}
                 className="w-10 h-10 rounded-full object-cover border border-border"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border uppercase">
-                {userProfile?.username?.charAt(0) ||
-                  userProfile?.first_name?.charAt(0) ||
+                {userProfile?.first_name?.charAt(0) ||
+                  userProfile?.last_name?.charAt(0) ||
+                  userProfile?.username?.charAt(0) ||
                   "U"}
               </div>
             )}
             <div className="flex flex-col">
               <span className="text-foreground font-semibold">
-                {userProfile?.first_name || userProfile?.username || "User"}
+                {getUserDisplayName(userProfile, "User")}
               </span>
               <div className="bg-muted rounded px-2 py-0.5 mt-0.5 flex items-center gap-1 w-fit">
                 <svg

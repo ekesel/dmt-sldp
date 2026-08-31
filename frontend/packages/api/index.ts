@@ -645,11 +645,17 @@ export const search = {
 
 /** ---------- users ---------- */
 
+export interface UserRole {
+  role_name?: string;
+  [key: string]: unknown;
+}
+
 export interface User {
   id: string | number;
   username: string;
   email: string;
-  role?: string;
+  role?: string | UserRole;
+  designation?: string;
   status?: string;
   first_name?: string;
   last_name?: string;
@@ -1077,6 +1083,112 @@ export const orgChart = {
 export const companyBaseline = {
   getBaseline: () => get<any>('/admin/company-baseline/'),
   updateBaseline: (data: any) => post<any, any>('/admin/company-baseline/', data),
+};
+
+/** ---------- resourceAllocations ---------- */
+
+export interface AllocationDeveloperSummary {
+  id: number;
+  full_name: string;
+}
+
+export interface AllocationProjectHeader {
+  id: number;
+  name: string;
+  key?: string;
+}
+
+export interface DeveloperAllocationItem {
+  id?: number;
+  project_id: number;
+  project_name?: string;
+  project_key?: string;
+  percentage_allocated: number;
+}
+
+export interface DeveloperMatrixRow {
+  developer_id: number;
+  developer_name: string;
+  total_allocated_percentage: number;
+  remaining_capacity_percentage: number;
+  is_over_capacity: boolean;
+  allocations: Record<string | number, number>;
+}
+
+export interface ResourceAllocationOverviewData {
+  month: number;
+  year: number;
+  monthly_status: 'DRAFT' | 'PUBLISHED' | string;
+  projects: AllocationProjectHeader[];
+  developers: DeveloperMatrixRow[];
+}
+
+export interface SaveAllocationItemPayload {
+  project_id: number;
+  percentage_allocated: number;
+}
+
+export interface SaveAllocationPayload {
+  user_id: number;
+  month: number;
+  year: number;
+  status?: 'DRAFT' | 'PUBLISHED' | string;
+  allocations: SaveAllocationItemPayload[];
+}
+
+export interface SaveAllocationResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    user_id: number;
+    user_email?: string;
+    month: number;
+    year: number;
+    status: string;
+    total_allocation_percentage: number;
+    allocations: DeveloperAllocationItem[];
+  };
+}
+
+export interface PublishAllocationPayload {
+  month: number;
+  year: number;
+}
+
+export interface PublishAllocationResponse {
+  status: boolean;
+  message: string;
+  data?: {
+    month: number;
+    year: number;
+    status: string;
+    published_at: string;
+  };
+}
+
+export const resourceAllocations = {
+  getDevelopers: (params?: { search?: string; role_type?: string }) =>
+    get<{ status: boolean; data: AllocationDeveloperSummary[] }>(
+      `/allocations/developers/${buildQuery({ search: params?.search, role_type: params?.role_type })}`
+    ),
+
+  getProjects: () =>
+    get<{ status: boolean; data: AllocationProjectHeader[] }>('/allocations/projects/'),
+
+  getOverview: (params?: { month?: number; year?: number; status?: string }) =>
+    get<{ status: boolean; data: ResourceAllocationOverviewData }>(
+      `/allocations/overview/${buildQuery({
+        month: params?.month,
+        year: params?.year,
+        status: params?.status && params.status !== 'ALL' ? params.status : undefined,
+      })}`
+    ),
+
+  save: (data: SaveAllocationPayload) =>
+    post<SaveAllocationResponse, SaveAllocationPayload>('/allocations/', data),
+
+  publish: (data: PublishAllocationPayload) =>
+    post<PublishAllocationResponse, PublishAllocationPayload>('/allocations/publish/', data),
 };
 
 export default api;

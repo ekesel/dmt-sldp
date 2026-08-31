@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import ReactionBar from "./ReactionBar";
 import CommentSection from "./CommentSection";
-import { cn, formatTimestamp } from "@/lib/utils";
+import { cn, formatTimestamp, getUserDisplayName } from "@/lib/utils";
 import { useComments } from "../../hooks/useComments";
 import { useReactions } from "../../hooks/useReactions";
 import { getMediaUrl, getFallbackImage } from "@/lib/media";
@@ -47,6 +47,8 @@ const PostCard = ({
     likes = 0,
     comments: initialComments = 0,
   } = post;
+
+  const authorName = getUserDisplayName(author, "Unknown User");
 
   const { totalComments } = useComments(post.post_id);
   const displayCommentCount = totalComments || initialComments;
@@ -103,12 +105,12 @@ const PostCard = ({
                 ? getFileUrl(author.avatar_url)
                 : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
             }
-            alt={author?.username}
+            alt={authorName}
             className="w-10 h-10 rounded-full object-cover border border-border cursor-pointer"
           />
           <div className="flex flex-col">
             <span className="text-foreground font-bold text-sm hover:underline cursor-pointer">
-              {author?.username || "Unknown User"}
+              {authorName}
             </span>
             <div className="flex items-center gap-2 text-muted-foreground text-xs mt-0.5">
               <span>{formatTimestamp(created_at)}</span>
