@@ -14,6 +14,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
     tenant_slug = serializers.ReadOnlyField(source='tenant.slug')
+    role_name = serializers.ReadOnlyField(source='role.role_name')
     avatar_url = serializers.SerializerMethodField()
     permission = serializers.SerializerMethodField()
 
@@ -23,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 
             'tenant', 'tenant_name', 'tenant_slug', 'is_platform_admin', 
             'is_staff', 'is_superuser', 'is_manager', 'is_active', 'date_of_join',
+            'role', 'role_name',
             'profile_picture', 'custom_title', 'competitive_title', 
             'competitive_title_reason', 'avatar_url', 'permission'
         ]

@@ -1214,24 +1214,36 @@ class ResourceAllocationOverviewAPIView(APIView):
     """
     API 5: Pivot Matrix Overview API
     Returns Developers x Projects grid matrix data for display and editing.
+    - If month/year parameters are provided, returns data for that month/year.
+    - If month/year parameters are NOT provided, defaults to the latest month/year stored in DB (or current month if DB is empty).
+    - Filters developers by role_category in ['PM', 'DEVELOPER', 'QA', 'AI_DEVELOPER'] or unassigned role.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
         now = timezone.now()
-        month = request.query_params.get('month', now.month)
-        year = request.query_params.get('year', now.year)
+        month_param = request.query_params.get('month')
+        year_param = request.query_params.get('year')
         view_status = request.query_params.get('status', 'ALL').upper()
 
-        try:
-            month = int(month)
-            year = int(year)
-        except ValueError:
-            return Response({
-                "status": False,
-                "message": "month and year must be integers."
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if month_param and year_param:
+            try:
+                month = int(month_param)
+                year = int(year_param)
+            except ValueError:
+                return Response({
+                    "status": False,
+                    "message": "month and year must be integers."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Get latest month/year from DB if available, else default to current month/year
+            latest_alloc = ResourceAllocation.objects.order_by('-year', '-month').first()
+            if latest_alloc:
+                month = latest_alloc.month
+                year = latest_alloc.year
+            else:
+                month = now.month
+                year = now.year
 
         # Get monthly status
         m_status_obj = MonthlyAllocationStatus.objects.filter(month=month, year=year).first()
@@ -1241,27 +1253,16 @@ class ResourceAllocationOverviewAPIView(APIView):
         projects = Project.objects.filter(is_active=True).order_by('name')
         project_list = [{"id": p.id, "name": p.name, "key": p.key} for p in projects]
 
-        # Active developers (rows) - Filtered for Technical roles (Dev / QA / Eng / Software)
-        # Excludes HR, CEO, CFO, Sales, etc.
+        # Active developers (rows) - Filtered where role is NOT null AND role_category in allowed_categories
+        allowed_categories = ['PM', 'DEVELOPER', 'QA', 'AI_DEVELOPER']
         developers = User.objects.filter(
             is_active=True,
-            email__iendswith='@samta.ai'
-        ).select_related('role').filter(
-            Q(role__role_name__icontains='dev') |
-            Q(role__role_name__icontains='tester') |
-            Q(role__role_code__icontains='DEV') |
-            Q(role__role_code__icontains='QA') 
-        ).exclude(
-            Q(role__role_name__icontains='hr') |
-            Q(role__role_name__icontains='ceo') |
-            Q(role__role_name__icontains='cfo') |
-            Q(role__role_name__icontains='cto') |
-            Q(role__role_name__icontains='recruiter') |
-            Q(role__role_name__icontains='accountant') |
-            Q(role__role_name__icontains='sales')
-        ).order_by('first_name', 'last_name', 'email')
+            email__iendswith='@samta.ai',
+            role__isnull=False,
+            role__role_category__in=allowed_categories
+        ).select_related('role').order_by('first_name', 'last_name', 'email')
 
-        # Fetch existing allocations for month/year
+        # Fetch existing allocations for target month/year
         alloc_qs = ResourceAllocation.objects.filter(month=month, year=year)
         if view_status in ['DRAFT', 'PUBLISHED']:
             alloc_qs = alloc_qs.filter(status=view_status)
@@ -1281,16 +1282,6 @@ class ResourceAllocationOverviewAPIView(APIView):
                 dev_allocations[proj.id] = pct
                 total_pct += pct
 
-            # Determine unified role category ('Developer' or 'QA')
-            r_name = dev.role.role_name if dev.role else ''
-            r_code = dev.role.role_code if dev.role else ''
-            combined_role = f"{r_name} {r_code}".lower()
-
-            if 'qa' in combined_role or 'test' in combined_role:
-                category = 'QA'
-            else:
-                category = 'Developer'
-
             developer_rows.append({
                 "developer_id": dev.id,
                 "developer_name": f"{dev.first_name} {dev.last_name}".strip() or dev.username,
@@ -1299,8 +1290,6 @@ class ResourceAllocationOverviewAPIView(APIView):
                 "is_over_capacity": total_pct > 100.0,
                 "allocations": dev_allocations
             })
-
-
 
         return Response({
             "status": True,
