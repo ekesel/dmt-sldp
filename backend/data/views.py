@@ -24,6 +24,10 @@ from .analytics.forecasting import ForecastingService
 from configuration.models import SourceConfiguration, Project
 from .analytics.identity_resolver import IdentityResolver
 from users.models import User
+from django.utils import timezone
+from configuration.models import SourceConfiguration
+from django.db.models import Sum
+from users.models import ResourceAllocation
 
 # --- Restored Views ---
 class MetricDashboardView(APIView):
@@ -52,6 +56,11 @@ class DashboardSummaryView(APIView):
         project_id = request.query_params.get('project_id')
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
+        
+        if start_date and not end_date:
+            end_date = timezone.now().date().strftime('%Y-%m-%d')
+
+
         from .analytics.metrics import MetricService
         from .models import PullRequest
         from django.db.models import Avg
@@ -69,6 +78,7 @@ class DashboardSummaryView(APIView):
         if end_date:
             pr_qs = pr_qs.filter(created_at__date__lte=end_date)
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+
         
         data = {
             "velocity": summary.get('velocity', 0),
@@ -99,17 +109,45 @@ class VelocityView(APIView):
                 metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
             metrics = list(metrics_qs) if (start_date or end_date) else list(metrics_qs[:5])
 
+            from configuration.models import SourceConfiguration
+            from django.db.models import Sum
+            source_conf_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
+
             for m in metrics:
                 base_sprint = m.sprint_name.split(' (')[0]
+                velocity_val = m.velocity or 0
+                total_pts_val = m.total_story_points_completed or m.velocity or 0
+
+                # If specific start_date and end_date filters are provided by user, calculate velocity dynamically for items finished in range
+                if start_date or end_date:
+                    items_qs = WorkItem.objects.filter(
+                        source_config_id__in=source_conf_ids,
+                        sprint__name=m.sprint_name,
+                        status_category='done'
+                    )
+                    if start_date:
+                        items_qs = items_qs.filter(
+                            Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date)
+                        )
+                    if end_date:
+                        items_qs = items_qs.filter(
+                            Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date)
+                        )
+                    
+                    calc_points = items_qs.aggregate(pts=Sum('story_points'))['pts']
+                    if calc_points is not None:
+                        velocity_val = calc_points
+                        total_pts_val = calc_points
+
                 data.append({
                     "sprint_name": base_sprint,
-                    "velocity": int(round(m.velocity or 0)),
-                    "total_story_points_completed": int(round(m.total_story_points_completed or 0))
+                    "velocity": int(round(velocity_val)),
+                    "total_story_points_completed": int(round(total_pts_val))
                 })
         else:
             # Global view: Group by project and aggregate velocity across each project's last 5 sprints
             projects = Project.objects.all()
-            
+           
             for proj in projects:
                 proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
                 if start_date:
@@ -119,8 +157,27 @@ class VelocityView(APIView):
                 
                 last_5 = list(proj_qs[:5]) if not (start_date or end_date) else list(proj_qs)
                 if last_5:
-                    avg_vel = sum(m.velocity or 0 for m in last_5) / len(last_5)
-                    total_pts = sum(m.total_story_points_completed or m.velocity or 0 for m in last_5)
+                    if start_date or end_date:
+                        sc_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
+                        items_qs = WorkItem.objects.filter(
+                            source_config_id__in=sc_ids,
+                            status_category='done'
+                        )
+                        if start_date:
+                            items_qs = items_qs.filter(
+                                Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date)
+                            )
+                        if end_date:
+                            items_qs = items_qs.filter(
+                                Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date)
+                            )
+                        calc_points = items_qs.aggregate(pts=Sum('story_points'))['pts'] or 0
+                        avg_vel = calc_points / len(last_5) if len(last_5) > 0 else 0
+                        total_pts = calc_points
+                    else:
+                        avg_vel = sum(m.velocity or 0 for m in last_5) / len(last_5)
+                        total_pts = sum(m.total_story_points_completed or m.velocity or 0 for m in last_5)
+
                     data.append({
                         "sprint_name": proj.name,
                         "velocity": int(round(avg_vel)),
@@ -142,6 +199,7 @@ class VelocityView(APIView):
                         "velocity": int(round(m.velocity or 0)),
                         "total_story_points_completed": int(round(m.total_story_points_completed or 0))
                     })
+
         
         if not data and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
@@ -202,6 +260,10 @@ class ComplianceView(APIView):
         project_id = request.query_params.get('project_id')
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
+        
+        if start_date and not end_date:
+            end_date = timezone.now().date().strftime('%Y-%m-%d')
+
         metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
         if project_id:
@@ -219,6 +281,7 @@ class ComplianceView(APIView):
             metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
 
         metrics = metrics_qs if (start_date or end_date) else metrics_qs[:5]
+
         
         if not metrics and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
@@ -353,18 +416,80 @@ class DeveloperListView(APIView):
                     'name': m['project__name']
                 }
         
+        # Fetch active resource allocations for target month & year to flag project active state
+        now = timezone.now()
+        target_month = request.query_params.get('month', now.month)
+        target_year = request.query_params.get('year', now.year)
+        try:
+            target_month = int(target_month)
+            target_year = int(target_year)
+        except ValueError:
+            target_month = now.month
+            target_year = now.year
+
+        
+        # Fetch PUBLISHED resource allocations for target month & year to flag project active state
+        alloc_qs = ResourceAllocation.objects.filter(
+            month=target_month,
+            year=target_year,
+            status='PUBLISHED',
+            percentage_allocated__gt=0
+        ).select_related('developer', 'project')
+
+        # Fallback to most recent published allocations if target month has no published allocations
+        if not alloc_qs.exists():
+            fallback_pub = ResourceAllocation.objects.filter(
+                status='PUBLISHED',
+                percentage_allocated__gt=0
+            ).filter(
+                Q(year__lt=target_year) | Q(year=target_year, month__lte=target_month)
+            ).order_by('-year', '-month').first()
+
+            if fallback_pub:
+                alloc_qs = ResourceAllocation.objects.filter(
+                    month=fallback_pub.month,
+                    year=fallback_pub.year,
+                    status='PUBLISHED',
+                    percentage_allocated__gt=0
+                ).select_related('developer', 'project')
+
+
+        # Build mapping: (developer_email.lower(), project_id) -> True
+        allocated_dev_projects = set()
+        for alloc in alloc_qs:
+            if alloc.developer and alloc.developer.email:
+                c_email = resolver.resolve(alloc.developer.email.strip().lower())
+                all_dev_aliases = set(resolver.all_aliases(c_email)) | {c_email, alloc.developer.email.strip().lower()}
+                for a_email in all_dev_aliases:
+                    allocated_dev_projects.add((a_email.lower(), alloc.project_id))
+
         result = []
         for email_key, dev in sorted(dev_map.items()):
             # Only include developers with a @samta.ai email address
             if dev['developer_email'].endswith('@samta.ai'):
+                project_list = []
+                dev_email_lower = dev['developer_email'].strip().lower()
+
+                for proj in dev['projects'].values():
+                    p_id = proj['id']
+                    # Check if developer has allocation > 0% for this project
+                    is_allocated = (dev_email_lower, p_id) in allocated_dev_projects
+                    project_list.append({
+                        'id': p_id,
+                        'name': proj['name'],
+                        'active': is_allocated
+                    })
+
                 result.append({
                     'developer_email': dev['developer_email'],
                     'developer_name': dev['developer_name'],
                     'id': dev['id'],
-                    'projects': list(dev['projects'].values())
+                    'projects': project_list
                 })
+
             
         return Response(result)
+
 
 
 def _get_combined_metrics(developer_email):
@@ -1252,7 +1377,11 @@ class AssigneeDistributionView(APIView):
         project_id = request.query_params.get('project_id')
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
+        
+        if start_date and not end_date:
+            end_date = timezone.now().date().strftime('%Y-%m-%d')
         date_filtered = bool(start_date or end_date)
+
 
         from .models import Sprint, SprintMetrics
         from configuration.models import SourceConfiguration

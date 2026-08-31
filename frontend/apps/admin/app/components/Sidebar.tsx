@@ -15,6 +15,7 @@ import {
     FolderKanban,
     Target,
     Wrench,
+    Layers,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,6 +45,11 @@ const menuItems: MenuItem[] = [
         icon: Users,
         label: 'Users',
         href: '/users',
+    },
+    {
+        icon: Layers,
+        label: 'Resource Allocation',
+        href: '/resource-allocation',
     },
     {
         icon: BarChart3,

@@ -11,6 +11,8 @@ from django.contrib.auth import get_user_model
 from datetime import timedelta
 from homepage.models import Holiday
 from configuration.models import Project
+from django.utils import timezone
+from django.db.models import Sum, Avg
 
 class MetricService:
     @staticmethod
@@ -312,6 +314,58 @@ class MetricService:
             
         latest_insight = latest_insight_qs.first()
         
+        now = timezone.now().date()
+
+        # Rule: If start_date is selected but end_date is missing, automatically set end_date to today
+        if start_date and not end_date:
+            end_date = now.strftime('%Y-%m-%d')
+
+        # If date filtering is active, compute metrics dynamically directly from WorkItems in the date window
+        if start_date or end_date:
+            work_items_qs = WorkItem.objects.all()
+            if project_id and project_id not in ['null', 'undefined']:
+                source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+                work_items_qs = work_items_qs.filter(source_config_id__in=source_ids)
+
+            if start_date:
+                work_items_qs = work_items_qs.filter(
+                    Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date) | Q(created_at__gte=start_date)
+                )
+            if end_date:
+                work_items_qs = work_items_qs.filter(
+                    Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date) | Q(created_at__lte=end_date)
+                )
+
+            total_items = work_items_qs.count()
+            done_items = work_items_qs.filter(status_category='done')
+            compliant_items = work_items_qs.filter(dmt_compliant=True).count()
+            compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
+
+            
+            total_pts = done_items.aggregate(pts=Sum('story_points'))['pts'] or 0
+            bugs_resolved = work_items_qs.filter(status_category='done', item_type__iexact='bug').count()
+            avg_ai = work_items_qs.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+            avg_cycle = MetricService.calculate_cycle_time(work_items_qs)
+
+            return {
+                'compliance_rate': round(compliance_rate, 2),
+                'velocity': round(total_pts, 1),
+                'ai_usage_percent': round(avg_ai, 1),
+                'code_ai_usage_percent': 0,
+                'active_sprint': {
+                    'total_points': round(total_pts, 1),
+                    'item_count': done_items.count()
+                },
+                'avg_cycle_time': round(avg_cycle, 1),
+                'bugs_resolved': bugs_resolved,
+                'latest_insight': {
+                    'id': latest_insight.id,
+                    'summary': latest_insight.summary,
+                    'suggestions': latest_insight.suggestions
+                } if latest_insight else None,
+                'api_requests_count': AuditLog.objects.count()
+            }
+
         if last_5_metrics:
             # Calculate averages across the last 5 (or fewer if not available)
             total_velocity = sum(m.velocity or 0 for m in last_5_metrics)
@@ -347,6 +401,7 @@ class MetricService:
                 } if latest_insight else None,
                 'api_requests_count': AuditLog.objects.count()
             }
+
         
         # Fallback to dynamic if no SprintMetrics
         sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
@@ -436,28 +491,29 @@ class MetricService:
 
         tenant = Tenant.objects.filter(schema_name=connection.schema_name).first()
         inactive_emails = set(get_inactive_user_emails_expanded(tenant=tenant))
+        story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio', 'story', 'task', 'issue'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+
         
         results = []
+
         for project in projects:
             source_conf_ids = SourceConfiguration.objects.filter(project=project).values_list('id', flat=True)
             
-            # 1. Collect developer emails from root/story items (exclude subtasks and epics/features)
-            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+            # 1. Collect developer emails from all work items in this sprint
             raw_emails = set(WorkItem.objects.filter(
-                story_filter,
                 sprint=sprint,
                 source_config_id__in=source_conf_ids,
             ).values_list('assignee_email', flat=True).distinct())
 
-            # Also include developers who appear only as sub-task contributors
+            # Also include developers who appear as sub-task contributors
             for contrib_item in WorkItem.objects.filter(
-                story_filter,
                 sprint=sprint,
                 source_config_id__in=source_conf_ids,
             ).exclude(assignee_contributions=[]).only('assignee_contributions'):
                 for c in (contrib_item.assignee_contributions or []):
                     if c.get('email'):
                         raw_emails.add(c['email'])
+
 
             # Include developers with PR activity (authored PRs or PR reviews) during this sprint
             all_project_source_ids = list(SourceConfiguration.objects.filter(project=project).values_list('id', flat=True))
