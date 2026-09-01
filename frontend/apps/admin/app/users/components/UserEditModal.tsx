@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Shield, User as UserIcon, Mail, Briefcase } from 'lucide-react';
-import { users as usersApi } from '@dmt/api';
+import { users as usersApi, orgChart } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 
 interface UserEditModalProps {
@@ -17,13 +17,28 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
         first_name: '',
         last_name: '',
         role: 'Admin',
-        designation: '',
+        designation: '' as string | number,
         is_active: true,
         custom_title: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [orgRoles, setOrgRoles] = useState<{id: number | string, role_name?: string}[]>([]);
     const { user: currentUser } = useAuth();
+
+    useEffect(() => {
+        const fetchRoles = async () => {
+            try {
+                const res = await orgChart.getRolesDropdown();
+                if (res.status && res.data) {
+                    setOrgRoles(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch roles", err);
+            }
+        };
+        fetchRoles();
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -36,7 +51,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: user.first_name || '',
                 last_name: user.last_name || '',
                 role: role,
-                designation: user.designation || (user.role_name as string) || (typeof user.role === 'object' && user.role ? user.role.role_name : undefined) || '',
+                designation: user.role !== undefined ? (typeof user.role === 'object' && user.role !== null ? (user.role as any).id : user.role) : '',
                 is_active: user.is_active ?? true,
                 custom_title: user.custom_title || '',
             });
@@ -63,7 +78,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 is_active: formData.is_active,
-                designation: formData.designation,
+                role: formData.designation ? Number(formData.designation) : null,
                 custom_title: formData.custom_title,
                 ...roleFlags
             });
@@ -161,14 +176,19 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Designation</label>
                         <div className="relative">
                             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                            <input
-                                type="text"
+                            <select
                                 name="designation"
                                 value={formData.designation}
                                 onChange={handleChange}
-                                className="w-full bg-muted border border-border rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-                                placeholder="e.g. Senior Software Engineer"
-                            />
+                                className="w-full bg-muted border border-border rounded-lg pl-10 pr-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none"
+                            >
+                                <option value="">Select a designation...</option>
+                                {orgRoles.map(role => (
+                                    <option key={role.id} value={role.id}>
+                                        {role.role_name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

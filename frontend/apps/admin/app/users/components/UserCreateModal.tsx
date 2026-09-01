@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Shield, User as UserIcon, Mail, Lock, Briefcase } from 'lucide-react';
-import { users as usersApi } from '@dmt/api';
+import { users as usersApi, orgChart } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 import { PasswordInput } from '@dmt/ui';
 
@@ -21,12 +21,27 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
         last_name: '',
         password: '',
         role: 'Admin', // Default role
-        designation: '',
+        designation: '' as string | number,
         custom_title: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [orgRoles, setOrgRoles] = useState<{id: number | string, role_name?: string}[]>([]);
     const { user: currentUser } = useAuth();
+
+    useEffect(() => {
+        const fetchRoles = async () => {
+            try {
+                const res = await orgChart.getRolesDropdown();
+                if (res.status && res.data) {
+                    setOrgRoles(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch roles", err);
+            }
+        };
+        fetchRoles();
+    }, []);
 
     // Default to 'User' instead of 'Admin', or top allowed role
     useEffect(() => {
@@ -53,6 +68,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
 
             await usersApi.create({
                 ...formData,
+                role: formData.designation ? Number(formData.designation) : null,
                 ...roleFlags,
                 ...(tenantId ? { tenant: tenantId } : {})
             });
@@ -195,14 +211,19 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">Designation</label>
                         <div className="relative">
                             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                            <input
-                                type="text"
+                            <select
                                 name="designation"
                                 value={formData.designation}
                                 onChange={handleChange}
-                                className="w-full bg-muted border border-border rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-                                placeholder="e.g. Senior Software Engineer"
-                            />
+                                className="w-full bg-muted border border-border rounded-lg pl-10 pr-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none"
+                            >
+                                <option value="">Select a designation...</option>
+                                {orgRoles.map(role => (
+                                    <option key={role.id} value={role.id}>
+                                        {role.role_name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

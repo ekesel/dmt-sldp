@@ -1167,14 +1167,6 @@ export interface PublishAllocationResponse {
 }
 
 export const resourceAllocations = {
-  getDevelopers: (params?: { search?: string; role_type?: string }) =>
-    get<{ status: boolean; data: AllocationDeveloperSummary[] }>(
-      `/allocations/developers/${buildQuery({ search: params?.search, role_type: params?.role_type })}`
-    ),
-
-  getProjects: () =>
-    get<{ status: boolean; data: AllocationProjectHeader[] }>('/allocations/projects/'),
-
   getOverview: (params?: { month?: number; year?: number; status?: string }) =>
     get<{ status: boolean; data: ResourceAllocationOverviewData }>(
       `/allocations/overview/${buildQuery({
