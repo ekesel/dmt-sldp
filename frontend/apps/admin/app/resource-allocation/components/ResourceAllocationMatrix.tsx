@@ -151,10 +151,10 @@ export function ResourceAllocationMatrix() {
   // Sync React Query data into local state for editing
   useEffect(() => {
     if (queryData) {
-      const { overviewRes, developersRes, projectsRes } = queryData;
+      const { overviewRes } = queryData;
       if (overviewRes && overviewRes.status && overviewRes.data) {
-        // Use master projects list if available, fallback to overview
-        const masterProjects = (projectsRes && projectsRes.status && projectsRes.data) ? projectsRes.data : overviewRes.data.projects || [];
+        // Use projects list from overview
+        const masterProjects = overviewRes.data.projects || [];
         setProjects(masterProjects);
 
         // Get allocations lookup from overview
@@ -162,8 +162,8 @@ export function ResourceAllocationMatrix() {
           (overviewRes.data.developers || []).map((d) => [d.developer_id, d])
         );
 
-        // Map over master developers list if available, else overview developers
-        const masterDevelopers = (developersRes && developersRes.status && developersRes.data) ? developersRes.data : overviewRes.data.developers || [];
+        // Map over overview developers list
+        const masterDevelopers = overviewRes.data.developers || [];
         
         const mappedDevelopers = masterDevelopers.map((dev: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => {
           const devId = dev.id || dev.developer_id!;
