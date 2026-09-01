@@ -418,11 +418,11 @@ function LoginForm() {
                     className="relative z-10 flex items-center gap-3 shrink-0"
                 >
                     <Image
-                        src="/assets/samta_logo.png"
+                        src="/assets/samta.png"
                         alt="Samta Logo"
-                        width={120}
-                        height={45}
-                        className="h-6 sm:h-7 w-auto object-contain shrink-0"
+                        width={160}
+                        height={80}
+                        className="h-10 sm:h-12 w-auto object-contain shrink-0"
                         priority
                     />
                     <span className="text-white/30 font-light text-sm sm:text-base select-none">|</span>
@@ -536,11 +536,11 @@ function LoginForm() {
                                 className="flex items-center justify-center"
                             >
                                 <Image
-                                    src="/assets/samta_logo.png"
+                                    src="/assets/samta.png"
                                     alt="Samta Logo"
-                                    width={220}
-                                    height={82}
-                                    className="h-10 sm:h-12 w-auto object-contain"
+                                    width={440}
+                                    height={164}
+                                    className="h-16 sm:h-20 w-auto object-contain"
                                     priority
                                 />
                             </motion.div>
