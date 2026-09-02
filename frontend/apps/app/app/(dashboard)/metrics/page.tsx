@@ -103,7 +103,8 @@ export default function MetricsPage() {
                             // Use lowercase email as uniqueness key
                             const uniqueKey = (dev.developer_email || '').trim().toLowerCase() || dev.id;
                             const initial = (dev.developer_name || dev.developer_email || '?').charAt(0).toUpperCase();
-                            const projectCount = dev.projects?.length || 0;
+                            const activeProjects = dev.projects?.filter((p: any) => p.active === true || p.is_active === true) || [];
+                            const projectCount = activeProjects.length;
                             return (
                                 <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
                                     <div className="flex items-center gap-4 mb-6">
@@ -117,14 +118,14 @@ export default function MetricsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap mb-6">
-                                        {dev.projects?.slice(0, 2).map((p: { id: number, name: string }) => (
+                                        {activeProjects.slice(0, 2).map((p: any) => (
                                             <span key={p.id} className="px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-[10px] font-black uppercase tracking-wider border border-border">
                                                 {p.name}
                                             </span>
                                         ))}
                                         {projectCount > 2 && (
                                             <span 
-                                                title={dev.projects?.slice(2).map((p: { name: string }) => p.name).join(', ')}
+                                                title={activeProjects.slice(2).map((p: any) => p.name).join(', ')}
                                                 className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20 cursor-pointer"
                                             >
                                                 +{projectCount - 2} more

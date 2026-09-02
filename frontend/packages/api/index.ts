@@ -610,7 +610,7 @@ export interface Developer {
   id: string; // This is the email
   developer_name: string;
   developer_email: string;
-  projects?: { id: number; name: string }[];
+  projects?: { id: number; name: string; active?: boolean }[];
   [key: string]: unknown;
 }
 

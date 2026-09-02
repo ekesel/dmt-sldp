@@ -119,7 +119,7 @@ export function NotificationBell() {
                             </div>
                         ) : (
                             <div className="divide-y divide-border">
-                                {notifications.slice(0, 50).map((n) => (
+                                {notifications.map((n) => (
                                     <div
                                         key={n.id}
                                         className={`p-4 hover:bg-accent/50 transition relative group ${!n.is_read ? 'bg-primary/5' : ''} ${getNotificationLink(n) ? 'cursor-pointer' : ''}`}
