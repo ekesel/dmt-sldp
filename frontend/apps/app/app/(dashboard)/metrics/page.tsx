@@ -103,7 +103,8 @@ export default function MetricsPage() {
                             // Use lowercase email as uniqueness key
                             const uniqueKey = (dev.developer_email || '').trim().toLowerCase() || dev.id;
                             const initial = (dev.developer_name || dev.developer_email || '?').charAt(0).toUpperCase();
-                            const allProjects = [...(dev.projects || [])].sort((a: any, b: any) => {
+                            type DevProject = NonNullable<Developer["projects"]>[0] & { is_active?: boolean };
+                            const allProjects = [...(dev.projects || [])].sort((a: DevProject, b: DevProject) => {
                                 const aActive = a.active === true || a.is_active === true;
                                 const bActive = b.active === true || b.is_active === true;
                                 if (aActive && !bActive) return -1;
@@ -124,7 +125,7 @@ export default function MetricsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap mb-6">
-                                        {allProjects.slice(0, 2).map((p: any) => {
+                                        {allProjects.slice(0, 2).map((p: DevProject) => {
                                             const isActive = p.active === true || p.is_active === true;
                                             return (
                                                 <span key={p.id} className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${isActive ? 'bg-accent text-accent-foreground border-border' : 'bg-muted text-muted-foreground border-border/50'}`}>
@@ -134,7 +135,7 @@ export default function MetricsPage() {
                                         })}
                                         {projectCount > 2 && (
                                             <span 
-                                                title={allProjects.slice(2).map((p: any) => p.name).join(', ')}
+                                                title={allProjects.slice(2).map((p: DevProject) => p.name).join(', ')}
                                                 className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20 cursor-pointer"
                                             >
                                                 +{projectCount - 2} more
