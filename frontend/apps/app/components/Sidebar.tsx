@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Radio,
   Home,
+  Layers,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -67,6 +68,11 @@ const menuItems: MenuItem[] = [
     icon: MessageSquare,
     label: "Quick Updates",
     href: "/notifications/send",
+  },
+  {
+    icon: Layers,
+    label: "Resource Allocation",
+    href: "/resource-allocation",
   },
   {
     icon: Newspaper,

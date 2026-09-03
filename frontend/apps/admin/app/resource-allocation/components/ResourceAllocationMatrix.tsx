@@ -164,7 +164,7 @@ export function ResourceAllocationMatrix() {
 
         // Map over overview developers list
         const masterDevelopers = overviewRes.data.developers || [];
-        
+
         const mappedDevelopers = masterDevelopers.map((dev: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => {
           const devId = dev.id || dev.developer_id!;
           const devName = dev.full_name || dev.developer_name!;
@@ -508,7 +508,7 @@ export function ResourceAllocationMatrix() {
         </div>
       );
     }
-    
+
     if (loadError) {
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
@@ -605,16 +605,16 @@ export function ResourceAllocationMatrix() {
                   {/* Sticky Developer Row Header */}
                   <td
                     className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${isOver
-                        ? 'bg-destructive/10'
-                        : 'bg-card'
+                      ? 'bg-destructive/10'
+                      : 'bg-card'
                       }`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Avatar Initials */}
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isOver
-                            ? 'bg-destructive/20 text-destructive border border-destructive/30'
-                            : 'bg-primary/10 text-primary border border-primary/20'
+                          ? 'bg-destructive/20 text-destructive border border-destructive/30'
+                          : 'bg-primary/10 text-primary border border-primary/20'
                           }`}
                       >
                         {dev.developer_name
@@ -692,7 +692,7 @@ export function ResourceAllocationMatrix() {
                         </span>
                         {isFull && (
                           <span className="text-[10px] px-1.5 py-0.5 bg-success/20 text-success rounded font-bold uppercase">
-                            100%
+                            FULL
                           </span>
                         )}
                       </div>
@@ -711,8 +711,8 @@ export function ResourceAllocationMatrix() {
                   <td className="px-4 py-3.5 text-center border-r border-border/50">
                     <span
                       className={`text-xs font-medium ${dev.remaining_capacity_percentage > 0
-                          ? 'text-warning'
-                          : 'text-muted-foreground'
+                        ? 'text-warning'
+                        : 'text-muted-foreground'
                         }`}
                     >
                       {dev.remaining_capacity_percentage}%
@@ -823,8 +823,8 @@ export function ResourceAllocationMatrix() {
               monthlyStatus === 'PUBLISHED'
             }
             className={`flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-xl shadow transition ${monthlyStatus === 'PUBLISHED'
-                ? 'bg-success/20 text-success border border-success/30 cursor-not-allowed'
-                : 'bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50'
+              ? 'bg-success/20 text-success border border-success/30 cursor-not-allowed'
+              : 'bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50'
               }`}
           >
             <Send className="w-4 h-4" />
