@@ -54,8 +54,14 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
         
         if start_date and not end_date:
             end_date = timezone.now().date().strftime('%Y-%m-%d')
@@ -96,8 +102,14 @@ class VelocityView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
 
         data = []
 
@@ -114,7 +126,7 @@ class VelocityView(APIView):
             source_conf_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
             for m in metrics:
-                base_sprint = m.sprint_name.split(' (')[0]
+                base_sprint = (m.sprint_name or "Unknown Sprint").split(' (')[0]
                 velocity_val = m.velocity or 0
                 total_pts_val = m.total_story_points_completed or m.velocity or 0
 
@@ -193,7 +205,7 @@ class VelocityView(APIView):
                     global_qs = global_qs.filter(sprint_end_date__lte=end_date)
                 metrics = list(global_qs[:5]) if not (start_date or end_date) else list(global_qs)
                 for m in metrics:
-                    base_sprint = m.sprint_name.split(' (')[0]
+                    base_sprint = (m.sprint_name or "Unknown Sprint").split(' (')[0]
                     data.append({
                         "sprint_name": base_sprint,
                         "velocity": int(round(m.velocity or 0)),
@@ -235,7 +247,7 @@ class ThroughputView(APIView):
     def get(self, request):
         metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
         data = [{
-            "sprint": m.sprint_name,
+            "sprint": m.sprint_name or "Unknown Sprint",
             "stories": m.stories_completed,
             "bugs": m.bugs_completed,
             "total": m.items_completed
@@ -248,7 +260,7 @@ class DefectDensityView(APIView):
     def get(self, request):
         metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
         data = [{
-            "sprint": m.sprint_name,
+            "sprint": m.sprint_name or "Unknown Sprint",
             "density": m.defect_density_per_100_points
         } for m in metrics]
         return Response(data)
@@ -258,8 +270,14 @@ class ComplianceView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
         
         if start_date and not end_date:
             end_date = timezone.now().date().strftime('%Y-%m-%d')
