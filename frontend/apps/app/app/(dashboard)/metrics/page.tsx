@@ -103,8 +103,14 @@ export default function MetricsPage() {
                             // Use lowercase email as uniqueness key
                             const uniqueKey = (dev.developer_email || '').trim().toLowerCase() || dev.id;
                             const initial = (dev.developer_name || dev.developer_email || '?').charAt(0).toUpperCase();
-                            const activeProjects = dev.projects?.filter((p: any) => p.active === true || p.is_active === true) || [];
-                            const projectCount = activeProjects.length;
+                            const allProjects = [...(dev.projects || [])].sort((a: any, b: any) => {
+                                const aActive = a.active === true || a.is_active === true;
+                                const bActive = b.active === true || b.is_active === true;
+                                if (aActive && !bActive) return -1;
+                                if (!aActive && bActive) return 1;
+                                return 0;
+                            });
+                            const projectCount = allProjects.length;
                             return (
                                 <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
                                     <div className="flex items-center gap-4 mb-6">
@@ -118,14 +124,17 @@ export default function MetricsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap mb-6">
-                                        {activeProjects.slice(0, 2).map((p: any) => (
-                                            <span key={p.id} className="px-2.5 py-1 rounded-full bg-accent text-accent-foreground text-[10px] font-black uppercase tracking-wider border border-border">
-                                                {p.name}
-                                            </span>
-                                        ))}
+                                        {allProjects.slice(0, 2).map((p: any) => {
+                                            const isActive = p.active === true || p.is_active === true;
+                                            return (
+                                                <span key={p.id} className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${isActive ? 'bg-accent text-accent-foreground border-border' : 'bg-muted text-muted-foreground border-border/50'}`}>
+                                                    {p.name}
+                                                </span>
+                                            );
+                                        })}
                                         {projectCount > 2 && (
                                             <span 
-                                                title={activeProjects.slice(2).map((p: any) => p.name).join(', ')}
+                                                title={allProjects.slice(2).map((p: any) => p.name).join(', ')}
                                                 className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20 cursor-pointer"
                                             >
                                                 +{projectCount - 2} more

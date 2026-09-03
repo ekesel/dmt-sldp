@@ -271,55 +271,7 @@ export function ResourceAllocationMatrix() {
     );
   };
 
-  // Save single developer row
-  const saveDeveloperRow = async (dev: EditableDeveloperRow) => {
-    try {
-      setDevelopers((prev) =>
-        prev.map((d) => (d.developer_id === dev.developer_id ? { ...d, isSaving: true } : d))
-      );
 
-      const allocationItems: SaveAllocationItemPayload[] = Object.entries(dev.allocations)
-        .filter(([, pct]) => (parseFloat(String(pct)) || 0) > 0)
-        .map(([pId, pct]) => ({
-          project_id: Number(pId),
-          percentage_allocated: parseFloat(String(pct)) || 0,
-        }));
-
-      const res = await saveMutation.mutateAsync({
-        user_id: dev.developer_id,
-        month: selectedMonth,
-        year: selectedYear,
-        status: monthlyStatus,
-        allocations: allocationItems,
-      });
-
-      if (res.status) {
-        toast.success(res.message || `Saved allocation for ${dev.developer_name}`);
-        setDevelopers((prev) =>
-          prev.map((d) =>
-            d.developer_id === dev.developer_id
-              ? { ...d, isDirty: false, isSaving: false }
-              : d
-          )
-        );
-      } else {
-        toast.error(res.message || 'Failed to save allocation.');
-        setDevelopers((prev) =>
-          prev.map((d) =>
-            d.developer_id === dev.developer_id ? { ...d, isSaving: false } : d
-          )
-        );
-      }
-    } catch (error: unknown) {
-      console.error('Save error:', error);
-      toast.error(getErrorMessage(error, `Failed to save allocation for ${dev.developer_name}`));
-      setDevelopers((prev) =>
-        prev.map((d) =>
-          d.developer_id === dev.developer_id ? { ...d, isSaving: false } : d
-        )
-      );
-    }
-  };
 
   // Bulk save all dirty rows concurrently with partial-failure isolation
   const saveAllDirtyRows = async (): Promise<boolean> => {
@@ -621,9 +573,6 @@ export function ResourceAllocationMatrix() {
                   <div className="font-semibold text-foreground truncate" title={proj.name}>
                     {proj.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground lowercase">
-                    {metrics.projectTotals[proj.id] || 0}% total
-                  </div>
                 </th>
               ))}
 
@@ -637,10 +586,7 @@ export function ResourceAllocationMatrix() {
                 Remaining
               </th>
 
-              {/* Row Actions */}
-              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-b border-border">
-                Actions
-              </th>
+
             </tr>
           </thead>
 
@@ -773,66 +719,11 @@ export function ResourceAllocationMatrix() {
                     </span>
                   </td>
 
-                  {/* Row Action: Save or Status */}
-                  <td className="px-4 py-3.5 text-center">
-                    {dev.isDirty ? (
-                      <button
-                        onClick={() => saveDeveloperRow(dev)}
-                        disabled={dev.isSaving || dev.is_over_capacity}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium rounded-lg shadow-sm transition disabled:opacity-50"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{dev.isSaving ? 'Saving...' : 'Save'}</span>
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/70 inline-flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-success" /> Synced
-                      </span>
-                    )}
-                  </td>
+
                 </tr>
               );
             })}
           </tbody>
-
-          {/* Table Footer: Column Summary */}
-          <tfoot>
-            <tr className="bg-muted border-t-2 border-border font-semibold text-xs text-foreground">
-              <td className="sticky bottom-0 left-0 z-30 bg-muted px-4 py-3.5 border-r border-t-2 border-border">
-                Project Workload Sum
-              </td>
-              {projects.map((proj) => (
-                <td
-                  key={proj.id}
-                  className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 font-bold text-primary"
-                >
-                  {metrics.projectTotals[proj.id] || 0}%
-                </td>
-              ))}
-              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50">
-                <span className="text-muted-foreground font-normal">
-                  Avg / Dev:{' '}
-                  {developers.length > 0
-                    ? Math.round(
-                      (developers.reduce(
-                        (acc, d) => acc + d.total_allocated_percentage,
-                        0
-                      ) /
-                        developers.length) *
-                      10
-                    ) / 10
-                    : 0}
-                  %
-                </span>
-              </td>
-              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-r border-t-2 border-border/50 text-muted-foreground font-normal">
-                —
-              </td>
-              <td className="sticky bottom-0 z-20 bg-muted px-4 py-3.5 text-center border-t-2 border-border text-muted-foreground font-normal">
-                {metrics.dirtyCount > 0 ? `${metrics.dirtyCount} unsaved` : 'All saved'}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     );
