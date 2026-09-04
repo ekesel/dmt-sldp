@@ -44,7 +44,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         
         queryset = Notification.objects.filter(
             Q(user=request.user) | Q(sender=request.user),
-            notification_type='qucik_update'
+            notification_type__in =['qucik_update','info','warning','error']
         ).select_related('user', 'sender').order_by('-created_at')
         
         # Group by conversation partner to only show the latest message per person
