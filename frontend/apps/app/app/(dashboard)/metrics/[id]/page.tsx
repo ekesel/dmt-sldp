@@ -229,12 +229,26 @@ export default function DeveloperDetailsPage({
                       <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">
                         Project
                       </span>
-                      <span className="font-bold text-sm text-foreground truncate leading-none">
+                      <span className="font-bold text-sm text-foreground flex items-center gap-2 overflow-hidden leading-none">
                         {selectedProjectId === "all"
                           ? "All Projects Combined"
-                          : (developer?.projects?.find(
-                            (p) => String(p.id) === selectedProjectId,
-                          )?.name ?? "Project")}
+                          : (() => {
+                              const proj = developer?.projects?.find(
+                                (p) => String(p.id) === selectedProjectId,
+                              );
+                              return proj ? (
+                                <>
+                                  <span className="truncate">{proj.name}</span>
+                                  {proj.active && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-green)]/10 text-[var(--color-green)] text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                      Active
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                "Project"
+                              );
+                            })()}
                       </span>
                     </div>
                     <ChevronDown
@@ -270,8 +284,13 @@ export default function DeveloperDetailsPage({
                                   : "bg-muted group-hover:bg-muted-foreground"
                                   }`}
                               />
-                              <span className="font-semibold text-sm truncate">
-                                {p.name}
+                              <span className="font-semibold text-sm flex items-center gap-2 overflow-hidden">
+                                <span className="truncate">{p.name}</span>
+                                {'active' in p && p.active && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-green)]/10 text-[var(--color-green)] text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                    Active
+                                  </span>
+                                )}
                               </span>
                               {isActive && (
                                 <span className="ml-auto text-primary shrink-0">

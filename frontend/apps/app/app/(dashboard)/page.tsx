@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card } from "@dmt/ui";
 import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle, CalendarDays, X, Loader2 } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
@@ -30,6 +30,40 @@ export default function DashboardPage() {
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+
+    useEffect(() => {
+        const savedProjectId = sessionStorage.getItem('dashboard_projectId');
+        const savedStartDate = sessionStorage.getItem('dashboard_startDate');
+        const savedEndDate = sessionStorage.getItem('dashboard_endDate');
+        
+        if (savedProjectId) setSelectedProjectId(Number(savedProjectId));
+        if (savedStartDate) setStartDate(savedStartDate);
+        if (savedEndDate) setEndDate(savedEndDate);
+    }, []);
+
+    useEffect(() => {
+        if (selectedProjectId !== null) {
+            sessionStorage.setItem('dashboard_projectId', selectedProjectId.toString());
+        } else {
+            sessionStorage.removeItem('dashboard_projectId');
+        }
+    }, [selectedProjectId]);
+
+    useEffect(() => {
+        if (startDate) {
+            sessionStorage.setItem('dashboard_startDate', startDate);
+        } else {
+            sessionStorage.removeItem('dashboard_startDate');
+        }
+    }, [startDate]);
+
+    useEffect(() => {
+        if (endDate) {
+            sessionStorage.setItem('dashboard_endDate', endDate);
+        } else {
+            sessionStorage.removeItem('dashboard_endDate');
+        }
+    }, [endDate]);
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);

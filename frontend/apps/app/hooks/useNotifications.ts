@@ -8,12 +8,15 @@ export function useNotifications() {
   const { token, user } = useAuth();
   const [notifications, setNotifications] = useState<DMTNotification[]>([]);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const activeNotifications = notifications.filter((n) => new Date(n.created_at) >= thirtyDaysAgo);
+
+  const unreadCount = activeNotifications.filter((n) => !n.is_read).length;
 
   const fetchNotifications = useCallback(async () => {
     try {
       const data = await apiNotifications.list();
-      setNotifications(data);
+      setNotifications(data.filter((n) => new Date(n.created_at) >= thirtyDaysAgo));
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     }
@@ -51,7 +54,7 @@ export function useNotifications() {
   };
 
   return {
-    notifications,
+    notifications: activeNotifications,
     unreadCount,
     markAsRead,
     markAllAsRead,

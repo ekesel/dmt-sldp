@@ -42,6 +42,7 @@ const PostCard = ({
     author,
     title,
     created_at,
+    updated_at,
     content,
     media_file: image,
     likes = 0,
@@ -52,6 +53,8 @@ const PostCard = ({
 
   const { totalComments } = useComments(post.post_id);
   const displayCommentCount = totalComments || initialComments;
+
+  const isEdited = updated_at && created_at && new Date(updated_at).getTime() - new Date(created_at).getTime() > 1000;
 
   useEffect(() => {
     let timeoutId: number | null = null;
@@ -112,8 +115,14 @@ const PostCard = ({
             <span className="text-foreground font-bold text-sm hover:underline cursor-pointer">
               {authorName}
             </span>
-            <div className="flex items-center gap-2 text-muted-foreground text-xs mt-0.5">
-              <span>{formatTimestamp(created_at)}</span>
+            <div className="flex items-center flex-wrap gap-2 text-muted-foreground text-xs mt-0.5">
+              {isEdited ? (
+                <span className="italic" title={formatTimestamp(updated_at)}>
+                  Edited {formatTimestamp(updated_at)}
+                </span>
+              ) : (
+                <span>{formatTimestamp(created_at)}</span>
+              )}
               <span>•</span>
               {post.category && (
                 <>
