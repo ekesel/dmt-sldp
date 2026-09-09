@@ -54,8 +54,14 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
         
         if start_date and not end_date:
             end_date = timezone.now().date().strftime('%Y-%m-%d')
@@ -96,8 +102,14 @@ class VelocityView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
 
         data = []
 
@@ -114,7 +126,7 @@ class VelocityView(APIView):
             source_conf_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
             for m in metrics:
-                base_sprint = m.sprint_name.split(' (')[0]
+                base_sprint = (m.sprint_name or "Unknown Sprint").split(' (')[0]
                 velocity_val = m.velocity or 0
                 total_pts_val = m.total_story_points_completed or m.velocity or 0
 
@@ -193,7 +205,7 @@ class VelocityView(APIView):
                     global_qs = global_qs.filter(sprint_end_date__lte=end_date)
                 metrics = list(global_qs[:5]) if not (start_date or end_date) else list(global_qs)
                 for m in metrics:
-                    base_sprint = m.sprint_name.split(' (')[0]
+                    base_sprint = (m.sprint_name or "Unknown Sprint").split(' (')[0]
                     data.append({
                         "sprint_name": base_sprint,
                         "velocity": int(round(m.velocity or 0)),
@@ -235,7 +247,7 @@ class ThroughputView(APIView):
     def get(self, request):
         metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
         data = [{
-            "sprint": m.sprint_name,
+            "sprint": m.sprint_name or "Unknown Sprint",
             "stories": m.stories_completed,
             "bugs": m.bugs_completed,
             "total": m.items_completed
@@ -248,7 +260,7 @@ class DefectDensityView(APIView):
     def get(self, request):
         metrics = SprintMetrics.objects.order_by('-sprint_end_date')[:5]
         data = [{
-            "sprint": m.sprint_name,
+            "sprint": m.sprint_name or "Unknown Sprint",
             "density": m.defect_density_per_100_points
         } for m in metrics]
         return Response(data)
@@ -258,8 +270,14 @@ class ComplianceView(APIView):
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
         start_date = request.query_params.get('start_date')
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
         end_date = request.query_params.get('end_date')
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
         
         if start_date and not end_date:
             end_date = timezone.now().date().strftime('%Y-%m-%d')
@@ -494,30 +512,67 @@ class DeveloperListView(APIView):
 
 def _get_combined_metrics(developer_email):
     
-    # 1. Latest end date per project for this developer
+    now = timezone.now()
+
+    # 1. Fetch published allocations for this developer to restrict projects if allocations exist
+    allocated_project_ids = list(
+        ResourceAllocation.objects.filter(
+            developer__email__iexact=developer_email,
+            status='PUBLISHED',
+            percentage_allocated__gt=0,
+            month=now.month,
+            year=now.year
+        ).values_list('project_id', flat=True)
+    )
+
+    # Fallback to recent published allocations if current month has no published entries
+    if not allocated_project_ids:
+        fallback_pub = ResourceAllocation.objects.filter(
+            developer__email__iexact=developer_email,
+            status='PUBLISHED',
+            percentage_allocated__gt=0
+        ).order_by('-year', '-month').first()
+
+        if fallback_pub:
+            allocated_project_ids = list(
+                ResourceAllocation.objects.filter(
+                    developer__email__iexact=developer_email,
+                    status='PUBLISHED',
+                    percentage_allocated__gt=0,
+                    month=fallback_pub.month,
+                    year=fallback_pub.year
+                ).values_list('project_id', flat=True)
+            )
+
+    qs = DeveloperMetrics.objects.filter(developer_email__iexact=developer_email)
+    if allocated_project_ids:
+        qs = qs.filter(project_id__in=allocated_project_ids)
+
+    # 2. Latest end date per project for this developer
     latest_per_project = list(
-        DeveloperMetrics.objects.filter(developer_email__iexact=developer_email)
-        .order_by()
+        qs.order_by()
         .values('project_id')
         .annotate(latest_end=Max('sprint_end_date'))
     )
     if not latest_per_project:
         return None
 
-    # 2. Fetch those specific latest records
+    # 3. Fetch those specific latest records
     filter_q = functools.reduce(
         operator.or_,
         (Q(project_id=row['project_id'], sprint_end_date=row['latest_end']) 
          for row in latest_per_project)
     )
-    current_rows = list(DeveloperMetrics.objects.filter(
-        developer_email__iexact=developer_email
-    ).filter(filter_q))
+    current_rows = list(qs.filter(filter_q))
 
     if not current_rows:
         return None
 
     # 3. Aggregate in Python for absolute accuracy
+    project_names = list(dict.fromkeys(
+        r.project.name for r in current_rows if r.project and r.project.name
+    ))
+
     combined = {
         'story_points_completed': int(round(sum(r.story_points_completed for r in current_rows))),
         'items_completed': sum(r.items_completed for r in current_rows),
@@ -533,6 +588,7 @@ def _get_combined_metrics(developer_email):
         'dmt_compliance_rate': sum((r.dmt_compliance_rate or 0) for r in current_rows) / len(current_rows),
         'sprint_name': 'All Projects (Current)',
         'sprint_end_date': None,
+        'project_names': project_names,
     }
     return combined
 
@@ -559,11 +615,44 @@ def _inject_workload(data_list, resolved_id, project_id=None):
         sprint_name = item.get('sprint_name')
         
         if sprint_name == 'All Projects (Current)':
-            from .models import DeveloperMetrics
-            # Find the latest sprint name for each project this developer is in
-            latest_metrics = DeveloperMetrics.objects.filter(
-                developer_email__in=developer_emails
-            ).order_by('project_id', '-sprint_end_date').distinct('project_id')
+            
+            now = timezone.now()
+
+            # Find active allocated project IDs for this developer
+            allocated_p_ids = list(
+                ResourceAllocation.objects.filter(
+                    developer__email__iexact=resolved_id,
+                    status='PUBLISHED',
+                    percentage_allocated__gt=0,
+                    month=now.month,
+                    year=now.year
+                ).values_list('project_id', flat=True)
+            )
+
+            if not allocated_p_ids:
+                fallback_pub = ResourceAllocation.objects.filter(
+                    developer__email__iexact=resolved_id,
+                    status='PUBLISHED',
+                    percentage_allocated__gt=0
+                ).order_by('-year', '-month').first()
+
+                if fallback_pub:
+                    allocated_p_ids = list(
+                        ResourceAllocation.objects.filter(
+                            developer__email__iexact=resolved_id,
+                            status='PUBLISHED',
+                            percentage_allocated__gt=0,
+                            month=fallback_pub.month,
+                            year=fallback_pub.year
+                        ).values_list('project_id', flat=True)
+                    )
+
+            dev_metrics_qs = DeveloperMetrics.objects.filter(developer_email__in=developer_emails)
+            if allocated_p_ids:
+                dev_metrics_qs = dev_metrics_qs.filter(project_id__in=allocated_p_ids)
+
+            # Find the latest sprint name for each active allocated project this developer is in
+            latest_metrics = dev_metrics_qs.order_by('project_id', '-sprint_end_date').distinct('project_id')
             
             latest_sprint_names = [m.sprint_name for m in latest_metrics if m.sprint_name]
             
@@ -574,6 +663,13 @@ def _inject_workload(data_list, resolved_id, project_id=None):
                 continue
                 
             tasks = WorkItem.objects.filter(sprint__name__in=latest_sprint_names, assignee_email__in=developer_emails)
+            if allocated_p_ids:
+                from configuration.models import SourceConfiguration
+                alloc_source_ids = list(
+                    SourceConfiguration.objects.filter(project_id__in=allocated_p_ids)
+                    .values_list('id', flat=True)
+                )
+                tasks = tasks.filter(source_config_id__in=alloc_source_ids)
         else:
             if not sprint_name:
                 item['workload'] = None
@@ -717,10 +813,10 @@ class DeveloperMetricsView(APIView):
         # --- All Projects Combined ---
         combined = _get_combined_metrics(resolved_id)
 
-        # Step 2: Historical trend — group by sprint_name across all projects
+        # Step 2: Historical trend — group by sprint_name and project across all projects
         history = list(
             metrics_qs
-            .values('sprint_name', 'sprint_end_date')
+            .values('sprint_name', 'sprint_end_date', 'project_id', 'project__name')
             .annotate(
                 story_points_completed=Sum('story_points_completed'),
                 items_completed=Sum('items_completed'),
@@ -737,6 +833,9 @@ class DeveloperMetricsView(APIView):
             )
             .order_by('-sprint_end_date')[:limit]
         )
+
+        for h in history:
+            h['project_name'] = h.pop('project__name', None)
 
         # NOTE: combined['code_ai_usage_percent'] is already correctly set by
         # _get_combined_metrics as the average of each project's LATEST sprint row.
@@ -816,6 +915,7 @@ class DeveloperComparisonView(APIView):
                 "velocity": {"you": round(dev_points, 2), "team_avg": team_avg_points},
                 "compliance": {"you": round(dev_compliance, 2), "team_avg": team_avg_compliance},
                 "sprint_name": "All Projects (Current)",
+                "project_names": combined.get('project_names', []),
             }
             _inject_workload([res_data], resolved_id, project_id)
             return Response(res_data)

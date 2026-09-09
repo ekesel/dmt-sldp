@@ -261,6 +261,13 @@ class MetricService:
         from tenants.models import AuditLog
         from configuration.models import SourceConfiguration
 
+        if project_id in ['null', 'undefined', '']:
+            project_id = None
+        if start_date in ['null', 'undefined', '']:
+            start_date = None
+        if end_date in ['null', 'undefined', '']:
+            end_date = None
+
         if connection.schema_name == 'public':
             return {
                 'compliance_rate': 0,
@@ -323,7 +330,7 @@ class MetricService:
         # If date filtering is active, compute metrics dynamically directly from WorkItems in the date window
         if start_date or end_date:
             work_items_qs = WorkItem.objects.all()
-            if project_id and project_id not in ['null', 'undefined']:
+            if project_id:
                 source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
                 work_items_qs = work_items_qs.filter(source_config_id__in=source_ids)
 
@@ -384,7 +391,7 @@ class MetricService:
             avg_code_ai = sum(m.code_ai_usage_percent or 0 for m in last_5_metrics) / count
             
             return {
-                'compliance_rate': round(latest.compliance_rate_percent, 2),
+                'compliance_rate': round(latest.compliance_rate_percent or 0, 2),
                 'velocity': round(avg_velocity, 1) if avg_velocity is not None else 0,
                 'ai_usage_percent': round(avg_ai_usage, 1),
                 'code_ai_usage_percent': round(avg_code_ai, 1),
