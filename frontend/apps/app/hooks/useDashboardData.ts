@@ -135,11 +135,11 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
           setAiStatus('');
         }, 2000);
       } else if (lastMessage.type === 'ai_insight_progress') {
-        const payload = lastMessage.message || lastMessage;
+        const payload = (lastMessage.message || lastMessage) as Record<string, unknown>;
         if (payload.progress !== undefined) {
           setIsRefreshingInsights(true);
-          setAiProgress(payload.progress);
-          setAiStatus(payload.status || 'Processing...');
+          setAiProgress(payload.progress as number);
+          setAiStatus((payload.status as string) || 'Processing...');
         }
       }
     }

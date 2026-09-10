@@ -74,9 +74,7 @@ export function ResourceAllocationMatrix() {
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
 
-  const [projects, setProjects] = useState<AllocationProjectHeader[]>([]);
-  const [developers, setDevelopers] = useState<ReadOnlyDeveloperRow[]>([]);
-  const [monthlyStatus, setMonthlyStatus] = useState<'DRAFT' | 'PUBLISHED' | string>('DRAFT');
+
 
   const {
     data: queryData,
@@ -94,42 +92,47 @@ export function ResourceAllocationMatrix() {
     }
   }, [queryError, loadError]);
 
-  useEffect(() => {
-    if (queryData) {
+  const { projects, developers, monthlyStatus } = useMemo(() => {
+    if (queryData?.overviewRes?.status && queryData.overviewRes.data) {
       const { overviewRes } = queryData;
-      if (overviewRes && overviewRes.status && overviewRes.data) {
-        const masterProjects = overviewRes.data.projects || [];
-        setProjects(masterProjects);
+      const masterProjects = overviewRes.data.projects || [];
 
-        const overviewDevelopersMap = new Map(
-          (overviewRes.data.developers || []).map((d) => [d.developer_id, d])
-        );
+      const overviewDevelopersMap = new Map(
+        (overviewRes.data.developers || []).map((d: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => [d.developer_id || d.id, d])
+      );
 
-        const masterDevelopers = overviewRes.data.developers || [];
-        const mappedDevelopers = masterDevelopers.map((dev: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => {
-          const devId = dev.id || dev.developer_id!;
-          const devName = dev.full_name || dev.developer_name!;
-          const overviewDev = overviewDevelopersMap.get(devId) || {
-            total_allocated_percentage: 0,
-            remaining_capacity_percentage: 100,
-            is_over_capacity: false,
-            allocations: {},
-          };
+      const masterDevelopers = overviewRes.data.developers || [];
+      const mappedDevelopers = masterDevelopers.map((dev: Partial<AllocationDeveloperSummary & DeveloperMatrixRow>) => {
+        const devId = dev.id || dev.developer_id!;
+        const devName = dev.full_name || dev.developer_name!;
+        const overviewDev = overviewDevelopersMap.get(devId) || {
+          total_allocated_percentage: 0,
+          remaining_capacity_percentage: 100,
+          is_over_capacity: false,
+          allocations: {},
+        };
 
-          return {
-            developer_id: devId,
-            developer_name: devName,
-            total_allocated_percentage: overviewDev.total_allocated_percentage,
-            remaining_capacity_percentage: overviewDev.remaining_capacity_percentage,
-            is_over_capacity: overviewDev.is_over_capacity,
-            allocations: { ...overviewDev.allocations },
-          };
-        });
+        return {
+          developer_id: devId,
+          developer_name: devName,
+          total_allocated_percentage: overviewDev.total_allocated_percentage,
+          remaining_capacity_percentage: overviewDev.remaining_capacity_percentage,
+          is_over_capacity: overviewDev.is_over_capacity,
+          allocations: { ...overviewDev.allocations },
+        };
+      });
 
-        setDevelopers(mappedDevelopers);
-        setMonthlyStatus(overviewRes.data.monthly_status || 'DRAFT');
-      }
+      return {
+        projects: masterProjects as AllocationProjectHeader[],
+        developers: mappedDevelopers as ReadOnlyDeveloperRow[],
+        monthlyStatus: (overviewRes.data.monthly_status as string) || 'DRAFT',
+      };
     }
+    return {
+      projects: [] as AllocationProjectHeader[],
+      developers: [] as ReadOnlyDeveloperRow[],
+      monthlyStatus: 'DRAFT',
+    };
   }, [queryData]);
 
   const metrics = useMemo(() => {
