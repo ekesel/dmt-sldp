@@ -53,11 +53,13 @@ export default function SprintAnalysisPage() {
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
                         />
-                        <SprintSelector
-                            projectId={selectedProjectId}
-                            selectedSprintId={selectedSprintId}
-                            onSelect={setSelectedSprintId}
-                        />
+                        {selectedProjectId !== null && (
+                            <SprintSelector
+                                projectId={selectedProjectId}
+                                selectedSprintId={selectedSprintId}
+                                onSelect={setSelectedSprintId}
+                            />
+                        )}
                         <button
                             onClick={runAnalysis}
                             disabled={isRefreshing || !selectedSprintId}

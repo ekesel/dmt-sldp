@@ -596,7 +596,7 @@ function LoginForm() {
                                         type="text"
                                         required
                                         className="w-full bg-background border border-border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-xs sm:text-sm"
-                                        placeholder="ekaansh.sahni@samta.ai"
+                                        placeholder="email@samta.ai"
                                         value={formData.username}
                                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     />

@@ -21,11 +21,11 @@ import {
 } from 'lucide-react';
 
 /* ── Notification Styles ─────────────────────────────────────── */
-const NOTIFICATION_STYLES: Record<string, { icon: React.ReactNode; bg: string }> = {
-    success: { icon: <CheckCircle className="w-5 h-5 text-emerald-500" />, bg: 'bg-emerald-50' },
-    warning: { icon: <AlertTriangle className="w-5 h-5 text-amber-500" />, bg: 'bg-amber-50' },
-    error: { icon: <XCircle className="w-5 h-5 text-rose-500" />, bg: 'bg-rose-50' },
-    info: { icon: <Info className="w-5 h-5 text-primary" />, bg: 'bg-blue-50' },
+const NOTIFICATION_STYLES: Record<string, { icon: React.ReactNode; bg: string; textClass: string }> = {
+    success: { icon: <CheckCircle className="w-5 h-5 text-green" />, bg: 'bg-green/10', textClass: 'text-green' },
+    warning: { icon: <AlertTriangle className="w-5 h-5 text-warning" />, bg: 'bg-warning/10', textClass: 'text-warning' },
+    error: { icon: <XCircle className="w-5 h-5 text-destructive" />, bg: 'bg-destructive/10', textClass: 'text-destructive' },
+    info: { icon: <Info className="w-5 h-5 text-primary" />, bg: 'bg-primary/10', textClass: 'text-primary' },
 };
 
 const getNotificationStyle = (type: string) => NOTIFICATION_STYLES[type] || NOTIFICATION_STYLES.info;
@@ -111,7 +111,7 @@ export default function SendNotificationPage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
-    const [type, setType] = useState('qucik_update');
+    const [type, setType] = useState('info');
     const [status, setStatus] = useState<{
         kind: 'success' | 'error' | 'partial';
         message: string;
@@ -138,7 +138,7 @@ export default function SendNotificationPage() {
         const onNotification = (payload: NotificationPayload) => {
             const data = payload.data || payload;
 
-            if (data.notification_type === 'qucik_update' && !data.data?.post_id) {
+            if (['qucik_update', 'info', 'success', 'warning', 'error'].includes(data.notification_type || '') && !data.data?.post_id) {
                 fetchNotifications(page);
             }
         };
@@ -480,6 +480,47 @@ export default function SendNotificationPage() {
                                         </div>
 
 
+                                        {/* Notification Type */}
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                                Notification Type
+                                            </label>
+                                            <div className="grid grid-cols-4 gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setType('info')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'info' ? 'bg-primary/5 border-primary ring-2 ring-primary/30' : 'bg-white border-gray-200 hover:border-primary/50'}`}
+                                                >
+                                                    <Info className="w-6 h-6 text-primary" />
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'info' ? 'text-primary' : 'text-gray-500'}`}>Info</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setType('success')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'success' ? 'bg-green/5 border-green ring-2 ring-green/30' : 'bg-white border-gray-200 hover:border-green/50'}`}
+                                                >
+                                                    <CheckCircle className="w-6 h-6 text-green" />
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'success' ? 'text-green' : 'text-gray-500'}`}>Success</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setType('warning')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'warning' ? 'bg-warning/5 border-warning ring-2 ring-warning/30' : 'bg-white border-gray-200 hover:border-warning/50'}`}
+                                                >
+                                                    <AlertTriangle className="w-6 h-6 text-warning" />
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'warning' ? 'text-warning' : 'text-gray-500'}`}>Warning</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setType('error')}
+                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'error' ? 'bg-destructive/5 border-destructive ring-2 ring-destructive/30' : 'bg-white border-gray-200 hover:border-destructive/50'}`}
+                                                >
+                                                    <XCircle className="w-6 h-6 text-destructive" />
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'error' ? 'text-destructive' : 'text-gray-500'}`}>Error</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         {/* Title */}
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -634,9 +675,14 @@ export default function SendNotificationPage() {
                                                             <h4 className="text-[0.9375rem] font-bold text-gray-900 break-words leading-tight">
                                                                 {senderName || 'System'}
                                                             </h4>
-                                                            <span className="text-[0.6875rem] font-medium text-gray-400 whitespace-nowrap shrink-0">
-                                                                {new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className={`text-[0.625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${style.bg} ${style.textClass}`}>
+                                                                    {n.notification_type === 'qucik_update' ? 'INFO' : (n.notification_type || 'INFO')}
+                                                                </span>
+                                                                <span className="text-[0.6875rem] font-medium text-gray-400 whitespace-nowrap">
+                                                                    {new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                         {(n.title || !senderName) && (
                                                             <p className="text-[0.875rem] text-gray-500 mb-0.5 leading-snug">
@@ -726,8 +772,8 @@ export default function SendNotificationPage() {
                                     return (
                                         <div key={idx} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${isSentByMe
-                                                    ? 'bg-primary text-white rounded-tr-sm'
-                                                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                                                ? 'bg-primary text-white rounded-tr-sm'
+                                                : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
                                                 }`}>
                                                 {!isSentByMe && (
                                                     <div className="text-[0.6875rem] font-bold text-primary-dark mb-1">

@@ -128,6 +128,18 @@ export function NotificationBell() {
                                         <div className="flex gap-3">
                                             <div className="mt-0.5">{getIcon(n.notification_type)}</div>
                                             <div className="flex-1 min-w-0">
+                                                {(() => {
+                                                    const senderName = n.user_name || n.data?.sender_name;
+                                                    const isQuickUpdate = ['qucik_update', 'info', 'success', 'warning', 'error'].includes(n.notification_type || '') && !n.data?.post_id;
+                                                    if (senderName && isQuickUpdate) {
+                                                        return (
+                                                            <p className={`text-xs font-bold mb-0.5 text-primary`}>
+                                                                {senderName}
+                                                            </p>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                                 {n.title && n.title !== 'Notification' && (
                                                     <p className={`text-xs font-semibold mb-0.5 truncate ${!n.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                                                         {n.title}

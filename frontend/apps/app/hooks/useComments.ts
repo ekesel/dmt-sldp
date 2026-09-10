@@ -67,8 +67,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
 
       updateCache(postId, newState);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch comments');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch comments';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -83,12 +84,13 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       // Handle potential nesting in response (e.g., { data: comment } or { comment: comment })
-      const newCommentRaw: any = (response as any).data || (response as any).comment || response;
+      const responseRecord = response as unknown as Record<string, unknown>;
+      const newCommentRaw = (responseRecord.data || responseRecord.comment || response) as Comment;
 
       // Ensure the comment has the text and user info for immediate display
       const newComment: Comment = {
         ...newCommentRaw,
-        comment_text: newCommentRaw.comment_text || newCommentRaw.text || text,
+        comment_text: newCommentRaw.comment_text || (newCommentRaw as Comment & { text?: string }).text || text,
         user: newCommentRaw.user || (currentUser ? {
           id: currentUser.id,
           username: currentUser.username,
@@ -126,8 +128,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment added!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add comment');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add comment';
+      toast.error(errorMessage);
     }
   };
 
@@ -163,8 +166,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment updated!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update comment');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update comment';
+      toast.error(errorMessage);
     }
   };
 
@@ -189,8 +193,9 @@ export function useComments(postId: number, options: { enabled?: boolean } = { e
       });
 
       toast.success('Comment deleted!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete comment');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete comment';
+      toast.error(errorMessage);
     }
   };
 

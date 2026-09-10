@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@dmt/ui';
 import { dashboard, LeaderboardResponse, LeaderboardWinner, getFileUrl } from '@dmt/api';
-import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award, HelpCircle, BarChart2, CheckCircle2, Bot, Bug } from 'lucide-react';
+import { Trophy, Shield, Zap, GitPullRequest, Sparkles, Award, HelpCircle, BarChart2, CheckCircle2, Bot, Bug, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProjectSelector } from '../../../components/ProjectSelector';
 import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 import { HelpSidebar } from "../../../components/HelpSidebar";
@@ -29,8 +29,10 @@ const CategoryCard = ({
     onHelpClick: (id: string) => void;
     lowerIsBetter?: boolean;
 }) => {
-    // Determine ranking with ties supported (show top 3 people only)
-    const rankedList = (winners || []).slice(0, 3).map((item, idx, list) => {
+    const [currentWinnerIndex, setCurrentWinnerIndex] = useState(0);
+
+    // Determine ranking with ties supported
+    const rankedList = (winners || []).map((item, idx, list) => {
         let rank = 1;
         if (idx > 0) {
             if (item.score === list[idx - 1].score) {
@@ -47,7 +49,23 @@ const CategoryCard = ({
     });
 
     const topWinners = rankedList.filter(item => item.rank === 1);
-    const contenders = rankedList.filter(item => item.rank > 1);
+    const contenders = rankedList.filter(item => item.rank > 1).slice(0, 2);
+
+    useEffect(() => {
+        if (currentWinnerIndex >= topWinners.length) {
+            setCurrentWinnerIndex(0);
+        }
+    }, [topWinners.length, currentWinnerIndex]);
+
+    const handlePrevWinner = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentWinnerIndex((prev) => Math.max(0, prev - 1));
+    };
+
+    const handleNextWinner = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentWinnerIndex((prev) => Math.min(topWinners.length - 1, prev + 1));
+    };
 
     const renderHistory = (history?: { date: string; score: number }[]) => {
         if (!history || history.length === 0) return null;
@@ -98,35 +116,55 @@ const CategoryCard = ({
 
             {topWinners.length > 0 ? (
                 <div className="space-y-4 mb-6">
-                    {topWinners.map((topWinner, idx) => (
-                        <div key={idx} className="bg-accent/50 rounded-2xl p-6 border border-border relative">
-                            <div className="absolute top-0 right-6 -translate-y-1/2">
-                                <div className="bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1">
-                                    <Trophy size={12} />
-                                    Winner
-                                </div>
+                    <div className="bg-accent/50 rounded-2xl p-6 border border-border relative">
+                        {topWinners.length > 1 && (
+                            <div className="absolute top-1/2 -left-4 -translate-y-1/2 z-10">
+                                <button 
+                                    onClick={handlePrevWinner} 
+                                    disabled={currentWinnerIndex === 0}
+                                    className={`p-1.5 bg-background border border-border rounded-full shadow-md transition-colors ${currentWinnerIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted'}`}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <img
-                                    src={topWinner.avatar ? getFileUrl(topWinner.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinner.name)}&background=random`}
-                                    alt={topWinner.name}
-                                    className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg object-cover"
-                                />
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-lg font-bold text-foreground truncate">{topWinner.name}</h4>
-                                    <p className="text-sm font-medium text-amber-500/90 truncate">{topWinner.title}</p>
-                                    {topWinner.reason && (
-                                        <p className="text-xs text-muted-foreground mt-1 italic">&quot;{topWinner.reason}&quot;</p>
-                                    )}
-                                </div>
-                                <div className="text-right flex flex-col items-end">
-                                    <div className="text-2xl font-black text-foreground">{topWinner.score}</div>
-                                    <div className="text-xs font-medium text-muted-foreground uppercase mb-1">{scoreLabel}</div>
-                                    {renderHistory(topWinner.history)}
-                                </div>
+                        )}
+                        {topWinners.length > 1 && (
+                            <div className="absolute top-1/2 -right-4 -translate-y-1/2 z-10">
+                                <button 
+                                    onClick={handleNextWinner} 
+                                    disabled={currentWinnerIndex === topWinners.length - 1}
+                                    className={`p-1.5 bg-background border border-border rounded-full shadow-md transition-colors ${currentWinnerIndex === topWinners.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted'}`}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        )}
+                        <div className="absolute top-0 right-6 -translate-y-1/2">
+                            <div className="bg-amber-500 text-amber-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-amber-500/20 flex items-center gap-1">
+                                <Trophy size={12} />
+                                Winner {topWinners.length > 1 ? `(${currentWinnerIndex + 1}/${topWinners.length})` : ''}
                             </div>
                         </div>
-                    ))}
+                        <div className="flex items-center gap-4">
+                            <img
+                                src={topWinners[currentWinnerIndex].avatar ? getFileUrl(topWinners[currentWinnerIndex].avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(topWinners[currentWinnerIndex].name)}&background=random`}
+                                alt={topWinners[currentWinnerIndex].name}
+                                className="w-16 h-16 rounded-full border-2 border-amber-500/50 shadow-lg object-cover"
+                            />
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-lg font-bold text-foreground truncate">{topWinners[currentWinnerIndex].name}</h4>
+                                <p className="text-sm font-medium text-amber-500/90 truncate">{topWinners[currentWinnerIndex].title}</p>
+                                {topWinners[currentWinnerIndex].reason && (
+                                    <p className="text-xs text-muted-foreground mt-1 italic">&quot;{topWinners[currentWinnerIndex].reason}&quot;</p>
+                                )}
+                            </div>
+                            <div className="text-right flex flex-col items-end">
+                                <div className="text-2xl font-black text-foreground">{topWinners[currentWinnerIndex].score}</div>
+                                <div className="text-xs font-medium text-muted-foreground uppercase mb-1">{scoreLabel}</div>
+                                {renderHistory(topWinners[currentWinnerIndex].history)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : (
                 <div className="bg-muted/30 rounded-2xl p-6 border border-border text-center mb-6">

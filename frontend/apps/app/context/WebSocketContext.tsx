@@ -3,22 +3,28 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import WSClient from '../lib/socket';
 
+export interface WebSocketMessage {
+  type?: string;
+  data?: unknown;
+  [key: string]: unknown;
+}
+
 interface WebSocketContextType {
   client: WSClient | null;
-  lastMessage: any | null;
+  lastMessage: WebSocketMessage | null;
   isConnected: boolean;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export const WebSocketProvider: React.FC<{ url: string | null; children: React.ReactNode }> = ({ url, children }) => {
-  const [lastMessage, setLastMessage] = React.useState<any | null>(null);
+  const [lastMessage, setLastMessage] = React.useState<WebSocketMessage | null>(null);
   const [isConnected, setIsConnected] = React.useState(false);
   const client = useMemo(() => (url ? new WSClient(url) : null), [url]);
 
   useEffect(() => {
     if (client) {
-      const handleAllMessages = (msg: any) => setLastMessage(msg);
+      const handleAllMessages = (msg: WebSocketMessage) => setLastMessage(msg);
       
       // WSClient dispatches 'message' for JSON messages or specific types
       // We'll listen to a generic 'message' event if we implement it, 

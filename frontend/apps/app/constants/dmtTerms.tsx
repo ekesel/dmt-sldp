@@ -40,7 +40,7 @@ export const dmtTerms: DMTTerm[] = [
   },
   {
     id: "objective_ai",
-    title: "Objective AI",
+    title: "Objective AI/Code AI Usage",
     description: (
       <div className="space-y-2">
         <p><strong>Meaning:</strong> A smart, automated system that directly reads the code written by the developer and automatically figures out how much of that code was actually written by AI (like ChatGPT or Copilot).</p>

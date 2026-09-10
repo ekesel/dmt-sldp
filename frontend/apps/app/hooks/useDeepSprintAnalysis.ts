@@ -80,11 +80,11 @@ export function useDeepSprintAnalysis(projectId: number | null, sprintId: number
                     setStatus('');
                 }, 2000);
             } else if (lastMessage.type === 'ai_insight_progress') {
-                const payload = lastMessage.message || lastMessage;
+                const payload = (lastMessage.message || lastMessage) as Record<string, unknown>;
                 if (payload.progress !== undefined) {
                     setIsRefreshing(true);
-                    setProgress(payload.progress);
-                    setStatus(payload.status || 'Processing...');
+                    setProgress(payload.progress as number);
+                    setStatus((payload.status as string) || 'Processing...');
                 }
             }
         }
