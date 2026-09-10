@@ -266,7 +266,7 @@ export default function SprintComparisonPage() {
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none shadow-md text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
-                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key}
+                                        helpId={key === 'pr_review_speed' ? 'pr_health' : key === 'code_ai_usage' ? 'objective_ai' : key}
                                         onHelpClick={handleHelpClick}
                                     />
                                 );

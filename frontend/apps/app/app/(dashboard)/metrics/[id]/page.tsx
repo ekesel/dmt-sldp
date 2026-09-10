@@ -53,6 +53,7 @@ export default function DeveloperDetailsPage({
 
   const buildRows = () =>
     metrics.map((m: any) => ({
+      "Project Name": m.project_names ? m.project_names.join(", ") : (m.project_name || ""),
       "Sprint Name": m.sprint_name ?? "",
       "Sprint End Date": m.sprint_end_date ?? "",
       "Story Points": m.story_points_completed ?? 0,
@@ -575,6 +576,7 @@ export default function DeveloperDetailsPage({
                 <table className="w-full text-left whitespace-nowrap">
                   <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
                     <tr>
+                      <th className="px-3 py-4 lg:px-6 lg:py-6">Project</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
                       <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
@@ -590,6 +592,9 @@ export default function DeveloperDetailsPage({
                         key={idx}
                         className="hover:bg-gray-100 transition-all group"
                       >
+                        <td className="px-3 py-4 lg:px-6 lg:py-6 font-semibold text-muted-foreground">
+                          {m.project_names ? m.project_names.join(", ") : (m.project_name || "-")}
+                        </td>
                         <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                           {m.sprint_name}
                         </td>
