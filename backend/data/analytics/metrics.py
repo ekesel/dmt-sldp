@@ -190,8 +190,15 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
             
-            if not work_items.exists() and project is not None:
-                continue # Skip projects with no items in this sprint
+            if project is not None:
+                # Existence check must include ALL item types (bugs included) — work_items above
+                # excludes bugs via story_filter, so a bug-only sprint would otherwise be skipped
+                # and its SprintMetrics row (incl. bugs_completed) would never get created/updated.
+                all_items_qs = WorkItem.objects.filter(sprint=sprint, source_config_id__in=source_conf_ids)
+                if has_folder_filters:
+                    all_items_qs = all_items_qs.filter(~Q(source_config_id__in=sources_with_folders) | filters)
+                if not all_items_qs.exists():
+                    continue # Skip projects with no items of any type in this sprint
 
             completed_items = work_items.filter(status_category='done')
             
@@ -411,12 +418,16 @@ class MetricService:
 
         
         # Fallback to dynamic if no SprintMetrics
-        sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
+        sprints = Sprint.objects.exclude(status='backlog')
         total_items_qs = WorkItem.objects.all()
         if project_id:
             source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             total_items_qs = total_items_qs.filter(source_config_id__in=source_config_ids)
-            
+            # Scope the fallback sprint list to this project too — otherwise it picks the
+            # globally most recent 5 sprints, which may not include any of this project's sprints.
+            sprints = sprints.filter(source_config_id__in=source_config_ids)
+        sprints = sprints.order_by('-end_date')[:5]
+
         total_count = total_items_qs.count()
         compliant_count = total_items_qs.filter(dmt_compliant=True).count()
         
