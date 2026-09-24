@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
-import { getCache, setCache } from './cache';
+import { getCache, setCache, clearCache, createCacheKey, type TypedCacheKey } from './cache';
+export { getCache, setCache, clearCache, createCacheKey, type TypedCacheKey };
 import { deduplicateRequest } from './deduplication';
 
 /* =========================
@@ -309,11 +310,11 @@ interface RequestConfig {
 }
 
 async function get<T>(url: string, params?: Record<string, unknown>, config?: RequestConfig): Promise<T> {
-  const cacheKey = config?.cache || config?.deduplicate ? `${url}?${JSON.stringify(params || {})}` : null;
+  const cacheKey = config?.cache || config?.deduplicate ? createCacheKey<T>(`${url}?${JSON.stringify(params || {})}`) : null;
 
   // 1. Check Cache
   if (config?.cache && cacheKey) {
-    const cached = getCache<T>(cacheKey);
+    const cached = getCache(cacheKey);
     if (cached) return cached;
   }
 
@@ -334,10 +335,9 @@ async function get<T>(url: string, params?: Record<string, unknown>, config?: Re
     let result: T;
 
     // 2. Deduplication or Direct Call
-    if (config?.deduplicate !== false && cacheKey) { // Default to deduplication if key exists? No, let's be explicit or default true for GET?
-      // Let's only deduplicate if explicitly asked OR if caching is on (implies read-only)
+    if (config?.deduplicate !== false && cacheKey) {
       if (config?.deduplicate || config?.cache) {
-        result = await deduplicateRequest(cacheKey, performRequest);
+        result = await deduplicateRequest(cacheKey.key, performRequest);
       } else {
         result = await performRequest();
       }
@@ -352,9 +352,7 @@ async function get<T>(url: string, params?: Record<string, unknown>, config?: Re
 
     return result;
   } catch (error) {
-    throw error; // Already handled by handleApiError inside performRequest? 
-    // handleApiError throws ApiClientError.
-    // We need to ensure we don't swallow it.
+    throw error;
   }
 }
 
@@ -446,30 +444,65 @@ export interface Tenant {
   id: string | number;
   name: string;
   slug?: string;
+  code?: string;
+  schema_name?: string;
+  status?: 'active' | 'inactive' | 'pending' | string;
+  users?: number;
+  users_count?: number;
+  created?: string;
+  created_at?: string;
+  created_on?: string;
+  updated_at?: string;
   [key: string]: unknown;
 }
 
 export const tenants = {
-  list: () => get<Tenant[]>('/admin/tenants/', {}, { cache: true, ttl: 60000 }), // Cache 1 min
-  get: (id: string | number) => get<Tenant>(`/admin/tenants/${id}/`, {}, { cache: true, ttl: 60000 }),
-  create: (data: Partial<Tenant>) => post<Tenant, Partial<Tenant>>('/admin/tenants/', data),
-  update: (id: string | number, data: Partial<Tenant>) => patch<Tenant, Partial<Tenant>>(`/admin/tenants/${id}/`, data),
-  delete: (id: string | number) => del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`),
-  activate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/activate/`),
-  deactivate: (id: string | number) => post<{ success?: boolean }>(`/admin/tenants/${id}/deactivate/`),
-  archiveData: (id: string | number) => post<{ status: string }>(`/admin/tenants/${id}/archive-data/`),
+  list: (config?: RequestConfig) => get<Tenant[]>('/admin/tenants/', {}, config),
+  get: (id: string | number, config?: RequestConfig) => get<Tenant>(`/admin/tenants/${id}/`, {}, config),
+  create: async (data: Partial<Tenant>) => {
+    const res = await post<Tenant, Partial<Tenant>>('/admin/tenants/', data);
+    clearCache('/admin/tenants');
+    return res;
+  },
+  update: async (id: string | number, data: Partial<Tenant>) => {
+    const res = await patch<Tenant, Partial<Tenant>>(`/admin/tenants/${id}/`, data);
+    clearCache('/admin/tenants');
+    return res;
+  },
+  delete: async (id: string | number) => {
+    const res = await del<{ success?: boolean; detail?: string }>(`/admin/tenants/${id}/`);
+    clearCache('/admin/tenants');
+    return res;
+  },
+  activate: async (id: string | number) => {
+    const res = await post<{ success?: boolean }>(`/admin/tenants/${id}/activate/`);
+    clearCache('/admin/tenants');
+    return res;
+  },
+  deactivate: async (id: string | number) => {
+    const res = await post<{ success?: boolean }>(`/admin/tenants/${id}/deactivate/`);
+    clearCache('/admin/tenants');
+    return res;
+  },
+  archiveData: async (id: string | number) => {
+    const res = await post<{ status: string }>(`/admin/tenants/${id}/archive-data/`);
+    clearCache('/admin/tenants');
+    return res;
+  },
 };
 
 export interface Project {
   id: string | number;
   name: string;
+  key?: string;
   description?: string;
+  is_active?: boolean;
   [key: string]: unknown;
 }
 
 export const projects = {
-  list: () => get<Project[]>('/admin/projects/', {}, { cache: true, ttl: 30000 }), // Cache 30s
-  get: (id: string) => get<Project>(`/admin/projects/${id}/`, {}, { cache: true }),
+  list: (config?: RequestConfig) => get<Project[]>('/admin/projects/', {}, config),
+  get: (id: string, config?: RequestConfig) => get<Project>(`/admin/projects/${id}/`, {}, config),
   triggerSync: (id: string | number) => post<{ status: string; message: string; task_ids?: string[] }>(`/admin/projects/${id}/trigger_sync/`),
 };
 

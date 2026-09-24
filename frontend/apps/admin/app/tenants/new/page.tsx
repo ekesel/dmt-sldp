@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import { tenants as tenantsApi } from '@dmt/api';
+import { useCurrentTenant } from '../../context/TenantContext';
 
 export default function NewTenantPage() {
     const router = useRouter();
+    const { refreshTenants } = useCurrentTenant();
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +31,9 @@ export default function NewTenantPage() {
                 slug,
                 schema_name: slug.replace(/-/g, '_'),
             });
+            await refreshTenants();
             router.push('/tenants');
+            router.refresh();
         } catch (err: any) {
             setError(err.message || 'Failed to create tenant.');
         } finally {

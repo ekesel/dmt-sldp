@@ -91,10 +91,15 @@ export const ActivityLog: React.FC<{
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let isCancelled = false;
+
         const fetchLogs = async () => {
             try {
                 setLoading(true);
+                setError(null);
                 const response = await activityLog.list({ limit, tenant: tenantId });
+                if (isCancelled) return;
+
                 // Handle both paginated and non-paginated responses
                 if (Array.isArray(response)) {
                     setLogs(response);
@@ -104,13 +109,20 @@ export const ActivityLog: React.FC<{
                     setLogs([]);
                 }
             } catch (err) {
+                if (isCancelled) return;
                 setError('Failed to load activity logs');
             } finally {
-                setLoading(false);
+                if (!isCancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchLogs();
+
+        return () => {
+            isCancelled = true;
+        };
     }, [limit, tenantId]);
 
     if (loading && (!logs || logs.length === 0)) {
@@ -151,16 +163,6 @@ export const ActivityLog: React.FC<{
                     ))
                 )}
             </div>
-
-            {!compact && logs.length > 0 && (
-                <a
-                    href="/admin/activity"
-                    className="group flex items-center justify-center gap-2 p-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all border-t border-border"
-                >
-                    View detailed audit trail
-                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </a>
-            )}
         </div>
     );
 };
