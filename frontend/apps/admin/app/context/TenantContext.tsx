@@ -23,11 +23,13 @@ export interface Tenant {
   name: string;
   slug?: string;
   code?: string;
+  schema_name?: string;
   status?: 'active' | 'inactive' | 'pending' | string;
   users?: number;
   users_count?: number;
   created?: string;
   created_at?: string;
+  created_on?: string;
   updated_at?: string;
   [key: string]: unknown;
 }

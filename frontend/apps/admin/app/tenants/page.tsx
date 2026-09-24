@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Plus, ExternalLink, MoreVertical, Pencil, Trash2, Power } from 'lucide-react';
@@ -23,52 +24,110 @@ function formatDate(date?: string) {
   return d.toISOString().slice(0, 10);
 }
 
+interface FormattedTenant {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  usersCount: number;
+  createdAt: string;
+}
+
 export default function TenantsPage() {
   const router = useRouter();
   const { availableTenants, isLoading, error, refreshTenants } = useCurrentTenant();
 
   const [openMenuTenantId, setOpenMenuTenantId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const [busyTenantId, setBusyTenantId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // close menu on outside click
   useEffect(() => {
     refreshTenants();
+  }, [refreshTenants]);
+
+  // Close menu on outside click, window/table scroll, or window resize
+  useEffect(() => {
+    if (!openMenuTenantId) return;
+
+    function handleClose() {
+      setOpenMenuTenantId(null);
+      setMenuPosition(null);
+    }
+
     function handleClickOutside(e: MouseEvent) {
-      if (!menuContainerRef.current) return;
-      if (!menuContainerRef.current.contains(e.target as Node)) {
-        setOpenMenuTenantId(null);
+      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
+        handleClose();
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
 
-  const tenants = useMemo(() => {
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+    };
+  }, [openMenuTenantId]);
+
+  const tenants = useMemo<FormattedTenant[]>(() => {
     return availableTenants.map((tenant) => {
-      const usersCount = Number((tenant as any).users_count ?? (tenant as any).users ?? 0);
+      const usersCount = Number(tenant.users_count ?? tenant.users ?? 0);
       return {
         id: String(tenant.id),
         name: String(tenant.name || '-'),
-        slug: String((tenant as any).slug || (tenant as any).code || (tenant as any).schema_name || '-'),
-        status: String((tenant as any).status || ''),
+        slug: String(tenant.slug || tenant.code || tenant.schema_name || '-'),
+        status: String(tenant.status || ''),
         usersCount,
-        createdAt: String((tenant as any).created_at || (tenant as any).created || (tenant as any).created_on || ''),
+        createdAt: String(tenant.created_at || tenant.created || tenant.created_on || ''),
       };
     });
   }, [availableTenants]);
+
+  const activeMenuTenant = useMemo(() => {
+    return tenants.find((t) => t.id === openMenuTenantId);
+  }, [tenants, openMenuTenantId]);
+
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, tenantId: string) => {
+    e.stopPropagation();
+    if (openMenuTenantId === tenantId) {
+      setOpenMenuTenantId(null);
+      setMenuPosition(null);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuHeight = 145; // Approximate height of the menu
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const right = window.innerWidth - rect.right;
+
+    if (spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow) {
+      // Position above the button when space below is tight
+      setMenuPosition({
+        bottom: window.innerHeight - rect.top + 6,
+        right: Math.max(10, right),
+      });
+    } else {
+      // Position below the button
+      setMenuPosition({
+        top: rect.bottom + 6,
+        right: Math.max(10, right),
+      });
+    }
+
+    setOpenMenuTenantId(tenantId);
+  };
 
   const handleCreateTenant = () => {
     // Change to your actual route if different
     router.push('/tenants/new');
   };
 
-  const handleOpenTenant = (tenant: any) => {
-    if (!tenant.slug) return;
-    // Construct the URL based on the slug. 
-    // In production, this would be tenant.slug.domain.com.
-    // NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL should be something like ".localhost:3000" or ".company.com"
+  const handleOpenTenant = (tenant: FormattedTenant) => {
+    if (!tenant.slug || tenant.slug === '-') return;
     const baseUrl = process.env.NEXT_PUBLIC_COMPANY_PORTAL_BASE_URL || '.localhost:3000';
     const protocol = process.env.NEXT_PUBLIC_COMPANY_PORTAL_PROTOCOL || 'http';
     const url = `${protocol}://${tenant.slug}${baseUrl}`;
@@ -77,11 +136,13 @@ export default function TenantsPage() {
 
   const handleEditTenant = (tenantId: string) => {
     setOpenMenuTenantId(null);
+    setMenuPosition(null);
     router.push(`/tenants/${tenantId}`);
   };
 
   const handleToggleStatus = async (tenantId: string, currentStatus: string) => {
     setOpenMenuTenantId(null);
+    setMenuPosition(null);
     setBusyTenantId(tenantId);
     try {
       if (currentStatus.toLowerCase() === 'active') {
@@ -102,6 +163,7 @@ export default function TenantsPage() {
     if (!confirmed) return;
 
     setOpenMenuTenantId(null);
+    setMenuPosition(null);
     setBusyTenantId(tenantId);
     try {
       await tenantsApi.delete(tenantId);
@@ -217,54 +279,17 @@ export default function TenantsPage() {
 
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuTenantId(openMenuTenantId === tenant.id ? null : tenant.id);
-                              }}
+                              onClick={(e) => handleToggleMenu(e, tenant.id)}
                               disabled={isBusy}
-                              className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground disabled:opacity-50"
+                              className={`p-2 hover:bg-muted rounded-lg transition disabled:opacity-50 ${
+                                isMenuOpen ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+                              }`}
                               title="Tenant Actions"
+                              aria-haspopup="true"
+                              aria-expanded={isMenuOpen}
                             >
                               <MoreVertical className="w-4 h-4" />
                             </button>
-
-                            {isMenuOpen && (
-                              <div className="absolute right-0 top-10 z-20 min-w-[190px] rounded-lg border border-border bg-popover shadow-lg p-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditTenant(tenant.id);
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded"
-                                >
-                                  <span className="inline-flex items-center gap-2">
-                                    <Pencil className="w-4 h-4" /> Edit tenant
-                                  </span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleStatus(tenant.id, tenant.status)}
-                                  className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded"
-                                >
-                                  <span className="inline-flex items-center gap-2">
-                                    <Power className="w-4 h-4" />
-                                    {tenant.status.toLowerCase() === 'active' ? 'Deactivate' : 'Activate'}
-                                  </span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTenant(tenant.id)}
-                                  className="w-full px-3 py-2 text-left text-sm text-destructive hover:bg-muted rounded"
-                                >
-                                  <span className="inline-flex items-center gap-2">
-                                    <Trash2 className="w-4 h-4" /> Delete tenant
-                                  </span>
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -275,6 +300,47 @@ export default function TenantsPage() {
             </table>
           </div>
         </div>
+
+        {openMenuTenantId && menuPosition && activeMenuTenant && typeof document !== 'undefined' && createPortal(
+          <div
+            ref={menuContainerRef}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top !== undefined ? `${menuPosition.top}px` : undefined,
+              bottom: menuPosition.bottom !== undefined ? `${menuPosition.bottom}px` : undefined,
+              right: `${menuPosition.right}px`,
+              zIndex: 9999,
+            }}
+            className="min-w-[190px] rounded-lg border border-border bg-popover shadow-xl p-1 animate-in fade-in zoom-in-95 duration-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => handleEditTenant(activeMenuTenant.id)}
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded flex items-center gap-2 transition"
+            >
+              <Pencil className="w-4 h-4" /> Edit tenant
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleToggleStatus(activeMenuTenant.id, activeMenuTenant.status)}
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-muted rounded flex items-center gap-2 transition"
+            >
+              <Power className="w-4 h-4" />
+              {activeMenuTenant.status.toLowerCase() === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDeleteTenant(activeMenuTenant.id)}
+              className="w-full px-3 py-2 text-left text-sm text-destructive hover:bg-muted rounded flex items-center gap-2 transition"
+            >
+              <Trash2 className="w-4 h-4" /> Delete tenant
+            </button>
+          </div>,
+          document.body
+        )}
       </div>
     </DashboardLayout>
   );

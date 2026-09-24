@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../UIComponents';
-import api from '@dmt/api';
+import api, { Project } from '@dmt/api';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -10,7 +10,7 @@ interface ProjectModalProps {
     isOpen: boolean;
     onClose: () => void;
     tenantId: string;
-    project?: any; // If provided, edit mode
+    project?: Project | null; // If provided, edit mode
     onSuccess: () => void;
 }
 
@@ -25,8 +25,8 @@ export function ProjectModal({ isOpen, onClose, tenantId, project, onSuccess }: 
     useEffect(() => {
         if (project) {
             setFormData({
-                name: project.name,
-                key: project.key,
+                name: project.name || '',
+                key: project.key || '',
                 description: project.description || '',
             });
         } else {
@@ -78,7 +78,7 @@ export function ProjectModal({ isOpen, onClose, tenantId, project, onSuccess }: 
                     <label className="block text-sm font-medium text-muted-foreground mb-1.5">Key</label>
                     <input
                         value={formData.key}
-                        onChange={(e) => setFormData({ ...formData, key: e.target.value.toUpperCase() })}
+                        onChange={(e) => setFormData({ ...formData, key: e.target.value })}
                         className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         placeholder="e.g. MOB"
                         required

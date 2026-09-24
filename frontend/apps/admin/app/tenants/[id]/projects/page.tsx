@@ -6,16 +6,8 @@ import { Plus, FolderKanban, Settings, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '../../../components/DashboardLayout';
 import { Badge } from '../../../components/UIComponents';
 import { ProjectModal } from '../../../components/projects/ProjectModal';
-import api from '@dmt/api';
+import api, { Project } from '@dmt/api';
 import { toast } from 'react-hot-toast';
-
-interface Project {
-    id: string | number;
-    name: string;
-    key: string;
-    description?: string;
-    is_active: boolean;
-}
 
 export default function ProjectListPage() {
     const params = useParams();

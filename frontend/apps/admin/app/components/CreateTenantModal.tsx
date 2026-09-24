@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { tenants as tenantsApi } from '@dmt/api';
+import { useCurrentTenant } from '../context/TenantContext';
 
 interface CreateTenantModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface CreateTenantModalProps {
 }
 
 export function CreateTenantModal({ isOpen, onClose, onSuccess }: CreateTenantModalProps) {
+    const { refreshTenants } = useCurrentTenant();
     const [formData, setFormData] = useState({
         name: '',
         slug: '',
@@ -28,6 +30,7 @@ export function CreateTenantModal({ isOpen, onClose, onSuccess }: CreateTenantMo
 
         try {
             await tenantsApi.create(formData);
+            await refreshTenants();
             onSuccess?.();
             onClose();
         } catch (err: any) {
@@ -53,8 +56,8 @@ export function CreateTenantModal({ isOpen, onClose, onSuccess }: CreateTenantMo
             <div className="bg-popover border border-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between p-6 border-b border-border">
                     <h2 className="text-xl font-bold text-foreground">Create New Tenant</h2>
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         aria-label="Close"
                         className="p-2 hover:bg-muted rounded-lg transition text-muted-foreground hover:text-foreground"
                     >
