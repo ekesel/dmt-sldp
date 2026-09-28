@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, Suspense, useEffect, useRef } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -12,153 +12,6 @@ const dancingScript = Dancing_Script({
     subsets: ['latin'],
     weight: ['400', '600', '700'],
 });
-
-interface Bubble {
-    x: number;
-    y: number;
-    radius: number;
-    vx: number;
-    vy: number;
-    alpha: number;
-    decay: number;
-    color: string;
-    wobble: number;
-    wobbleSpeed: number;
-}
-
-function CursorBubbles() {
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        let animationFrameId: number;
-        let bubbles: Bubble[] = [];
-        let lastMousePos = { x: -100, y: -100 };
-        let hasMoved = false;
-
-        const handleResize = () => {
-            if (!canvas) return;
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-
-        handleResize();
-        window.addEventListener('resize', handleResize);
-
-        const colors = [
-            'rgba(40, 138, 198, ',   // primary blue #288ac6
-            'rgba(75, 163, 217, ',   // primary tint 1
-            'rgba(126, 195, 235, ',  // primary tint 2
-            'rgba(186, 224, 246, ',  // soft primary light
-            'rgba(255, 255, 255, ',  // white glow
-        ];
-
-        const createBubble = (x: number, y: number, speedMultiplier = 1, sizeMultiplier = 1) => {
-            const initialRadius = (Math.random() * 7 + 3.5) * sizeMultiplier;
-            const colorPrefix = colors[Math.floor(Math.random() * colors.length)];
-            bubbles.push({
-                x: x + (Math.random() - 0.5) * 10,
-                y: y + (Math.random() - 0.5) * 10,
-                radius: initialRadius,
-                vx: ((Math.random() - 0.5) * 1.4) * speedMultiplier,
-                vy: (-Math.random() * 1.8 - 0.6) * speedMultiplier,
-                alpha: Math.random() * 0.45 + 0.4,
-                decay: Math.random() * 0.012 + 0.009,
-                color: colorPrefix,
-                wobble: Math.random() * Math.PI * 2,
-                wobbleSpeed: Math.random() * 0.06 + 0.02,
-            });
-        };
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const dx = e.clientX - lastMousePos.x;
-            const dy = e.clientY - lastMousePos.y;
-            const dist = Math.hypot(dx, dy);
-
-            if (dist > 6 || !hasMoved) {
-                const count = Math.min(Math.floor(dist / 12) + 1, 3);
-                for (let i = 0; i < count; i++) {
-                    createBubble(e.clientX, e.clientY);
-                }
-                lastMousePos = { x: e.clientX, y: e.clientY };
-                hasMoved = true;
-            }
-        };
-
-        const handleClick = (e: MouseEvent) => {
-            for (let i = 0; i < 9; i++) {
-                createBubble(e.clientX, e.clientY, 1.8, 1.2);
-            }
-        };
-
-        window.addEventListener('mousemove', handleMouseMove, { passive: true });
-        window.addEventListener('click', handleClick, { passive: true });
-
-        const render = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = bubbles.length - 1; i >= 0; i--) {
-                const b = bubbles[i];
-                b.wobble += b.wobbleSpeed;
-                b.x += b.vx + Math.sin(b.wobble) * 0.5;
-                b.y += b.vy;
-                b.alpha -= b.decay;
-                b.radius = Math.max(0, b.radius - 0.015);
-
-                if (b.alpha <= 0 || b.radius <= 0) {
-                    bubbles.splice(i, 1);
-                    continue;
-                }
-
-                // Draw Bubble Body
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-                ctx.fillStyle = `${b.color}${b.alpha * 0.35})`;
-                ctx.fill();
-
-                // Draw Bubble Outer Ring
-                ctx.strokeStyle = `${b.color}${b.alpha * 0.85})`;
-                ctx.lineWidth = 1.1;
-                ctx.stroke();
-
-                // Draw Bubble Specular Highlight (glass reflection)
-                ctx.beginPath();
-                ctx.arc(
-                    b.x - b.radius * 0.35,
-                    b.y - b.radius * 0.35,
-                    Math.max(0.5, b.radius * 0.28),
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fillStyle = `rgba(255, 255, 255, ${b.alpha * 0.95})`;
-                ctx.fill();
-            }
-
-            animationFrameId = requestAnimationFrame(render);
-        };
-
-        render();
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('click', handleClick);
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, []);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            className="pointer-events-none fixed inset-0 z-50 w-full h-full"
-            style={{ pointerEvents: 'none' }}
-        />
-    );
-}
 
 function DotGrid({ className = '' }: { className?: string }) {
     return (
@@ -400,8 +253,6 @@ function LoginForm() {
 
     return (
         <div className="h-screen w-full flex flex-col lg:flex-row bg-background overflow-hidden relative">
-            {/* Interactive Cursor Bubble Trail */}
-            <CursorBubbles />
 
             {/* Left Hero Panel with global primary color palette */}
             <div className="relative w-full lg:w-[42%] xl:w-[40%] bg-gradient-to-br from-[#124068] via-[#1a6396] to-primary flex flex-col justify-between p-6 sm:p-8 lg:p-10 xl:p-12 overflow-hidden shrink-0 h-full select-none">
