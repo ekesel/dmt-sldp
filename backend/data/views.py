@@ -101,6 +101,10 @@ class VelocityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from .models import Sprint, WorkItem
+        from configuration.models import SourceConfiguration
+        from django.db.models import Sum, Q
+        
         project_id = request.query_params.get('project_id')
         if project_id in ['null', 'undefined', '']:
             project_id = None
@@ -121,8 +125,6 @@ class VelocityView(APIView):
                 metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
             metrics = list(metrics_qs) if (start_date or end_date) else list(metrics_qs[:5])
 
-            from configuration.models import SourceConfiguration
-            from django.db.models import Sum
             source_conf_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
             for m in metrics:
@@ -215,7 +217,6 @@ class VelocityView(APIView):
         
         if not data and SprintMetrics.objects.count() == 0:
              # Fallback: Calculate from WorkItems
-             from .models import Sprint, WorkItem
              
              # Get last 5 sprints
              sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
