@@ -25,6 +25,13 @@ class SprintComparisonView(APIView):
         if is_valid_project:
             filter_kwargs_a['project_id'] = project_id
             filter_kwargs_b['project_id'] = project_id
+        elif not developer_id:
+            # Team View, no project selected ("All Projects"): SprintMetrics stores one explicit
+            # project=None row per sprint as the true combined/global aggregate. Without this,
+            # .first() below would match ANY project's row sharing this sprint name — silently
+            # showing one arbitrary project's numbers instead of the real combined total.
+            filter_kwargs_a['project__isnull'] = True
+            filter_kwargs_b['project__isnull'] = True
 
         data = {
             'sprint_a': {'name': sprint_a_name},
