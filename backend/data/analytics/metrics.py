@@ -234,7 +234,12 @@ class MetricService:
             
             # Objective AI from PRs in this project/sprint
             from ..models import PullRequest
-            pr_filter = Q(source_config_id__in=source_conf_ids, created_at__range=(sprint_start, sprint_end))
+            pr_filter = Q(created_at__range=(sprint_start, sprint_end))
+            if project:
+                # source_conf_ids is only meaningful for a real project — for the Global (project=None)
+                # entry it would otherwise leak the last project processed by this loop, since it's
+                # never reset outside the `if project:` block above.
+                pr_filter &= Q(source_config_id__in=source_conf_ids)
             avg_code_ai = PullRequest.objects.filter(pr_filter).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
             metrics_obj, created = SprintMetrics.objects.update_or_create(
@@ -394,11 +399,19 @@ class MetricService:
             
             # Use the latest sprint's compliance and insights for the summary
             latest = last_5_metrics[0]
+            if project_id:
+                compliance_rate = latest.compliance_rate_percent or 0
+            else:
+                # All Projects: last_5_metrics holds every project's rows, so [0] is just whichever
+                # project came first. Use the org-wide weighted rate: Σcompliant ÷ Σtotal.
+                sum_total = sum(m.total_items or 0 for m in last_5_metrics)
+                sum_compliant = sum(m.compliant_items or 0 for m in last_5_metrics)
+                compliance_rate = (sum_compliant / sum_total * 100) if sum_total > 0 else 0
             avg_ai_usage = sum(m.ai_usage_percent or 0 for m in last_5_metrics) / count
             avg_code_ai = sum(m.code_ai_usage_percent or 0 for m in last_5_metrics) / count
             
             return {
-                'compliance_rate': round(latest.compliance_rate_percent or 0, 2),
+                'compliance_rate': round(compliance_rate, 2),
                 'velocity': round(avg_velocity, 1) if avg_velocity is not None else 0,
                 'ai_usage_percent': round(avg_ai_usage, 1),
                 'code_ai_usage_percent': round(avg_code_ai, 1),
