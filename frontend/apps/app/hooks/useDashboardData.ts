@@ -1,11 +1,12 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
 import api, { aiInsights } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
-interface DashboardSummary {
+export interface DashboardSummary {
   velocity: number;
   compliance_rate: number;
   bugs_resolved: number;
@@ -14,18 +15,18 @@ interface DashboardSummary {
   code_ai_usage_percent: number;
 }
 
-interface VelocityData {
+export interface VelocityData {
   sprint_name: string;
   velocity: number;
   total_story_points_completed: number;
 }
 
-interface ComplianceData {
+export interface ComplianceData {
   sprint_name: string;
   compliance_rate_percent: number;
 }
 
-interface Insight {
+export interface Insight {
   id: number;
   summary: string;
   suggestions: any[];
@@ -44,33 +45,29 @@ export interface AssigneeEntry {
   avg_cycle_time_days: number | null;
 }
 
+export interface DashboardDataResult {
+  summary: DashboardSummary | null;
+  velocity: VelocityData[];
+  compliance: ComplianceData[];
+  insights: Insight[];
+  forecast: Record<string, string> | null;
+  assigneeDistribution: AssigneeEntry[];
+}
+
 export function useDashboardData(projectId?: number | null, startDate?: string | null, endDate?: string | null) {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [velocity, setVelocity] = useState<VelocityData[]>([]);
-  const [compliance, setCompliance] = useState<ComplianceData[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [forecast, setForecast] = useState<Record<string, string> | null>(null);
-  const [assigneeDistribution, setAssigneeDistribution] = useState<AssigneeEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [aiProgress, setAiProgress] = useState(0);
   const [aiStatus, setAiStatus] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
 
   const { lastMessage } = useWebSocket();
 
-  const { token } = useAuth(); // Assuming useAuth exposes token or user.accessToken
+  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? ''];
 
-  const requestIdRef = useRef(0);
-
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-
-    const requestId = ++requestIdRef.current;
-
-    try {
-      setLoading(true);
+  const { data, isLoading, isFetching, error, refetch } = useQuery<DashboardDataResult, Error>({
+    queryKey,
+    queryFn: async () => {
       const params: Record<string, any> = projectId ? { project_id: projectId } : {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
@@ -84,52 +81,41 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
       ]);
 
-      // Discard if a newer request has already started
-      if (requestId !== requestIdRef.current) return;
-
-      setSummary(summaryData);
-      setVelocity(velocityData);
-      setCompliance(complianceData);
-      setInsights(insightsData);
-      setForecast(forecastData);
-      setAssigneeDistribution(assigneeData);
-      setError(null);
-    } catch (err: any) {
-      if (requestId !== requestIdRef.current) return;
-      console.error('Dashboard load error:', err);
-      setError(err.message || 'Failed to load dashboard data');
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [token, projectId, startDate, endDate]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Create a debounced version of fetchData for WebSocket events
-  const debouncedFetchData = useCallback(() => {
-    const timeoutId = setTimeout(() => {
-      fetchData();
-    }, 500); // 500ms debounce
-    return () => clearTimeout(timeoutId);
-  }, [fetchData]);
+      return {
+        summary: summaryData,
+        velocity: velocityData,
+        compliance: complianceData,
+        insights: insightsData,
+        forecast: forecastData,
+        assigneeDistribution: assigneeData,
+      };
+    },
+    enabled: Boolean(token),
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
 
   const lastProcessedMessageRef = useRef<any>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (lastMessage && lastMessage !== lastProcessedMessageRef.current) {
       lastProcessedMessageRef.current = lastMessage;
       if (lastMessage.type === 'metrics_update') {
-        debouncedFetchData();
+        // Debounce invalidation so hundreds of work item saves during sync
+        // are coalesced into a single dashboard refetch after updates settle
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+        }, 1500);
       } else if (lastMessage.type === 'ai_insight_update') {
         setIsRefreshingInsights(false);
         setAiProgress(100);
         setAiStatus('Complete');
-        fetchData(); // AI update can be immediate
-        // Reset progress after a short delay
+        queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
         setTimeout(() => {
           setAiProgress(0);
           setAiStatus('');
@@ -143,25 +129,39 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
         }
       }
     }
-  }, [lastMessage, fetchData, debouncedFetchData]);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [lastMessage, queryClient]);
 
   const refreshInsights = async () => {
     try {
       setIsRefreshingInsights(true);
       await aiInsights.refresh(projectId);
-      toast.success("AI Insights refresh triggered");
+      toast.success('AI Insights refresh triggered');
     } catch (err: any) {
       console.error('[RefreshInsights] Error:', err);
-      toast.error(err.message || "Failed to trigger AI insights refresh");
-    } finally {
-      // Don't set to false here, wait for WebSocket 'ai_insight_update' or 'ai_insight_progress'
-      // to manage the state after the trigger call succeeds.
+      toast.error(err.message || 'Failed to trigger AI insights refresh');
+      setIsRefreshingInsights(false);
     }
   };
 
   return {
-    summary, velocity, compliance, insights, forecast, assigneeDistribution,
-    loading, error, refresh: fetchData, refreshInsights, isRefreshingInsights,
-    aiProgress, aiStatus
+    summary: data?.summary ?? null,
+    velocity: data?.velocity ?? [],
+    compliance: data?.compliance ?? [],
+    insights: data?.insights ?? [],
+    forecast: data?.forecast ?? null,
+    assigneeDistribution: data?.assigneeDistribution ?? [],
+    loading: isLoading,
+    isFetching,
+    error: error ? error.message || 'Failed to load dashboard data' : null,
+    refresh: refetch,
+    refreshInsights,
+    isRefreshingInsights,
+    aiProgress,
+    aiStatus,
   };
 }

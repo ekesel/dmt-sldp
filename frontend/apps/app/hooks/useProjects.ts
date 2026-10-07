@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+'use client';
+import { useQuery } from '@tanstack/react-query';
 import api from '@dmt/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,31 +11,22 @@ export interface Project {
 }
 
 export function useProjects() {
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const { token } = useAuth();
 
-    useEffect(() => {
-        const fetchProjects = async () => {
-            if (!token) return;
+    const { data: projects = [], isLoading: loading, error } = useQuery<Project[], Error>({
+        queryKey: ['admin-projects-list'],
+        queryFn: async () => {
+            const response = await api.get<Project[]>('/admin/projects/');
+            return response.data || [];
+        },
+        enabled: Boolean(token),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+    });
 
-            try {
-                setLoading(true);
-                // Use the api instance which handles Host headers/baseURL correctly
-                const response = await api.get<Project[]>('/admin/projects/');
-                setProjects(response.data);
-                setError(null);
-            } catch (err: any) {
-                console.error('Project fetch error:', err);
-                setError(err.message || 'Failed to load projects');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProjects();
-    }, [token]);
-
-    return { projects, loading, error };
+    return {
+        projects,
+        loading,
+        error: error ? error.message || 'Failed to load projects' : null
+    };
 }

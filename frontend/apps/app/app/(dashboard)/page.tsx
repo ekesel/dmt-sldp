@@ -27,19 +27,25 @@ function sprintRangeLabel(startDate: string, endDate: string): string {
 }
 
 export default function DashboardPage() {
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
-
-    useEffect(() => {
-        const savedProjectId = sessionStorage.getItem('dashboard_projectId');
-        const savedStartDate = sessionStorage.getItem('dashboard_startDate');
-        const savedEndDate = sessionStorage.getItem('dashboard_endDate');
-        
-        if (savedProjectId) setSelectedProjectId(Number(savedProjectId));
-        if (savedStartDate) setStartDate(savedStartDate);
-        if (savedEndDate) setEndDate(savedEndDate);
-    }, []);
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const savedProjectId = sessionStorage.getItem('dashboard_projectId');
+            return savedProjectId ? Number(savedProjectId) : null;
+        }
+        return null;
+    });
+    const [startDate, setStartDate] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem('dashboard_startDate') || '';
+        }
+        return '';
+    });
+    const [endDate, setEndDate] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem('dashboard_endDate') || '';
+        }
+        return '';
+    });
 
     useEffect(() => {
         if (selectedProjectId !== null) {
@@ -317,12 +323,18 @@ export default function DashboardPage() {
         }
     };
 
-    if (loading && !summary) {
-        return <div className="min-h-screen bg-background flex items-center justify-center text-foreground">Loading...</div>;
-    }
-
     if (error && !summary) {
-        return <div className="min-h-screen bg-background flex items-center justify-center text-destructive">{error}</div>;
+        return (
+            <main className="min-h-screen bg-background p-8">
+                <div className="max-w-7xl mx-auto flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground">Failed to Load Dashboard</h3>
+                    <p className="text-muted-foreground mt-2 max-w-md">{error}</p>
+                </div>
+            </main>
+        );
     }
 
     return (
@@ -425,6 +437,38 @@ export default function DashboardPage() {
                     )}
 
                     {(() => {
+                        if (loading && !summary) {
+                            return (
+                                <div className="space-y-8 animate-pulse">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                                        {[...Array(5)].map((_, i) => (
+                                            <div key={i} className="h-36 rounded-2xl bg-card border-2 border-primary/20 p-6 flex flex-col justify-between">
+                                                <div className="h-4 w-24 bg-muted rounded"></div>
+                                                <div className="h-8 w-32 bg-muted rounded"></div>
+                                                <div className="h-3 w-28 bg-muted rounded"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        <div className="lg:col-span-2 min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
+                                            <div className="space-y-2">
+                                                <div className="h-6 w-40 bg-muted rounded"></div>
+                                                <div className="h-4 w-60 bg-muted rounded"></div>
+                                            </div>
+                                            <div className="h-[280px] w-full bg-muted/20 rounded-xl"></div>
+                                        </div>
+                                        <div className="min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
+                                            <div className="space-y-2">
+                                                <div className="h-6 w-40 bg-muted rounded"></div>
+                                                <div className="h-4 w-60 bg-muted rounded"></div>
+                                            </div>
+                                            <div className="h-[280px] w-full bg-muted/20 rounded-xl"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
                         if (hasInvalidDates) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -445,8 +489,8 @@ export default function DashboardPage() {
                                     <KPICard
                                         label="Sprint Velocity"
                                         value={`${summary?.velocity || 0} SP`}
-                                        trend={{ direction: 'neutral', value: 'Avg' }}
-                                        description={<span className="text-primary">Average of {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
+                                        trend={selectedProjectId ? undefined : { direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">{selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -456,8 +500,8 @@ export default function DashboardPage() {
                                     <KPICard
                                         label="Cycle Time"
                                         value={`${summary?.cycle_time || 0} Days`}
-                                        trend={{ direction: 'neutral', value: 'Avg' }}
-                                        description={<span className="text-primary">Average resolution duration</span>}
+                                        trend={selectedProjectId ? undefined : { direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">{selectedProjectId ? 'Resolution duration' : 'Average resolution duration'}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -467,7 +511,7 @@ export default function DashboardPage() {
                                     <KPICard
                                         label="DMT Compliance"
                                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
-                                        trend={{ direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
+                                        trend={selectedProjectId ? undefined : { direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                                         description={<span className="text-primary">Minimum Threshold: 80%</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
