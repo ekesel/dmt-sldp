@@ -236,6 +236,18 @@ function LoginForm() {
         }
     }, [searchParams]);
 
+    // Restore remembered username on load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedUsername = localStorage.getItem('dmt-remembered-username');
+            const savedRememberMe = localStorage.getItem('dmt-remember-me') === 'true';
+            if (savedUsername && savedRememberMe) {
+                setFormData(prev => ({ ...prev, username: savedUsername }));
+                setRememberMe(true);
+            }
+        }
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -243,6 +255,18 @@ function LoginForm() {
 
         try {
             await login(formData.username, formData.password, 'company');
+
+            // Persist or clear remembered credentials based on checkbox state
+            if (typeof window !== 'undefined') {
+                if (rememberMe) {
+                    localStorage.setItem('dmt-remembered-username', formData.username);
+                    localStorage.setItem('dmt-remember-me', 'true');
+                } else {
+                    localStorage.removeItem('dmt-remembered-username');
+                    localStorage.removeItem('dmt-remember-me');
+                }
+            }
+
             router.push('/home');
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Invalid credentials. Please make sure you are accessing the correct portal.');
@@ -548,7 +572,7 @@ function LoginForm() {
                     transition={{ duration: 0.6, delay: 0.4 }}
                     className="w-full pt-1 pb-1 flex flex-wrap items-center justify-center gap-y-1 gap-x-3 text-[11px] sm:text-xs text-muted-foreground text-center select-none"
                 >
-                    
+
                     <span className="text-slate-300 hidden sm:inline">|</span>
                     <div className="flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5 text-slate-400" />

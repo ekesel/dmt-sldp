@@ -4,6 +4,103 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth as authApi } from '@dmt/api';
 import { Shield, Mail, Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+export const validateResetEmail = (emailStr: string): { isValid: boolean; error?: string } => {
+    const trimmed = emailStr.trim();
+    if (!trimmed) {
+        return { isValid: false, error: 'Email address is required.' };
+    }
+
+    if (!trimmed.includes('@')) {
+        return { isValid: false, error: 'Please include an "@" symbol in the email address.' };
+    }
+
+    const parts = trimmed.split('@');
+    if (parts.length !== 2) {
+        return { isValid: false, error: 'Email address contains invalid "@" formatting.' };
+    }
+
+    const [prefix, domain] = parts;
+
+    // 1. Prefix cannot be empty
+    if (!prefix) {
+        return { isValid: false, error: 'Email prefix (before @) cannot be empty.' };
+    }
+
+    // 2. Reject numeric-only strings in local-part prefix
+    if (/^\d+$/.test(prefix)) {
+        return { isValid: false, error: 'Email prefix cannot be numeric-only. It must contain letters.' };
+    }
+
+    // 3. Reject leading or trailing special characters in prefix
+    if (/^[._%+-]|[._%+-]$/.test(prefix)) {
+        return { isValid: false, error: 'Email prefix cannot start or end with special characters.' };
+    }
+
+    // 4. Reject consecutive special characters
+    if (/[._%+-]{2,}/.test(prefix)) {
+        return { isValid: false, error: 'Email prefix cannot contain consecutive special characters.' };
+    }
+
+    // 5. Enforce standard prefix character pattern (alphanumeric and valid symbols, requiring letters)
+    const validPrefixRegex = /^(?=.*[a-zA-Z])[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*$/;
+    if (!validPrefixRegex.test(prefix)) {
+        return { isValid: false, error: 'Email prefix contains invalid special characters or standalone symbols.' };
+    }
+
+    // 6. Domain structural validation
+    if (!domain) {
+        return { isValid: false, error: 'Domain name is required (e.g., company.com).' };
+    }
+
+    if (domain.includes('..') || domain.startsWith('.') || domain.endsWith('.') || domain.startsWith('-') || domain.endsWith('-')) {
+        return { isValid: false, error: 'Domain name contains invalid structure or consecutive dots.' };
+    }
+
+    const domainParts = domain.split('.');
+    if (domainParts.length < 2) {
+        return { isValid: false, error: 'Domain must include a valid top-level domain extension (e.g., .com, .org).' };
+    }
+
+    const tld = domainParts[domainParts.length - 1];
+    // TLD must be strictly letters and at least 2 characters (e.g., .com, .org, .io)
+    const validTldRegex = /^[a-zA-Z]{2,24}$/;
+    if (!validTldRegex.test(tld)) {
+        return { isValid: false, error: 'Top-level domain extension must contain only letters (min 2 characters, e.g., .com).' };
+    }
+
+    // Host labels (subdomains and primary domain before TLD)
+    const hostLabels = domainParts.slice(0, domainParts.length - 1);
+    for (const label of hostLabels) {
+        if (!label) {
+            return { isValid: false, error: 'Domain name contains empty labels or invalid dots.' };
+        }
+        if (label.length < 2) {
+            return { isValid: false, error: `Domain host "${label}" is too short. Each host label must be at least 2 characters.` };
+        }
+        if (label.startsWith('-') || label.endsWith('-')) {
+            return { isValid: false, error: 'Domain labels cannot start or end with a hyphen.' };
+        }
+        if (!/^[a-zA-Z0-9-]+$/.test(label)) {
+            return { isValid: false, error: `Domain host "${label}" contains invalid characters.` };
+        }
+    }
+
+    // Primary host (label directly before TLD) must not be numeric-only and must contain letters
+    const primaryHost = hostLabels[hostLabels.length - 1];
+    if (/^\d+$/.test(primaryHost) || !/[a-zA-Z]/.test(primaryHost)) {
+        return { isValid: false, error: 'Domain host name cannot be numeric-only. It must contain letters.' };
+    }
+
+    // Full domain structural format cross-check
+    const validDomainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}$/;
+    if (!validDomainRegex.test(domain)) {
+        return { isValid: false, error: 'Please enter a structurally legitimate domain name (e.g., company.com).' };
+    }
+
+    return { isValid: true };
+};
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -15,13 +112,24 @@ export default function ForgotPasswordPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        const validation = validateResetEmail(email);
+        if (!validation.isValid) {
+            const errorMsg = validation.error || 'Invalid email format.';
+            setError(errorMsg);
+            toast.error(errorMsg);
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await authApi.passwordResetRequest(email);
+            await authApi.passwordResetRequest(email.trim());
             setSuccess(true);
         } catch (err: any) {
-            setError(err.response?.data?.detail || err.message || 'An error occurred. Please try again.');
+            const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || 'Email address not found in identity server database.';
+            setError(errorMsg);
+            toast.error(errorMsg);
         } finally {
             setIsLoading(false);
         }
