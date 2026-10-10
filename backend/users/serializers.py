@@ -7,8 +7,20 @@ from rest_framework import serializers
 from .models import RoleTable
 from .models import CustomPermission
 import hashlib
+import re
 
 User = get_user_model()
+
+# Host labels: alnum/hyphen. Second-level label >= 2 chars (rejects t.com, 6.rm), alphabetic TLD >= 2 chars.
+_DOMAIN_RE = re.compile(r'^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*[a-z0-9][a-z0-9-]+\.[a-z]{2,}$', re.I)
+
+
+def validate_email_domain(email):
+    """Raise ValidationError if the part after '@' is not a structurally valid hostname."""
+    domain = (email or '').rsplit('@', 1)[-1]
+    if not _DOMAIN_RE.match(domain):
+        raise serializers.ValidationError("Invalid credentials provided or not accepted.")
+    return email
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -33,6 +45,8 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         if not value:
             return value
+        if not (self.instance and self.instance.email == value):
+            validate_email_domain(value)
         # Check if email already exists, excluding the user instance being edited
         qs = User.objects.filter(email__iexact=value)
         if self.instance:
@@ -112,6 +126,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
         
+        validate_email_domain(attrs['email'])
         # Check if email already exists
         if User.objects.filter(email=attrs['email']).exists():
             raise serializers.ValidationError({"email": "This email is already registered."})

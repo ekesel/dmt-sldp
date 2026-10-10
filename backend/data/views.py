@@ -71,7 +71,18 @@ class DashboardSummaryView(APIView):
         from .models import PullRequest
         from django.db.models import Avg
         from configuration.models import SourceConfiguration
-        summary = MetricService.get_dashboard_summary(project_id, start_date=start_date, end_date=end_date)
+        sprint_names = None
+        sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+        if project_id and sprint_ids:
+            from .models import Sprint
+            from django.db.models import Min, Max
+            sel = Sprint.objects.filter(id__in=sprint_ids)
+            sprint_names = list(sel.values_list('name', flat=True))
+            # PR window = span of the selected sprints
+            span = sel.aggregate(a=Min('start_date'), b=Max('end_date'))
+            start_date = span['a'].date().isoformat() if span['a'] else None
+            end_date = span['b'].date().isoformat() if span['b'] else None
+        summary = MetricService.get_dashboard_summary(project_id, start_date=start_date, end_date=end_date, sprint_names=sprint_names)
 
         # Compute code_ai_usage_percent LIVE from analyzed PRs
         # (SprintMetrics may be stale if not re-populated after PR diff analysis)
@@ -86,8 +97,12 @@ class DashboardSummaryView(APIView):
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
         
+        # Card must reconcile with the Velocity History graph: average the exact rows VelocityView returns.
+        points = [p['velocity'] for p in VelocityView().get(request).data]
+        card_velocity = round(sum(points) / len(points), 1) if points else summary.get('velocity', 0)
+
         data = {
-            "velocity": summary.get('velocity', 0),
+            "velocity": card_velocity,
             "compliance_rate": round(summary['compliance_rate'], 2),
             "bugs_resolved": summary['bugs_resolved'],
             "cycle_time": summary['avg_cycle_time'],
@@ -96,6 +111,21 @@ class DashboardSummaryView(APIView):
             "analyzed_prs_count": pr_qs.count(),
         }
         return Response(data)
+
+def _window_story_points(items_qs, start_date, end_date):
+    """Done story points in the date window — same rules as MetricService.get_dashboard_summary:
+    stories only (no subtasks/bugs/epics), item placed by resolved_at (updated_at if never resolved)."""
+    from django.db.models.functions import Coalesce
+    items_qs = items_qs.filter(status_category='done').filter(
+        (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio']))
+        & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+    ).annotate(ref_date=Coalesce('resolved_at', 'updated_at'))
+    if start_date:
+        items_qs = items_qs.filter(ref_date__date__gte=start_date)
+    if end_date:
+        items_qs = items_qs.filter(ref_date__date__lte=end_date)
+    return items_qs.aggregate(pts=Sum('story_points'))['pts']
+
 
 class VelocityView(APIView):
     permission_classes = [IsAuthenticated]
@@ -119,11 +149,17 @@ class VelocityView(APIView):
 
         if project_id and project_id not in ['null', 'undefined']:
             metrics_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+            sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+            if sprint_ids:
+                # Same rule as DashboardSummaryView: explicit sprint pick overrides the date window.
+                names = Sprint.objects.filter(id__in=sprint_ids).values_list('name', flat=True)
+                metrics_qs = metrics_qs.filter(sprint_name__in=list(names))
+                start_date = end_date = None
             if start_date:
                 metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
             if end_date:
                 metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
-            metrics = list(metrics_qs) if (start_date or end_date) else list(metrics_qs[:5])
+            metrics = list(metrics_qs) if (start_date or end_date or sprint_ids) else list(metrics_qs[:5])
 
             source_conf_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
@@ -134,21 +170,9 @@ class VelocityView(APIView):
 
                 # If specific start_date and end_date filters are provided by user, calculate velocity dynamically for items finished in range
                 if start_date or end_date:
-                    items_qs = WorkItem.objects.filter(
-                        source_config_id__in=source_conf_ids,
-                        sprint__name=m.sprint_name,
-                        status_category='done'
-                    )
-                    if start_date:
-                        items_qs = items_qs.filter(
-                            Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date)
-                        )
-                    if end_date:
-                        items_qs = items_qs.filter(
-                            Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date)
-                        )
-                    
-                    calc_points = items_qs.aggregate(pts=Sum('story_points'))['pts']
+                    calc_points = _window_story_points(WorkItem.objects.filter(
+                        source_config_id__in=source_conf_ids, sprint__name=m.sprint_name
+                    ), start_date, end_date)
                     if calc_points is not None:
                         velocity_val = calc_points
                         total_pts_val = calc_points
@@ -173,19 +197,8 @@ class VelocityView(APIView):
                 if last_5:
                     if start_date or end_date:
                         sc_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
-                        items_qs = WorkItem.objects.filter(
-                            source_config_id__in=sc_ids,
-                            status_category='done'
-                        )
-                        if start_date:
-                            items_qs = items_qs.filter(
-                                Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date)
-                            )
-                        if end_date:
-                            items_qs = items_qs.filter(
-                                Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date)
-                            )
-                        calc_points = items_qs.aggregate(pts=Sum('story_points'))['pts'] or 0
+                        calc_points = _window_story_points(
+                            WorkItem.objects.filter(source_config_id__in=sc_ids), start_date, end_date) or 0
                         avg_vel = calc_points / len(last_5) if len(last_5) > 0 else 0
                         total_pts = calc_points
                     else:
@@ -1069,8 +1082,8 @@ class ComplianceFlagListView(APIView):
         if sprint_id and sprint_id not in ['null', 'undefined', '']:
             items = items.filter(sprint_id=sprint_id)
             fixed_later_items = fixed_later_items.filter(sprint_id=sprint_id)
-        elif not sprint_id:
-            # Auto: pick items from the latest sprint only
+        else:
+            # Auto (no / 'null' / 'undefined' sprint): pick items from the latest sprint only
             latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
             if latest_sprint:
                 items = items.filter(sprint_id=latest_sprint.id)
@@ -1136,8 +1149,8 @@ class ComplianceFlagListView(APIView):
                     "violations_cleared_at": None,
                 })
 
-        # Process historical fixed later items
-        for item in fixed_later_items:
+        # Process historical fixed later items (resolved, so never part of a critical/warning filter or its card count)
+        for item in ([] if severity_filter else fixed_later_items):
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
             assignee_names = get_assignee_names(item)
 
@@ -1288,8 +1301,14 @@ class ComplianceSummaryView(APIView):
         total = items_qs.count()
         compliant = items_qs.filter(dmt_compliant=True).count()
         non_compliant = items_qs.filter(dmt_compliant=False)
-        critical_count = non_compliant.filter(status_category='done').count()
-        warning_count = non_compliant.filter(status_category__in=['todo', 'in_progress']).count()
+        # One flag per failure (what ComplianceFlagListView lists), not one per item.
+        critical_count = warning_count = 0
+        for status_cat, failures in non_compliant.values_list('status_category', 'compliance_failures'):
+            n = len(failures or [])
+            if status_cat == 'done':
+                critical_count += n
+            else:
+                warning_count += n
 
         # Final health fallback: if SprintMetrics is stale or doesn't match the live count standard, 
         # use the live calculation for the dashboard's "Overall Health" to prevent user confusion.
@@ -1633,6 +1652,25 @@ class AssigneeDistributionView(APIView):
                 'completed': agg['completed'],
                 'avg_cycle_time_days': avg_ct,
             })
+
+        # Project selected: show only members currently allocated to it (latest published month <= now).
+        # No published allocation for the project at all -> keep everyone (nothing to filter by).
+        if project_id and project_id not in ['null', 'undefined', '']:
+            now = timezone.now()
+            proj_allocs = ResourceAllocation.objects.filter(
+                project_id=project_id, status='PUBLISHED', percentage_allocated__gt=0
+            ).filter(Q(year__lt=now.year) | Q(year=now.year, month__lte=now.month))
+            latest = proj_allocs.order_by('-year', '-month').first()
+            if latest:
+                resolver = IdentityResolver()
+                resolver.load()
+                allowed = set()
+                for email in proj_allocs.filter(year=latest.year, month=latest.month).values_list('developer__email', flat=True):
+                    if email:
+                        c = resolver.resolve(email.strip().lower())
+                        allowed |= set(resolver.all_aliases(c)) | {c, email.strip().lower()}
+                allowed = {a.lower() for a in allowed}
+                result = [r for r in result if r['email'] in allowed]
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)

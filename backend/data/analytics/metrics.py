@@ -267,7 +267,7 @@ class MetricService:
         return results
 
     @staticmethod
-    def get_dashboard_summary(project_id=None, start_date=None, end_date=None):
+    def get_dashboard_summary(project_id=None, start_date=None, end_date=None, sprint_names=None):
         from ..models import SprintMetrics, AIInsight
         from django.db import connection
         from tenants.models import AuditLog
@@ -292,7 +292,12 @@ class MetricService:
 
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
 
-        if project_id:
+        if project_id and sprint_names:
+            # Explicit sprint selection overrides the date window; averages run over just these sprints.
+            start_date = end_date = None
+            last_5_metrics = list(SprintMetrics.objects.filter(
+                project_id=project_id, sprint_name__in=sprint_names).order_by('-sprint_end_date'))
+        elif project_id:
             sprints_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
             if start_date:
                 sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
@@ -346,25 +351,31 @@ class MetricService:
                 source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
                 work_items_qs = work_items_qs.filter(source_config_id__in=source_ids)
 
+            # Items are placed in the window by when they were resolved (updated_at if never resolved).
+            # The old OR across resolved/updated/created matched any item touched after start_date,
+            # which inflated totals far beyond the sprint (e.g. 674 SP vs 230 SP in ClickUp).
+            from django.db.models.functions import Coalesce
+            work_items_qs = work_items_qs.annotate(ref_date=Coalesce('resolved_at', 'updated_at'))
             if start_date:
-                work_items_qs = work_items_qs.filter(
-                    Q(resolved_at__gte=start_date) | Q(updated_at__gte=start_date) | Q(created_at__gte=start_date)
-                )
+                work_items_qs = work_items_qs.filter(ref_date__date__gte=start_date)
             if end_date:
-                work_items_qs = work_items_qs.filter(
-                    Q(resolved_at__lte=end_date) | Q(updated_at__lte=end_date) | Q(created_at__lte=end_date)
-                )
+                work_items_qs = work_items_qs.filter(ref_date__date__lte=end_date)
 
-            total_items = work_items_qs.count()
+            # Compliance, points and cycle time use stories only (no subtasks, bugs, epics/features) —
+            # the same rule as the sprint rollup, so applying a date filter doesn't change the formula.
+            story_items = work_items_qs.filter(
+                (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio']))
+                & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+            )
+            total_items = story_items.count()
             done_items = work_items_qs.filter(status_category='done')
-            compliant_items = work_items_qs.filter(dmt_compliant=True).count()
+            compliant_items = story_items.filter(dmt_compliant=True).count()
             compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
 
-            
-            total_pts = done_items.aggregate(pts=Sum('story_points'))['pts'] or 0
+            total_pts = story_items.filter(status_category='done').aggregate(pts=Sum('story_points'))['pts'] or 0
             bugs_resolved = work_items_qs.filter(status_category='done', item_type__iexact='bug').count()
-            avg_ai = work_items_qs.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
-            avg_cycle = MetricService.calculate_cycle_time(work_items_qs)
+            avg_ai = story_items.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
+            avg_cycle = MetricService.calculate_cycle_time(story_items)
 
             return {
                 'compliance_rate': round(compliance_rate, 2),
@@ -389,13 +400,19 @@ class MetricService:
             # Calculate averages across the last 5 (or fewer if not available)
             total_velocity = sum(m.velocity or 0 for m in last_5_metrics)
             total_items = sum(m.items_completed or 0 for m in last_5_metrics)
-            total_cycle_time = sum(m.avg_cycle_time_days or 0 for m in last_5_metrics)
             total_bugs = sum(m.bugs_completed or 0 for m in last_5_metrics)
             count = len(last_5_metrics)
             
             avg_velocity = total_velocity / count
             avg_items = total_items / count
-            avg_cycle_time = total_cycle_time / count
+            # Cycle time: skip sprints with nothing finished (stored as 0/None) and weight by items
+            # completed, so an empty sprint doesn't drag the average down.
+            cycle_rows = [(m.avg_cycle_time_days, m.items_completed or 0) for m in last_5_metrics if m.avg_cycle_time_days]
+            cycle_weight = sum(n for _, n in cycle_rows)
+            if cycle_weight:
+                avg_cycle_time = sum(c * n for c, n in cycle_rows) / cycle_weight
+            else:
+                avg_cycle_time = sum(c for c, _ in cycle_rows) / len(cycle_rows) if cycle_rows else 0
             
             # Use the latest sprint's compliance and insights for the summary
             latest = last_5_metrics[0]

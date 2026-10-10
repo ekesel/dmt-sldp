@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from django.http import FileResponse
 from rest_framework.permissions import IsAuthenticated
 from .models import Tag, MetadataCategory, MetadataValue, Document, DocumentVersion
@@ -33,6 +34,11 @@ class DocumentAPI(APIView):
 
         if request.GET.get("meta"):
             docs = docs.filter(metadata_values__id=request.GET["meta"])
+
+        # Quick search: frontend sends ?search=, which was previously ignored (UI BUG-007/018)
+        term = (request.GET.get("search") or "").strip()
+        if term:
+            docs = docs.filter(Q(title__icontains=term) | Q(tags__name__icontains=term) | Q(metadata_values__value__icontains=term))
 
         return Response(DocumentSerializer(docs.distinct(), many=True).data)
 
