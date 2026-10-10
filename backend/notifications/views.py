@@ -6,6 +6,8 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Notification
 from .serializers import NotificationSerializer, QuickUpdateNotificationSerializer
 from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 from .serializers import ChatHistorySerializer
 
 class QuickUpdateNotificationPagination(PageNumberPagination):
@@ -36,8 +38,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Always filter by current user
-        return Notification.objects.filter(user=self.request.user)
+        # Always filter by current user; feed shows only the last 30 days (UI BUG-038). Rows are kept, not deleted.
+        return Notification.objects.filter(user=self.request.user, created_at__gte=timezone.now() - timedelta(days=30))
 
     @action(detail=False, methods=['get'], url_path='quick-update')
     def quick_update(self, request):

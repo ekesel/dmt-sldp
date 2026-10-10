@@ -3,6 +3,7 @@ from re import I
 from rest_framework_simplejwt import authentication
 import os
 from rest_framework import viewsets, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,7 +15,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
-from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer
+from .serializers import UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer, validate_email_domain
 from users.utils import import_users_from_excel
 from rest_framework import viewsets
 from .models import RoleTable
@@ -273,10 +274,14 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         email = request.data.get('email')
         if not email:
-            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_request)
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_email_domain(email)
+        except ValidationError:
+            return Response({'error': 'Invalid credentials provided or not accepted.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Find the user, allowing inactive users so admins get notified to invite them
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         if not user:
             # For security, return success even if user not found to prevent email enumeration
             return Response({'message': 'If an account exists with this email, admins have been notified.'}, status=status.HTTP_200_OK)
