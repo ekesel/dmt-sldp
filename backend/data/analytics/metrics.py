@@ -421,16 +421,12 @@ class MetricService:
             else:
                 avg_cycle_time = sum(c for c, _ in cycle_rows) / len(cycle_rows) if cycle_rows else 0
             
-            # Use the latest sprint's compliance and insights for the summary
-            latest = last_5_metrics[0]
-            if project_id:
-                compliance_rate = latest.compliance_rate_percent or 0
-            else:
-                # All Projects: last_5_metrics holds every project's rows, so [0] is just whichever
-                # project came first. Use the org-wide weighted rate: Σcompliant ÷ Σtotal.
-                sum_total = sum(m.total_items or 0 for m in last_5_metrics)
-                sum_compliant = sum(m.compliant_items or 0 for m in last_5_metrics)
-                compliance_rate = (sum_compliant / sum_total * 100) if sum_total > 0 else 0
+            # Weighted over the same sprints as the other cards (project: its last 5 / selected sprints;
+            # All Projects: every project's last 5): Σcompliant ÷ Σtotal. Previously a single project
+            # showed only its latest sprint.
+            sum_total = sum(m.total_items or 0 for m in last_5_metrics)
+            sum_compliant = sum(m.compliant_items or 0 for m in last_5_metrics)
+            compliance_rate = (sum_compliant / sum_total * 100) if sum_total > 0 else 0
             avg_ai_usage = sum(m.ai_usage_percent or 0 for m in last_5_metrics) / count
             avg_code_ai = sum(m.code_ai_usage_percent or 0 for m in last_5_metrics) / count
             

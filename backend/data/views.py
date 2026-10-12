@@ -94,6 +94,22 @@ class DashboardSummaryView(APIView):
             pr_qs = pr_qs.filter(created_at__date__gte=start_date)
         if end_date:
             pr_qs = pr_qs.filter(created_at__date__lte=end_date)
+        if not (start_date or end_date):
+            # No filter: same period as the other cards — each project's last 5 completed sprints
+            # (was all-time PRs).
+            window = Q(pk__in=[])
+            project_ids = [project_id] if project_id else list(Project.objects.values_list('id', flat=True))
+            for pid in project_ids:
+                spans = list(SprintMetrics.objects.filter(
+                    project_id=pid, sprint_end_date__lt=timezone.localdate()
+                ).order_by('-sprint_end_date').values_list('sprint_start_date', 'sprint_end_date')[:5])
+                if spans:
+                    window |= Q(
+                        source_config_id__in=SourceConfiguration.objects.filter(project_id=pid).values_list('id', flat=True),
+                        created_at__date__gte=min(s for s, _ in spans),
+                        created_at__date__lte=max(e for _, e in spans),
+                    )
+            pr_qs = pr_qs.filter(window)
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
         
