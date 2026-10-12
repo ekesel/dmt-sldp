@@ -336,11 +336,13 @@ class ClickupConnector(BaseConnector):
             resolved_sprint = self.sprint_lists[primary_list_id]
             
         if not resolved_sprint and hasattr(self, 'sprint_lists'):
-            for secondary_lst in task.get('lists', []):
-                sec_id = secondary_lst.get('id')
-                if sec_id in self.sprint_lists:
-                    resolved_sprint = self.sprint_lists[sec_id]
-                    break
+            # ClickUp returns TIML lists under 'locations' (there is no 'lists' key), e.g. a CR whose
+            # home list is "Reported Bugs" but is also added to "Sprint 40". If it sits in several
+            # sprint lists, use the latest sprint.
+            secondary = task.get('locations') or task.get('lists') or []
+            candidates = [self.sprint_lists[l.get('id')] for l in secondary if l.get('id') in self.sprint_lists]
+            if candidates:
+                resolved_sprint = max(candidates, key=lambda s: s.end_date or s.start_date or timezone.now().replace(year=1970))
                     
         if resolved_sprint:
             sprint_obj = resolved_sprint
