@@ -175,7 +175,7 @@ class JiraConnector(BaseConnector):
             for custom_field_key in [
                 'pr_link_id', 'ac_quality_id', 'reviewer_dmt_signoff_id', 
                 'unit_testing_status_id', 'pm_name_id', 'tech_lead_name_id', 
-                'story_points_id', 'ai_usage_id'
+                'story_points_id', 'ai_usage_id', 'coverage_id'
             ]:
                 field_id = config_mapping.get(custom_field_key)
                 if field_id:
@@ -493,6 +493,12 @@ class JiraConnector(BaseConnector):
             except (ValueError, TypeError):
                 pass
 
+        coverage_percent = None
+        try:
+            coverage_percent = float(get_jira_cf_val(config_mapping.get('coverage_id')))
+        except (ValueError, TypeError):
+            pass
+
         # Prepare data for model and compliance check
         work_item_data = {
             'source_config_id': source_id,
@@ -505,6 +511,7 @@ class JiraConnector(BaseConnector):
             'priority': priority.lower(),
             'story_points': story_points,
             'ai_usage_percent': ai_usage_percent,
+            'coverage_percent': coverage_percent,
             'creator_email': self.identity_resolver.resolve(fields.get('creator', {}).get('emailAddress')),
             'assignee_email': assignee_email,
             'assignee_name': assignee_name,

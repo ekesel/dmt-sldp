@@ -14,6 +14,13 @@ from configuration.models import Project
 from django.utils import timezone
 from django.db.models import Sum, Avg
 
+# Closed-but-not-fixed bug statuses: ClickUp maps them to 'done', but they are not resolved bugs.
+NOT_FIXED_BUG_STATUSES = (
+    Q(status__iexact='not a bug') | Q(status__iexact='duplicate') | Q(status__iexact='invalid')
+    | Q(status__iexact="won't fix") | Q(status__iexact='wontfix') | Q(status__iexact="won't do")
+)
+
+
 class MetricService:
     @staticmethod
     def calculate_velocity(sprint_id, project_id=None):
@@ -88,8 +95,8 @@ class MetricService:
         for item in items:
             start = item.started_at or item.created_at
             if start and item.resolved_at:
-                curr_date = start.date()
-                end_date = item.resolved_at.date()
+                curr_date = timezone.localtime(start).date()
+                end_date = timezone.localtime(item.resolved_at).date()
 
                 if curr_date > end_date:
                     continue
@@ -129,7 +136,6 @@ class MetricService:
         if not sprint.end_date:
             # Final fallback: use start_date if available, or Jan 1st of current year.
             # This ensures idempotency (same date every sync) for undated sprints.
-            from django.utils import timezone
             sprint_end = sprint.start_date or timezone.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
             sprint_end = sprint.end_date
@@ -215,7 +221,7 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
             
-            completed_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').count()
+            completed_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES).count()
             completed_stories = completed_items.filter(item_type__iexact='story').count()
             
             # 4. Compliance (Standardized to ALL work items for dashboard consistency)
@@ -247,7 +253,7 @@ class MetricService:
                 sprint_end_date=sprint_end.date(),
                 project=project,
                 defaults={
-                    'sprint_start_date': sprint_start.date(),
+                    'sprint_start_date': timezone.localtime(sprint_start).date(),
                     'total_story_points_completed': velocity,
                     'velocity': velocity,
                     'items_completed': completed_items.count(),
@@ -298,7 +304,8 @@ class MetricService:
             last_5_metrics = list(SprintMetrics.objects.filter(
                 project_id=project_id, sprint_name__in=sprint_names).order_by('-sprint_end_date'))
         elif project_id:
-            sprints_qs = SprintMetrics.objects.filter(project_id=project_id).order_by('-sprint_end_date')
+            # Only completed sprints; the running sprint would show partial numbers.
+            sprints_qs = SprintMetrics.objects.filter(project_id=project_id, sprint_end_date__lt=timezone.localdate()).order_by('-sprint_end_date')
             if start_date:
                 sprints_qs = sprints_qs.filter(sprint_end_date__gte=start_date)
             if end_date:
@@ -313,7 +320,7 @@ class MetricService:
             last_5_metrics = []
             
             for proj in projects:
-                proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
+                proj_qs = SprintMetrics.objects.filter(project=proj, sprint_end_date__lt=timezone.localdate()).order_by('-sprint_end_date')
                 if start_date:
                     proj_qs = proj_qs.filter(sprint_end_date__gte=start_date)
                 if end_date:
@@ -323,7 +330,7 @@ class MetricService:
             
             # If no per-project SprintMetrics exist, fallback to project__isnull=True metrics
             if not last_5_metrics:
-                global_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                global_qs = SprintMetrics.objects.filter(project__isnull=True, sprint_end_date__lt=timezone.localdate()).order_by('-sprint_end_date')
                 if start_date:
                     global_qs = global_qs.filter(sprint_end_date__gte=start_date)
                 if end_date:
@@ -338,7 +345,7 @@ class MetricService:
             
         latest_insight = latest_insight_qs.first()
         
-        now = timezone.now().date()
+        now = timezone.localdate()
 
         # Rule: If start_date is selected but end_date is missing, automatically set end_date to today
         if start_date and not end_date:
@@ -373,7 +380,7 @@ class MetricService:
             compliance_rate = (compliant_items / total_items * 100) if total_items > 0 else 0
 
             total_pts = story_items.filter(status_category='done').aggregate(pts=Sum('story_points'))['pts'] or 0
-            bugs_resolved = work_items_qs.filter(status_category='done', item_type__iexact='bug').count()
+            bugs_resolved = work_items_qs.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES).count()
             avg_ai = story_items.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
             avg_cycle = MetricService.calculate_cycle_time(story_items)
 
@@ -514,7 +521,6 @@ class MetricService:
         
         sprint = Sprint.objects.get(id=sprint_id)
         if not sprint.end_date:
-            from django.utils import timezone
             sprint_end = sprint.start_date or timezone.now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
             sprint_end = sprint.end_date

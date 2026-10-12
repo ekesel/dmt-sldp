@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from django.utils import timezone
 from users.models import User
 import pandas as pd
 from .models import Holiday
@@ -10,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 # Checking today is any one birthday or not
 def get_birthday_info(tenant):
-    today = date.today()
+    today = timezone.localdate()
     birthday_people = User.objects.filter(date_of_birth__month=today.month, date_of_birth__day=today.day, tenant=tenant, is_active=True)
     return birthday_people
 
 # checking today is any one anniversary or not
 def get_anniversary_info(tenant):
-    today = date.today()
+    today = timezone.localdate()
     anniversary_people = User.objects.filter(date_of_join__month=today.month, date_of_join__day=today.day, tenant=tenant, is_active=True)
     TodayAnniversaryList = []
     for obj in anniversary_people:
@@ -28,7 +29,7 @@ def get_anniversary_info(tenant):
     return TodayAnniversaryList
 
 def upcoming_birthday_info(tenant):
-    today = date.today()
+    today = timezone.localdate()
     users = User.objects.filter(tenant=tenant, is_active=True)
     upcoming = []
     for user in users:
@@ -63,7 +64,7 @@ def upcoming_birthday_info(tenant):
     return sorted(upcoming, key=lambda x: x['days_left'])
 
 def upcoming_anniversary_info(tenant):
-    today = date.today()
+    today = timezone.localdate()
     users = User.objects.filter(tenant=tenant, is_active=True)
     upcoming = []
     for user in users:
