@@ -5,7 +5,7 @@ from ..base import BaseConnector
 import logging
 from urllib.parse import urlparse, unquote, quote
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone  # 'Z' strings are UTC, not server-local
 from data.models import Sprint, WorkItem, PullRequest, PullRequestStatus, PullRequestReviewer, Commit
 from users.resolver import UserResolver
 from etl.transformers import ComplianceEngine
@@ -310,11 +310,11 @@ class AzureDevOpsConnector(BaseConnector):
             # though fromisoformat is quite robust for ISO8601
             try:
                 # Try format with fractional seconds
-                return timezone.make_aware(datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ"))
+                return timezone.make_aware(datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ"), dt_timezone.utc)
             except ValueError:
                 try:
                     # Try format without fractional seconds
-                    return timezone.make_aware(datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ"))
+                    return timezone.make_aware(datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ"), dt_timezone.utc)
                 except ValueError:
                     logger.warning(f"Could not parse date: {date_str}")
                     return None

@@ -464,6 +464,14 @@ class ClickupConnector(BaseConnector):
                 except (ValueError, TypeError):
                     pass
         
+        cov_id = config_mapping.get('coverage_id')
+        coverage_percent = None
+        if cov_id:
+            try:
+                coverage_percent = float(get_cf_value(cov_id))
+            except (ValueError, TypeError):
+                pass
+
         # 2. PR Link
         pr_link_id = config_mapping.get('pr_link_id')
         pr_link = get_cf_value(pr_link_id)
@@ -576,6 +584,7 @@ class ClickupConnector(BaseConnector):
             'priority': priority,
             'story_points': story_points,
             'ai_usage_percent': ai_usage_percent,
+            'coverage_percent': coverage_percent,
             'parent': parent_obj,
             'creator_email': self.identity_resolver.resolve(task.get('creator', {}).get('email')),
             'assignee_email': assignee_email,

@@ -163,7 +163,7 @@ def aggregate_tenant_metrics(tenant_id, target_date_str=None):
     from tenants.models import Tenant
     
     if target_date_str is None:
-        target_date = (timezone.now() - timedelta(days=1)).date()
+        target_date = timezone.localdate() - timedelta(days=1)
     else:
         target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
 

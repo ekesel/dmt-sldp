@@ -64,7 +64,7 @@ class DashboardSummaryView(APIView):
             end_date = None
         
         if start_date and not end_date:
-            end_date = timezone.now().date().strftime('%Y-%m-%d')
+            end_date = timezone.localdate().strftime('%Y-%m-%d')
 
 
         from .analytics.metrics import MetricService
@@ -80,8 +80,8 @@ class DashboardSummaryView(APIView):
             sprint_names = list(sel.values_list('name', flat=True))
             # PR window = span of the selected sprints
             span = sel.aggregate(a=Min('start_date'), b=Max('end_date'))
-            start_date = span['a'].date().isoformat() if span['a'] else None
-            end_date = span['b'].date().isoformat() if span['b'] else None
+            start_date = timezone.localtime(span['a']).date().isoformat() if span['a'] else None
+            end_date = timezone.localtime(span['b']).date().isoformat() if span['b'] else None
         summary = MetricService.get_dashboard_summary(project_id, start_date=start_date, end_date=end_date, sprint_names=sprint_names)
 
         # Compute code_ai_usage_percent LIVE from analyzed PRs
@@ -155,6 +155,9 @@ class VelocityView(APIView):
                 names = Sprint.objects.filter(id__in=sprint_ids).values_list('name', flat=True)
                 metrics_qs = metrics_qs.filter(sprint_name__in=list(names))
                 start_date = end_date = None
+            else:
+                # Only completed sprints; the running sprint would show partial numbers.
+                metrics_qs = metrics_qs.filter(sprint_end_date__lt=timezone.localdate())
             if start_date:
                 metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
             if end_date:
@@ -187,7 +190,7 @@ class VelocityView(APIView):
             projects = Project.objects.all()
            
             for proj in projects:
-                proj_qs = SprintMetrics.objects.filter(project=proj).order_by('-sprint_end_date')
+                proj_qs = SprintMetrics.objects.filter(project=proj, sprint_end_date__lt=timezone.localdate()).order_by('-sprint_end_date')
                 if start_date:
                     proj_qs = proj_qs.filter(sprint_end_date__gte=start_date)
                 if end_date:
@@ -213,7 +216,7 @@ class VelocityView(APIView):
             
             # Fallback if no per-project metrics exist
             if not data:
-                global_qs = SprintMetrics.objects.filter(project__isnull=True).order_by('-sprint_end_date')
+                global_qs = SprintMetrics.objects.filter(project__isnull=True, sprint_end_date__lt=timezone.localdate()).order_by('-sprint_end_date')
                 if start_date:
                     global_qs = global_qs.filter(sprint_end_date__gte=start_date)
                 if end_date:
@@ -232,7 +235,7 @@ class VelocityView(APIView):
              # Fallback: Calculate from WorkItems
              
              # Get last 5 sprints
-             sprints = Sprint.objects.exclude(status='backlog').order_by('-end_date')[:5]
+             sprints = Sprint.objects.exclude(status='backlog').filter(end_date__lt=timezone.now()).order_by('-end_date')[:5]
              
              for sprint in sprints:
                  wi_qs = WorkItem.objects.filter(sprint=sprint, status_category='done')
@@ -294,31 +297,37 @@ class ComplianceView(APIView):
             end_date = None
         
         if start_date and not end_date:
-            end_date = timezone.now().date().strftime('%Y-%m-%d')
+            end_date = timezone.localdate().strftime('%Y-%m-%d')
 
         metrics_qs = SprintMetrics.objects.order_by('-sprint_end_date')
+        sprint_ids = []
 
         if project_id:
-            source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
-            from .models import WorkItem
-            relevant_sprint_names = WorkItem.objects.filter(
-                source_config_id__in=source_config_ids,
-                sprint__isnull=False
-            ).values_list('sprint__name', flat=True).distinct()
-            metrics_qs = metrics_qs.filter(sprint_name__in=relevant_sprint_names)
+            # This project's own rollup rows — matching by sprint name alone also pulled in other
+            # projects' (and the global) rows for sprints with the same name.
+            metrics_qs = metrics_qs.filter(project_id=project_id)
+            sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+            if sprint_ids:
+                # Same rule as DashboardSummaryView: explicit sprint pick overrides the date window.
+                names = Sprint.objects.filter(id__in=sprint_ids).values_list('name', flat=True)
+                metrics_qs = metrics_qs.filter(sprint_name__in=list(names))
+                start_date = end_date = None
+        if not sprint_ids:
+            # Only completed sprints; the running sprint would show partial numbers.
+            metrics_qs = metrics_qs.filter(sprint_end_date__lt=timezone.localdate())
 
         if start_date:
             metrics_qs = metrics_qs.filter(sprint_end_date__gte=start_date)
         if end_date:
             metrics_qs = metrics_qs.filter(sprint_end_date__lte=end_date)
 
-        metrics = metrics_qs if (start_date or end_date) else metrics_qs[:5]
+        metrics = metrics_qs if (start_date or end_date or sprint_ids) else metrics_qs[:5]
 
         
         if not metrics and SprintMetrics.objects.count() == 0:
-             # Fallback: Calculate from WorkItems
-             from .models import Sprint, WorkItem
-             sprints = Sprint.objects.order_by('-end_date')[:5]
+             # Fallback: Calculate from WorkItems (Sprint/WorkItem are module-level imports; a local
+             # import here would make `Sprint` local to the whole function and break the sprint_ids branch)
+             sprints = Sprint.objects.filter(end_date__lt=timezone.now()).order_by('-end_date')[:5]
              data = []
              
              for sprint in sprints:
@@ -778,7 +787,7 @@ class DeveloperMetricsView(APIView):
                                 developer_email=resolved_id,
                                 project_id=project_id,
                                 sprint_name=sprint_obj.name,
-                                sprint_end_date=sprint_obj.end_date.date() if sprint_obj.end_date else timezone.now().date(),
+                                sprint_end_date=sprint_obj.end_date.date() if sprint_obj.end_date else timezone.localdate(),
                                 story_points_completed=0,
                                 items_completed=0,
                                 commits_count=0,
@@ -1499,7 +1508,7 @@ class AssigneeDistributionView(APIView):
         end_date = request.query_params.get('end_date')
         
         if start_date and not end_date:
-            end_date = timezone.now().date().strftime('%Y-%m-%d')
+            end_date = timezone.localdate().strftime('%Y-%m-%d')
         date_filtered = bool(start_date or end_date)
 
 
@@ -1515,12 +1524,19 @@ class AssigneeDistributionView(APIView):
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
 
                 sprint_qs = Sprint.objects.filter(source_config_id__in=source_ids).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
-                if start_date:
-                    sprint_qs = sprint_qs.filter(end_date__gte=start_date)
-                if end_date:
-                    sprint_qs = sprint_qs.filter(end_date__lte=end_date)
-                if not date_filtered:
-                    sprint_qs = sprint_qs[:5]
+                sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+                if sprint_ids:
+                    # Explicit sprint pick overrides the date window (same rule as the summary).
+                    sprint_qs = sprint_qs.filter(id__in=sprint_ids)
+                else:
+                    # Only completed sprints; the running sprint would show partial numbers.
+                    sprint_qs = sprint_qs.filter(end_date__lt=timezone.now())
+                    if start_date:
+                        sprint_qs = sprint_qs.filter(end_date__gte=start_date)
+                    if end_date:
+                        sprint_qs = sprint_qs.filter(end_date__lte=end_date)
+                    if not date_filtered:
+                        sprint_qs = sprint_qs[:5]
                     
                 relevant_sprint_ids = list(sprint_qs.values_list('id', flat=True))
 
@@ -1538,7 +1554,7 @@ class AssigneeDistributionView(APIView):
                     proj_source_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
                     if not proj_source_ids:
                         continue
-                    sprint_qs = Sprint.objects.filter(source_config_id__in=proj_source_ids).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+                    sprint_qs = Sprint.objects.filter(source_config_id__in=proj_source_ids, end_date__lt=timezone.now()).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
                     if start_date:
                         sprint_qs = sprint_qs.filter(end_date__gte=start_date)
                     if end_date:
