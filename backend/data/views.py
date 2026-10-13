@@ -143,6 +143,19 @@ def _window_story_points(items_qs, start_date, end_date):
     return items_qs.aggregate(pts=Sum('story_points'))['pts']
 
 
+def _sprint_points_in_window(m, source_ids, start_date, end_date):
+    """Velocity of one SprintMetrics row under a date filter. A sprint lying fully inside the range
+    shows its full sprint velocity (matches the tool); a sprint only partly inside counts just the
+    story points completed within the range."""
+    from datetime import date
+    inside = ((not start_date or m.sprint_start_date >= date.fromisoformat(str(start_date)))
+              and (not end_date or m.sprint_end_date <= date.fromisoformat(str(end_date))))
+    if inside:
+        return m.velocity or 0
+    return _window_story_points(WorkItem.objects.filter(source_config_id__in=source_ids, sprint__name=m.sprint_name),
+                                start_date, end_date) or 0
+
+
 class VelocityView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -189,12 +202,7 @@ class VelocityView(APIView):
 
                 # If specific start_date and end_date filters are provided by user, calculate velocity dynamically for items finished in range
                 if start_date or end_date:
-                    calc_points = _window_story_points(WorkItem.objects.filter(
-                        source_config_id__in=source_conf_ids, sprint__name=m.sprint_name
-                    ), start_date, end_date)
-                    if calc_points is not None:
-                        velocity_val = calc_points
-                        total_pts_val = calc_points
+                    velocity_val = total_pts_val = _sprint_points_in_window(m, source_conf_ids, start_date, end_date)
 
                 data.append({
                     "sprint_name": base_sprint,
@@ -216,8 +224,8 @@ class VelocityView(APIView):
                 if last_5:
                     if start_date or end_date:
                         sc_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
-                        calc_points = _window_story_points(
-                            WorkItem.objects.filter(source_config_id__in=sc_ids), start_date, end_date) or 0
+                        # Same per-sprint rule as the project view, so All Projects reconciles with it.
+                        calc_points = sum(_sprint_points_in_window(m, sc_ids, start_date, end_date) for m in last_5)
                         avg_vel = calc_points / len(last_5) if len(last_5) > 0 else 0
                         total_pts = calc_points
                     else:
