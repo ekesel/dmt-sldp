@@ -9,6 +9,19 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Standard DMT custom-field names in ClickUp, used when a source has no explicit field_mapping.
+DEFAULT_FIELD_NAMES = {
+    'ac_quality_id': 'AC Quality',
+    'pr_link_id': 'PR Link',
+    'reviewer_dmt_signoff_id': 'Reviewer DMT Signoff',
+    'unit_testing_status_id': 'Unit Testing Status',
+    'pm_name_id': 'PM Name',
+    'tech_lead_name_id': 'Tech Lead',
+    'ai_usage_id': '% AI Usage',
+    'coverage_id': 'Unit test Coverage %',
+}
+
+
 class ClickupConnector(BaseConnector):
     def test_connection(self) -> bool:
         """
@@ -354,8 +367,12 @@ class ClickupConnector(BaseConnector):
         updated_at = timezone.make_aware(datetime.fromtimestamp(int(task['date_updated']) / 1000))
         
         resolved_at = None
-        if task.get('date_closed'):
-            resolved_at = timezone.make_aware(datetime.fromtimestamp(int(task['date_closed']) / 1000))
+        # ClickUp sets date_done when a task reaches a "done"-type status and date_closed only for
+        # "closed"-type statuses. Prefer date_done; without it, done items fell back to updated_at
+        # (last edit), so old items edited later looked freshly resolved.
+        done_ts = task.get('date_done') or task.get('date_closed')
+        if done_ts:
+            resolved_at = timezone.make_aware(datetime.fromtimestamp(int(done_ts) / 1000))
         
         # Capture specific started_at
         started_at = None
@@ -397,6 +414,9 @@ class ClickupConnector(BaseConnector):
             config_mapping = sc.config_json.get('field_mapping', {}) if sc.config_json else {}
         except SourceConfiguration.DoesNotExist:
             config_mapping = {}
+        # Unmapped keys fall back to the standard DMT custom-field names (get_cf_value matches id or
+        # name). Without this, a source with no field_mapping read none of the DMT fields -> 0% compliance.
+        config_mapping = {**DEFAULT_FIELD_NAMES, **{k: v for k, v in config_mapping.items() if v}}
 
         # Custom Fields Extraction
         custom_fields = task.get('custom_fields', [])
@@ -595,6 +615,7 @@ class ClickupConnector(BaseConnector):
             'created_at': created_at,
             'updated_at': updated_at,
             'resolved_at': resolved_at,
+            'started_at': started_at,  # was computed but never saved, so cycle time fell back to created_at
             'raw_source_data': task,
             'ac_quality': ac_quality_db,
             'reviewer_dmt_signoff': reviewer_signoff,

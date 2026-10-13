@@ -75,48 +75,32 @@ class MetricService:
     @staticmethod
     def calculate_cycle_time(items_qs):
         """
-        Calculate average cycle time in working days (excluding weekends & holidays).
-        Cycle Time = resolved_at - started_at.
-        Fallback to Lead Time = resolved_at - created_at if started_at is missing.
+        Average cycle time in working days (weekends & holidays excluded), same as ClickUp:
+        working days elapsed after the start day up to the done day (Mon -> Tue = 1, same day = 0).
+        Items without a start date are skipped — created -> done is lead time, not cycle time.
         """
-
-        # Filter only done items with resolved_at
-        items = items_qs.filter(status_category='done', resolved_at__isnull=False)
+        items = items_qs.filter(status_category='done', resolved_at__isnull=False, started_at__isnull=False)
         if not items.exists():
             return 0
 
-        # Pre-fetch all holiday dates for fast set lookup
         try:
             holiday_dates = set(Holiday.objects.values_list('date', flat=True))
         except Exception:
             holiday_dates = set()
 
         durations = []
-        for item in items:
-            start = item.started_at or item.created_at
-            if start and item.resolved_at:
-                curr_date = timezone.localtime(start).date()
-                end_date = timezone.localtime(item.resolved_at).date()
-
-                if curr_date > end_date:
-                    continue
-
-                if curr_date == end_date:
-                    # Same day: count fraction if Mon-Fri and not holiday
-                    if curr_date.weekday() < 5 and curr_date not in holiday_dates:
-                        delta_sec = (item.resolved_at - start).total_seconds()
-                        durations.append(delta_sec / 86400.0)
-                    else:
-                        durations.append(0.0)
-                else:
-                    working_days = 0.0
-                    step = curr_date
-                    while step <= end_date:
-                        # Mon-Fri (0..4) and not a registered holiday
-                        if step.weekday() < 5 and step not in holiday_dates:
-                            working_days += 1.0
-                        step += timedelta(days=1)
-                    durations.append(working_days)
+        for start, resolved in items.values_list('started_at', 'resolved_at'):
+            curr_date = timezone.localtime(start).date()
+            end_date = timezone.localtime(resolved).date()
+            if curr_date > end_date:
+                continue
+            working_days = 0
+            step = curr_date + timedelta(days=1)
+            while step <= end_date:
+                if step.weekday() < 5 and step not in holiday_dates:
+                    working_days += 1
+                step += timedelta(days=1)
+            durations.append(working_days)
 
         if not durations:
             return 0
