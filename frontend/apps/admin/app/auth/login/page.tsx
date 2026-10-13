@@ -29,13 +29,24 @@ export default function LoginPage() {
         clearError();
         setLocalError('');
 
-        if (!username || !password) {
-            setLocalError('Please enter both username and password');
+        const trimmedUsername = username.trim();
+        if (!trimmedUsername) {
+            setLocalError('Field cannot be empty');
+            setUsername('');
             return;
         }
 
+        if (!password) {
+            setLocalError('Please enter your password');
+            return;
+        }
+
+        if (username !== trimmedUsername) {
+            setUsername(trimmedUsername);
+        }
+
         try {
-            await login(username, password, 'admin');
+            await login(trimmedUsername, password, 'admin');
             router.push('/');
         } catch (err) {
             // Error is already set by useAuth hook
@@ -72,7 +83,16 @@ export default function LoginPage() {
                                 id="username"
                                 type="text"
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={(e) => {
+                                    setUsername(e.target.value);
+                                    if (localError) setLocalError('');
+                                }}
+                                onBlur={() => {
+                                    const trimmed = username.trim();
+                                    if (username && username !== trimmed) {
+                                        setUsername(trimmed);
+                                    }
+                                }}
                                 placeholder="Enter your email or username"
                                 autoComplete="username"
                                 className="w-full px-4 py-3 bg-muted/50 border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition duration-200"

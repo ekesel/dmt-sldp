@@ -42,6 +42,8 @@ vi.mock("../../lib/media", () => ({
 
 vi.mock("../../lib/utils", () => ({
   formatTimestamp: (timestamp: string) => "2 hours ago",
+  getUserDisplayName: (author: any, fallback?: string) =>
+    author?.first_name ? `${author.first_name} ${author.last_name || ""}`.trim() : fallback || "Unknown User",
 }));
 
 describe("SocialNewsFeed Component", () => {

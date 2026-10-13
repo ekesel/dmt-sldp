@@ -54,7 +54,12 @@ export interface DashboardDataResult {
   assigneeDistribution: AssigneeEntry[];
 }
 
-export function useDashboardData(projectId?: number | null, startDate?: string | null, endDate?: string | null) {
+export function useDashboardData(
+  projectId?: number | null,
+  startDate?: string | null,
+  endDate?: string | null,
+  sprintId?: number | null
+) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
@@ -63,7 +68,7 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
 
   const { lastMessage } = useWebSocket();
 
-  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? ''];
+  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? '', sprintId ?? 'all'];
 
   const { data, isLoading, isFetching, error, refetch } = useQuery<DashboardDataResult, Error>({
     queryKey,
@@ -71,13 +76,16 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
       const params: Record<string, any> = projectId ? { project_id: projectId } : {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
+      if (sprintId) {
+        params.sprint_ids = String(sprintId);
+        params.sprint_id = sprintId;
+      }
 
-      const [summaryData, velocityData, complianceData, insightsData, forecastData, assigneeData] = await Promise.all([
+      const [summaryData, velocityData, complianceData, insightsData, assigneeData] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
         api.get<VelocityData[]>('dashboard/velocity/', { params }).then(r => r.data),
         api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
         aiInsights.list(params) as unknown as Promise<Insight[]>,
-        api.get<Record<string, string>>('dashboard/forecast/', { params }).then(r => r.data).catch(() => null),
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
       ]);
 
@@ -86,7 +94,7 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
         velocity: velocityData,
         compliance: complianceData,
         insights: insightsData,
-        forecast: forecastData,
+        forecast: null,
         assigneeDistribution: assigneeData,
       };
     },

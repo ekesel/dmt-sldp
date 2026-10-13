@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
   };
 
   return (
-    <nav className="bg-primary text-primary-foreground sticky top-0 z-40 h-[4rem] border-b border-primary-foreground/10">
+    <nav className="bg-primary text-primary-foreground sticky top-0 z-50 h-[4rem] border-b border-primary-foreground/10">
       <div className="px-[1rem] md:px-[1.5rem] h-full flex items-center justify-between gap-[0.5rem] md:gap-[1rem]">
         {/* Left Section: Logo & Branding */}
         <div className="flex items-center gap-3 shrink-0">
@@ -231,7 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
         </div>
 
         {/* Right Section: Time, Notifications, Actions */}
-        <div className="flex items-center gap-[0.5rem] md:gap-[1rem]">
+        <div className="flex items-center gap-[0.5rem] md:gap-[1rem] shrink-0">
           {/* Time Display */}
           <div className="hidden lg:block text-[0.875rem] font-semibold text-primary-foreground/90 whitespace-nowrap">
             {currentTime}
@@ -242,40 +242,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick, isMenuOpen }) => {
 
 
           {/* User Profile */}
-          <div ref={dropdownRef} className="relative flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20">
-            <div className="relative group cursor-pointer" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <div className="w-[2.25rem] h-[2.25rem] md:w-[2.5rem] md:h-[2.5rem] rounded-full border-2 border-primary-foreground/40 overflow-hidden hover:border-primary-foreground transition-colors">
-                {user?.avatar_url ? (
-                  <Image
-                    src={user.avatar_url}
-                    alt="Profile"
-                    width={40}
-                    height={40}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="w-full h-full bg-primary-foreground/20 flex items-center justify-center">
-                    <span className="text-primary-foreground font-semibold text-sm">
-                      {(user?.first_name?.[0] || user?.username?.[0] || "U").toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {/* Status Indicator */}
-              <div className="absolute bottom-0 right-0 w-[0.75rem] h-[0.75rem] bg-green-500 border-2 border-primary rounded-full"></div>
-            </div>
-
+          <div ref={dropdownRef} className="relative z-50 flex items-center pl-[0.5rem] ml-[0.5rem] md:pl-[0.75rem] md:ml-[0.75rem] border-l border-primary-foreground/20 shrink-0">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               aria-label="Toggle profile menu"
               aria-expanded={isDropdownOpen}
               aria-haspopup="true"
               aria-controls="profile-dropdown"
-              className="ml-[0.25rem] p-[0.25rem] hover:bg-primary-foreground/10 rounded-[0.25rem] transition"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-primary-foreground/10 transition cursor-pointer select-none group focus:outline-none shrink-0"
             >
+              <div className="relative shrink-0">
+                <div className="w-[2.25rem] h-[2.25rem] md:w-[2.5rem] md:h-[2.5rem] rounded-full border-2 border-primary-foreground/40 overflow-hidden group-hover:border-primary-foreground transition-colors">
+                  {user?.avatar_url ? (
+                    <Image
+                      src={user.avatar_url}
+                      alt="Profile"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-primary-foreground/20 flex items-center justify-center">
+                      <span className="text-primary-foreground font-semibold text-sm">
+                        {(user?.first_name?.[0] || user?.username?.[0] || "U").toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {/* Status Indicator */}
+                <div className="absolute bottom-0 right-0 w-[0.75rem] h-[0.75rem] bg-green-500 border-2 border-primary rounded-full z-10" />
+              </div>
+
               <ChevronDown
-                className={`w-[1rem] h-[1rem] text-primary-foreground transition ${isDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-[1rem] h-[1rem] text-primary-foreground transition-transform duration-200 shrink-0 relative z-20 ${isDropdownOpen ? "rotate-180" : ""}`}
               />
             </button>
 

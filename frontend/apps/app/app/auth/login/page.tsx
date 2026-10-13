@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, Suspense, useEffect } from 'react';
+import React, { useState, Suspense, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -222,6 +222,7 @@ function LoginForm() {
     const { login, isLoading: isAuthLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [usernameError, setUsernameError] = useState(false);
     const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
@@ -229,6 +230,7 @@ function LoginForm() {
         username: '',
         password: '',
     });
+    const usernameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (searchParams.get('expired') === 'true') {
@@ -251,15 +253,36 @@ function LoginForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setUsernameError(false);
+
+        const trimmedUsername = formData.username.trim();
+        if (!trimmedUsername) {
+            setError('Field cannot be empty');
+            setUsernameError(true);
+            setFormData(prev => ({ ...prev, username: '' }));
+            usernameInputRef.current?.focus();
+            return;
+        }
+
+        if (!formData.password) {
+            setError('Password cannot be empty');
+            return;
+        }
+
+        // Automatically update form state to trimmed username if there was whitespace
+        if (formData.username !== trimmedUsername) {
+            setFormData(prev => ({ ...prev, username: trimmedUsername }));
+        }
+
         setIsLoading(true);
 
         try {
-            await login(formData.username, formData.password, 'company');
+            await login(trimmedUsername, formData.password, 'company');
 
             // Persist or clear remembered credentials based on checkbox state
             if (typeof window !== 'undefined') {
                 if (rememberMe) {
-                    localStorage.setItem('dmt-remembered-username', formData.username);
+                    localStorage.setItem('dmt-remembered-username', trimmedUsername);
                     localStorage.setItem('dmt-remember-me', 'true');
                 } else {
                     localStorage.removeItem('dmt-remembered-username');
@@ -461,21 +484,39 @@ function LoginForm() {
                         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
                             {/* Email or Username */}
                             <div className="space-y-1">
-                                <label htmlFor="username" className="block text-xs sm:text-sm font-semibold text-slate-700">
+                                <label htmlFor="username" className={`block text-xs sm:text-sm font-semibold transition-colors ${usernameError ? 'text-destructive' : 'text-slate-700'}`}>
                                     Email or Username
                                 </label>
                                 <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${usernameError ? 'text-destructive' : 'text-slate-400'}`} />
                                     <input
+                                        ref={usernameInputRef}
                                         id="username"
                                         type="text"
                                         required
-                                        className="w-full bg-background border border-border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-xs sm:text-sm"
+                                        className={`w-full bg-background border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 transition-all outline-none text-xs sm:text-sm ${
+                                            usernameError
+                                                ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
+                                                : 'border-border focus:ring-primary/20 focus:border-primary'
+                                        }`}
                                         placeholder="email@samta.ai"
                                         value={formData.username}
-                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, username: e.target.value });
+                                            if (error) setError(null);
+                                            if (usernameError) setUsernameError(false);
+                                        }}
+                                        onBlur={() => {
+                                            const trimmed = formData.username.trim();
+                                            if (formData.username && formData.username !== trimmed) {
+                                                setFormData(prev => ({ ...prev, username: trimmed }));
+                                            }
+                                        }}
                                     />
                                 </div>
+                                {usernameError && (
+                                    <p className="text-[11px] text-destructive font-medium mt-1">Field cannot be empty</p>
+                                )}
                             </div>
 
                             {/* Password */}

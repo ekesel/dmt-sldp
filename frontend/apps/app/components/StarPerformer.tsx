@@ -6,7 +6,7 @@ import { Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dashboard, getFileUrl } from '@dmt/api';
 
-interface Performer {
+export interface Performer {
     name: string;
     role: string;
     message: string;
@@ -18,6 +18,66 @@ interface StarPerformerProps {
     performers?: Performer[];
 }
 
+export const parseStarPerformers = (data: any): Performer[] => {
+    if (!data || !data.top_performers) return [];
+
+    const rawVals = Object.values(data.top_performers)
+        .filter((val: any) => val !== null && val !== undefined)
+        .map((val: any) => {
+            const p = Array.isArray(val) ? val[0] : val;
+            return p ? Number(p.score) : NaN;
+        })
+        .filter((n) => Number.isFinite(n));
+
+    const scoreMin = rawVals.length > 0 ? Math.min(...rawVals) : 0;
+    const scoreMax = rawVals.length > 0 ? Math.max(...rawVals) : 1;
+
+    return Object.values(data.top_performers)
+        .filter((val: any) => val !== null && val !== undefined)
+        .map((val: any) => {
+            const p = Array.isArray(val) ? val[0] : val;
+            if (!p) return null;
+
+            const RATING_MIN = 4;
+            const RATING_MAX = 5;
+            const DEFAULT_RATING = 4.5;
+            let rating = DEFAULT_RATING;
+            if (p.score !== undefined && p.score !== null) {
+                const valScore = Number(p.score);
+                if (Number.isFinite(valScore)) {
+                    const range = scoreMax - scoreMin;
+                    const normalized = range > 0
+                        ? (valScore - scoreMin) / range
+                        : 0.5;
+                    rating = RATING_MIN + normalized * (RATING_MAX - RATING_MIN);
+                    rating = Math.min(RATING_MAX, Math.max(RATING_MIN, rating));
+                }
+            }
+
+            let avatarUrl = 'https://i.pravatar.cc/150?u=star';
+            if (p.avatar) {
+                try {
+                    avatarUrl = typeof getFileUrl === 'function' ? getFileUrl(p.avatar) : p.avatar;
+                } catch {
+                    avatarUrl = p.avatar;
+                }
+            }
+
+            return {
+                name: p.name || 'Performer',
+                role: p.title || 'Top Performer',
+                message: p.reason || 'Outstanding performance',
+                rating,
+                avatar: avatarUrl,
+            };
+        })
+        .filter((p): p is Performer => p !== null);
+};
+
+export const resetStarPerformersCache = () => {
+    // No-op for compatibility
+};
+
 /**
  * StarPerformer component that matches the reference image.
  * Features a trophy illustration, user info, and a star rating.
@@ -27,7 +87,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
 }) => {
     const [currentIndex, setCurrentIndex] = React.useState(0);
     const [apiPerformers, setApiPerformers] = React.useState<Performer[]>([]);
-    const [loading, setLoading] = React.useState(true);
+    const [loading, setLoading] = React.useState<boolean>(!performers || performers.length === 0);
 
     React.useEffect(() => {
         // Skip network fetch entirely when performers are injected via props
@@ -36,68 +96,28 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             return;
         }
 
-        const fetchPerformers = async () => {
-            setLoading(true);
-            try {
-                const data = await dashboard.getStarPerformer();
+        let isMounted = true;
+        setLoading(true);
 
-                if (data && data.top_performers) {
-                    // Derive score bounds from the actual data for monotonic normalization
-                    const rawVals = Object.values(data.top_performers)
-                        .filter((val: any) => val !== null && val !== undefined)
-                        .map((val: any) => {
-                            const p = Array.isArray(val) ? val[0] : val;
-                            return p ? Number(p.score) : NaN;
-                        })
-                        .filter((n) => Number.isFinite(n));
-
-                    const scoreMin = rawVals.length > 0 ? Math.min(...rawVals) : 0;
-                    const scoreMax = rawVals.length > 0 ? Math.max(...rawVals) : 1;
-
-                    const mapped: Performer[] = Object.values(data.top_performers)
-                        .filter((val: any) => val !== null && val !== undefined)
-                        .map((val: any) => {
-                            // Extract single performer object if it is wrapped in an array
-                            const p = Array.isArray(val) ? val[0] : val;
-                            if (!p) return null;
-
-                            // Monotonic linear normalization: map score → [4, 5] stars
-                            const RATING_MIN = 4;
-                            const RATING_MAX = 5;
-                            const DEFAULT_RATING = 4.5;
-                            let rating = DEFAULT_RATING;
-                            if (p.score !== undefined && p.score !== null) {
-                                const valScore = Number(p.score);
-                                if (Number.isFinite(valScore)) {
-                                    const range = scoreMax - scoreMin;
-                                    const normalized = range > 0
-                                        ? (valScore - scoreMin) / range  // 0..1
-                                        : 0.5;                           // all equal → mid
-                                    // Linearly interpolate and clamp to [RATING_MIN, RATING_MAX]
-                                    rating = RATING_MIN + normalized * (RATING_MAX - RATING_MIN);
-                                    rating = Math.min(RATING_MAX, Math.max(RATING_MIN, rating));
-                                }
-                            }
-                            return {
-                                name: p.name || 'Performer',
-                                role: p.title || 'Top Performer',
-                                message: p.reason || 'Outstanding performance',
-                                rating,
-                                avatar: p.avatar ? getFileUrl(p.avatar) : 'https://i.pravatar.cc/150?u=star'
-                            };
-                        })
-                        .filter((p): p is Performer => p !== null);
-
-                    setApiPerformers(mapped);
-                }
-            } catch (error) {
+        dashboard.getStarPerformer()
+            .then((data) => {
+                if (!isMounted) return;
+                const mapped = parseStarPerformers(data);
+                setApiPerformers(mapped);
+            })
+            .catch((error) => {
                 console.error('Failed to fetch star performers:', error);
-            } finally {
-                setLoading(false);
-            }
+            })
+            .finally(() => {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            isMounted = false;
         };
-        fetchPerformers();
-    }, [performers, dashboard]);
+    }, [performers]);
 
     // Resolve final data list
     const dataList = performers && performers.length > 0
@@ -234,13 +254,13 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
 
             {/* User Info Section */}
             <div className="relative flex-1 flex items-center min-h-0">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={currentIndex}
-                        initial={{ opacity: 0, x: 30 }}
+                        initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -30 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
                         className="flex gap-3 sm:gap-5 items-center w-full"
                     >
                         {/* Avatar */}
@@ -251,6 +271,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                                 fill
                                 className="object-cover"
                                 unoptimized
+                                priority
                             />
                         </div>
 
