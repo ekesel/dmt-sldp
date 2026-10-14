@@ -62,8 +62,9 @@ export const SprintSelector = React.memo(({
 
     // Re-fetch sprints whenever the project changes
     useEffect(() => {
+        setSprintList([]);
+        setIsOpen(false);
         if (projectId === null || projectId === undefined) {
-            setSprintList([]);
             setLoading(false);
             return;
         }

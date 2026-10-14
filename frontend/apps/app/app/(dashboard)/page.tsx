@@ -72,6 +72,12 @@ export default function DashboardPage() {
     });
     const [selectedSprintId, setSelectedSprintId] = useState<number | null>(() => {
         if (typeof window !== 'undefined') {
+            const savedProjectId = sessionStorage.getItem('dashboard_projectId');
+            // If All Projects is selected, clear and do not restore sprint filter
+            if (!savedProjectId) {
+                sessionStorage.removeItem('dashboard_sprintId');
+                return null;
+            }
             const savedSprintId = sessionStorage.getItem('dashboard_sprintId');
             return savedSprintId ? Number(savedSprintId) : null;
         }
@@ -79,11 +85,23 @@ export default function DashboardPage() {
     });
     const [selectedSprintName, setSelectedSprintName] = useState<string>('');
 
+    const prevProjectIdRef = useRef<number | null>(selectedProjectId);
+
     useEffect(() => {
         if (selectedProjectId !== null) {
             sessionStorage.setItem('dashboard_projectId', selectedProjectId.toString());
         } else {
             sessionStorage.removeItem('dashboard_projectId');
+        }
+
+        // When the selected project changes, reset previously selected sprint IDs and clear stale sprint selection
+        if (prevProjectIdRef.current !== selectedProjectId) {
+            prevProjectIdRef.current = selectedProjectId;
+            setSelectedSprintId(null);
+            setSelectedSprintName('');
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('dashboard_sprintId');
+            }
         }
     }, [selectedProjectId]);
 
@@ -133,13 +151,16 @@ export default function DashboardPage() {
         selectedProjectId,
         hasInvalidDates ? null : (startDate || null),
         hasInvalidDates ? null : (endDate || null),
-        selectedSprintId
+        selectedProjectId !== null ? selectedSprintId : null
     );
 
     const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
         setSelectedProjectId(projectId);
         setSelectedSprintId(null);
         setSelectedSprintName('');
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('dashboard_sprintId');
+        }
         const projectName = project?.name || (projectId ? `Project ${projectId}` : 'All Projects');
         toast.success(`Project filter applied: ${projectName}`, { id: 'project-filter' });
     }, []);
@@ -415,7 +436,7 @@ export default function DashboardPage() {
                 pageNum++;
             }
 
-            const pdfName = `dashboard-${selectedProjectId || 'global'}${selectedSprintId ? `-sprint-${selectedSprintId}` : ''}-${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfName = `dashboard-${selectedProjectId || 'global'}${selectedProjectId && selectedSprintId ? `-sprint-${selectedSprintId}` : ''}-${new Date().toISOString().split('T')[0]}.pdf`;
             const pdfBlob = pdf.output('blob');
             const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
 

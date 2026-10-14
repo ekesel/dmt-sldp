@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Dancing_Script } from 'next/font/google';
 import { useAuth } from '../../../context/AuthContext';
+import { validateResetEmail } from '../forgot-password/page';
 import { Shield, Lock, Loader2, AlertCircle, User, Info, Zap, Users, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -223,6 +224,7 @@ function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [usernameError, setUsernameError] = useState(false);
+    const [usernameErrorMessage, setUsernameErrorMessage] = useState<string | null>(null);
     const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
@@ -236,7 +238,8 @@ function LoginForm() {
         if (searchParams.get('expired') === 'true') {
             setInfoMessage('Your session has expired due to inactivity. Please log in again.');
         }
-    }, [searchParams]);
+        router.prefetch('/home');
+    }, [searchParams, router]);
 
     // Restore remembered username on load
     useEffect(() => {
@@ -254,14 +257,29 @@ function LoginForm() {
         e.preventDefault();
         setError(null);
         setUsernameError(false);
+        setUsernameErrorMessage(null);
 
         const trimmedUsername = formData.username.trim();
         if (!trimmedUsername) {
-            setError('Field cannot be empty');
+            const emptyMsg = 'Field cannot be empty';
+            setError(emptyMsg);
             setUsernameError(true);
+            setUsernameErrorMessage(emptyMsg);
             setFormData(prev => ({ ...prev, username: '' }));
             usernameInputRef.current?.focus();
             return;
+        }
+
+        if (trimmedUsername.includes('@')) {
+            const emailValidation = validateResetEmail(trimmedUsername);
+            if (!emailValidation.isValid) {
+                const errorMsg = emailValidation.error || 'Invalid credentials provided or not accepted.';
+                setError(errorMsg);
+                setUsernameError(true);
+                setUsernameErrorMessage(errorMsg);
+                usernameInputRef.current?.focus();
+                return;
+            }
         }
 
         if (!formData.password) {
@@ -292,7 +310,21 @@ function LoginForm() {
 
             router.push('/home');
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Invalid credentials. Please make sure you are accessing the correct portal.');
+            const errorMsg =
+                (typeof err.response?.data === 'string' && err.response.data) ||
+                err.response?.data?.error ||
+                err.response?.data?.detail ||
+                err.response?.data?.message ||
+                err.data?.error ||
+                err.data?.detail ||
+                err.data?.message ||
+                (Array.isArray(err.response?.data?.email) && err.response.data.email[0]) ||
+                (Array.isArray(err.response?.data?.non_field_errors) && err.response.data.non_field_errors[0]) ||
+                (err.message && !err.message.includes('Request failed') ? err.message : null) ||
+                'Invalid credentials provided or not accepted.';
+            setError(errorMsg);
+            setUsernameError(true);
+            setUsernameErrorMessage(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -504,7 +536,10 @@ function LoginForm() {
                                         onChange={(e) => {
                                             setFormData({ ...formData, username: e.target.value });
                                             if (error) setError(null);
-                                            if (usernameError) setUsernameError(false);
+                                            if (usernameError) {
+                                                setUsernameError(false);
+                                                setUsernameErrorMessage(null);
+                                            }
                                         }}
                                         onBlur={() => {
                                             const trimmed = formData.username.trim();
@@ -515,7 +550,9 @@ function LoginForm() {
                                     />
                                 </div>
                                 {usernameError && (
-                                    <p className="text-[11px] text-destructive font-medium mt-1">Field cannot be empty</p>
+                                    <p className="text-[11px] text-destructive font-medium mt-1">
+                                        {usernameErrorMessage || error || "Field cannot be empty"}
+                                    </p>
                                 )}
                             </div>
 

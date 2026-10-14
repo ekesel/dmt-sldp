@@ -127,7 +127,18 @@ export default function ForgotPasswordPage() {
             await authApi.passwordResetRequest(email.trim());
             setSuccess(true);
         } catch (err: any) {
-            const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || 'Email address not found in identity server database.';
+            const errorMsg =
+                (typeof err.response?.data === 'string' && err.response.data) ||
+                err.response?.data?.error ||
+                err.response?.data?.detail ||
+                err.response?.data?.message ||
+                err.data?.error ||
+                err.data?.detail ||
+                err.data?.message ||
+                (Array.isArray(err.response?.data?.email) && err.response.data.email[0]) ||
+                (Array.isArray(err.response?.data?.non_field_errors) && err.response.data.non_field_errors[0]) ||
+                (err.message && !err.message.includes('Request failed') ? err.message : null) ||
+                'Email address not found in identity server database.';
             setError(errorMsg);
             toast.error(errorMsg);
         } finally {
@@ -178,19 +189,29 @@ export default function ForgotPasswordPage() {
                             )}
 
                             <div className="space-y-1.5">
-                                <label htmlFor="email" className="text-sm font-medium text-muted-foreground">Email Address</label>
+                                <label htmlFor="email" className={`text-sm font-medium ${error ? 'text-destructive' : 'text-muted-foreground'}`}>Email Address</label>
                                 <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                    <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${error ? 'text-destructive' : 'text-muted-foreground'}`} />
                                     <input
                                         id="email"
                                         type="email"
                                         required
-                                        className="w-full bg-background border border-border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
+                                        className={`w-full bg-background border rounded-lg pl-10 pr-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 transition-all outline-none ${
+                                            error
+                                                ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
+                                                : 'border-border focus:ring-primary/50 focus:border-primary'
+                                        }`}
                                         placeholder="john@example.com"
                                         value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            if (error) setError(null);
+                                        }}
                                     />
                                 </div>
+                                {error && (
+                                    <p className="text-xs text-destructive font-medium mt-1">{error}</p>
+                                )}
                             </div>
 
                             <button

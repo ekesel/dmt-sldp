@@ -116,18 +116,21 @@ export const setGlobalErrorHandler = (handler: (error: any) => void) => {
 export interface ApiErrorPayload {
   detail?: string;
   message?: string;
+  error?: string;
   [key: string]: unknown;
 }
 
 export class ApiClientError extends Error {
   status?: number;
   data?: ApiErrorPayload | unknown;
+  response?: { status?: number; data?: any };
 
-  constructor(message: string, status?: number, data?: ApiErrorPayload | unknown) {
+  constructor(message: string, status?: number, data?: ApiErrorPayload | unknown, response?: { status?: number; data?: any }) {
     super(message);
     this.name = 'ApiClientError';
     this.status = status;
     this.data = data;
+    this.response = response || (status !== undefined || data !== undefined ? { status, data } : undefined);
   }
 }
 
@@ -252,13 +255,19 @@ function handleApiError(error: unknown): never {
   if (axios.isAxiosError(error)) {
     const axiosErr = error as AxiosError<ApiErrorPayload>;
     const status = axiosErr.response?.status;
-    const data = axiosErr.response?.data;
+    const data: any = axiosErr.response?.data;
     const message =
-      data?.detail ||
-      data?.message ||
+      (typeof data === 'string' && data.trim() ? data : null) ||
+      (typeof data?.error === 'string' ? data.error : null) ||
+      (typeof data?.detail === 'string' ? data.detail : null) ||
+      (typeof data?.message === 'string' ? data.message : null) ||
+      (Array.isArray(data?.email) && data.email[0]) ||
+      (typeof data?.email === 'string' ? data.email : null) ||
+      (Array.isArray(data?.non_field_errors) && data.non_field_errors[0]) ||
+      (typeof data?.non_field_errors === 'string' ? data.non_field_errors : null) ||
       axiosErr.message ||
       'An unexpected API error occurred';
-    throw new ApiClientError(message, status, data);
+    throw new ApiClientError(message, status, data, axiosErr.response);
   }
   throw error instanceof Error ? error : new ApiClientError('Unknown API error');
 }
@@ -575,7 +584,12 @@ export const dashboard = {
     get<any>(`/dashboard/sprint-comparison/${buildQuery({ sprint_a: sprintA, sprint_b: sprintB, project_id: projectId, developer_id: developerId })}`),
 
 
-  getStarPerformer: () => get<StarPerformerData>('/homepage/star-performer/'),
+  getStarPerformer: () =>
+    get<StarPerformerData>('/homepage/star-performer/', undefined, {
+      cache: true,
+      deduplicate: true,
+      ttl: 30 * 60 * 1000,
+    }),
   getPolicies: () => get<PolicyData[]>('/homepage/policy/'),
   uploadPolicy: (formData: FormData) => post<PolicyData, FormData>('/homepage/policy/', formData),
   updatePolicy: (id: number, formData: FormData) => patch<PolicyData, FormData>(`/homepage/policy/${id}/`, formData),

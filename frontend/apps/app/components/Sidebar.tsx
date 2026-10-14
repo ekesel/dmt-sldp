@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,9 +17,10 @@ import {
   Home,
   Layers,
 } from "lucide-react";
-import { useState } from "react";
+import { dashboard } from "@dmt/api";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
+import { parseStarPerformers, setCachedPerformers, StarPerformerApiResponse } from "./StarPerformer";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -135,6 +136,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         key={item.href}
         href={item.href}
         onClick={onClose}
+        onMouseEnter={() => {
+          if (item.href === "/home") {
+            dashboard.getStarPerformer()
+              .then((data) => {
+                const mapped = parseStarPerformers(data as StarPerformerApiResponse);
+                if (mapped && mapped.length > 0) {
+                  setCachedPerformers(mapped);
+                }
+              })
+              .catch(() => {});
+          }
+        }}
         className={`flex items-center gap-3 transition-all group/item ${isNested ? "pl-6 pr-3 py-2.5 rounded-md" : "px-4 py-3 rounded-lg"
           } ${isActive
             ? "bg-access text-access-foreground font-bold shadow-sm"

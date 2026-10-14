@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { Shield, Mail, Lock, User, Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { tenants } from '@dmt/api';
 import { PasswordInput } from '@dmt/ui';
+import { validateResetEmail } from '../forgot-password/page';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -26,6 +27,12 @@ export default function RegisterPage() {
         e.preventDefault();
         setError(null);
 
+        const emailValidation = validateResetEmail(formData.email);
+        if (!emailValidation.isValid) {
+            setError(emailValidation.error || 'Invalid credentials provided or not accepted.');
+            return;
+        }
+
         if (formData.password !== formData.password2) {
             setError("Passwords don't match");
             return;
@@ -34,30 +41,22 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            // In a real scenario, we might want to validate the tenant slug first or invite code
-            // For now, we assume the backend handles tenant assignment or creation logic if needed.
-            // But wait, the current register() function doesn't take tenant_slug.
-            // We need to either create a new tenant (registering a company) or join an existing one.
-            // The prompt said "if user is not there in current tenant... not able to login".
-            // This register page likely registers a NEW USER for an existing tenant (via invite?) or NEW TENANT?
-            // Given "DMT Company to tenant name" task, likely this registers a USER.
-
-            // Let's assume for now we call register. But we need to pass tenant info if we want to link them.
-            // The backend RegisterSerializer accepts 'tenant' (ID). A slug is not enough unless we lookup.
-            // TODO: Enhance backend to lookup tenant by slug or invite code.
-
-            // For this implementation, I will just call register and let the backend decide default or fail.
-            // Or I'll skip tenant field in register for now and assume they get a default or null.
-            // BUT requirements say "per tenant login".
-
             await register(formData);
             router.push('/');
         } catch (err: any) {
             // Check for specific error details from backend
-            const detail = err.response?.data?.detail
-                || (err.response?.data?.email && `Email: ${err.response.data.email[0]}`)
-                || (err.response?.data?.username && `Username: ${err.response.data.username[0]}`)
-                || (err.response?.data?.password && `Password: ${err.response.data.password[0]}`)
+            const detail =
+                (typeof err.response?.data === 'string' && err.response.data)
+                || err.response?.data?.error
+                || err.response?.data?.detail
+                || err.response?.data?.message
+                || err.data?.error
+                || err.data?.detail
+                || err.data?.message
+                || (err.response?.data?.email && `Email: ${Array.isArray(err.response.data.email) ? err.response.data.email[0] : err.response.data.email}`)
+                || (err.response?.data?.username && `Username: ${Array.isArray(err.response.data.username) ? err.response.data.username[0] : err.response.data.username}`)
+                || (err.response?.data?.password && `Password: ${Array.isArray(err.response.data.password) ? err.response.data.password[0] : err.response.data.password}`)
+                || (err.message && !err.message.includes('Request failed') ? err.message : null)
                 || 'Registration failed. Please try again.';
             setError(detail);
         } finally {

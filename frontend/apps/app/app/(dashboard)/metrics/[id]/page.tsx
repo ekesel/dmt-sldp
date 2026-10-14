@@ -239,7 +239,9 @@ export default function DeveloperDetailsPage({
                               );
                               return proj ? (
                                 <>
-                                  <span className="truncate">{proj.name}</span>
+                                  <span className={`truncate ${proj.active === false ? "text-gray-400 dark:text-gray-500" : ""}`}>
+                                    {proj.name}
+                                  </span>
                                   {proj.active && (
                                     <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-green)]/10 text-[var(--color-green)] text-[10px] font-bold uppercase tracking-wider shrink-0">
                                       Active
@@ -265,7 +267,8 @@ export default function DeveloperDetailsPage({
                           { id: "all", name: "All Projects Combined" },
                           ...(developer?.projects ?? []),
                         ].map((p) => {
-                          const isActive = String(p.id) === selectedProjectId;
+                          const isSelected = String(p.id) === selectedProjectId;
+                          const isInactive = 'active' in p && p.active === false;
                           return (
                             <button
                               key={p.id}
@@ -274,27 +277,39 @@ export default function DeveloperDetailsPage({
                                 setSelectedSprintId(null);
                                 setDropdownOpen(false);
                               }}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
-                                ? "bg-primary/15 text-primary-foreground"
-                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                                }`}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${
+                                isSelected
+                                  ? isInactive
+                                    ? "bg-primary/15 text-gray-400 dark:text-gray-500"
+                                    : "bg-primary/15 text-primary-foreground"
+                                  : isInactive
+                                    ? "text-gray-400 dark:text-gray-500 hover:bg-accent/40 hover:text-gray-400"
+                                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                              }`}
                             >
                               <div
-                                className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${isActive
-                                  ? "bg-primary shadow-[0_0_6px_var(--color-primary)]"
-                                  : "bg-muted group-hover:bg-muted-foreground"
-                                  }`}
+                                className={`w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-200 ${
+                                  isSelected
+                                    ? isInactive
+                                      ? "bg-gray-400 dark:bg-gray-500"
+                                      : "bg-primary shadow-[0_0_6px_var(--color-primary)]"
+                                    : isInactive
+                                      ? "bg-gray-300 dark:bg-gray-600"
+                                      : "bg-muted group-hover:bg-muted-foreground"
+                                }`}
                               />
                               <span className="font-semibold text-sm flex items-center gap-2 overflow-hidden">
-                                <span className="truncate">{p.name}</span>
+                                <span className={`truncate ${isInactive ? "text-gray-400 dark:text-gray-500" : ""}`}>
+                                  {p.name}
+                                </span>
                                 {'active' in p && p.active && (
                                   <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-green)]/10 text-[var(--color-green)] text-[10px] font-bold uppercase tracking-wider shrink-0">
                                     Active
                                   </span>
                                 )}
                               </span>
-                              {isActive && (
-                                <span className="ml-auto text-primary shrink-0">
+                              {isSelected && (
+                                <span className={`ml-auto shrink-0 ${isInactive ? "text-gray-400 dark:text-gray-500" : "text-primary"}`}>
                                   <CheckCircle2 size={14} />
                                 </span>
                               )}
