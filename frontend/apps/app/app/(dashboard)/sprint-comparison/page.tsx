@@ -140,7 +140,7 @@ export default function SprintComparisonPage() {
     return (
         <div className="flex flex-col gap-8 w-full min-h-screen bg-background pb-10 px-6">
             {/* Header / Sticky Filter */}
-            <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 transition-all duration-300">
+            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 transition-all duration-300">
                 <div className="flex items-center gap-6 flex-wrap">
                     <div className="font-bold text-xl text-foreground tracking-tight mr-2 border-r border-border pr-6">Sprint Comparison</div>
 

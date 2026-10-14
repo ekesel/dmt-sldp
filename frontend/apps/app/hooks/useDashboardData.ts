@@ -54,7 +54,13 @@ export interface DashboardDataResult {
   assigneeDistribution: AssigneeEntry[];
 }
 
-export function useDashboardData(projectId?: number | null, startDate?: string | null, endDate?: string | null) {
+export function useDashboardData(
+  projectId?: number | null,
+  startDate?: string | null,
+  endDate?: string | null,
+  sprintId?: number | number[] | string | null,
+  sprintIds?: number | number[] | string | null
+) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
@@ -63,7 +69,13 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
 
   const { lastMessage } = useWebSocket();
 
-  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? ''];
+  // When All Projects is selected (projectId is null/undefined), ignore any sprint IDs
+  const effectiveSprintIds = projectId ? (sprintIds ?? sprintId) : null;
+  const sprintKey = Array.isArray(effectiveSprintIds)
+    ? effectiveSprintIds.join(',')
+    : (effectiveSprintIds ?? 'all');
+
+  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? '', sprintKey];
 
   const { data, isLoading, isFetching, error, refetch } = useQuery<DashboardDataResult, Error>({
     queryKey,
@@ -71,13 +83,24 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
       const params: Record<string, any> = projectId ? { project_id: projectId } : {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
+      if (projectId && effectiveSprintIds !== undefined && effectiveSprintIds !== null && effectiveSprintIds !== '') {
+        const sprintIdsStr = Array.isArray(effectiveSprintIds)
+          ? effectiveSprintIds.filter(Boolean).join(',')
+          : String(effectiveSprintIds);
 
-      const [summaryData, velocityData, complianceData, insightsData, forecastData, assigneeData] = await Promise.all([
+        if (sprintIdsStr) {
+          params.sprint_ids = sprintIdsStr;
+          const singleNum = Number(sprintIdsStr);
+          if (!isNaN(singleNum) && !sprintIdsStr.includes(',')) {
+            params.sprint_id = singleNum;
+          }
+        }
+      }
+
+      const [summaryData, velocityData, complianceData, assigneeData] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
         api.get<VelocityData[]>('dashboard/velocity/', { params }).then(r => r.data),
         api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
-        aiInsights.list(params) as unknown as Promise<Insight[]>,
-        api.get<Record<string, string>>('dashboard/forecast/', { params }).then(r => r.data).catch(() => null),
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
       ]);
 
@@ -85,15 +108,50 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
         summary: summaryData,
         velocity: velocityData,
         compliance: complianceData,
-        insights: insightsData,
-        forecast: forecastData,
+        insights: [],
+        forecast: null,
         assigneeDistribution: assigneeData,
       };
     },
     enabled: Boolean(token),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) => {
+      // Clear stale sprint data and previous project metrics when switching projects
+      if (previousQuery?.queryKey[1] !== (projectId ?? 'all')) {
+        return undefined;
+      }
+      return previousData;
+    },
+  });
+
+  // AI Insights and Forecast: project-level ONLY, never sprint-filtered
+  const aiQueryKey = ['dashboard-ai', projectId ?? 'all'];
+
+  const {
+    data: aiData,
+    isFetching: isAiFetching,
+    error: aiError,
+    refetch: refetchAi,
+  } = useQuery<{ insights: Insight[]; forecast: Record<string, string> | null }, Error>({
+    queryKey: aiQueryKey,
+    queryFn: async () => {
+      const aiParams: Record<string, any> = projectId ? { project_id: projectId } : {};
+      const [insightsData, forecastData] = await Promise.all([
+        aiInsights.list(aiParams) as unknown as Promise<Insight[]>,
+        api.get<Record<string, string>>('dashboard/forecast/', { params: aiParams })
+          .then(r => r.data)
+          .catch(() => null),
+      ]);
+
+      return {
+        insights: insightsData || [],
+        forecast: forecastData || null,
+      };
+    },
+    enabled: Boolean(token),
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const lastProcessedMessageRef = useRef<any>(null);
@@ -115,7 +173,7 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
         setIsRefreshingInsights(false);
         setAiProgress(100);
         setAiStatus('Complete');
-        queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-ai'] });
         setTimeout(() => {
           setAiProgress(0);
           setAiStatus('');
@@ -140,6 +198,7 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
     try {
       setIsRefreshingInsights(true);
       await aiInsights.refresh(projectId);
+      queryClient.invalidateQueries({ queryKey: ['dashboard-ai'] });
       toast.success('AI Insights refresh triggered');
     } catch (err: any) {
       console.error('[RefreshInsights] Error:', err);
@@ -152,13 +211,15 @@ export function useDashboardData(projectId?: number | null, startDate?: string |
     summary: data?.summary ?? null,
     velocity: data?.velocity ?? [],
     compliance: data?.compliance ?? [],
-    insights: data?.insights ?? [],
-    forecast: data?.forecast ?? null,
+    insights: aiData?.insights ?? [],
+    forecast: aiData?.forecast ?? null,
     assigneeDistribution: data?.assigneeDistribution ?? [],
     loading: isLoading,
-    isFetching,
-    error: error ? error.message || 'Failed to load dashboard data' : null,
-    refresh: refetch,
+    isFetching: isFetching || isAiFetching,
+    error: error ? (error.message || 'Failed to load dashboard data') : (aiError ? (aiError.message || 'Failed to load AI insights') : null),
+    refresh: async () => {
+      await Promise.all([refetch(), refetchAi()]);
+    },
     refreshInsights,
     isRefreshingInsights,
     aiProgress,

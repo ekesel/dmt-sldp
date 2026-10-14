@@ -16,13 +16,23 @@ interface VelocityChartProps {
 }
 
 export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
+    const [isMounted, setIsMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) {
+        return <div className="w-full h-full min-h-[300px]" />;
+    }
+
     if (!data || data.length === 0) {
-        return <div className="h-full flex items-center justify-center text-muted-foreground">No velocity data available</div>;
+        return <div className="w-full h-full min-h-[300px] flex items-center justify-center text-muted-foreground">No velocity data available</div>;
     }
 
     return (
-        <div className="w-full h-full min-h-[18.75rem]">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full h-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
                 <AreaChart data={data} margin={{ top: 10, right: 30, left: 80, bottom: 30 }}>
                     <defs>
                         <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">

@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Heart, MessageSquare } from 'lucide-react';
+import { ThumbsUp, MessageSquare } from 'lucide-react';
 import { useNewsfeedQuery } from '../hooks/useNewsfeedQuery';
 import { useReactions } from '../hooks/useReactions';
 import { useComments } from '../hooks/useComments';
@@ -132,10 +132,10 @@ export const SocialNewsFeed: React.FC = () => {
                 <div className="flex gap-4 pt-2.5 border-t border-border/40 mt-2.5 flex-shrink-0">
                     <button
                         onClick={handleLikeClick}
-                        className={`flex items-center gap-1 transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] ${isLiked ? 'text-rose-600' : 'text-muted-foreground hover:text-rose-600'}`}
+                        className={`flex items-center gap-1 transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
                     >
-                        <Heart
-                            className={`w-4 h-4 transition-all ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-muted-foreground'}`}
+                        <ThumbsUp
+                            className={`w-4 h-4 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
                         />
                         <span>Like{likeCount > 0 ? ` (${likeCount})` : ''}</span>
                     </button>

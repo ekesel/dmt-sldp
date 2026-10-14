@@ -1,32 +1,44 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from "@dmt/ui";
 import { TrendingUp, FileText, BarChart3, AlertCircle, Share2, RefreshCcw, Sparkles, HelpCircle, CalendarDays, X, Loader2 } from "lucide-react";
 import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
-import { ForecastChart } from "../../components/charts/ForecastChart";
 import { AIInsightsList } from "../../components/AIInsightsList";
 import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
 import { useDashboardData } from "../../hooks/useDashboardData";
-import { ProjectSelector } from "../../components/ProjectSelector";
+import { ProjectSelector, Project } from "../../components/ProjectSelector";
+import { SprintSelector, Sprint } from "../../components/SprintSelector";
 import { ActiveFolderSelector } from "../../components/ActiveFolderSelector";
 import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
 import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
 import { toast } from "react-hot-toast";
 import { HelpSidebar } from "../../components/HelpSidebar";
+import { DatePicker } from "../../components/DatePicker";
 function fmtDate(d: string) {
     return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function sprintRangeLabel(startDate: string, endDate: string): string {
+function sprintRangeLabel(startDate: string, endDate: string, sprintName?: string | null): string {
+    if (sprintName) return sprintName;
     if (!startDate && !endDate) return 'Last 5 sprints';
     if (startDate && endDate) return `${fmtDate(startDate)} – ${fmtDate(endDate)}`;
     if (startDate) return `From ${fmtDate(startDate)}`;
     return `Up to ${fmtDate(endDate)}`;
 }
 
+function getTodayDateStr(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 export default function DashboardPage() {
+    const todayStr = getTodayDateStr();
+
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
         if (typeof window !== 'undefined') {
             const savedProjectId = sessionStorage.getItem('dashboard_projectId');
@@ -36,22 +48,60 @@ export default function DashboardPage() {
     });
     const [startDate, setStartDate] = useState<string>(() => {
         if (typeof window !== 'undefined') {
-            return sessionStorage.getItem('dashboard_startDate') || '';
+            const saved = sessionStorage.getItem('dashboard_startDate') || '';
+            const today = getTodayDateStr();
+            if (saved && saved > today) {
+                sessionStorage.removeItem('dashboard_startDate');
+                return '';
+            }
+            return saved;
         }
         return '';
     });
     const [endDate, setEndDate] = useState<string>(() => {
         if (typeof window !== 'undefined') {
-            return sessionStorage.getItem('dashboard_endDate') || '';
+            const saved = sessionStorage.getItem('dashboard_endDate') || '';
+            const today = getTodayDateStr();
+            if (saved && saved > today) {
+                sessionStorage.removeItem('dashboard_endDate');
+                return '';
+            }
+            return saved;
         }
         return '';
     });
+    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const savedProjectId = sessionStorage.getItem('dashboard_projectId');
+            // If All Projects is selected, clear and do not restore sprint filter
+            if (!savedProjectId) {
+                sessionStorage.removeItem('dashboard_sprintId');
+                return null;
+            }
+            const savedSprintId = sessionStorage.getItem('dashboard_sprintId');
+            return savedSprintId ? Number(savedSprintId) : null;
+        }
+        return null;
+    });
+    const [selectedSprintName, setSelectedSprintName] = useState<string>('');
+
+    const prevProjectIdRef = useRef<number | null>(selectedProjectId);
 
     useEffect(() => {
         if (selectedProjectId !== null) {
             sessionStorage.setItem('dashboard_projectId', selectedProjectId.toString());
         } else {
             sessionStorage.removeItem('dashboard_projectId');
+        }
+
+        // When the selected project changes, reset previously selected sprint IDs and clear stale sprint selection
+        if (prevProjectIdRef.current !== selectedProjectId) {
+            prevProjectIdRef.current = selectedProjectId;
+            setSelectedSprintId(null);
+            setSelectedSprintName('');
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('dashboard_sprintId');
+            }
         }
     }, [selectedProjectId]);
 
@@ -70,6 +120,14 @@ export default function DashboardPage() {
             sessionStorage.removeItem('dashboard_endDate');
         }
     }, [endDate]);
+
+    useEffect(() => {
+        if (selectedSprintId !== null) {
+            sessionStorage.setItem('dashboard_sprintId', selectedSprintId.toString());
+        } else {
+            sessionStorage.removeItem('dashboard_sprintId');
+        }
+    }, [selectedSprintId]);
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -79,20 +137,113 @@ export default function DashboardPage() {
     const isDateInvalid = (d: string) => {
         if (!d) return false;
         const year = parseInt(d.split('-')[0], 10);
-        return year < 2000 || year > 2100;
+        if (year < 2000 || year > 2100) return true;
+        return d > todayStr;
     };
     const isRangeInvalid = Boolean(startDate && endDate && new Date(startDate) > new Date(endDate));
     const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate) || isRangeInvalid;
 
     const {
-        summary, velocity, compliance, insights, forecast, assigneeDistribution,
+        summary, velocity, compliance, insights, assigneeDistribution,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
     } = useDashboardData(
         selectedProjectId,
         hasInvalidDates ? null : (startDate || null),
-        hasInvalidDates ? null : (endDate || null)
+        hasInvalidDates ? null : (endDate || null),
+        selectedProjectId !== null ? selectedSprintId : null
     );
+
+    const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
+        setSelectedProjectId(projectId);
+        setSelectedSprintId(null);
+        setSelectedSprintName('');
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('dashboard_sprintId');
+        }
+        const projectName = project?.name || (projectId ? `Project ${projectId}` : 'All Projects');
+        toast.success(`Project filter applied: ${projectName}`, { id: 'project-filter' });
+    }, []);
+
+    const handleSprintSelect = useCallback((sprintId: number | null, sprint?: Sprint | null) => {
+        setSelectedSprintId(sprintId);
+        setSelectedSprintName(sprint?.name || '');
+        if (sprintId) {
+            setStartDate('');
+            setEndDate('');
+            toast.success(`Sprint filter applied: ${sprint?.name || `Sprint ${sprintId}`}`, { id: 'sprint-filter' });
+        } else {
+            toast.success('All sprints selected', { id: 'sprint-filter' });
+        }
+    }, []);
+
+    const handleClearSprint = () => {
+        setSelectedSprintId(null);
+        setSelectedSprintName('');
+        toast.success('Sprint filter cleared', { id: 'sprint-filter' });
+    };
+
+    const handleStartDateChange = (val: string) => {
+        if (val && val > todayStr) {
+            toast.error('Cannot select future dates', { id: 'date-filter' });
+            return;
+        }
+        setStartDate(val);
+        if (val) {
+            setSelectedSprintId(null);
+            setSelectedSprintName('');
+            if (isDateInvalid(val)) {
+                return;
+            }
+            if (endDate && !isDateInvalid(endDate)) {
+                if (new Date(val) > new Date(endDate)) {
+                    toast.error('Start date cannot be after end date', { id: 'date-filter' });
+                } else {
+                    toast.success(`Date filter applied: ${fmtDate(val)} – ${fmtDate(endDate)}`, { id: 'date-filter' });
+                }
+            } else {
+                toast.success(`Date filter applied: From ${fmtDate(val)}`, { id: 'date-filter' });
+            }
+        } else if (endDate && !isDateInvalid(endDate)) {
+            toast.success(`Date filter applied: Up to ${fmtDate(endDate)}`, { id: 'date-filter' });
+        } else {
+            toast.success('Date filter cleared', { id: 'date-filter' });
+        }
+    };
+
+    const handleEndDateChange = (val: string) => {
+        if (val && val > todayStr) {
+            toast.error('Cannot select future dates', { id: 'date-filter' });
+            return;
+        }
+        setEndDate(val);
+        if (val) {
+            setSelectedSprintId(null);
+            setSelectedSprintName('');
+            if (isDateInvalid(val)) {
+                return;
+            }
+            if (startDate && !isDateInvalid(startDate)) {
+                if (new Date(startDate) > new Date(val)) {
+                    toast.error('End date cannot be before start date', { id: 'date-filter' });
+                } else {
+                    toast.success(`Date filter applied: ${fmtDate(startDate)} – ${fmtDate(val)}`, { id: 'date-filter' });
+                }
+            } else {
+                toast.success(`Date filter applied: Up to ${fmtDate(val)}`, { id: 'date-filter' });
+            }
+        } else if (startDate && !isDateInvalid(startDate)) {
+            toast.success(`Date filter applied: From ${fmtDate(startDate)}`, { id: 'date-filter' });
+        } else {
+            toast.success('Date filter cleared', { id: 'date-filter' });
+        }
+    };
+
+    const handleClearDateFilter = () => {
+        setStartDate('');
+        setEndDate('');
+        toast.success('Date filter cleared', { id: 'date-filter' });
+    };
 
     const handleHelpClick = (id: string) => {
         setActiveHelpId(id);
@@ -285,7 +436,7 @@ export default function DashboardPage() {
                 pageNum++;
             }
 
-            const pdfName = `dashboard-${selectedProjectId || 'global'}-${new Date().toISOString().split('T')[0]}.pdf`;
+            const pdfName = `dashboard-${selectedProjectId || 'global'}${selectedProjectId && selectedSprintId ? `-sprint-${selectedSprintId}` : ''}-${new Date().toISOString().split('T')[0]}.pdf`;
             const pdfBlob = pdf.output('blob');
             const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
 
@@ -354,42 +505,50 @@ export default function DashboardPage() {
                     <div className="flex gap-4 items-center flex-wrap justify-end">
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
-                            onSelect={setSelectedProjectId}
+                            onSelect={handleProjectSelect}
                         />
+                        {selectedProjectId !== null && (
+                            <div className="flex items-center gap-2">
+                                <SprintSelector
+                                    projectId={selectedProjectId}
+                                    selectedSprintId={selectedSprintId}
+                                    onSelect={handleSprintSelect}
+                                    autoSelectLatest={false}
+                                    allowAll={true}
+                                    className="w-56 h-12"
+                                />
+                                {selectedSprintId !== null && (
+                                    <button
+                                        onClick={handleClearSprint}
+                                        className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
+                                        title="Clear sprint filter"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-4 py-2 rounded-lg transition-all duration-300 w-56 h-12">
-                                <CalendarDays size={18} className="text-primary shrink-0" />
-                                <div className="flex flex-col flex-1 justify-center">
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-0.5">From</span>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        min="2000-01-01"
-                                        max="2100-12-31"
-                                        onChange={e => setStartDate(e.target.value)}
-                                        className="bg-transparent font-medium text-sm text-foreground outline-none leading-none cursor-pointer w-full"
-                                    />
-                                </div>
-                            </div>
+                            <DatePicker
+                                label="From"
+                                value={startDate}
+                                min="2000-01-01"
+                                max={endDate && endDate <= todayStr ? endDate : todayStr}
+                                onChange={handleStartDateChange}
+                            />
                             <span className="text-muted-foreground text-sm font-bold">→</span>
-                            <div className="flex items-center gap-2 bg-card border border-border hover:border-primary/40 px-4 py-2 rounded-lg transition-all duration-300 w-56 h-12">
-                                <CalendarDays size={18} className="text-primary shrink-0" />
-                                <div className="flex flex-col flex-1 justify-center">
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-0.5">To</span>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        min="2000-01-01"
-                                        max="2100-12-31"
-                                        onChange={e => setEndDate(e.target.value)}
-                                        className="bg-transparent font-medium text-sm text-foreground outline-none leading-none cursor-pointer w-full"
-                                    />
-                                </div>
-                            </div>
+                            <DatePicker
+                                label="To"
+                                value={endDate}
+                                min={startDate || "2000-01-01"}
+                                max={todayStr}
+                                onChange={handleEndDateChange}
+                                popoverAlign="right"
+                            />
                             {(startDate || endDate) && (
                                 <button
-                                    onClick={() => { setStartDate(''); setEndDate(''); }}
-                                    className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0"
+                                    onClick={handleClearDateFilter}
+                                    className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
                                     title="Clear date filter"
                                 >
                                     <X size={16} />
@@ -449,21 +608,12 @@ export default function DashboardPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        <div className="lg:col-span-2 min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
-                                            <div className="space-y-2">
-                                                <div className="h-6 w-40 bg-muted rounded"></div>
-                                                <div className="h-4 w-60 bg-muted rounded"></div>
-                                            </div>
-                                            <div className="h-[280px] w-full bg-muted/20 rounded-xl"></div>
+                                    <div className="min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
+                                        <div className="space-y-2">
+                                            <div className="h-6 w-40 bg-muted rounded"></div>
+                                            <div className="h-4 w-60 bg-muted rounded"></div>
                                         </div>
-                                        <div className="min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
-                                            <div className="space-y-2">
-                                                <div className="h-6 w-40 bg-muted rounded"></div>
-                                                <div className="h-4 w-60 bg-muted rounded"></div>
-                                            </div>
-                                            <div className="h-[280px] w-full bg-muted/20 rounded-xl"></div>
-                                        </div>
+                                        <div className="h-[380px] w-full bg-muted/20 rounded-xl"></div>
                                     </div>
                                 </div>
                             );
@@ -490,7 +640,7 @@ export default function DashboardPage() {
                                         label="Sprint Velocity"
                                         value={`${summary?.velocity || 0} SP`}
                                         trend={selectedProjectId ? undefined : { direction: 'neutral', value: 'Avg' }}
-                                        description={<span className="text-primary">{selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`}</span>}
+                                        description={<span className="text-primary">{selectedSprintName || (selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`)}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -535,7 +685,7 @@ export default function DashboardPage() {
                                         label="Bugs Resolved"
                                         value={(summary?.bugs_resolved || 0).toString()}
                                         trend={{ direction: 'neutral', value: 'Total' }}
-                                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate).toLowerCase()}</span>}
+                                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate, selectedSprintName).toLowerCase()}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -544,70 +694,44 @@ export default function DashboardPage() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                    <Card className="lg:col-span-2 min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                                        <div className="flex items-center justify-between mb-10">
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                                    <BarChart3 className="text-primary" />
-                                                    Velocity History
-                                                </h2>
-                                                <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 w-full bg-muted/10 rounded-2xl border border-border p-4">
-                                            <VelocityChart data={velocity} />
-                                        </div>
-                                    </Card>
-
-                                    <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                                        <div className="mb-8">
+                                <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
+                                    <div className="flex items-center justify-between mb-10">
+                                        <div>
                                             <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                                <TrendingUp className="text-primary" />
-                                                Delivery Forecast
-                                                <button
-                                                    onClick={() => handleHelpClick('forecast')}
-                                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none ml-2"
-                                                    title="Learn more about this metric"
-                                                >
-                                                    <HelpCircle size={20} />
-                                                </button>
+                                                <BarChart3 className="text-primary" />
+                                                Velocity History
                                             </h2>
-                                            <p className="text-muted-foreground text-sm mt-1">Stochastic prediction based on historical cycle times</p>
+                                            <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
                                         </div>
-                                        <div className="flex-1 w-full flex items-center justify-center text-muted-foreground">
-                                            {forecast ? (
-                                                <ForecastChart data={forecast} />
-                                            ) : (
-                                                "Forecast data unavailable (insufficient historical records)"
-                                            )}
-                                        </div>
-                                    </Card>
-
-                                    {/* Critical Alerts - Simplified logic based on compliance */}
-                                    <div className="lg:col-span-3 space-y-6">
-                                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                                            <AlertCircle className="text-destructive" />
-                                            Compliance Alerts
-                                        </h2>
-                                        {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                                            <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
-                                                <div className="flex justify-between items-start">
-                                                    <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
-                                                </div>
-                                                <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
-                                                <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
-                                            </Card>
-                                        )}
-                                        {(!summary || (summary.compliance_rate >= 80)) && (
-                                            <p className="text-muted-foreground">No critical alerts at this time.</p>
-                                        )}
                                     </div>
+                                    <div className="w-full h-[380px] min-h-[380px] bg-muted/10 rounded-2xl border border-border p-4">
+                                        <VelocityChart data={velocity} />
+                                    </div>
+                                </Card>
+
+                                {/* Critical Alerts - Simplified logic based on compliance */}
+                                <div className="space-y-6">
+                                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                        <AlertCircle className="text-destructive" />
+                                        Compliance Alerts
+                                    </h2>
+                                    {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
+                                        <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
+                                            <div className="flex justify-between items-start">
+                                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
+                                            </div>
+                                            <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
+                                            <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                        </Card>
+                                    )}
+                                    {(!summary || (summary.compliance_rate >= 80)) && (
+                                        <p className="text-muted-foreground">No critical alerts at this time.</p>
+                                    )}
                                 </div>
 
                                 {/* Assignee Distribution Card */}
                                 {assigneeDistribution.length > 0 && (
-                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate)} />
+                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate, selectedSprintName)} />
                                 )}
 
                                 <div className="pt-8 border-t border-border">

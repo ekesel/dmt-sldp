@@ -10,7 +10,7 @@ import EventsCalendar from "../../../components/EventsCalendar";
 
 export default function HomePage() {
   return (
-    <div className="min-h-full lg:h-full flex flex-col bg-[#F3F4F6] px-4 pt-2 pb-3 lg:px-6 lg:pt-3 lg:pb-4">
+    <main className="min-h-full lg:h-full flex flex-col bg-[#F3F4F6] px-4 pt-2 pb-3 lg:px-6 lg:pt-3 lg:pb-4">
       {/* Inner container: flex column, fills all available height */}
       <div className="max-w-[100rem] w-full mx-auto flex flex-col gap-4 flex-1 lg:min-h-0">
 
@@ -47,6 +47,6 @@ export default function HomePage() {
         </div>
 
       </div>
-    </div>
+    </main>
   );
 }

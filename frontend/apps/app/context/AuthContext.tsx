@@ -1,7 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth, getFileUrl } from '@dmt/api';
+import { auth, dashboard, getFileUrl } from '@dmt/api';
 import { useRoleStore } from '../store/roleStore';
+import { parseStarPerformers, setCachedPerformers, getCachedPerformers, StarPerformerApiResponse } from '../components/StarPerformer';
 
 interface User {
     id: number;
@@ -58,6 +59,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         localStorage.setItem('dmt-tenant', userData.tenant_slug);
                     }
                     useRoleStore.getState().setRolesFromUser(userData);
+                    // Pre-warm star performer cache upon session initialization
+                    dashboard.getStarPerformer()
+                        .then((data) => {
+                            const mapped = parseStarPerformers(data as StarPerformerApiResponse);
+                            if (mapped && mapped.length > 0) {
+                                setCachedPerformers(mapped);
+                            }
+                        })
+                        .catch(() => {});
                 } catch (err) {
                     localStorage.removeItem('dmt-access-token');
                     localStorage.removeItem('dmt-refresh-token');
@@ -90,8 +100,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             setUser(response.user);
             useRoleStore.getState().setRolesFromUser(response.user);
+            // Pre-warm star performer cache upon successful login
+            const starPromise = dashboard.getStarPerformer()
+                .then((data) => {
+                    const mapped = parseStarPerformers(data as StarPerformerApiResponse);
+                    if (mapped && mapped.length > 0) {
+                        setCachedPerformers(mapped);
+                    }
+                    return mapped;
+                })
+                .catch(() => null);
+
+            // If persistent cache is cold, give up to 350ms to pre-populate so Home mounts with zero lag
+            if (!getCachedPerformers()) {
+                await Promise.race([
+                    starPromise,
+                    new Promise((resolve) => setTimeout(resolve, 350)),
+                ]);
+            }
         } catch (err: any) {
-            const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials.';
+            const errorMessage =
+                (typeof err.response?.data === 'string' && err.response.data) ||
+                err.response?.data?.error ||
+                err.response?.data?.detail ||
+                err.response?.data?.message ||
+                err.data?.error ||
+                err.data?.detail ||
+                err.data?.message ||
+                (Array.isArray(err.response?.data?.email) && err.response.data.email[0]) ||
+                (Array.isArray(err.response?.data?.non_field_errors) && err.response.data.non_field_errors[0]) ||
+                (err.message && !err.message.includes('Request failed') ? err.message : null) ||
+                'Login failed. Please check your credentials.';
             setError(errorMessage);
             throw err;
         } finally {
@@ -106,7 +145,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await auth.register(data);
             setError(null);
         } catch (err: any) {
-            const errorMessage = err.response?.data?.username?.[0] || 'Registration failed';
+            const errorMessage =
+                (typeof err.response?.data === 'string' && err.response.data) ||
+                err.response?.data?.error ||
+                err.response?.data?.detail ||
+                err.response?.data?.message ||
+                (Array.isArray(err.response?.data?.username) && err.response.data.username[0]) ||
+                (Array.isArray(err.response?.data?.email) && err.response.data.email[0]) ||
+                err.data?.error ||
+                err.data?.detail ||
+                err.message ||
+                'Registration failed';
             setError(errorMessage);
             throw err;
         } finally {

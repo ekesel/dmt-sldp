@@ -3,7 +3,7 @@
  */
 import { render, screen, act, fireEvent, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { StarPerformer } from "../StarPerformer";
+import { StarPerformer, resetStarPerformersCache } from "../StarPerformer";
 import { dashboard } from "@dmt/api";
 
 // Mock next/image to render a standard img tag
@@ -19,6 +19,7 @@ vi.mock("@dmt/api", () => ({
   dashboard: {
     getStarPerformer: vi.fn(),
   },
+  getFileUrl: (path: string) => path,
 }));
 
 // Mock framer-motion to avoid animation delays in tests
@@ -31,6 +32,7 @@ vi.mock("framer-motion", () => ({
 
 describe("StarPerformer Component", () => {
   beforeEach(() => {
+    resetStarPerformersCache();
     vi.useFakeTimers();
     vi.clearAllMocks();
   });

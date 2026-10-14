@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Filter, Loader2, Target } from 'lucide-react';
 import { sources as sourcesApi } from '@dmt/api';
 import { toast } from 'react-hot-toast';
@@ -15,6 +15,31 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
     const [isLoadingFolders, setIsLoadingFolders] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen]);
 
     const { isManager, isStaff, isSuperUser } = usePermissions();
     const canManageScope = isManager || isStaff || isSuperUser;
@@ -96,8 +121,9 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
     };
 
     return (
-        <div className="relative">
+        <div ref={dropdownRef} className="relative">
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoadingFolders || isSaving}
                 className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full min-w-[15rem] text-left"
@@ -119,6 +145,7 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
                 <div className="absolute right-0 mt-2 w-full min-w-[15rem] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_1.25rem_3.75rem_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         <button
+                            type="button"
                             onClick={() => handleSelectFolder('', '')}
                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${!currentFolderId
                                 ? 'bg-primary/15 text-foreground'
@@ -134,6 +161,7 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
                             const isActive = currentFolderId === f.id;
                             return (
                                 <button
+                                    type="button"
                                     key={f.id}
                                     onClick={() => handleSelectFolder(f.id, f.name)}
                                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group ${isActive
@@ -149,11 +177,6 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({ proj
                         })}
                     </div>
                 </div>
-            )}
-
-            {/* Backdrop to close */}
-            {isOpen && (
-                <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
             )}
         </div>
     );
