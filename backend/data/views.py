@@ -86,7 +86,9 @@ class DashboardSummaryView(APIView):
 
         # Compute code_ai_usage_percent LIVE from analyzed PRs
         # (SprintMetrics may be stale if not re-populated after PR diff analysis)
-        pr_qs = PullRequest.objects.filter(ai_code_percent__isnull=False, ai_code_percent__gt=0)
+        # All analyzed PRs, including 0% ones — averaging only PRs with AI overstated usage.
+        from .analytics.metrics import ANALYZED_PRS
+        pr_qs = PullRequest.objects.filter(ANALYZED_PRS)
         if project_id:
             source_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             pr_qs = pr_qs.filter(source_config_id__in=source_ids)

@@ -18,7 +18,12 @@ from django.db.models import Sum, Avg
 NOT_FIXED_BUG_STATUSES = (
     Q(status__iexact='not a bug') | Q(status__iexact='duplicate') | Q(status__iexact='invalid')
     | Q(status__iexact="won't fix") | Q(status__iexact='wontfix') | Q(status__iexact="won't do")
+    | Q(status__iexact='closed')  # only bugs moved to Done count as resolved
 )
+
+# A PR counts for AI % only if its diff was really analyzed and it added code. Connectors store
+# 0% with total_changed_lines=0 when the diff fetch fails, so those must not drag the average down.
+ANALYZED_PRS = Q(ai_code_percent__isnull=False, total_changed_lines__gt=0)
 
 
 class MetricService:
@@ -230,7 +235,7 @@ class MetricService:
                 # entry it would otherwise leak the last project processed by this loop, since it's
                 # never reset outside the `if project:` block above.
                 pr_filter &= Q(source_config_id__in=source_conf_ids)
-            avg_code_ai = PullRequest.objects.filter(pr_filter).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+            avg_code_ai = PullRequest.objects.filter(pr_filter & ANALYZED_PRS).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
@@ -689,7 +694,7 @@ class MetricService:
                 defects = base_work_items.filter(item_type__iexact='bug').count()
                 avg_coverage = dev_work_items.aggregate(avg=Avg('coverage_percent'))['avg']
                 avg_ai_usage = dev_work_items.aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
-                avg_code_ai = dev_prs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
+                avg_code_ai = dev_prs.filter(ANALYZED_PRS).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
                 
                 # Fallback: if no PR-level AI scan data, use rollup on WorkItem.code_ai_usage_percent.
                 # This covers PRs matched via pr_links (stored on WorkItem) rather than a direct FK.
