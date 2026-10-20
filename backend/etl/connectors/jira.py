@@ -391,18 +391,23 @@ class JiraConnector(BaseConnector):
                 if key.startswith('customfield_') and value:
                     # Jira sprints can be a list of strings or dicts depending on API version/config
                     if isinstance(value, list) and len(value) > 0:
-                        s_val = value[0]
-                        sid = None
-                        if isinstance(s_val, dict):
-                            sid = str(s_val.get('id'))
-                        elif isinstance(s_val, str) and 'id=' in s_val:
-                            # Sometimes it's a string like "com.atlassian.greenhopper.service.sprint.Sprint@...[id=1,name=...]"
-                            match = re.search(r'id=(\d+)', s_val)
-                            if match:
-                                sid = match.group(1)
-                        
-                        if sid and sid in sprint_map:
-                            sprint_obj = sprint_map[sid]
+                        # The field lists every sprint the issue was ever in (carry-overs included).
+                        # Use the latest one — value[0] is the oldest, which put carried-over issues
+                        # in the sprint they started in instead of the one they are in now.
+                        candidates = []
+                        for s_val in value:
+                            sid = None
+                            if isinstance(s_val, dict):
+                                sid = str(s_val.get('id'))
+                            elif isinstance(s_val, str) and 'id=' in s_val:
+                                # Sometimes it's a string like "com.atlassian.greenhopper.service.sprint.Sprint@...[id=1,name=...]"
+                                match = re.search(r'id=(\d+)', s_val)
+                                if match:
+                                    sid = match.group(1)
+                            if sid and sid in sprint_map:
+                                candidates.append(sprint_map[sid])
+                        if candidates:
+                            sprint_obj = max(candidates, key=lambda s: s.end_date or s.start_date or timezone.now().replace(year=1970))
                             break
 
         # Extract DMT custom fields via config field_mapping

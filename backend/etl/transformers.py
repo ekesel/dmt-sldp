@@ -38,8 +38,9 @@ class TaskHistoryParser:
                 timestamp = record.get('created')
                 for item in record.get('items', []):
                     if item.get('field') == 'status':
-                        to_string = item.get('toString', '').lower()
-                        if to_string in ['in progress', 'in_progress', 'active', 'development', 'developing']:
+                        to_string = (item.get('toString') or '').lower()
+                        # Substring match: custom workflows use names like "Development / In Progress".
+                        if to_string == 'active' or 'progress' in to_string or 'develop' in to_string:
                             return TaskHistoryParser._parse_ts(timestamp, 'iso')
         
         return None
