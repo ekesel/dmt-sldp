@@ -28,6 +28,22 @@ ANALYZED_PRS = Q(ai_code_percent__isnull=False, total_changed_lines__gt=0)
 
 class MetricService:
     @staticmethod
+    def _drop_stale_rollups(model, sprint_name, project):
+        """Rollup rows are keyed by sprint end date, so every time a sprint's dates were edited
+        in Jira/ClickUp a new row was created and the old one stayed — the dashboard then summed
+        them (e.g. SM Sprint 22: 0 + 2 + 5 = 7 bugs). Delete rows for this sprint name + project
+        whose end date no longer matches any real sprint with that name."""
+        from ..models import Sprint
+        from configuration.models import SourceConfiguration
+        real = Sprint.objects.filter(name=sprint_name)
+        if project is not None:
+            real = real.filter(source_config_id__in=SourceConfiguration.objects.filter(
+                project=project).values_list('id', flat=True))
+        valid = {(s.end_date or s.start_date).date() for s in real if (s.end_date or s.start_date)}
+        if valid:  # never wipe rows when we cannot tell which date is current
+            model.objects.filter(sprint_name=sprint_name, project=project).exclude(sprint_end_date__in=valid).delete()
+
+    @staticmethod
     def calculate_velocity(sprint_id, project_id=None):
         
         # Base query
@@ -237,6 +253,7 @@ class MetricService:
                 pr_filter &= Q(source_config_id__in=source_conf_ids)
             avg_code_ai = PullRequest.objects.filter(pr_filter & ANALYZED_PRS).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
+            MetricService._drop_stale_rollups(SprintMetrics, sprint.name, project)
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
                 sprint_end_date=sprint_end.date(),
