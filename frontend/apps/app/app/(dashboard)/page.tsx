@@ -9,7 +9,6 @@ import { AssigneeDistributionCard } from "../../components/AssigneeDistributionC
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector, Project } from "../../components/ProjectSelector";
 import { SprintSelector, Sprint } from "../../components/SprintSelector";
-import { ActiveFolderSelector } from "../../components/ActiveFolderSelector";
 import { AIThinkingOverlay } from "../../components/AIThinkingOverlay";
 import { SyncProgressOverlay } from '../../components/SyncProgressOverlay';
 import { projects } from "@dmt/api";
@@ -70,20 +69,30 @@ export default function DashboardPage() {
         }
         return '';
     });
-    const [selectedSprintId, setSelectedSprintId] = useState<number | null>(() => {
+    const [selectedSprintIds, setSelectedSprintIds] = useState<number[]>(() => {
         if (typeof window !== 'undefined') {
             const savedProjectId = sessionStorage.getItem('dashboard_projectId');
             // If All Projects is selected, clear and do not restore sprint filter
             if (!savedProjectId) {
+                sessionStorage.removeItem('dashboard_sprintIds');
                 sessionStorage.removeItem('dashboard_sprintId');
-                return null;
+                return [];
+            }
+            const savedSprintIds = sessionStorage.getItem('dashboard_sprintIds');
+            if (savedSprintIds) {
+                try {
+                    const parsed = JSON.parse(savedSprintIds);
+                    if (Array.isArray(parsed)) return parsed.map(Number).filter(n => !isNaN(n));
+                } catch {
+                    return savedSprintIds.split(',').map(Number).filter(n => !isNaN(n));
+                }
             }
             const savedSprintId = sessionStorage.getItem('dashboard_sprintId');
-            return savedSprintId ? Number(savedSprintId) : null;
+            return savedSprintId ? [Number(savedSprintId)] : [];
         }
-        return null;
+        return [];
     });
-    const [selectedSprintName, setSelectedSprintName] = useState<string>('');
+    const [selectedSprintNames, setSelectedSprintNames] = useState<string[]>([]);
 
     const prevProjectIdRef = useRef<number | null>(selectedProjectId);
 
@@ -97,9 +106,10 @@ export default function DashboardPage() {
         // When the selected project changes, reset previously selected sprint IDs and clear stale sprint selection
         if (prevProjectIdRef.current !== selectedProjectId) {
             prevProjectIdRef.current = selectedProjectId;
-            setSelectedSprintId(null);
-            setSelectedSprintName('');
+            setSelectedSprintIds([]);
+            setSelectedSprintNames([]);
             if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('dashboard_sprintIds');
                 sessionStorage.removeItem('dashboard_sprintId');
             }
         }
@@ -122,12 +132,18 @@ export default function DashboardPage() {
     }, [endDate]);
 
     useEffect(() => {
-        if (selectedSprintId !== null) {
-            sessionStorage.setItem('dashboard_sprintId', selectedSprintId.toString());
+        if (selectedSprintIds.length > 0) {
+            sessionStorage.setItem('dashboard_sprintIds', JSON.stringify(selectedSprintIds));
+            if (selectedSprintIds.length === 1) {
+                sessionStorage.setItem('dashboard_sprintId', selectedSprintIds[0].toString());
+            } else {
+                sessionStorage.removeItem('dashboard_sprintId');
+            }
         } else {
+            sessionStorage.removeItem('dashboard_sprintIds');
             sessionStorage.removeItem('dashboard_sprintId');
         }
-    }, [selectedSprintId]);
+    }, [selectedSprintIds]);
     const [isExporting, setIsExporting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -151,35 +167,40 @@ export default function DashboardPage() {
         selectedProjectId,
         hasInvalidDates ? null : (startDate || null),
         hasInvalidDates ? null : (endDate || null),
-        selectedProjectId !== null ? selectedSprintId : null
+        selectedProjectId !== null ? (selectedSprintIds.length > 0 ? selectedSprintIds : null) : null
     );
 
     const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
         setSelectedProjectId(projectId);
-        setSelectedSprintId(null);
-        setSelectedSprintName('');
+        setSelectedSprintIds([]);
+        setSelectedSprintNames([]);
         if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('dashboard_sprintIds');
             sessionStorage.removeItem('dashboard_sprintId');
         }
         const projectName = project?.name || (projectId ? `Project ${projectId}` : 'All Projects');
         toast.success(`Project filter applied: ${projectName}`, { id: 'project-filter' });
     }, []);
 
-    const handleSprintSelect = useCallback((sprintId: number | null, sprint?: Sprint | null) => {
-        setSelectedSprintId(sprintId);
-        setSelectedSprintName(sprint?.name || '');
-        if (sprintId) {
+    const handleSprintMultiSelect = useCallback((sprintIds: number[], sprintItems: Sprint[]) => {
+        setSelectedSprintIds(sprintIds);
+        setSelectedSprintNames(sprintItems.map(s => s.name));
+        if (sprintIds.length > 0) {
             setStartDate('');
             setEndDate('');
-            toast.success(`Sprint filter applied: ${sprint?.name || `Sprint ${sprintId}`}`, { id: 'sprint-filter' });
+            if (sprintIds.length === 1) {
+                toast.success(`Sprint filter applied: ${sprintItems[0]?.name || `Sprint ${sprintIds[0]}`}`, { id: 'sprint-filter' });
+            } else {
+                toast.success(`${sprintIds.length} sprints selected (showing average)`, { id: 'sprint-filter' });
+            }
         } else {
             toast.success('All sprints selected', { id: 'sprint-filter' });
         }
     }, []);
 
     const handleClearSprint = () => {
-        setSelectedSprintId(null);
-        setSelectedSprintName('');
+        setSelectedSprintIds([]);
+        setSelectedSprintNames([]);
         toast.success('Sprint filter cleared', { id: 'sprint-filter' });
     };
 
@@ -190,8 +211,8 @@ export default function DashboardPage() {
         }
         setStartDate(val);
         if (val) {
-            setSelectedSprintId(null);
-            setSelectedSprintName('');
+            setSelectedSprintIds([]);
+            setSelectedSprintNames([]);
             if (isDateInvalid(val)) {
                 return;
             }
@@ -218,8 +239,8 @@ export default function DashboardPage() {
         }
         setEndDate(val);
         if (val) {
-            setSelectedSprintId(null);
-            setSelectedSprintName('');
+            setSelectedSprintIds([]);
+            setSelectedSprintNames([]);
             if (isDateInvalid(val)) {
                 return;
             }
@@ -436,7 +457,8 @@ export default function DashboardPage() {
                 pageNum++;
             }
 
-            const pdfName = `dashboard-${selectedProjectId || 'global'}${selectedProjectId && selectedSprintId ? `-sprint-${selectedSprintId}` : ''}-${new Date().toISOString().split('T')[0]}.pdf`;
+            const sprintSuffix = selectedSprintIds.length > 0 ? `-sprints-${selectedSprintIds.join('-')}` : '';
+            const pdfName = `dashboard-${selectedProjectId || 'global'}${selectedProjectId ? sprintSuffix : ''}-${new Date().toISOString().split('T')[0]}.pdf`;
             const pdfBlob = pdf.output('blob');
             const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
 
@@ -491,18 +513,18 @@ export default function DashboardPage() {
     return (
         <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
             <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8 mt-8">
-                <header className="flex justify-between items-end border-b border-border pb-8">
-                    <div>
+                <header className="flex flex-col lg:flex-row items-start justify-between border-b border-border pb-8 gap-6">
+                    <div className="shrink-0">
                         <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
                             <TrendingUp size={16} />
                             Performance Overview
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3 whitespace-nowrap">
                             {selectedProjectId ? 'Project Analytics' : 'Organizational Analytics'}
                         </h1>
                         <p className="text-muted-foreground mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>
-                    <div className="flex gap-4 items-center flex-wrap justify-end">
+                    <div className="flex gap-4 items-center flex-wrap justify-start lg:justify-end">
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={handleProjectSelect}
@@ -511,13 +533,15 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-2">
                                 <SprintSelector
                                     projectId={selectedProjectId}
-                                    selectedSprintId={selectedSprintId}
-                                    onSelect={handleSprintSelect}
+                                    multiSelect={true}
+                                    selectedSprintIds={selectedSprintIds}
+                                    onMultiSelect={handleSprintMultiSelect}
                                     autoSelectLatest={false}
                                     allowAll={true}
+                                    popoverAlign="right"
                                     className="w-56 h-12"
                                 />
-                                {selectedSprintId !== null && (
+                                {selectedSprintIds.length > 0 && (
                                     <button
                                         onClick={handleClearSprint}
                                         className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
@@ -555,32 +579,27 @@ export default function DashboardPage() {
                                 </button>
                             )}
                         </div>
-                        <ActiveFolderSelector
-                            projectId={selectedProjectId}
-                            onFolderChanged={() => {
-                                // Simply reload the page to clear frontend caches and fetch new metric scoped data
-                                window.location.reload();
-                            }}
-                        />
-                        {selectedProjectId && (
+                        <div className="flex items-center gap-3 shrink-0">
+                            {selectedProjectId && (
+                                <button
+                                    onClick={handleResync}
+                                    disabled={isSyncing}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer h-12 ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    title="Resync Project Data"
+                                >
+                                    <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
+                                    {isSyncing ? 'Syncing...' : 'Resync'}
+                                </button>
+                            )}
                             <button
-                                onClick={handleResync}
-                                disabled={isSyncing}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title="Resync Project Data"
+                                onClick={handleExportPDF}
+                                disabled={isExporting}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer h-12 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
-                                {isSyncing ? 'Syncing...' : 'Resync'}
+                                <FileText size={18} />
+                                {isExporting ? 'Exporting...' : 'Export PDF'}
                             </button>
-                        )}
-                        <button
-                            onClick={handleExportPDF}
-                            disabled={isExporting}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <FileText size={18} />
-                            {isExporting ? 'Exporting...' : 'Export PDF'}
-                        </button>
+                        </div>
                     </div>
                 </header>
 
@@ -633,14 +652,26 @@ export default function DashboardPage() {
                             );
                         }
 
+                        const sprintDisplayLabel = selectedSprintIds.length === 1
+                            ? (selectedSprintNames[0] || `Sprint ${selectedSprintIds[0]}`)
+                            : selectedSprintIds.length > 1
+                                ? `${selectedSprintIds.length} selected sprints`
+                                : null;
+
+                        const sprintAverageLabel = selectedSprintIds.length === 1
+                            ? (selectedSprintNames[0] || `Sprint ${selectedSprintIds[0]}`)
+                            : selectedSprintIds.length > 1
+                                ? `Average of ${selectedSprintIds.length} sprints`
+                                : null;
+
                         return (
                             <div className={`space-y-8 transition-opacity duration-200 ${loading && summary ? 'opacity-40 pointer-events-none' : ''}`}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                                     <KPICard
                                         label="Sprint Velocity"
                                         value={`${summary?.velocity || 0} SP`}
-                                        trend={selectedProjectId ? undefined : { direction: 'neutral', value: 'Avg' }}
-                                        description={<span className="text-primary">{selectedSprintName || (selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`)}</span>}
+                                        trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">{sprintAverageLabel || (selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`)}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -650,8 +681,8 @@ export default function DashboardPage() {
                                     <KPICard
                                         label="Cycle Time"
                                         value={`${summary?.cycle_time || 0} Days`}
-                                        trend={selectedProjectId ? undefined : { direction: 'neutral', value: 'Avg' }}
-                                        description={<span className="text-primary">{selectedProjectId ? 'Resolution duration' : 'Average resolution duration'}</span>}
+                                        trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: 'neutral', value: 'Avg' }}
+                                        description={<span className="text-primary">{sprintAverageLabel || (selectedProjectId ? 'Resolution duration' : 'Average resolution duration')}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -661,7 +692,7 @@ export default function DashboardPage() {
                                     <KPICard
                                         label="DMT Compliance"
                                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
-                                        trend={selectedProjectId ? undefined : { direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
+                                        trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                                         description={<span className="text-primary">Minimum Threshold: 80%</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
@@ -685,7 +716,7 @@ export default function DashboardPage() {
                                         label="Bugs Resolved"
                                         value={(summary?.bugs_resolved || 0).toString()}
                                         trend={{ direction: 'neutral', value: 'Total' }}
-                                        description={<span className="text-primary">Bugs fixed in {sprintRangeLabel(startDate, endDate, selectedSprintName).toLowerCase()}</span>}
+                                        description={<span className="text-primary">{selectedSprintIds.length > 1 ? `Bugs fixed across ${selectedSprintIds.length} selected sprints` : `Bugs fixed in ${sprintRangeLabel(startDate, endDate, sprintDisplayLabel).toLowerCase()}`}</span>}
                                         valueClassName="text-accent !text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
                                         labelClassName="font-bold text-base whitespace-nowrap text-primary"
@@ -701,7 +732,11 @@ export default function DashboardPage() {
                                                 <BarChart3 className="text-primary" />
                                                 Velocity History
                                             </h2>
-                                            <p className="text-muted-foreground text-sm mt-1">Sprint-over-sprint delivery trends</p>
+                                            <p className="text-muted-foreground text-sm mt-1">
+                                                {selectedSprintIds.length > 1
+                                                    ? `Delivery trends across ${selectedSprintIds.length} selected sprints`
+                                                    : 'Sprint-over-sprint delivery trends'}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="w-full h-[380px] min-h-[380px] bg-muted/10 rounded-2xl border border-border p-4">
@@ -731,7 +766,7 @@ export default function DashboardPage() {
 
                                 {/* Assignee Distribution Card */}
                                 {assigneeDistribution.length > 0 && (
-                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate, selectedSprintName)} />
+                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate, sprintDisplayLabel)} />
                                 )}
 
                                 <div className="pt-8 border-t border-border">

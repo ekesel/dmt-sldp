@@ -144,4 +144,67 @@ describe('SprintSelector Component', () => {
 
         expect(container.firstChild).toBeNull();
     });
+
+    it('supports multiSelect mode and toggles multiple sprints', async () => {
+        const mockSprints = [
+            { id: 101, name: 'Sprint 101', start_date: '2026-01-01', end_date: '2026-01-14', status: 'closed' },
+            { id: 102, name: 'Sprint 102', start_date: '2026-01-15', end_date: '2026-01-28', status: 'active' },
+            { id: 103, name: 'Sprint 103', start_date: '2026-01-29', end_date: '2026-02-11', status: 'closed' },
+        ];
+        (sprints.list as any).mockResolvedValue(mockSprints);
+
+        const handleMultiSelect = vi.fn();
+        const { rerender } = render(
+            <SprintSelector
+                projectId={1}
+                multiSelect={true}
+                selectedSprintIds={[]}
+                onMultiSelect={handleMultiSelect}
+                autoSelectLatest={false}
+                allowAll={true}
+            />
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('All Sprints')).toBeDefined();
+        });
+
+        // Open dropdown
+        const button = screen.getByRole('button');
+        fireEvent.click(button);
+
+        // Click Sprint 101
+        const sprint101Btn = screen.getByText('Sprint 101');
+        fireEvent.click(sprint101Btn);
+
+        expect(handleMultiSelect).toHaveBeenCalledWith([101], [expect.objectContaining({ id: 101 })]);
+
+        // Re-render with [101] selected
+        rerender(
+            <SprintSelector
+                projectId={1}
+                multiSelect={true}
+                selectedSprintIds={[101]}
+                onMultiSelect={handleMultiSelect}
+                autoSelectLatest={false}
+                allowAll={true}
+            />
+        );
+
+        expect(screen.getAllByText('Sprint 101').length).toBeGreaterThanOrEqual(1);
+
+        // Re-render with [101, 102] selected
+        rerender(
+            <SprintSelector
+                projectId={1}
+                multiSelect={true}
+                selectedSprintIds={[101, 102]}
+                onMultiSelect={handleMultiSelect}
+                autoSelectLatest={false}
+                allowAll={true}
+            />
+        );
+
+        expect(screen.getByText('2 Sprints Selected')).toBeDefined();
+    });
 });
