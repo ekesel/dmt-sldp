@@ -5,7 +5,7 @@ import re
 from ..base import BaseConnector
 from data.models import WorkItem, Sprint
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, time
 import logging
 from users.resolver import UserResolver
 
@@ -175,7 +175,7 @@ class JiraConnector(BaseConnector):
             for custom_field_key in [
                 'pr_link_id', 'ac_quality_id', 'reviewer_dmt_signoff_id', 
                 'unit_testing_status_id', 'pm_name_id', 'tech_lead_name_id', 
-                'story_points_id', 'ai_usage_id', 'coverage_id'
+                'story_points_id', 'ai_usage_id', 'coverage_id', 'start_date_id'
             ]:
                 field_id = config_mapping.get(custom_field_key)
                 if field_id:
@@ -342,9 +342,14 @@ class JiraConnector(BaseConnector):
         updated_at = self._parse_date(fields.get('updated'))
         resolved_at = self._parse_date(fields.get('resolutiondate'))
         
-        # Parse cycle time from history
+        # Cycle-time start: the team's "Start date" field when mapped (blank = no start, so the issue
+        # stays out of cycle time); otherwise the first move to an in-progress status.
         changelog = issue.get('changelog', {}).get('histories', [])
-        started_at = TaskHistoryParser.extract_started_at(changelog, 'jira')
+        start_field = self.config.get('field_mapping', {}).get('start_date_id')
+        if start_field:
+            started_at = self._parse_start_date(fields.get(start_field))
+        else:
+            started_at = TaskHistoryParser.extract_started_at(changelog, 'jira')
 
         # Status and Category
         # Jira statusCategory: new, indeterminate, done
@@ -566,6 +571,14 @@ class JiraConnector(BaseConnector):
             return parse_datetime(date_str)
         except Exception:
             return None
+
+    def _parse_start_date(self, value: Optional[str]) -> Optional[datetime]:
+        """Jira date fields come as 'YYYY-MM-DD'; read them as local midnight so the day doesn't shift."""
+        from django.utils.dateparse import parse_date
+        if not value:
+            return None
+        day = parse_date(str(value)[:10])
+        return timezone.make_aware(datetime.combine(day, time.min)) if day else None
 
     def _flatten_adf(self, adf: Any) -> str:
         """
