@@ -362,6 +362,10 @@ class JiraConnector(BaseConnector):
             'done': 'done'
         }
         status_category = category_map.get(category_key, 'todo')
+        if status_category == 'done':
+            # Done date = the last move into the current Done status (as Jira's sprint report shows);
+            # resolutiondate stays at the first resolution when an issue is reopened and closed again.
+            resolved_at = TaskHistoryParser.extract_last_entered(changelog, raw_status) or resolved_at
         
         priority = fields.get('priority', {}).get('name', 'Medium')
         issue_type = fields.get('issuetype', {}).get('name', 'Task')
