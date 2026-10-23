@@ -1635,7 +1635,8 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                start_time = row['started_at'] or row['created_at']
+                # Same rule as the dashboard: no start date = no cycle time (created -> done is lead time).
+                start_time = row['started_at']
                 if row['resolved_at'] and start_time:
                     duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
                     agg['durations'].append(duration)
@@ -1675,7 +1676,8 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                start_time = row['started_at'] or row['created_at']
+                # Same rule as the dashboard: no start date = no cycle time (created -> done is lead time).
+                start_time = row['started_at']
                 if row['resolved_at'] and start_time:
                     duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
                     agg['durations'].append(duration)

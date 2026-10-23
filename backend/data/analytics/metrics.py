@@ -21,6 +21,22 @@ NOT_FIXED_BUG_STATUSES = (
     | Q(status__iexact='closed')  # only bugs moved to Done count as resolved
 )
 
+
+def resolved_in_sprint(sprint):
+    """
+    Resolved between the sprint's start and its actual close (planned end if never closed), local days,
+    inclusive — how Jira's sprint report counts. A bug carried into a later sprint after it was fixed,
+    or fixed after the sprint closed, no longer counts here.
+    """
+    close = sprint.completed_at or sprint.end_date
+    window = Q()
+    if sprint.start_date:
+        window &= Q(resolved_at__date__gte=timezone.localtime(sprint.start_date).date())
+    if close:
+        window &= Q(resolved_at__date__lte=timezone.localtime(close).date())
+    return window
+
+
 # A PR counts for AI % only if its diff was really analyzed and it added code. Connectors store
 # 0% with total_changed_lines=0 when the diff fetch fails, so those must not drag the average down.
 ANALYZED_PRS = Q(ai_code_percent__isnull=False, total_changed_lines__gt=0)
@@ -151,6 +167,8 @@ class MetricService:
             sprint_start = sprint.start_date
             
         projects = list(Project.objects.all()) + [None] # All projects + Global (None)
+        # Bugs Resolved uses the sprint's date window for Jira sprints only (see resolved_in_sprint).
+        is_jira_sprint = SourceConfiguration.objects.filter(id=sprint.source_config_id, source_type='jira').exists()
         
         results = []
         for project in projects:
@@ -226,7 +244,12 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
             
-            completed_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES).count()
+            done_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES)
+            # ponytail: Jira only. ClickUp/ADO bugs are often bulk-closed weeks after the sprint
+            # (40 Tatva bugs share one resolved date), so the window would zero them out.
+            if is_jira_sprint:
+                done_bugs = done_bugs.filter(resolved_in_sprint(sprint))
+            completed_bugs = done_bugs.count()
             completed_stories = completed_items.filter(item_type__iexact='story').count()
             
             # 4. Compliance (Standardized to ALL work items for dashboard consistency)
