@@ -5,7 +5,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import RoleTable
-from .models import CustomPermission
+from .models import CustomPermission, UserLevelHistory
+from django.utils import timezone
 import hashlib
 import re
 
@@ -23,12 +24,22 @@ def validate_email_domain(email):
     return email
 
 
+def can_change_level(actor, target):
+    """Managers and admins set levels; a manager can't change their own (superusers/platform admins can)."""
+    if not actor or not (actor.is_superuser or actor.is_platform_admin or actor.is_manager):
+        return False
+    is_self = target is not None and target.pk == actor.pk
+    return not is_self or actor.is_superuser or actor.is_platform_admin
+
+
 class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.ReadOnlyField(source='tenant.name')
     tenant_slug = serializers.ReadOnlyField(source='tenant.slug')
     role_name = serializers.ReadOnlyField(source='role.role_name')
     avatar_url = serializers.SerializerMethodField()
     permission = serializers.SerializerMethodField()
+    # Date the new seniority takes effect (default today); earlier sprints keep the older level.
+    seniority_effective_from = serializers.DateField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -38,9 +49,72 @@ class UserSerializer(serializers.ModelSerializer):
             'is_staff', 'is_superuser', 'is_manager', 'is_active', 'date_of_join',
             'role', 'role_name',
             'profile_picture', 'custom_title', 'competitive_title', 
-            'competitive_title_reason', 'avatar_url', 'permission'
+            'competitive_title_reason', 'avatar_url', 'permission', 'seniority',
+            'seniority_effective_from',
         ]
         read_only_fields = ['id', 'avatar_url']
+
+    def _level_unchanged(self, value):
+        """The user object was sent back with its current level and no new date: nothing to save."""
+        return (
+            self.instance is not None and not self.initial_data.get('seniority_effective_from')
+            and (value or None) == (UserLevelHistory.level_on(self.instance, timezone.localdate()) or self.instance.seniority)
+        )
+
+    def validate_seniority(self, value):
+        # Seniority drives workload weighting, so users must not set their own.
+        if self._level_unchanged(value):
+            return value
+        request = self.context.get('request')
+        if not can_change_level(getattr(request, 'user', None), self.instance):
+            raise serializers.ValidationError("Only managers or admins can change seniority, and not their own.")
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # The stored mirror goes stale once a future-dated level takes effect; read it from the history
+        # when it's prefetched or this is a single user (nested/list use keeps the mirror: no N+1).
+        prefetched = 'level_history' in getattr(instance, '_prefetched_objects_cache', {})
+        if 'seniority' in data and instance.pk and (prefetched or self.parent is None):
+            data['seniority'] = UserLevelHistory.level_on(instance, timezone.localdate()) or instance.seniority
+        return data
+
+    def validate(self, attrs):
+        if 'seniority' in attrs and self._level_unchanged(attrs['seniority']):
+            attrs.pop('seniority')
+        if attrs.get('seniority_effective_from') and 'seniority' not in attrs:
+            raise serializers.ValidationError({'seniority_effective_from': 'Send it together with seniority.'})
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        level = self._pop_level(validated_data)
+        user = super().create(validated_data)
+        self._save_level(user, level)
+        return user
+
+    def update(self, instance, validated_data):
+        level = self._pop_level(validated_data)
+        user = super().update(instance, validated_data)
+        self._save_level(user, level)
+        return user
+
+    def _pop_level(self, validated_data):
+        effective_from = validated_data.pop('seniority_effective_from', None)
+        if 'seniority' not in validated_data:
+            return None
+        return validated_data.pop('seniority') or None, effective_from or timezone.localdate()
+
+    def _save_level(self, user, level):
+        """Record the level from its effective date; User.seniority mirrors the level in effect today."""
+        if level is None:
+            return
+        seniority, effective_from = level
+        request = self.context.get('request')
+        UserLevelHistory.objects.update_or_create(
+            user=user, effective_from=effective_from,
+            defaults={'seniority': seniority, 'created_by': getattr(request, 'user', None)},
+        )
+        UserLevelHistory.refresh_mirror(user)
 
     def validate_email(self, value):
         if not value:
@@ -198,6 +272,14 @@ class RoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoleTable
         fields = '__all__'
+
+
+class UserLevelHistorySerializer(serializers.ModelSerializer):
+    created_by_email = serializers.ReadOnlyField(source='created_by.email')
+
+    class Meta:
+        model = UserLevelHistory
+        fields = ['id', 'seniority', 'effective_from', 'created_by_email', 'created_at']
 
 
 class ResourceAllocationSerializer(serializers.ModelSerializer):

@@ -645,11 +645,19 @@ def _inject_workload(data_list, resolved_id, project_id=None):
     from .analytics.identity_resolver import IdentityResolver
     from .models import WorkItem, Sprint
     from configuration.models import SourceConfiguration
+    from collections import defaultdict
+    from .analytics.workload import (
+        get_workload_settings, team_workload, workload_items, latest_sprint_ids_per_project, allocation_timeline,
+        sprint_day, settings_timeline,
+    )
     
     # 1. Fetch all linked email aliases (GitHub, Jira, etc.) of the developer
     resolver = IdentityResolver()
     resolver.load()
     developer_emails = list(set(resolver.all_aliases(resolved_id)) | {resolved_id})
+    me = resolver.resolve(resolved_id.strip().lower()).lower()
+    settings_tl = settings_timeline()
+    workload_settings = get_workload_settings(timeline=settings_tl)
     
     # 2. Fetch project source configurations if project-specific filtering is required
     project_source_ids = None
@@ -660,74 +668,40 @@ def _inject_workload(data_list, resolved_id, project_id=None):
             .values_list('id', flat=True)
         )
         
+    # Capacity uses the developer's share of time on the selected project; All Projects = 100%.
+    alloc_tl = allocation_timeline(project_id) if is_valid_project else None
+
     for item in data_list:
         sprint_name = item.get('sprint_name')
         
         if sprint_name == 'All Projects (Current)':
-            
-            now = timezone.now()
-
-            # Find active allocated project IDs for this developer
-            allocated_p_ids = list(
-                ResourceAllocation.objects.filter(
-                    developer__email__iexact=resolved_id,
-                    status='PUBLISHED',
-                    percentage_allocated__gt=0,
-                    month=now.month,
-                    year=now.year
-                ).values_list('project_id', flat=True)
-            )
-
-            if not allocated_p_ids:
-                fallback_pub = ResourceAllocation.objects.filter(
-                    developer__email__iexact=resolved_id,
-                    status='PUBLISHED',
-                    percentage_allocated__gt=0
-                ).order_by('-year', '-month').first()
-
-                if fallback_pub:
-                    allocated_p_ids = list(
-                        ResourceAllocation.objects.filter(
-                            developer__email__iexact=resolved_id,
-                            status='PUBLISHED',
-                            percentage_allocated__gt=0,
-                            month=fallback_pub.month,
-                            year=fallback_pub.year
-                        ).values_list('project_id', flat=True)
-                    )
-
-            dev_metrics_qs = DeveloperMetrics.objects.filter(developer_email__in=developer_emails)
-            if allocated_p_ids:
-                dev_metrics_qs = dev_metrics_qs.filter(project_id__in=allocated_p_ids)
-
-            # Find the latest sprint name for each active allocated project this developer is in
-            latest_metrics = dev_metrics_qs.order_by('project_id', '-sprint_end_date').distinct('project_id')
-            
-            latest_sprint_names = [m.sprint_name for m in latest_metrics if m.sprint_name]
-            
-            if not latest_sprint_names:
+            # Company-wide view: team = everyone in the latest started sprint of every project.
+            # Those sprints run side by side, so they count as one period (sprint_count = 1).
+            latest_ids = latest_sprint_ids_per_project()
+            if not latest_ids:
                 item['workload'] = {
                     'total': 0, 'in_progress': 0, 'completed': 0, 'todo': 0, 'status': 'Underutilised'
                 }
                 continue
-                
-            tasks = WorkItem.objects.filter(sprint__name__in=latest_sprint_names, assignee_email__in=developer_emails)
-            if allocated_p_ids:
-                from configuration.models import SourceConfiguration
-                alloc_source_ids = list(
-                    SourceConfiguration.objects.filter(project_id__in=allocated_p_ids)
-                    .values_list('id', flat=True)
-                )
-                tasks = tasks.filter(source_config_id__in=alloc_source_ids)
+            sprint_items = WorkItem.objects.filter(sprint_id__in=latest_ids)
+            days = [timezone.localdate()]
         else:
             if not sprint_name:
                 item['workload'] = None
                 continue
             
-            # 3. Fetch tasks for the specific sprint name
-            tasks = WorkItem.objects.filter(sprint__name=sprint_name, assignee_email__in=developer_emails)
+            # 3. Fetch tasks for the specific sprint name (team = everyone in that sprint)
+            sprint_items = WorkItem.objects.filter(sprint__name=sprint_name)
+            # Level, settings and allocation as of the sprint's start day.
+            sprints = Sprint.objects.filter(name=sprint_name)
+            if project_source_ids is not None:
+                sprints = sprints.filter(source_config_id__in=project_source_ids)
+            first = sprints.order_by(F('start_date').asc(nulls_last=True)).values_list('start_date', 'end_date').first()
+            days = [sprint_day(*first) if first else timezone.localdate()]
         if project_source_ids is not None:
-            tasks = tasks.filter(source_config_id__in=project_source_ids)
+            sprint_items = sprint_items.filter(source_config_id__in=project_source_ids)
+        sprint_items = workload_items(sprint_items, workload_settings)
+        tasks = sprint_items.filter(assignee_email__in=developer_emails)
             
         # 4. Count tasks based on their status
         total_tasks = tasks.count()
@@ -735,14 +709,18 @@ def _inject_workload(data_list, resolved_id, project_id=None):
         completed_count = tasks.filter(status_category='done').count()
         todo_count = tasks.filter(status_category='todo').count()
         
-        # 5. Determine the workload status (Based on remaining active tasks: in_progress + todo)
-        active_tasks_count = in_progress_count + todo_count
-        if active_tasks_count > 5:
-            workload_status = 'Overloaded'
-        elif active_tasks_count >= 3:
-            workload_status = 'Balanced'
-        else:
-            workload_status = 'Underutilised'
+        # 5. Workload status: items vs the developer's ideal range (level x allocation); percentile = rank.
+        # Uses all assigned items (done + in progress + todo), so the day of the sprint doesn't matter.
+        team_counts = defaultdict(int)
+        rows = (
+            sprint_items.exclude(assignee_email__isnull=True).exclude(assignee_email='')
+            .values('assignee_email').annotate(n=Count('id'))
+        )
+        for row in rows:
+            team_counts[resolver.resolve(row['assignee_email'].strip().lower()).lower()] += row['n']
+        team_counts[me] = total_tasks
+        workload = team_workload(team_counts, days, alloc_tl, settings_tl, resolver)[0].get(me, {'percentile': None, 'status': 'Underutilised', 'effective_load': 0})
+        workload_status = workload['status']
             
         # 6. Inject the workload data into the response item
         item['workload'] = {
@@ -750,7 +728,12 @@ def _inject_workload(data_list, resolved_id, project_id=None):
             'in_progress': in_progress_count,
             'completed': completed_count,
             'todo': todo_count,
-            'status': workload_status
+            'status': workload_status,
+            'percentile': workload['percentile'],
+            'effective_load': workload['effective_load'],
+            'capacity': workload.get('capacity'),
+            'ideal_min': workload.get('ideal_min'),
+            'ideal_max': workload.get('ideal_max'),
         }
 
 
@@ -1520,6 +1503,24 @@ class AIInsightFeedbackView(APIView):
             return Response({"error": "AIInsight not found"}, status=404)
 
 
+class WorkloadWarningsView(APIView):
+    """
+    GET /api/dashboard/workload-warnings/?project_id=
+    Setup gaps for the workload screen banner: {"warnings": [{"code", "message"}]}.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .analytics.workload import workload_warnings
+
+        project_id = request.query_params.get('project_id')
+        if project_id in (None, '', 'null', 'undefined', 'all'):
+            project_id = None
+        elif not str(project_id).isdigit():
+            return Response({'error': 'project_id must be a number.'}, status=400)
+        return Response({'warnings': workload_warnings(project_id)})
+
+
 class AssigneeDistributionView(APIView):
     """
     GET /api/dashboard/assignee-distribution/
@@ -1543,8 +1544,18 @@ class AssigneeDistributionView(APIView):
         from django.db.models import Q
         from collections import defaultdict
 
-        # Identify sprints — use date range when provided, otherwise latest 1 sprint
+        # Identify sprints — date range when provided, otherwise the last `sprint_window`
+        # sprints that have started (completed ones + the running one).
         from django.db.models import F
+        from .analytics.workload import (
+            get_workload_settings, team_workload, workload_items, allocation_timeline, allocation_on, sprint_day,
+        )
+        workload_settings = get_workload_settings()
+        window = workload_settings['sprint_window']
+        now = timezone.now()
+        started = Q(start_date__lte=now) | Q(end_date__lt=now)
+        # One judging day per sprint in the window (level, settings and allocation in effect then).
+        days = []
         try:
             if project_id and project_id not in ['null', 'undefined']:
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
@@ -1554,17 +1565,19 @@ class AssigneeDistributionView(APIView):
                 if sprint_ids:
                     # Explicit sprint pick overrides the date window (same rule as the summary).
                     sprint_qs = sprint_qs.filter(id__in=sprint_ids)
-                else:
-                    # Only completed sprints; the running sprint would show partial numbers.
-                    sprint_qs = sprint_qs.filter(end_date__lt=timezone.now())
+                elif date_filtered:
+                    # Date range: only completed sprints inside it.
+                    sprint_qs = sprint_qs.filter(end_date__lt=now)
                     if start_date:
                         sprint_qs = sprint_qs.filter(end_date__gte=start_date)
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
-                    if not date_filtered:
-                        sprint_qs = sprint_qs[:5]
+                else:
+                    sprint_qs = sprint_qs.filter(started)[:window]
                     
-                relevant_sprint_ids = list(sprint_qs.values_list('id', flat=True))
+                rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
+                relevant_sprint_ids = [r[0] for r in rows]
+                days = [sprint_day(start, end) for _, start, end in rows]
 
                 if relevant_sprint_ids:
                     work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
@@ -1580,16 +1593,21 @@ class AssigneeDistributionView(APIView):
                     proj_source_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
                     if not proj_source_ids:
                         continue
-                    sprint_qs = Sprint.objects.filter(source_config_id__in=proj_source_ids, end_date__lt=timezone.now()).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
-                    if start_date:
-                        sprint_qs = sprint_qs.filter(end_date__gte=start_date)
-                    if end_date:
-                        sprint_qs = sprint_qs.filter(end_date__lte=end_date)
-                        
-                    if not date_filtered:
-                        relevant_sprint_ids.extend(list(sprint_qs[:5].values_list('id', flat=True)))
+                    sprint_qs = Sprint.objects.filter(source_config_id__in=proj_source_ids).order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+                    if date_filtered:
+                        sprint_qs = sprint_qs.filter(end_date__lt=now)
+                        if start_date:
+                            sprint_qs = sprint_qs.filter(end_date__gte=start_date)
+                        if end_date:
+                            sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                     else:
-                        relevant_sprint_ids.extend(list(sprint_qs.values_list('id', flat=True)))
+                        sprint_qs = sprint_qs.filter(started)[:window]
+                    rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
+                    relevant_sprint_ids.extend(r[0] for r in rows)
+                    # ponytail: global view scales limits by the busiest project's sprints;
+                    # per-developer sprint lists if cross-project teams get uneven windows.
+                    if len(rows) > len(days):
+                        days = [sprint_day(start, end) for _, start, end in rows]
 
                 if relevant_sprint_ids:
                     work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
@@ -1597,6 +1615,8 @@ class AssigneeDistributionView(APIView):
                     work_items = WorkItem.objects.none()
         except Exception:
             work_items = WorkItem.objects.none()
+
+        work_items = workload_items(work_items, workload_settings)
 
         # Use a dict to aggregate stats by email
         # Key: lowercased email
@@ -1699,22 +1719,20 @@ class AssigneeDistributionView(APIView):
 
         # Project selected: show only members currently allocated to it (latest published month <= now).
         # No published allocation for the project at all -> keep everyone (nothing to filter by).
+        alloc_tl = None
         if project_id and project_id not in ['null', 'undefined', '']:
-            now = timezone.now()
-            proj_allocs = ResourceAllocation.objects.filter(
-                project_id=project_id, status='PUBLISHED', percentage_allocated__gt=0
-            ).filter(Q(year__lt=now.year) | Q(year=now.year, month__lte=now.month))
-            latest = proj_allocs.order_by('-year', '-month').first()
-            if latest:
-                resolver = IdentityResolver()
-                resolver.load()
-                allowed = set()
-                for email in proj_allocs.filter(year=latest.year, month=latest.month).values_list('developer__email', flat=True):
-                    if email:
-                        c = resolver.resolve(email.strip().lower())
-                        allowed |= set(resolver.all_aliases(c)) | {c, email.strip().lower()}
-                allowed = {a.lower() for a in allowed}
-                result = [r for r in result if r['email'] in allowed]
+            alloc_tl = allocation_timeline(project_id)
+            current = allocation_on(alloc_tl, timezone.localdate())
+            if current:
+                result = [r for r in result if r['email'] in current]
+
+        # Workload status: items vs each member's ideal range (level x allocation per sprint); percentile = rank.
+        statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl)
+        for r in result:
+            r['todo'] = r['total'] - r['in_progress'] - r['completed']
+            r['seniority'] = levels.get(r['email']) or 'mid'
+            r.update(statuses.get(r['email'], {'percentile': None, 'status': None, 'effective_load': 0}))
+            r['workload_status'] = r.pop('status')
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)

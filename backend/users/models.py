@@ -8,6 +8,9 @@ def get_user_media_upload_path(instance, filename):
     filename = get_valid_filename(filename)
     return f'{connection.schema_name}/profile_pics/{filename}'
 
+SENIORITY_CHOICES = [('junior', 'Junior'), ('mid', 'Mid'), ('senior', 'Senior')]
+
+
 class User(AbstractUser):
     # Added common fields here
     tenant = models.ForeignKey('tenants.Tenant', on_delete=models.CASCADE, null=True, blank=True)
@@ -22,9 +25,43 @@ class User(AbstractUser):
     role = models.ForeignKey('RoleTable', on_delete=models.SET_NULL, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     parent = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
-    org_chart_visibility = models.BooleanField(default=False) 
+    org_chart_visibility = models.BooleanField(default=False)
+    # Level in effect today (mirror of UserLevelHistory); workload uses the history per sprint. null = mid.
+    seniority = models.CharField(max_length=10, null=True, blank=True, choices=SENIORITY_CHOICES)
     
     
+
+class UserLevelHistory(models.Model):
+    """A developer's level from effective_from until their next row; drives the workload capacity weight."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='level_history')
+    seniority = models.CharField(max_length=10, null=True, blank=True, choices=SENIORITY_CHOICES)
+    effective_from = models.DateField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'user_level_history'
+        unique_together = ('user', 'effective_from')
+        ordering = ['effective_from']
+
+    @staticmethod
+    def level_on(user, day):
+        """Level in effect on `day`; before the first row, the earliest known level. Uses a prefetch when present."""
+        rows = list(user.level_history.all())
+        earlier = [r.seniority for r in rows if r.effective_from <= day]
+        if earlier:
+            return earlier[-1]
+        return rows[0].seniority if rows else None
+
+    @classmethod
+    def refresh_mirror(cls, user):
+        """After a history change: set User.seniority to the level in effect today."""
+        from django.utils import timezone
+
+        getattr(user, '_prefetched_objects_cache', {}).pop('level_history', None)
+        user.seniority = cls.level_on(user, timezone.localdate())
+        user.save(update_fields=['seniority'])
+
 
 class ExternalIdentity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='external_identities')
