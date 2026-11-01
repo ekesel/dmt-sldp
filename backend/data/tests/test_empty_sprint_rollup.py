@@ -66,3 +66,18 @@ class EmptySprintRollupTest(TenantTestCase):
         MetricService.populate_sprint_metrics(sprint.id)
 
         self.assertFalse(SprintMetrics.objects.filter(sprint_name='Other Folder Sprint', project=project).exists())
+
+    def test_other_teams_empty_iteration_gets_no_row(self):
+        from configuration.models import Project, SourceConfiguration
+        from data.analytics.metrics import MetricService
+        from data.models import Sprint, SprintMetrics
+
+        project = Project.objects.create(tenant=self.tenant, name='Tatva', key='TAT')
+        src = SourceConfiguration.objects.create(project=project, source_type='azure_devops', name='A', base_url='https://a.test',
+                                                 config_json={'active_folder_id': 'x', 'active_folder_name': 'TATVA / TATVA Team'})
+        sprint = Sprint.objects.create(external_id='o1', source_config_id=src.id, name='Other Team Sprint',
+                                       start_date=at(1), end_date=at(14), status='other_team')
+
+        MetricService.populate_sprint_metrics(sprint.id)
+
+        self.assertFalse(SprintMetrics.objects.filter(sprint_name='Other Team Sprint', project=project).exists())
