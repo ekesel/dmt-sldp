@@ -88,7 +88,7 @@ class UserViewSet(viewsets.ModelViewSet):
         queryset = queryset.filter(email__iendswith='@samta.ai')
 
         # Sort alphabetically (first_name, last_name, email)
-        queryset = queryset.order_by('first_name', 'last_name', 'email')
+        queryset = queryset.order_by('first_name', 'last_name', 'email').prefetch_related('level_history')
         
         return queryset
 
@@ -143,6 +143,34 @@ class UserViewSet(viewsets.ModelViewSet):
                     serializer.validated_data['is_platform_admin'] = serializer.instance.is_platform_admin
 
         serializer.save()
+
+    @action(detail=True, methods=['get', 'delete'], url_path='seniority-history')
+    def seniority_history(self, request, pk=None):
+        """
+        GET: the user's level rows (effective_from ascending).
+        DELETE ?effective_from=YYYY-MM-DD: remove a wrongly saved row (managers/admins only).
+        Levels are added or changed through the user PATCH (seniority + seniority_effective_from).
+        """
+        from .models import UserLevelHistory
+        from .serializers import UserLevelHistorySerializer
+
+        user = self.get_object()
+        if request.method == 'DELETE':
+            from .serializers import can_change_level
+            if not can_change_level(request.user, user):
+                return Response({'detail': 'Only managers or admins can change seniority, and not their own.'}, status=status.HTTP_403_FORBIDDEN)
+            from django.utils.dateparse import parse_date
+            try:
+                day = parse_date(request.query_params.get('effective_from') or '')
+            except ValueError:
+                day = None
+            if not day:
+                return Response({'detail': 'effective_from must be YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            deleted, _ = UserLevelHistory.objects.filter(user=user, effective_from=day).delete()
+            if not deleted:
+                return Response({'detail': 'No level saved on that date.'}, status=status.HTTP_404_NOT_FOUND)
+            UserLevelHistory.refresh_mirror(user)
+        return Response(UserLevelHistorySerializer(user.level_history.all(), many=True).data)
 
 
 class RegisterView(APIView):

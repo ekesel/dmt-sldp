@@ -138,3 +138,20 @@ class CompanyBaseline(models.Model):
     def __str__(self):
         return f"Company Baseline for {self.tenant} (last updated {self.last_updated.strftime('%Y-%m-%d') if self.last_updated else 'New'})"
 
+
+
+class WorkloadSettingsVersion(models.Model):
+    """
+    Workload settings (overrides for data.analytics.workload.DEFAULT_SETTINGS) in effect from
+    effective_from until the next version. Public schema, company-wide.
+    """
+    effective_from = models.DateField(unique=True)
+    overrides = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'workload_settings_versions'
+        ordering = ['effective_from']

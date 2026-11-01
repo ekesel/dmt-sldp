@@ -69,3 +69,44 @@ class CompanyBaselineViewTests(TenantTestCase):
             self.assertEqual(baseline.item_volume_completed, 25)
 
 
+
+    def test_workload_settings_only_superadmin(self):
+        payload = {"workload_settings": {"per_sprint_limits": {"under": 2, "over": 5}}}
+
+        request = self.factory.post('/api/admin/company-baseline/', payload, format='json')
+        force_authenticate(request, user=self.user)
+        self.assertEqual(CompanyBaselineView.as_view()(request).status_code, 403)
+
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+        request = self.factory.post('/api/admin/company-baseline/', payload, format='json')
+        force_authenticate(request, user=admin)
+        response = CompanyBaselineView.as_view()(request)
+        self.assertIn(response.status_code, (200, 201))
+        self.assertEqual(response.data['data']['workload_settings']['per_sprint_limits'], {'under': 2, 'over': 5})
+
+    def test_workload_settings_effective_from(self):
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+
+        def post(payload):
+            request = self.factory.post('/api/admin/company-baseline/', payload, format='json')
+            force_authenticate(request, user=admin)
+            return CompanyBaselineView.as_view()(request)
+
+        post({"workload_settings": {"per_sprint_limits": {"over": 5}}, "workload_settings_effective_from": "2026-01-01"})
+        # Future version: today still uses the January one; partial update keeps over=5.
+        response = post({"workload_settings": {"per_sprint_limits": {"under": 2}},
+                         "workload_settings_effective_from": "2999-01-01"})
+        data = response.data['data']
+        self.assertEqual(data['workload_settings']['per_sprint_limits'], {'under': 3, 'over': 5})
+        history = {str(v['effective_from']): v['settings']['per_sprint_limits'] for v in data['workload_settings_history']}
+        self.assertEqual(history, {'2026-01-01': {'under': 3, 'over': 5}, '2999-01-01': {'under': 2, 'over': 5}})
+
+        request = self.factory.delete('/api/admin/company-baseline/?workload_settings_effective_from=2999-01-01')
+        force_authenticate(request, user=admin)
+        self.assertEqual(len(CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']), 1)
+
+    def test_sprint_window_must_be_whole_number(self):
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+        request = self.factory.post('/api/admin/company-baseline/', {"workload_settings": {"sprint_window": 2.5}}, format='json')
+        force_authenticate(request, user=admin)
+        self.assertEqual(CompanyBaselineView.as_view()(request).status_code, 400)
