@@ -226,7 +226,13 @@ class MetricService:
                 all_items_qs = WorkItem.objects.filter(sprint=sprint, source_config_id__in=source_conf_ids)
                 if has_folder_filters:
                     all_items_qs = all_items_qs.filter(~Q(source_config_id__in=sources_with_folders) | filters)
-                if not all_items_qs.exists():
+                # The project's own sprint still gets a row when empty, so it shows as 0 in the graph
+                # like a sprint with items but no points (else it vanished). ClickUp syncs sprint lists
+                # from every folder, so a folder-filtered ClickUp source can't tell its own empty sprint.
+                # Finished status is 'completed' for ADO/ClickUp, 'closed' for Jira.
+                own_sprint = (sprint.status in ('active', 'completed', 'closed') and sources.filter(id=sprint.source_config_id)
+                              .exclude(source_type='clickup', id__in=sources_with_folders if has_folder_filters else []).exists())
+                if not own_sprint and not all_items_qs.exists():
                     continue # Skip projects with no items of any type in this sprint
 
             completed_items = work_items.filter(status_category='done')

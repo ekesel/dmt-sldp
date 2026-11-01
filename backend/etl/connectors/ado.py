@@ -455,8 +455,10 @@ class AzureDevOpsConnector(BaseConnector):
             resolved_at = None
         else:
             status_category = 'done'
-            if not resolved_at:
-                resolved_at = timezone.now() # Fallback
+            # Tasks/issues often have no ResolvedDate (process-dependent); now() made every resync
+            # move them to "resolved today", inflating cycle time. ClosedDate, then the last state change.
+            resolved_at = (resolved_at or self._parse_date(fields.get('Microsoft.VSTS.Common.ClosedDate'))
+                           or self._parse_date(fields.get('Microsoft.VSTS.Common.StateChangeDate')) or timezone.now())
             
         # Priority
         prio = str(fields.get('Microsoft.VSTS.Common.Priority', '3'))
@@ -501,17 +503,8 @@ class AzureDevOpsConnector(BaseConnector):
                 if len(parts) > 1:
                     sprint_name = parts[-1]
                     sprint_obj = Sprint.objects.filter(source_config_id=source_id, name=sprint_name).order_by('-end_date').first()
-                    
-        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint for this source
-        if not sprint_obj and (started_at or resolved_at):
-             project_sprint_ids = WorkItem.objects.filter(
-                 source_config_id=source_id,
-                 sprint__isnull=False
-             ).values_list('sprint_id', flat=True).distinct()
-             sprint_obj = Sprint.objects.filter(
-                id__in=project_sprint_ids,
-                status__in=['active', 'completed']
-            ).order_by('-end_date').first()
+        # No iteration (path is just the project root) = backlog: leave sprint empty. It used to go to the
+        # latest sprint, inflating that sprint and moving to the next one on every resync.
 
         # Extract DMT Compliance Custom Fields from ADO
         
