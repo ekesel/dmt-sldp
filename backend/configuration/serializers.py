@@ -22,17 +22,3 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('created_at',)
 
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        if ret.get('name'):
-            name = str(ret['name'])
-            # Capitalize each word, keeping all-uppercase acronyms like OCS intact
-            words = name.split(' ')
-            formatted_words = []
-            for w in words:
-                if w.isupper() and len(w) <= 4:
-                    formatted_words.append(w)
-                else:
-                    formatted_words.append(w.capitalize())
-            ret['name'] = " ".join(formatted_words)
-        return ret
