@@ -9,7 +9,7 @@ from data.views import (
     ComplianceView, BlockedItemsView, PRHealthView,
     DeveloperListView, DeveloperMetricsView, DeveloperComparisonView,
     ComplianceFlagListView, ComplianceFlagResolveView, ComplianceSummaryView, ComplianceFixedLaterView, SprintListView, AIInsightListView,
-    AssigneeDistributionView, AIInsightRefreshView
+    AssigneeDistributionView, AIInsightRefreshView, WorkloadWarningsView
 )
 from django.conf.urls.static import static
 from data.sprint_comparison_views import SprintComparisonView
@@ -67,6 +67,7 @@ urlpatterns = [
     path('api/dashboard/blocked-items/', BlockedItemsView.as_view(), name='dashboard_blocked_items'),
     path('api/dashboard/pr-health/', PRHealthView.as_view(), name='dashboard_pr_health'),
     path('api/dashboard/assignee-distribution/', AssigneeDistributionView.as_view(), name='assignee_distribution'),
+    path('api/dashboard/workload-warnings/', WorkloadWarningsView.as_view(), name='workload_warnings'),
     path('api/dashboard/sprint-comparison/', SprintComparisonView.as_view(), name='sprint_comparison'),
     path('api/admin/company-baseline/', CompanyBaselineView.as_view(), name='company_baseline'),
     path('api/dashboard/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),

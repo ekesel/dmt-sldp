@@ -46,6 +46,23 @@ class TaskHistoryParser:
         return None
 
     @staticmethod
+    def extract_last_entered(history: List[Dict[str, Any]], status_name: str) -> Optional[datetime]:
+        """
+        Jira: when the issue last moved into `status_name` (its current status). Jira keeps the first
+        resolutiondate when a Done issue is reopened and closed again; this returns the final move.
+        None when the changelog doesn't show that move.
+        # ponytail: relies on the changelog Jira returns with the search; very long histories may be
+        # truncated, in which case the caller falls back to resolutiondate.
+        """
+        target = (status_name or '').lower()
+        last = None
+        for record in sorted(history or [], key=lambda x: x.get('created', '')):
+            for item in record.get('items', []):
+                if item.get('field') == 'status' and (item.get('toString') or '').lower() == target:
+                    last = record.get('created')
+        return TaskHistoryParser._parse_ts(last, 'iso') if last else None
+
+    @staticmethod
     def _parse_ts(val, unit='ms'):
         if not val: return None
         try:

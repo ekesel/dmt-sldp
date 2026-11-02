@@ -21,12 +21,44 @@ NOT_FIXED_BUG_STATUSES = (
     | Q(status__iexact='closed')  # only bugs moved to Done count as resolved
 )
 
+
+def resolved_in_sprint(sprint):
+    """
+    Resolved between the sprint's start and its actual close (planned end if never closed), local days,
+    inclusive — how Jira's sprint report counts. A bug carried into a later sprint after it was fixed,
+    or fixed after the sprint closed, no longer counts here.
+    """
+    close = sprint.completed_at or sprint.end_date
+    window = Q()
+    if sprint.start_date:
+        window &= Q(resolved_at__date__gte=timezone.localtime(sprint.start_date).date())
+    if close:
+        window &= Q(resolved_at__date__lte=timezone.localtime(close).date())
+    return window
+
+
 # A PR counts for AI % only if its diff was really analyzed and it added code. Connectors store
 # 0% with total_changed_lines=0 when the diff fetch fails, so those must not drag the average down.
 ANALYZED_PRS = Q(ai_code_percent__isnull=False, total_changed_lines__gt=0)
 
 
 class MetricService:
+    @staticmethod
+    def _drop_stale_rollups(model, sprint_name, project):
+        """Rollup rows are keyed by sprint end date, so every time a sprint's dates were edited
+        in Jira/ClickUp a new row was created and the old one stayed — the dashboard then summed
+        them (e.g. SM Sprint 22: 0 + 2 + 5 = 7 bugs). Delete rows for this sprint name + project
+        whose end date no longer matches any real sprint with that name."""
+        from ..models import Sprint
+        from configuration.models import SourceConfiguration
+        real = Sprint.objects.filter(name=sprint_name)
+        if project is not None:
+            real = real.filter(source_config_id__in=SourceConfiguration.objects.filter(
+                project=project).values_list('id', flat=True))
+        valid = {(s.end_date or s.start_date).date() for s in real if (s.end_date or s.start_date)}
+        if valid:  # never wipe rows when we cannot tell which date is current
+            model.objects.filter(sprint_name=sprint_name, project=project).exclude(sprint_end_date__in=valid).delete()
+
     @staticmethod
     def calculate_velocity(sprint_id, project_id=None):
         
@@ -135,6 +167,8 @@ class MetricService:
             sprint_start = sprint.start_date
             
         projects = list(Project.objects.all()) + [None] # All projects + Global (None)
+        # Bugs Resolved uses the sprint's date window for Jira sprints only (see resolved_in_sprint).
+        is_jira_sprint = SourceConfiguration.objects.filter(id=sprint.source_config_id, source_type='jira').exists()
         
         results = []
         for project in projects:
@@ -192,7 +226,13 @@ class MetricService:
                 all_items_qs = WorkItem.objects.filter(sprint=sprint, source_config_id__in=source_conf_ids)
                 if has_folder_filters:
                     all_items_qs = all_items_qs.filter(~Q(source_config_id__in=sources_with_folders) | filters)
-                if not all_items_qs.exists():
+                # The project's own sprint still gets a row when empty, so it shows as 0 in the graph
+                # like a sprint with items but no points (else it vanished). ClickUp syncs sprint lists
+                # from every folder, so a folder-filtered ClickUp source can't tell its own empty sprint.
+                # Finished status is 'completed' for ADO/ClickUp, 'closed' for Jira.
+                own_sprint = (sprint.status in ('active', 'completed', 'closed') and sources.filter(id=sprint.source_config_id)
+                              .exclude(source_type='clickup', id__in=sources_with_folders if has_folder_filters else []).exists())
+                if not own_sprint and not all_items_qs.exists():
                     continue # Skip projects with no items of any type in this sprint
 
             completed_items = work_items.filter(status_category='done')
@@ -210,7 +250,12 @@ class MetricService:
                         ~Q(source_config_id__in=sources_with_folders) | filters
                     )
             
-            completed_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES).count()
+            done_bugs = all_sprint_items.filter(status_category='done', item_type__iexact='bug').exclude(NOT_FIXED_BUG_STATUSES)
+            # ponytail: Jira only. ClickUp/ADO bugs are often bulk-closed weeks after the sprint
+            # (40 Tatva bugs share one resolved date), so the window would zero them out.
+            if is_jira_sprint:
+                done_bugs = done_bugs.filter(resolved_in_sprint(sprint))
+            completed_bugs = done_bugs.count()
             completed_stories = completed_items.filter(item_type__iexact='story').count()
             
             # 4. Compliance (Standardized to ALL work items for dashboard consistency)
@@ -237,6 +282,7 @@ class MetricService:
                 pr_filter &= Q(source_config_id__in=source_conf_ids)
             avg_code_ai = PullRequest.objects.filter(pr_filter & ANALYZED_PRS).aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
+            MetricService._drop_stale_rollups(SprintMetrics, sprint.name, project)
             metrics_obj, created = SprintMetrics.objects.update_or_create(
                 sprint_name=sprint.name,
                 sprint_end_date=sprint_end.date(),

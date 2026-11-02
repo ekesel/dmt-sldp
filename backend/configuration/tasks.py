@@ -102,7 +102,7 @@ def perform_sync_task(self, source_id: int):
         # Signal dashboard to refresh metrics
         try:
             # First trigger recalculation on backend
-            update_all_sprint_metrics.delay(schema_name=source.project.tenant.schema_name)
+            update_all_sprint_metrics.delay(schema_name=source.project.tenant.schema_name, project_id=source.project_id)
             
             # Then signal frontend to refetch (with a slight delay or after recap completes)
             # Frontend will refetch immediately, but since update_all_sprint_metrics is async,

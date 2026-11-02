@@ -23,6 +23,7 @@ class AzureDevOpsConnector(BaseConnector):
             
         self.organization = None
         self.project_name = None
+        self._state_cache = {}  # (project, work item type) -> {state lower: ADO state category}
         self._parse_config()
 
     def _parse_config(self):
@@ -345,6 +346,13 @@ class AzureDevOpsConnector(BaseConnector):
             team_names.remove(default_team_name)
             team_names.insert(0, default_team_name)
 
+        # A source filtered to one team (folder "Project / Team") owns only that team's iterations.
+        folder = self.config.get('active_folder_name') or ''
+        folder_project, _, folder_team = folder.partition(' / ')
+        team_filtered = bool(folder_team) and folder_project == project_name
+        if team_filtered:
+            team_names = [folder_team]
+
         synced_iteration_ids = set()
 
         for team_name in team_names:
@@ -394,6 +402,12 @@ class AzureDevOpsConnector(BaseConnector):
             except Exception as e:
                 logger.warning(f"Failed to sync sprints for team {team_name} in {project_name}: {e}")
 
+        if team_filtered and synced_iteration_ids:
+            # Other teams' iterations synced before the filter: keep them (items may link to them),
+            # but mark them so velocity doesn't show them as this team's empty sprints.
+            Sprint.objects.filter(source_config_id=source_id).exclude(external_id__in=synced_iteration_ids) \
+                .update(status='other_team')
+
     def _sync_work_items(self, project_name: str, source_id: int, headers: Dict) -> int:
         """
         Fetch all work items via WIQL and sync.
@@ -432,6 +446,45 @@ class AzureDevOpsConnector(BaseConnector):
                     count += 1
         return count
 
+    # ADO's own state categories, set per process by the ADO admin. Resolved = work implemented
+    # (e.g. fixed, verified); custom stages like testing/review normally sit in In Progress.
+    STATE_CATEGORY_TO_STATUS = {
+        'Proposed': 'todo', 'InProgress': 'in_progress', 'Resolved': 'done', 'Completed': 'done',
+        # ponytail: Removed still counts as done (no "cancelled" status yet); add one if it skews counts.
+        'Removed': 'done',
+    }
+
+    def _state_categories(self, project_name: str, work_item_type: str) -> Dict[str, str]:
+        """{state lower: category} for a work item type (cached per sync); {} if the API can't be read."""
+        key = (project_name, work_item_type)
+        if key not in self._state_cache:
+            url = (f"{self.api_base}/{quote(project_name)}/_apis/wit/workitemtypes/"
+                   f"{quote(work_item_type)}/states?api-version=6.0-preview.1")
+            mapping = {}
+            try:
+                resp = requests.get(url, headers=self._get_auth_header(), timeout=30)
+                if resp.status_code == 200:
+                    mapping = {s['name'].lower(): s.get('category') for s in resp.json().get('value', [])}
+                else:
+                    logger.warning(f"ADO states for {work_item_type} in {project_name}: HTTP {resp.status_code}")
+            except requests.RequestException as e:
+                logger.warning(f"ADO states for {work_item_type} in {project_name} failed: {e}")
+            self._state_cache[key] = mapping
+        return self._state_cache[key]
+
+    def _status_category(self, project_name: str, work_item_type: str, state: str) -> str:
+        """todo / in_progress / done from the state's ADO category; name lists when it's unknown."""
+        category = self._state_categories(project_name, work_item_type).get(state.lower()) if project_name else None
+        if category in self.STATE_CATEGORY_TO_STATUS:
+            return self.STATE_CATEGORY_TO_STATUS[category]
+        state_lower = state.lower()
+        if state_lower in ['new', 'to do', 'proposed', 'to-do']:
+            return 'todo'
+        if state_lower in ['done', 'closed', 'completed', 'resolved', 'removed']:
+            return 'done'
+        # Anything else (In Testing, In Review, QA, ...) is still being worked on.
+        return 'in_progress'
+
     def _process_work_item(self, item: Dict, source_id: int):
         fields = item.get('fields', {})
         external_id = str(item.get('id'))
@@ -446,17 +499,18 @@ class AzureDevOpsConnector(BaseConnector):
         resolved_at = self._parse_date(fields.get('Microsoft.VSTS.Common.ResolvedDate'))
         
         # Determine status category
-        state_lower = state.lower()
-        if state_lower in ['new', 'to do', 'proposed', 'to-do']:
-            status_category = 'todo'
-            resolved_at = None
-        elif state_lower in ['in progress', 'doing', 'development / in progress', 'blocked', 'blocker', 'on hold']:
-            status_category = 'in_progress'
+        status_category = self._status_category(
+            fields.get('System.TeamProject') or self.project_name, fields.get('System.WorkItemType', 'Task'), state
+        )
+        if status_category != 'done':
             resolved_at = None
         else:
-            status_category = 'done'
-            if not resolved_at:
-                resolved_at = timezone.now() # Fallback
+            # Tasks/issues often have no ResolvedDate (process-dependent); now() made every resync
+            # move them to "resolved today", inflating cycle time. ClosedDate, then the last state change,
+            # then the last edit; now() only if ADO sent none of them.
+            resolved_at = (resolved_at or self._parse_date(fields.get('Microsoft.VSTS.Common.ClosedDate'))
+                           or self._parse_date(fields.get('Microsoft.VSTS.Common.StateChangeDate'))
+                           or self._parse_date(fields.get('System.ChangedDate')) or timezone.now())
             
         # Priority
         prio = str(fields.get('Microsoft.VSTS.Common.Priority', '3'))
@@ -488,7 +542,7 @@ class AzureDevOpsConnector(BaseConnector):
 
         # Link to Sprint (Iteration)
         # Attempt to match by exact IterationId first (most reliable)
-        iteration_info = fields.get('System.IterationId') or item.get('id') # fallback
+        iteration_info = fields.get('System.IterationId')
         sprint_obj = None
         if iteration_info:
              sprint_obj = Sprint.objects.filter(source_config_id=source_id, external_id=str(iteration_info)).first()
@@ -500,18 +554,11 @@ class AzureDevOpsConnector(BaseConnector):
                 parts = iteration_path.split('\\')
                 if len(parts) > 1:
                     sprint_name = parts[-1]
-                    sprint_obj = Sprint.objects.filter(source_config_id=source_id, name=sprint_name).order_by('-end_date').first()
-                    
-        # If still no sprint and it's resolved/started, map to the most recently completed/active sprint for this source
-        if not sprint_obj and (started_at or resolved_at):
-             project_sprint_ids = WorkItem.objects.filter(
-                 source_config_id=source_id,
-                 sprint__isnull=False
-             ).values_list('sprint_id', flat=True).distinct()
-             sprint_obj = Sprint.objects.filter(
-                id__in=project_sprint_ids,
-                status__in=['active', 'completed']
-            ).order_by('-end_date').first()
+                    # Teams can reuse a sprint name; only link when the name is unambiguous.
+                    same_name = list(Sprint.objects.filter(source_config_id=source_id, name=sprint_name)[:2])
+                    sprint_obj = same_name[0] if len(same_name) == 1 else None
+        # No iteration (path is just the project root) = backlog: leave sprint empty. It used to go to the
+        # latest sprint, inflating that sprint and moving to the next one on every resync.
 
         # Extract DMT Compliance Custom Fields from ADO
         

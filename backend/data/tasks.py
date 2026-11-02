@@ -70,8 +70,8 @@ def sync_tenant_data(source_id, schema_name=None):
         if source.source_type in ['github', 'azure_devops_git']:
             analyze_pr_ai_usage.delay(source.id, schema_name=schema_name or connection.schema_name)
             
-        # 4. Trigger Metric Recalculation (Async)
-        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
+        # 4. Trigger Metric Recalculation (Async) for this project only
+        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name, project_id=source.project_id)
         
         return f"Successfully synced {source.name}. Processed {stats.get('item_count', 0)} items."
         
@@ -214,19 +214,30 @@ def run_daily_aggregation():
 
 @shared_task
 @tenant_aware_task
-def update_all_sprint_metrics(schema_name=None):
+def update_all_sprint_metrics(schema_name=None, project_id=None):
     """
-    Recalculate metrics for all sprints in the current tenant.
-    Used after sync or for backfilling.
+    Recalculate sprint/developer metrics. With project_id (after a sync) only that project's
+    sprints are rebuilt — rebuilding every sprint of the tenant took long enough that the
+    dashboard kept showing stale numbers after a sync. Without it (backfills) all sprints.
     """
     from .models import Sprint
     from .analytics.metrics import MetricService
-    
+    from configuration.models import SourceConfiguration
+
     sprints = Sprint.objects.all()
-    count = 0
+    if project_id:
+        sprints = sprints.filter(source_config_id__in=SourceConfiguration.objects.filter(
+            project_id=project_id).values_list('id', flat=True))
+    count = failed = 0
     for sprint in sprints:
-        metrics = MetricService.populate_sprint_metrics(sprint.id)
-        MetricService.populate_developer_metrics(sprint.id)
+        # One bad sprint must not leave every later sprint with stale metrics.
+        try:
+            metrics = MetricService.populate_sprint_metrics(sprint.id)
+            MetricService.populate_developer_metrics(sprint.id)
+        except Exception:
+            failed += 1
+            logger.exception(f"Sprint metrics rollup failed for sprint {sprint.id} ({sprint.name})")
+            continue
         if metrics:
             count += 1
             
@@ -247,7 +258,7 @@ def update_all_sprint_metrics(schema_name=None):
     except Exception as e:
         print(f"Failed to broadcast metrics update: {e}")
 
-    return f"Updated metrics for {count} sprints in {connection.schema_name}"
+    return f"Updated metrics for {count} sprints in {connection.schema_name} ({failed} failed)"
 
 @shared_task
 @tenant_aware_task
@@ -345,8 +356,8 @@ def analyze_pr_ai_usage(source_id, schema_name=None):
         else:
             log.error_message = f"Analyzed PRs. Matched {prs_matched} PRs to Work Items. Rolled up metrics for {rollup_count} work items."
 
-        # 3. Trigger metrics update to surface these bounds to DeveloperMetrics
-        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name)
+        # 3. Trigger metrics update to surface these bounds to DeveloperMetrics (this project only)
+        update_all_sprint_metrics.delay(schema_name=schema_name or connection.schema_name, project_id=source.project_id)
         
         return log.error_message
         
