@@ -15,6 +15,8 @@ from etl.transformers import ComplianceEngine
 logger = logging.getLogger(__name__)
 
 class AzureDevOpsConnector(BaseConnector):
+    _compliance_exempt_types = ('task',)
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         # Strip API key of any whitespace which typically causes 401s

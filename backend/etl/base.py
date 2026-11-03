@@ -242,6 +242,48 @@ class BaseConnector(ABC):
                 )
                 self._apply_to_item(item, contributions, dmt_updates, 'subtask')
 
+        self._recompute_root_compliance(source_id)
+
+    # Item types a connector exempts from DMT even at root level (ADO clears leaf tasks).
+    _compliance_exempt_types: tuple = ()
+
+    def _recompute_root_compliance(self, source_id: int):
+        """
+        Re-run compliance on every root item from its stored fields.
+
+        Compliance is otherwise only computed for items the sync re-fetched, or whose
+        bubbled DMT fields changed — so an untouched item keeps a result from an older
+        rule or an older rollup forever (stale compliant/violated).
+        """
+        from data.models import WorkItem
+        from etl.transformers import ComplianceEngine
+
+        # Same "root" as the dashboard's story filter: stories under an epic count too, even
+        # though each connector's post-sync bulk-clear treats every parented item as a sub-task.
+        roots = WorkItem.objects.filter(
+            Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio']),
+            source_config_id=source_id,
+            deleted_at__isnull=True,
+        ).exclude(item_type__in=['epic', 'feature', 'portfolio', *self._compliance_exempt_types])
+
+        for item in roots.iterator():
+            is_compliant, failures = ComplianceEngine.check_compliance({
+                'parent': None,  # an epic parent must not make a story exempt
+                'item_type': item.item_type,
+                'status': item.status,
+                'status_category': item.status_category,
+                'ac_quality': item.ac_quality,
+                'unit_testing_status': item.unit_testing_status,
+                'pr_links': item.pr_links,
+                'reviewer_dmt_signoff': item.reviewer_dmt_signoff,
+            })
+            if is_compliant == item.dmt_compliant and failures == (item.compliance_failures or []):
+                continue
+            history = self._track_violation_history(source_id, item.external_id, is_compliant, failures)
+            WorkItem.objects.filter(pk=item.pk).update(
+                dmt_compliant=is_compliant, compliance_failures=failures, **history
+            )
+
     @staticmethod
     def _extract_person_field(val):
         """
