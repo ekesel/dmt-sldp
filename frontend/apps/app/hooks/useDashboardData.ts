@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
-import api, { aiInsights } from '@dmt/api';
+import api, { aiInsights, WorkloadWarning } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
 export interface DashboardSummary {
@@ -43,6 +43,13 @@ export interface AssigneeEntry {
   in_progress: number;
   completed: number;
   avg_cycle_time_days: number | null;
+  seniority?: 'junior' | 'mid' | 'senior' | string;
+  capacity?: number;
+  ideal_min?: number;
+  ideal_max?: number;
+  workload_status?: 'Overloaded' | 'Balanced' | 'Underutilised' | string | null;
+  percentile?: number | null;
+  effective_load?: number;
 }
 
 export interface DashboardDataResult {
@@ -52,6 +59,7 @@ export interface DashboardDataResult {
   insights: Insight[];
   forecast: Record<string, string> | null;
   assigneeDistribution: AssigneeEntry[];
+  workloadWarnings: WorkloadWarning[];
 }
 
 export function useDashboardData(
@@ -97,11 +105,14 @@ export function useDashboardData(
         }
       }
 
-      const [summaryData, velocityData, complianceData, assigneeData] = await Promise.all([
+      const warningsParams: Record<string, any> = projectId ? { project_id: projectId } : {};
+
+      const [summaryData, velocityData, complianceData, assigneeData, warningsData] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
         api.get<VelocityData[]>('dashboard/velocity/', { params }).then(r => r.data),
         api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
+        api.get<{ warnings: WorkloadWarning[] }>('dashboard/workload-warnings/', { params: warningsParams }).then(r => r.data?.warnings || []).catch(() => []),
       ]);
 
       return {
@@ -111,6 +122,7 @@ export function useDashboardData(
         insights: [],
         forecast: null,
         assigneeDistribution: assigneeData,
+        workloadWarnings: warningsData,
       };
     },
     enabled: Boolean(token),
@@ -214,6 +226,7 @@ export function useDashboardData(
     insights: aiData?.insights ?? [],
     forecast: aiData?.forecast ?? null,
     assigneeDistribution: data?.assigneeDistribution ?? [],
+    workloadWarnings: data?.workloadWarnings ?? [],
     loading: isLoading,
     isFetching: isFetching || isAiFetching,
     error: error ? (error.message || 'Failed to load dashboard data') : (aiError ? (aiError.message || 'Failed to load AI insights') : null),

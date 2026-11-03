@@ -8,6 +8,14 @@ import { UserCreateModal } from './UserCreateModal';
 import { UserEditModal } from './UserEditModal';
 import { useCurrentTenant } from '../../context/TenantContext';
 
+function getSeniorityBadgeClass(seniority?: string) {
+    if (!seniority) return '';
+    const s = seniority.toLowerCase();
+    if (s === 'senior') return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    if (s === 'junior') return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+}
+
 export function UserList() {
     const { currentTenantId, currentTenant } = useCurrentTenant();
     const [users, setUsers] = useState<User[]>([]);
@@ -199,9 +207,16 @@ export function UserList() {
                                                         {(user.first_name?.[0] || user.username[0]).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-foreground font-medium">
-                                                            {user.first_name} {user.last_name || user.username}
-                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-foreground font-medium">
+                                                                {user.first_name} {user.last_name || user.username}
+                                                            </p>
+                                                            {user.seniority && (
+                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold capitalize ${getSeniorityBadgeClass(user.seniority)}`}>
+                                                                    {user.seniority}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                             <span>{user.email}</span>
                                                             {(user.designation || (typeof user.role === 'object' && user.role ? user.role.role_name : undefined)) && (

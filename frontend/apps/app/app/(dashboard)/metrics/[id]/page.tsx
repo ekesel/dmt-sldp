@@ -20,12 +20,25 @@ import {
   Download,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import { developers, Developer } from "@dmt/api";
+import { developers, Developer, workloadWarnings, WorkloadWarning } from "@dmt/api";
+import { WorkloadWarningsBanner } from "../../../../components/WorkloadWarningsBanner";
 import { useRouter } from "next/navigation";
 import { TrendingChart } from "../../../../components/charts/TrendingChart";
 import { ActiveFolderSelector } from "../../../../components/ActiveFolderSelector";
 import { SprintSelector } from "../../../../components/SprintSelector";
 import { HelpSidebar } from "../../../../components/HelpSidebar";
+
+function getWorkloadStatusBadge(status?: string | null) {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (s === 'overloaded') {
+    return { label: status, className: 'bg-destructive/10 text-destructive border-destructive/20' };
+  }
+  if (s === 'balanced') {
+    return { label: status, className: 'bg-green-500/10 text-green-500 border-green-500/20' };
+  }
+  return { label: status, className: 'bg-warning/10 text-warning border-warning/20' };
+}
 
 export default function DeveloperDetailsPage({
   params,
@@ -37,6 +50,7 @@ export default function DeveloperDetailsPage({
   const [developer, setDeveloper] = useState<Developer | null>(null);
   const [metrics, setMetrics] = useState<any[]>([]);
   const [comparison, setComparison] = useState<any>(null);
+  const [warnings, setWarnings] = useState<WorkloadWarning[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
@@ -133,7 +147,7 @@ export default function DeveloperDetailsPage({
 
         // Fetch metrics (limit 10 for trends) & comparison
         const normalizedProjectId = selectedProjectId === "all" ? null : selectedProjectId;
-        const [metricsData, comparisonData] = await Promise.all([
+        const [metricsData, comparisonData, warningsRes] = await Promise.all([
           developers.getMetrics(
             developerEmail,
             normalizedProjectId,
@@ -144,10 +158,12 @@ export default function DeveloperDetailsPage({
             normalizedProjectId,
             selectedSprintId,
           ),
+          workloadWarnings.get(normalizedProjectId).catch(() => ({ warnings: [] })),
         ]);
 
-        setMetrics(metricsData);
+        setMetrics(metricsData || []);
         setComparison(comparisonData);
+        setWarnings(warningsRes?.warnings || []);
       } catch (error) {
         console.error("Failed to fetch developer details", error);
       } finally {
@@ -181,6 +197,9 @@ export default function DeveloperDetailsPage({
   return (
     <main className="min-h-screen bg-background p-8 pb-20 selection:bg-primary/30">
       <div className="max-w-7xl mx-auto space-y-12 text-foreground">
+        {warnings && warnings.length > 0 && (
+          <WorkloadWarningsBanner warnings={warnings} className="mb-4" />
+        )}
         <header className="space-y-6">
           <button
             onClick={() => router.back()}
@@ -498,14 +517,29 @@ export default function DeveloperDetailsPage({
               </button>
             </div>
             <div className="relative">
-              <div className="text-5xl font-black">
-                {latestMetrics.workload?.completed || 0}
+              <div className="flex items-baseline justify-between gap-2">
+                <div className="text-5xl font-black">
+                  {latestMetrics.workload?.completed ?? latestMetrics.items_completed ?? 0}
+                </div>
+                {latestMetrics.workload?.status && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${getWorkloadStatusBadge(latestMetrics.workload.status)?.className || ""}`}>
+
+                    {latestMetrics.workload.status}
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
-                {selectedProjectId === "all"
-                  ? "Items across active sprints"
-                  : `Items completed  ${comparison?.sprint_name || "current sprint"}`}
-              </p>
+              <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+                <span>
+                  {selectedProjectId === "all"
+                    ? "Items across active sprints"
+                    : `Completed in ${comparison?.sprint_name || "current sprint"}`}
+                </span>
+                {latestMetrics.workload?.ideal_min !== undefined && latestMetrics.workload?.ideal_max !== undefined && (
+                  <span className="text-[10px] text-foreground font-semibold normal-case">
+                    Ideal: {latestMetrics.workload.ideal_min}–{latestMetrics.workload.ideal_max}
+                  </span>
+                )}
+              </div>
             </div>
           </Card>
         </div>
@@ -799,8 +833,19 @@ export default function DeveloperDetailsPage({
                       <span className="text-muted-foreground font-medium">
                         Status
                       </span>
-                      <span className="text-foreground font-black">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${getWorkloadStatusBadge(latestMetrics.workload.status)?.className || ""}`}>
+
                         {latestMetrics.workload.status}
+                      </span>
+                    </div>
+                  )}
+                  {latestMetrics.workload.ideal_min !== undefined && latestMetrics.workload.ideal_max !== undefined && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground font-medium">
+                        Target Range
+                      </span>
+                      <span className="text-foreground font-semibold text-xs">
+                        Ideal: {latestMetrics.workload.ideal_min}–{latestMetrics.workload.ideal_max} items
                       </span>
                     </div>
                   )}

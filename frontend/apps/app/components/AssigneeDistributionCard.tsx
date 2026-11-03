@@ -29,6 +29,29 @@ function avatarColor(name: string): string {
     return colors[Math.abs(hash) % colors.length];
 }
 
+function getSeniorityBadge(seniority?: string) {
+    if (!seniority) return null;
+    const s = seniority.toLowerCase();
+    switch (s) {
+        case 'junior':
+            return {
+                label: 'Junior',
+                className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            };
+        case 'senior':
+            return {
+                label: 'Senior',
+                className: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+            };
+        case 'mid':
+        default:
+            return {
+                label: 'Mid',
+                className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+            };
+    }
+}
+
 export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel = 'Last 5 sprints' }: Props) {
     if (loading) {
         return (
@@ -79,20 +102,30 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     const color = avatarColor(person.name);
                     const visibleWork = person.completed + person.in_progress;
                     const barWidth = Math.round((visibleWork / maxTotal) * 100);
-                    const inProgressPct = visibleWork > 0 ? Math.round((person.in_progress / visibleWork) * 100) : 0;
 
-                    let workloadStatus = null;
+                    const seniorityBadge = getSeniorityBadge(person.seniority || 'mid');
+
+                    let workloadStatus: { label: string; className: string } | null = null;
                     let barColor = color;
-                    if (barWidth > 80) {
-                        workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
-                        barColor = '#ef4444'; // red-500
-                    } else if (barWidth >= 60 && barWidth <= 80) {
-                        workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
-                        barColor = '#22c55e'; // green-500
-                    } else {
-                        workloadStatus = { label: 'Underutilised', className: 'bg-warning/10 text-warning border-warning/20' };
-                        barColor = '#eab308'; // yellow-500
+
+                    // Status comes exclusively from the API (workload_status).
+                    // Per api-contract: do NOT compute status on the frontend - the backend
+                    // applies Company Baseline Min/Max, seniority weights and allocation.
+                    const apiStatus = person.workload_status;
+                    if (apiStatus) {
+                        const statusLower = apiStatus.toLowerCase();
+                        if (statusLower === 'overloaded') {
+                            workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
+                            barColor = '#ef4444';
+                        } else if (statusLower === 'balanced') {
+                            workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
+                            barColor = '#22c55e';
+                        } else if (statusLower === 'underutilised') {
+                            workloadStatus = { label: 'Underutilised', className: 'bg-warning/10 text-warning border-warning/20' };
+                            barColor = '#eab308';
+                        }
                     }
+                    // null workload_status means the person has 0 items - show no badge.
 
                     return (
                         <div key={person.email} className="group">
@@ -109,6 +142,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="text-sm font-medium text-foreground">{person.name}</span>
+                                        {seniorityBadge && (
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${seniorityBadge.className}`}>
+                                                {seniorityBadge.label}
+                                            </span>
+                                        )}
                                         {workloadStatus && (
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${workloadStatus.className}`}>
                                                 {workloadStatus.label}
@@ -152,8 +190,6 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                     }}
                                 />
                             </div>
-
-
                         </div>
                     );
                 })}

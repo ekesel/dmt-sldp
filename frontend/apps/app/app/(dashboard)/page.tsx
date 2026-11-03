@@ -6,6 +6,7 @@ import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { AIInsightsList } from "../../components/AIInsightsList";
 import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
+import { WorkloadWarningsBanner } from "../../components/WorkloadWarningsBanner";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector, Project } from "../../components/ProjectSelector";
 import { SprintSelector, Sprint } from "../../components/SprintSelector";
@@ -160,7 +161,7 @@ export default function DashboardPage() {
     const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate) || isRangeInvalid;
 
     const {
-        summary, velocity, compliance, insights, assigneeDistribution,
+        summary, velocity, compliance, insights, assigneeDistribution, workloadWarnings,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
     } = useDashboardData(

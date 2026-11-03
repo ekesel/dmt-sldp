@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, User as UserIcon, Mail, Lock, Briefcase } from 'lucide-react';
+import { X, Shield, User as UserIcon, Mail, Lock, Briefcase, BarChart2 } from 'lucide-react';
 import { users as usersApi, orgChart } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 import { PasswordInput } from '@dmt/ui';
@@ -23,6 +23,8 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
         role: 'Admin', // Default role
         designation: '' as string | number,
         custom_title: '',
+        seniority: '' as string,
+        seniority_effective_from: '' as string,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -66,12 +68,19 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 is_manager: formData.role === 'Manager',
             };
 
-            await usersApi.create({
+            const createPayload: any = {
                 ...formData,
                 role: formData.designation ? Number(formData.designation) : null,
                 ...roleFlags,
                 ...(tenantId ? { tenant: tenantId } : {})
-            });
+            };
+            if (!createPayload.seniority) {
+                delete createPayload.seniority;
+                delete createPayload.seniority_effective_from;
+            } else if (!createPayload.seniority_effective_from) {
+                delete createPayload.seniority_effective_from;
+            }
+            await usersApi.create(createPayload);
             onSuccess?.();
             onClose();
             // Reset form
@@ -84,6 +93,8 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 role: 'User',
                 designation: '',
                 custom_title: '',
+                seniority: '',
+                seniority_effective_from: '',
             });
         } catch (err: any) {
             setError(err.message || 'Failed to create user');
@@ -237,6 +248,43 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                             className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                             placeholder="e.g. Code Quality Champion"
                         />
+                    </div>
+
+                    {/* Seniority Level */}
+                    <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                            <BarChart2 size={14} className="text-primary" />
+                            <span className="text-sm font-medium text-foreground">Developer Level</span>
+                            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold">Affects workload capacity</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Level</label>
+                                <select
+                                    name="seniority"
+                                    value={formData.seniority}
+                                    onChange={handleChange}
+                                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none text-sm"
+                                >
+                                    <option value="">Not set (Mid)</option>
+                                    <option value="junior">Junior</option>
+                                    <option value="mid">Mid</option>
+                                    <option value="senior">Senior</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Effective From</label>
+                                <input
+                                    type="date"
+                                    name="seniority_effective_from"
+                                    value={formData.seniority_effective_from}
+                                    onChange={handleChange}
+                                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition text-sm"
+                                    placeholder="Today if blank"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1">Defaults to today if left blank</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-4 flex gap-3">

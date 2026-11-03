@@ -59,6 +59,14 @@ api.interceptors.request.use((config) => {
         config.headers['X-Tenant'] = parts[0];
       }
     }
+
+    // Admin portal operations and authentication must target the public schema; strip X-Tenant
+    const isPortalAdmin =
+      (typeof config.data === 'string' && config.data.includes('"portal":"admin"')) ||
+      (config.data && typeof config.data === 'object' && (config.data as any).portal === 'admin');
+    if (isPortalAdmin && config.headers['X-Tenant']) {
+      delete config.headers['X-Tenant'];
+    }
   }
   return config;
 });
@@ -711,6 +719,7 @@ export interface User {
   avatar_url?: string;
   is_active?: boolean;
   date_joined?: string;
+  seniority?: 'junior' | 'mid' | 'senior' | string;
   [key: string]: unknown;
 }
 
@@ -1130,6 +1139,8 @@ export const orgChart = {
 export const companyBaseline = {
   getBaseline: () => get<any>('/admin/company-baseline/'),
   updateBaseline: (data: any) => post<any, any>('/admin/company-baseline/', data),
+  deleteWorkloadSettingsVersion: (effectiveFrom: string) =>
+    del<any>(`/admin/company-baseline/?workload_settings_effective_from=${encodeURIComponent(effectiveFrom)}`),
 };
 
 /** ---------- resourceAllocations ---------- */
@@ -1228,6 +1239,38 @@ export const resourceAllocations = {
 
   publish: (data: PublishAllocationPayload) =>
     post<PublishAllocationResponse, PublishAllocationPayload>('/allocations/publish/', data),
+};
+
+
+export interface IndividualWorkload {
+  total: number;
+  in_progress: number;
+  completed: number;
+  todo: number;
+  status?: 'Overloaded' | 'Balanced' | 'Underutilised' | string | null;
+  percentile?: number | null;
+  effective_load?: number;
+  capacity?: number;
+  ideal_min?: number;
+  ideal_max?: number;
+}
+
+export interface WorkloadWarning {
+  code: 'settings_not_set' | 'allocation_not_published' | 'level_not_set' | 'allocation_not_set' | 'no_sprint_data' | string;
+  message: string;
+}
+
+export interface WorkloadWarningsResponse {
+  warnings: WorkloadWarning[];
+}
+
+export const workloadWarnings = {
+  get: (projectId?: string | number | null) =>
+    get<WorkloadWarningsResponse>(
+      `/dashboard/workload-warnings/${buildQuery({
+        project_id: projectId && projectId !== 'all' ? projectId : undefined,
+      })}`
+    ),
 };
 
 export default api;

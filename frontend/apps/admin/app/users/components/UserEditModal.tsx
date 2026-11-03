@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, User as UserIcon, Mail, Briefcase } from 'lucide-react';
+import { X, Shield, User as UserIcon, Mail, Briefcase, BarChart2 } from 'lucide-react';
 import { users as usersApi, orgChart } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -20,6 +20,8 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
         designation: '' as string | number,
         is_active: true,
         custom_title: '',
+        seniority: '' as string,
+        seniority_effective_from: '' as string,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -54,11 +56,16 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 designation: user.role !== undefined ? (typeof user.role === 'object' && user.role !== null ? (user.role as any).id : user.role) : '',
                 is_active: user.is_active ?? true,
                 custom_title: user.custom_title || '',
+                seniority: user.seniority || '',
+                seniority_effective_from: '',
             });
         }
     }, [user]);
 
     if (!isOpen || !user) return null;
+
+    // Per api-contract: hide seniority on the editor's own profile
+    const isOwnProfile = currentUser?.id === user.id;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,14 +81,23 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 is_manager: formData.role === 'Manager',
             };
 
-            await usersApi.update(user.id, {
+            const updatePayload: any = {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 is_active: formData.is_active,
                 role: formData.designation ? Number(formData.designation) : null,
                 custom_title: formData.custom_title,
-                ...roleFlags
-            });
+                ...roleFlags,
+            };
+            // Only send seniority when the editor is allowed to change it (not own profile)
+            // and a level has been selected
+            if (!isOwnProfile && formData.seniority) {
+                updatePayload.seniority = formData.seniority;
+                if (formData.seniority_effective_from) {
+                    updatePayload.seniority_effective_from = formData.seniority_effective_from;
+                }
+            }
+            await usersApi.update(user.id, updatePayload);
             onSuccess?.();
             onClose();
         } catch (err: any) {
@@ -203,6 +219,45 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                             placeholder="e.g. Code Quality Champion"
                         />
                     </div>
+
+                    {/* Seniority Level - hidden when editing own profile */}
+                    {!isOwnProfile && (
+                        <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <BarChart2 size={14} className="text-primary" />
+                                <span className="text-sm font-medium text-foreground">Developer Level</span>
+                                <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold">Affects workload capacity</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Level</label>
+                                    <select
+                                        name="seniority"
+                                        value={formData.seniority}
+                                        onChange={handleChange}
+                                        className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none text-sm"
+                                    >
+                                        <option value="">Not set (Mid)</option>
+                                        <option value="junior">Junior</option>
+                                        <option value="mid">Mid</option>
+                                        <option value="senior">Senior</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Effective From</label>
+                                    <input
+                                        type="date"
+                                        name="seniority_effective_from"
+                                        value={formData.seniority_effective_from}
+                                        onChange={handleChange}
+                                        className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition text-sm"
+                                        placeholder="Today if blank"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-1">Defaults to today if left blank</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border">
                         <input
