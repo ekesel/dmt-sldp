@@ -89,13 +89,15 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 custom_title: formData.custom_title,
                 ...roleFlags,
             };
-            // Only send seniority when the editor is allowed to change it (not own profile)
-            // and a level has been selected
-            if (!isOwnProfile && formData.seniority) {
-                updatePayload.seniority = formData.seniority;
-                if (formData.seniority_effective_from) {
-                    updatePayload.seniority_effective_from = formData.seniority_effective_from;
+            // Seniority and Effective From (hidden on own profile per api-contract)
+            if (!isOwnProfile) {
+                if (!formData.seniority_effective_from) {
+                    setError('Effective From date is required');
+                    setLoading(false);
+                    return;
                 }
+                updatePayload.seniority = formData.seniority || null;
+                updatePayload.seniority_effective_from = formData.seniority_effective_from;
             }
             await usersApi.update(user.id, updatePayload);
             onSuccess?.();
@@ -244,16 +246,26 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Effective From</label>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block text-xs font-medium text-muted-foreground">
+                                            Effective From <span className="text-destructive">*</span>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, seniority_effective_from: new Date().toLocaleDateString('en-CA') }))}
+                                            className="text-[10px] text-primary hover:underline font-medium"
+                                        >
+                                            Today
+                                        </button>
+                                    </div>
                                     <input
                                         type="date"
                                         name="seniority_effective_from"
+                                        required
                                         value={formData.seniority_effective_from}
                                         onChange={handleChange}
                                         className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition text-sm"
-                                        placeholder="Today if blank"
                                     />
-                                    <p className="text-[10px] text-muted-foreground mt-1">Defaults to today if left blank</p>
                                 </div>
                             </div>
                         </div>

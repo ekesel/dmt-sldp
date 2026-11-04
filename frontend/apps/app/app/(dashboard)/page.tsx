@@ -171,6 +171,17 @@ export default function DashboardPage() {
         selectedProjectId !== null ? (selectedSprintIds.length > 0 ? selectedSprintIds : null) : null
     );
 
+    // Toast notification if user allocation is missing for the present month
+    useEffect(() => {
+        if (!workloadWarnings || workloadWarnings.length === 0) return;
+        const allocWarning = workloadWarnings.find(
+            w => w.code === 'allocation_not_set' && !w.message.includes('Allocation sheet for')
+        );
+        if (allocWarning) {
+            toast.error(allocWarning.message, { id: 'allocation-warning', duration: 6000 });
+        }
+    }, [workloadWarnings]);
+
     const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
         setSelectedProjectId(projectId);
         setSelectedSprintIds([]);
@@ -767,7 +778,11 @@ export default function DashboardPage() {
 
                                 {/* Assignee Distribution Card */}
                                 {assigneeDistribution.length > 0 && (
-                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate, sprintDisplayLabel)} />
+                                    <AssigneeDistributionCard
+                                        assignees={assigneeDistribution}
+                                        warnings={workloadWarnings}
+                                        sprintRangeLabel={sprintRangeLabel(startDate, endDate, sprintDisplayLabel)}
+                                    />
                                 )}
 
                                 <div className="pt-8 border-t border-border">

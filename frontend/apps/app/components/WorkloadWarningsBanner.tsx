@@ -15,7 +15,14 @@ export function WorkloadWarningsBanner({ warnings, className = '' }: Props) {
 
   if (!warnings || warnings.length === 0) return null;
 
-  const visibleWarnings = warnings.filter((w) => !dismissed[w.code]);
+  const visibleWarnings = warnings.filter(
+    (w) =>
+      !dismissed[w.code] &&
+      w.code !== 'allocation_not_published' &&
+      w.code !== 'level_not_set' &&
+      !w.message.includes('Allocation sheet for') &&
+      !w.message.includes('Level is not set for')
+  );
   if (visibleWarnings.length === 0) return null;
 
   const getActionLink = (code: string) => {

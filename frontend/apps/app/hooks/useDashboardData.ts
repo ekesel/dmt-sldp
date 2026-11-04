@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
-import api, { aiInsights, WorkloadWarning } from '@dmt/api';
+import api, { aiInsights, resourceAllocations, DeveloperMatrixRow, WorkloadWarning } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
 export interface DashboardSummary {
@@ -50,6 +50,8 @@ export interface AssigneeEntry {
   workload_status?: 'Overloaded' | 'Balanced' | 'Underutilised' | string | null;
   percentile?: number | null;
   effective_load?: number;
+  has_allocation?: boolean;
+  allocation_percentage?: number | null;
 }
 
 export interface DashboardDataResult {
@@ -107,13 +109,64 @@ export function useDashboardData(
 
       const warningsParams: Record<string, any> = projectId ? { project_id: projectId } : {};
 
-      const [summaryData, velocityData, complianceData, assigneeData, warningsData] = await Promise.all([
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const [summaryData, velocityData, complianceData, rawAssigneeData, warningsData, allocationOverview] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
         api.get<VelocityData[]>('dashboard/velocity/', { params }).then(r => r.data),
         api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
         api.get<{ warnings: WorkloadWarning[] }>('dashboard/workload-warnings/', { params: warningsParams }).then(r => r.data?.warnings || []).catch(() => []),
+        resourceAllocations.getOverview({ month: currentMonth, year: currentYear })
+          .then(r => r.data)
+          .catch(() =>
+            resourceAllocations.getOverview()
+              .then(r => r.data)
+              .catch(() => null)
+          ),
       ]);
+
+      const devById = new Map<number, DeveloperMatrixRow>();
+      const devByName = new Map<string, DeveloperMatrixRow>();
+      const hasOverviewDevelopers = Boolean(
+        allocationOverview?.developers && Array.isArray(allocationOverview.developers) && allocationOverview.developers.length > 0
+      );
+
+      if (hasOverviewDevelopers && allocationOverview?.developers) {
+        for (const dev of allocationOverview.developers) {
+          if (dev.developer_id) devById.set(dev.developer_id, dev);
+          if (dev.developer_name) devByName.set(dev.developer_name.trim().toLowerCase(), dev);
+        }
+      }
+
+      const assigneeData: AssigneeEntry[] = (rawAssigneeData || []).map((assignee) => {
+        let allocPct: number | null = null;
+        let hasAlloc: boolean | undefined = undefined;
+
+        if (hasOverviewDevelopers) {
+          const dev = (assignee.id ? devById.get(assignee.id) : null) || devByName.get(assignee.name.trim().toLowerCase());
+          if (dev) {
+            if (projectId) {
+              const val = dev.allocations?.[projectId] ?? dev.allocations?.[String(projectId)];
+              allocPct = val !== undefined ? Number(val) : 0;
+            } else {
+              allocPct = Number(dev.total_allocated_percentage ?? 0);
+            }
+          } else {
+            // Not in developer allocation sheet for this month => 0% allocation
+            allocPct = 0;
+          }
+          hasAlloc = allocPct > 0;
+        }
+
+        return {
+          ...assignee,
+          allocation_percentage: allocPct,
+          has_allocation: hasAlloc,
+        };
+      });
 
       return {
         summary: summaryData,

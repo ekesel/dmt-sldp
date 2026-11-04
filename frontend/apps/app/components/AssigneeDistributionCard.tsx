@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
-import { Users, Clock, CheckCircle2, Loader2, UserCheck } from 'lucide-react';
+import { Users, Clock, CheckCircle2, Loader2, UserCheck, AlertTriangle } from 'lucide-react';
 import { AssigneeEntry } from '../hooks/useDashboardData';
+import { WorkloadWarning } from '@dmt/api';
 
 interface Props {
     assignees: AssigneeEntry[];
     loading?: boolean;
     sprintRangeLabel?: string;
+    warnings?: WorkloadWarning[];
 }
 
 function getInitials(name: string): string {
@@ -52,7 +54,7 @@ function getSeniorityBadge(seniority?: string) {
     }
 }
 
-export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel = 'Last 5 sprints' }: Props) {
+export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel = 'Last 5 sprints', warnings }: Props) {
     if (loading) {
         return (
             <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 flex items-center justify-center h-48">
@@ -62,6 +64,50 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
     }
 
     if (!assignees || assignees.length === 0) return null;
+
+    // Parse unallocated users from warnings if allocation is missing for the month
+    const unallocatedNames = React.useMemo(() => {
+        const set = new Set<string>();
+        if (!warnings) return set;
+        for (const w of warnings) {
+            if (w.code === 'allocation_not_set') {
+                const match = w.message.match(/employee\(s\):\s*([^.]+)\./i);
+                if (match && match[1]) {
+                    const parts = match[1].split(/,|\band\b/i).map(s => s.trim().toLowerCase());
+                    parts.forEach(p => {
+                        const cleaned = p.replace(/\d+\s+more/i, '').trim();
+                        if (cleaned) set.add(cleaned);
+                    });
+                }
+            }
+        }
+        return set;
+    }, [warnings]);
+
+    const isPersonZeroAllocation = React.useCallback(
+        (person: AssigneeEntry) => {
+            // If allocation percentage is explicitly provided, only 0% shows the warning sign
+            if (typeof person.allocation_percentage === 'number') {
+                return person.allocation_percentage === 0;
+            }
+            if (person.has_allocation === false) {
+                return true;
+            }
+            if (person.has_allocation === true) {
+                return false;
+            }
+
+            const nameLower = person.name.toLowerCase();
+            const emailPrefix = person.email.split('@')[0].toLowerCase();
+            return (
+                unallocatedNames.has(nameLower) ||
+                Array.from(unallocatedNames).some(
+                    (n) => nameLower.includes(n) || n.includes(nameLower) || emailPrefix.includes(n)
+                )
+            );
+        },
+        [unallocatedNames]
+    );
 
     // Ensure unique items by email to prevent duplicate key errors in UI
     const seenEmails = new Set<string>();
@@ -102,6 +148,8 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     const color = avatarColor(person.name);
                     const visibleWork = person.completed + person.in_progress;
                     const barWidth = Math.round((visibleWork / maxTotal) * 100);
+
+                    const isZeroAllocation = isPersonZeroAllocation(person);
 
                     const seniorityBadge = getSeniorityBadge(person.seniority || 'mid');
 
@@ -157,6 +205,14 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                                 <UserCheck className="w-3.5 h-3.5 text-accent flex-shrink-0" />
                                             </span>
                                         )}
+                                        {isZeroAllocation && (
+                                            <span
+                                                title="0% allocation for this month"
+                                                className="text-destructive inline-flex items-center cursor-default"
+                                            >
+                                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="text-xs text-muted-foreground">{person.email}</span>
                                 </div>
@@ -200,6 +256,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 text-warning" /> In Progress</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Completed</span>
                 <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Avg Cycle</span>
+                {sortedAssignees.some(isPersonZeroAllocation) && (
+                    <span className="flex items-center gap-1.5 text-destructive font-bold">
+                        <AlertTriangle className="w-4 h-4" /> 0% Allocation
+                    </span>
+                )}
                 <span className="flex items-center gap-1.5 ml-auto"><UserCheck className="w-4 h-4 text-accent" /> Portal access</span>
             </div>
         </div>

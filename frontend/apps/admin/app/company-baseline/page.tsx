@@ -524,7 +524,7 @@ export default function CompanyBaselinePage() {
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mb-3">
-                                        Capacity multiplier for Mid / Mid-Senior engineers (Default: 1.0).
+                                        Capacity multiplier for Mid-Senior engineers(Default:1.0).
                                     </p>
                                     <div className="relative">
                                         <input
@@ -550,7 +550,7 @@ export default function CompanyBaselinePage() {
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mb-3">
-                                        Capacity multiplier for Senior / Lead engineers (Default: 1.3).
+                                        Capacity multiplier for Senior engineers(Default:1.3). 
                                     </p>
                                     <div className="relative">
                                         <input
