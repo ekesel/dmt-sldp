@@ -119,7 +119,8 @@ class ComplianceEngine:
             status_category == 'done'
             or raw_status in ComplianceEngine._ADVANCED_STATUSES
         )
-        is_todo = status_category == 'todo'
+        # Jira files 'Reopened' under its To Do category; the raw status still makes it advanced.
+        is_todo = status_category == 'todo' and not is_advanced
 
         failures = []
         item_type = (work_item_data.get('item_type') or '').lower()

@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
 from datetime import datetime
-from etl.transformers import TaskHistoryParser
+from etl.transformers import TaskHistoryParser, ComplianceEngine
 
 class TestTaskHistoryParser(TestCase):
     def test_jira_extraction(self):
@@ -56,3 +56,16 @@ class TestLastEnteredStatus(TestCase):
         history = [{'created': '2026-07-06T10:00:00.000+0000', 'items': [{'field': 'assignee', 'toString': 'x'}]}]
         self.assertIsNone(TaskHistoryParser.extract_last_entered(history, 'Done'))
         self.assertIsNone(TaskHistoryParser.extract_last_entered([], 'Done'))
+
+
+class TestComplianceStage(TestCase):
+    def test_jira_reopened_gets_full_checks(self):
+        # Jira puts Reopened in the To Do category; it must not stop at the AC check.
+        item = {'status': 'Reopened', 'status_category': 'todo', 'item_type': 'story', 'ac_quality': 'final'}
+        ok, failures = ComplianceEngine.check_compliance(item)
+        self.assertFalse(ok)
+        self.assertIn('unit_testing_not_done', failures)
+
+    def test_todo_checks_ac_only(self):
+        item = {'status': 'To Do', 'status_category': 'todo', 'item_type': 'story', 'ac_quality': 'final'}
+        self.assertEqual(ComplianceEngine.check_compliance(item), (True, []))
