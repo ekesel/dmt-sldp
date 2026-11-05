@@ -689,21 +689,21 @@ export default function CompanyBaselinePage() {
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Junior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {(Number(currentUnder) * Number(currentJunior)).toFixed(1)} – {(Number(currentOver) * Number(currentJunior)).toFixed(1)}
+                                            {Math.round(Number(currentUnder) * Number(currentJunior))} – {Math.round(Number(currentOver) * Number(currentJunior))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Mid Senior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {(Number(currentUnder) * Number(currentMid)).toFixed(1)} – {(Number(currentOver) * Number(currentMid)).toFixed(1)}
+                                            {Math.round(Number(currentUnder) * Number(currentMid))} – {Math.round(Number(currentOver) * Number(currentMid))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Senior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {(Number(currentUnder) * Number(currentSenior)).toFixed(1)} – {(Number(currentOver) * Number(currentSenior)).toFixed(1)}
+                                            {Math.round(Number(currentUnder) * Number(currentSenior))} – {Math.round(Number(currentOver) * Number(currentSenior))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
