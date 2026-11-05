@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
-import { Users, Clock, CheckCircle2, Loader2, UserCheck } from 'lucide-react';
+import { Users, Clock, CheckCircle2, Loader2, UserCheck, AlertTriangle } from 'lucide-react';
 import { AssigneeEntry } from '../hooks/useDashboardData';
+import { WorkloadWarning } from '@dmt/api';
 
 interface Props {
     assignees: AssigneeEntry[];
     loading?: boolean;
     sprintRangeLabel?: string;
+    warnings?: WorkloadWarning[];
 }
 
 function getInitials(name: string): string {
@@ -29,7 +31,30 @@ function avatarColor(name: string): string {
     return colors[Math.abs(hash) % colors.length];
 }
 
-export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel = 'Last 5 sprints' }: Props) {
+function getSeniorityBadge(seniority?: string) {
+    if (!seniority) return null;
+    const s = seniority.toLowerCase();
+    switch (s) {
+        case 'junior':
+            return {
+                label: 'Junior',
+                className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+            };
+        case 'senior':
+            return {
+                label: 'Senior',
+                className: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+            };
+        case 'mid':
+        default:
+            return {
+                label: 'Mid',
+                className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+            };
+    }
+}
+
+export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel = 'Last 5 sprints', warnings }: Props) {
     if (loading) {
         return (
             <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 flex items-center justify-center h-48">
@@ -39,6 +64,50 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
     }
 
     if (!assignees || assignees.length === 0) return null;
+
+    // Parse unallocated users from warnings if allocation is missing for the month
+    const unallocatedNames = React.useMemo(() => {
+        const set = new Set<string>();
+        if (!warnings) return set;
+        for (const w of warnings) {
+            if (w.code === 'allocation_not_set') {
+                const match = w.message.match(/employee\(s\):\s*([^.]+)\./i);
+                if (match && match[1]) {
+                    const parts = match[1].split(/,|\band\b/i).map(s => s.trim().toLowerCase());
+                    parts.forEach(p => {
+                        const cleaned = p.replace(/\d+\s+more/i, '').trim();
+                        if (cleaned) set.add(cleaned);
+                    });
+                }
+            }
+        }
+        return set;
+    }, [warnings]);
+
+    const isPersonZeroAllocation = React.useCallback(
+        (person: AssigneeEntry) => {
+            // If allocation percentage is explicitly provided, only 0% shows the warning sign
+            if (typeof person.allocation_percentage === 'number') {
+                return person.allocation_percentage === 0;
+            }
+            if (person.has_allocation === false) {
+                return true;
+            }
+            if (person.has_allocation === true) {
+                return false;
+            }
+
+            const nameLower = person.name.toLowerCase();
+            const emailPrefix = person.email.split('@')[0].toLowerCase();
+            return (
+                unallocatedNames.has(nameLower) ||
+                Array.from(unallocatedNames).some(
+                    (n) => nameLower.includes(n) || n.includes(nameLower) || emailPrefix.includes(n)
+                )
+            );
+        },
+        [unallocatedNames]
+    );
 
     // Ensure unique items by email to prevent duplicate key errors in UI
     const seenEmails = new Set<string>();
@@ -79,20 +148,32 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     const color = avatarColor(person.name);
                     const visibleWork = person.completed + person.in_progress;
                     const barWidth = Math.round((visibleWork / maxTotal) * 100);
-                    const inProgressPct = visibleWork > 0 ? Math.round((person.in_progress / visibleWork) * 100) : 0;
 
-                    let workloadStatus = null;
+                    const isZeroAllocation = isPersonZeroAllocation(person);
+
+                    const seniorityBadge = getSeniorityBadge(person.seniority || 'mid');
+
+                    let workloadStatus: { label: string; className: string } | null = null;
                     let barColor = color;
-                    if (barWidth > 80) {
-                        workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
-                        barColor = '#ef4444'; // red-500
-                    } else if (barWidth >= 60 && barWidth <= 80) {
-                        workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
-                        barColor = '#22c55e'; // green-500
-                    } else {
-                        workloadStatus = { label: 'Underutilised', className: 'bg-warning/10 text-warning border-warning/20' };
-                        barColor = '#eab308'; // yellow-500
+
+                    // Status comes exclusively from the API (workload_status).
+                    // Per api-contract: do NOT compute status on the frontend - the backend
+                    // applies Company Baseline Min/Max, seniority weights and allocation.
+                    const apiStatus = person.workload_status;
+                    if (apiStatus) {
+                        const statusLower = apiStatus.toLowerCase();
+                        if (statusLower === 'overloaded') {
+                            workloadStatus = { label: 'Overloaded', className: 'bg-destructive/10 text-destructive border-destructive/20' };
+                            barColor = '#ef4444';
+                        } else if (statusLower === 'balanced') {
+                            workloadStatus = { label: 'Balanced', className: 'bg-green-500/10 text-green-500 border-green-500/20' };
+                            barColor = '#22c55e';
+                        } else if (statusLower === 'underutilised') {
+                            workloadStatus = { label: 'Underutilised', className: 'bg-warning/10 text-warning border-warning/20' };
+                            barColor = '#eab308';
+                        }
                     }
+                    // null workload_status means the person has 0 items - show no badge.
 
                     return (
                         <div key={person.email} className="group">
@@ -109,6 +190,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="text-sm font-medium text-foreground">{person.name}</span>
+                                        {seniorityBadge && (
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${seniorityBadge.className}`}>
+                                                {seniorityBadge.label}
+                                            </span>
+                                        )}
                                         {workloadStatus && (
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${workloadStatus.className}`}>
                                                 {workloadStatus.label}
@@ -117,6 +203,14 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                         {person.is_portal_user && (
                                             <span title="Can log in to portal">
                                                 <UserCheck className="w-3.5 h-3.5 text-accent flex-shrink-0" />
+                                            </span>
+                                        )}
+                                        {isZeroAllocation && (
+                                            <span
+                                                title="0% allocation for this month"
+                                                className="text-destructive inline-flex items-center cursor-default"
+                                            >
+                                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                                             </span>
                                         )}
                                     </div>
@@ -152,8 +246,6 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                     }}
                                 />
                             </div>
-
-
                         </div>
                     );
                 })}
@@ -164,6 +256,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 text-warning" /> In Progress</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Completed</span>
                 <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Avg Cycle</span>
+                {sortedAssignees.some(isPersonZeroAllocation) && (
+                    <span className="flex items-center gap-1.5 text-destructive font-bold">
+                        <AlertTriangle className="w-4 h-4" /> 0% Allocation
+                    </span>
+                )}
                 <span className="flex items-center gap-1.5 ml-auto"><UserCheck className="w-4 h-4 text-accent" /> Portal access</span>
             </div>
         </div>

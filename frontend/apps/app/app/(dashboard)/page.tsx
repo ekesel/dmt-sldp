@@ -6,6 +6,7 @@ import { KPICard } from "../../components/KPISection";
 import { VelocityChart } from "../../components/charts/VelocityChart";
 import { AIInsightsList } from "../../components/AIInsightsList";
 import { AssigneeDistributionCard } from "../../components/AssigneeDistributionCard";
+import { WorkloadWarningsBanner } from "../../components/WorkloadWarningsBanner";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { ProjectSelector, Project } from "../../components/ProjectSelector";
 import { SprintSelector, Sprint } from "../../components/SprintSelector";
@@ -160,7 +161,7 @@ export default function DashboardPage() {
     const hasInvalidDates = isDateInvalid(startDate) || isDateInvalid(endDate) || isRangeInvalid;
 
     const {
-        summary, velocity, compliance, insights, assigneeDistribution,
+        summary, velocity, compliance, insights, assigneeDistribution, workloadWarnings,
         loading, error, refreshInsights, isRefreshingInsights,
         aiProgress, aiStatus
     } = useDashboardData(
@@ -169,6 +170,17 @@ export default function DashboardPage() {
         hasInvalidDates ? null : (endDate || null),
         selectedProjectId !== null ? (selectedSprintIds.length > 0 ? selectedSprintIds : null) : null
     );
+
+    // Toast notification if user allocation is missing for the present month
+    useEffect(() => {
+        if (!workloadWarnings || workloadWarnings.length === 0) return;
+        const allocWarning = workloadWarnings.find(
+            w => w.code === 'allocation_not_set' && !w.message.includes('Allocation sheet for')
+        );
+        if (allocWarning) {
+            toast.error(allocWarning.message, { id: 'allocation-warning', duration: 6000 });
+        }
+    }, [workloadWarnings]);
 
     const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
         setSelectedProjectId(projectId);
@@ -766,7 +778,11 @@ export default function DashboardPage() {
 
                                 {/* Assignee Distribution Card */}
                                 {assigneeDistribution.length > 0 && (
-                                    <AssigneeDistributionCard assignees={assigneeDistribution} sprintRangeLabel={sprintRangeLabel(startDate, endDate, sprintDisplayLabel)} />
+                                    <AssigneeDistributionCard
+                                        assignees={assigneeDistribution}
+                                        warnings={workloadWarnings}
+                                        sprintRangeLabel={sprintRangeLabel(startDate, endDate, sprintDisplayLabel)}
+                                    />
                                 )}
 
                                 <div className="pt-8 border-t border-border">
