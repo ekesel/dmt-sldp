@@ -1625,6 +1625,7 @@ class AssigneeDistributionView(APIView):
         # Key: lowercased email
         # Value: { 'name': str, 'email': str, 'id': int|None, 'is_portal_user': bool, 'total': int, 'in_progress': int, 'completed': int, 'durations': list }
         aggregation = {}
+        holiday_dates = MetricService.holiday_dates()
 
         # 1. Process Resolved Assignees
         resolved_rows = (
@@ -1658,11 +1659,11 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                # Same rule as the dashboard: no start date = no cycle time (created -> done is lead time).
-                start_time = row['started_at']
-                if row['resolved_at'] and start_time:
-                    duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
-                    agg['durations'].append(duration)
+                # Same rule as the dashboard: no start date = no cycle time; working days, weekends/holidays excluded.
+                if row['resolved_at'] and row['started_at']:
+                    duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
+                    if duration is not None:
+                        agg['durations'].append(duration)
 
         # 2. Process Fallback Assignees (unlinked)
     
@@ -1699,11 +1700,11 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                # Same rule as the dashboard: no start date = no cycle time (created -> done is lead time).
-                start_time = row['started_at']
-                if row['resolved_at'] and start_time:
-                    duration = (row['resolved_at'] - start_time).total_seconds() / 86400.0
-                    agg['durations'].append(duration)
+                # Same rule as the dashboard: no start date = no cycle time; working days, weekends/holidays excluded.
+                if row['resolved_at'] and row['started_at']:
+                    duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
+                    if duration is not None:
+                        agg['durations'].append(duration)
 
         # 3. Finalize result list
         result = []

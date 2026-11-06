@@ -463,3 +463,19 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.allocate('new@x.test', project, 100, month_offset=0)
         rows = self.get({'project_id': str(project.id), 'sprint_ids': str(last_month.id)})
         self.assertEqual(set(rows), {'old@x.test'})  # last month's sheet, not this month's
+
+
+class WorkingDaysTest(SimpleTestCase):
+    """Team card cycle time uses the dashboard's working-day count."""
+
+    def test_weekends_and_holidays_skipped(self):
+        from datetime import datetime
+        from data.analytics.metrics import MetricService
+
+        tz = timezone.get_current_timezone()
+        fri = timezone.make_aware(datetime(2026, 10, 30, 10), tz)
+        tue = timezone.make_aware(datetime(2026, 11, 3, 10), tz)
+        self.assertEqual(MetricService.working_days(fri, tue, set()), 2)  # Mon + Tue
+        self.assertEqual(MetricService.working_days(fri, tue, {date(2026, 11, 2)}), 1)
+        self.assertEqual(MetricService.working_days(fri, fri, set()), 0)
+        self.assertIsNone(MetricService.working_days(tue, fri, set()))
