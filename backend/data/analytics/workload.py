@@ -209,21 +209,35 @@ def member_capacity(keys, days, settings_tl, levels, alloc_tl=None):
     return out
 
 
-def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None):
+def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, parts=None):
     """
     Classify a team over sprints judged on `days` (empty = today).
+    parts: [(keys, days, alloc_tl), ...] for a team spread over several projects (All Projects): each member's
+    capacity is summed over the projects they have items in, each with that project's sprints and allocation;
+    `days` / `alloc_tl` are then unused.
     settings_tl / resolver: pass them when calling repeatedly to avoid reloading per call.
     Returns ({key: classify_workload result}, {key: level today}).
     """
     from django.utils import timezone
 
     today = timezone.localdate()
-    days = list(days) or [today]
+    active = [k for k, c in counts.items() if c > 0]
+    if parts is None:
+        parts = [(active, days, alloc_tl)]
     if settings_tl is None:
         settings_tl = settings_timeline()
     levels = level_timelines(counts, resolver)
-    capacity = member_capacity([k for k, c in counts.items() if c > 0], days, settings_tl, levels, alloc_tl)
-    result = classify_workload(counts, capacity, len(days), get_workload_settings(today, settings_tl))
+    capacity = {}
+    for keys, part_days, part_alloc in parts:
+        part_keys = [k for k in keys if counts.get(k, 0) > 0]
+        for k, (cap, low, high) in member_capacity(part_keys, list(part_days) or [today], settings_tl, levels, part_alloc).items():
+            prev = capacity.get(k, (0.0, 0.0, 0.0))
+            capacity[k] = (prev[0] + cap, prev[1] + low, prev[2] + high)
+    missing = [k for k in active if k not in capacity]
+    if missing:  # items outside every part: judge them on today at 100%
+        capacity.update(member_capacity(missing, [today], settings_tl, levels))
+    sprint_count = max((len(part_days) for _, part_days, _ in parts), default=0) or 1
+    result = classify_workload(counts, capacity, sprint_count, get_workload_settings(today, settings_tl))
     return result, {k: level_on(t, today) for k, t in levels.items()}
 
 

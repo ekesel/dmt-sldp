@@ -1556,6 +1556,7 @@ class AssigneeDistributionView(APIView):
         started = Q(start_date__lte=now) | Q(end_date__lt=now)
         # One judging day per sprint in the window (level, settings and allocation in effect then).
         days = []
+        project_parts = []  # All Projects: (project id, sprint ids, judging days) per project
         try:
             if project_id and project_id not in ['null', 'undefined']:
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
@@ -1588,6 +1589,10 @@ class AssigneeDistributionView(APIView):
             
                 projects = Project.objects.all()
                 relevant_sprint_ids = []
+                # Old sprints of projects that stopped running sprints don't belong in "last N sprints".
+                # ponytail: assumes 2-week sprints for the cut-off; store sprint length if teams differ a lot.
+                cutoff = now - timezone.timedelta(days=window * 14)
+                recent = Q(end_date__gte=cutoff) | Q(end_date__isnull=True, start_date__gte=cutoff)
                 
                 for proj in projects:
                     proj_source_ids = list(SourceConfiguration.objects.filter(project=proj).values_list('id', flat=True))
@@ -1601,13 +1606,11 @@ class AssigneeDistributionView(APIView):
                         if end_date:
                             sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                     else:
-                        sprint_qs = sprint_qs.filter(started)[:window]
+                        sprint_qs = sprint_qs.filter(started).filter(recent)[:window]
                     rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
-                    relevant_sprint_ids.extend(r[0] for r in rows)
-                    # ponytail: global view scales limits by the busiest project's sprints;
-                    # per-developer sprint lists if cross-project teams get uneven windows.
-                    if len(rows) > len(days):
-                        days = [sprint_day(start, end) for _, start, end in rows]
+                    if rows:
+                        relevant_sprint_ids.extend(r[0] for r in rows)
+                        project_parts.append((proj.id, [r[0] for r in rows], [sprint_day(s, e) for _, s, e in rows]))
 
                 if relevant_sprint_ids:
                     work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
@@ -1720,14 +1723,37 @@ class AssigneeDistributionView(APIView):
         # Project selected: show only members currently allocated to it (latest published month <= now).
         # No published allocation for the project at all -> keep everyone (nothing to filter by).
         alloc_tl = None
+        parts = None
         if project_id and project_id not in ['null', 'undefined', '']:
             alloc_tl = allocation_timeline(project_id)
-            current = allocation_on(alloc_tl, timezone.localdate())
-            if current:
-                result = [r for r in result if r['email'] in current]
+            # Members = people allocated in the months of the sprints being viewed (a month with nothing
+            # published uses today's sheet, like the capacity does).
+            members = set()
+            for day in days or [timezone.localdate()]:
+                members |= set(allocation_on(alloc_tl, day))
+            if not members:
+                members = set(allocation_on(alloc_tl, timezone.localdate()))
+            if members:
+                result = [r for r in result if r['email'] in members]
+        elif project_parts:
+            # All Projects: each member's capacity adds up over the projects they worked on, each project's
+            # sprints with that project's allocation.
+            parts = []
+            for proj_id, sprint_ids, proj_days in project_parts:
+                keys = set()
+                rows = (
+                    work_items.filter(sprint_id__in=sprint_ids)
+                    .values_list('resolved_assignee__email', 'resolved_assignee__is_active', 'assignee_email')
+                    .distinct()
+                )
+                for resolved_email, active, raw_email in rows:
+                    email = resolved_email if resolved_email and active else raw_email
+                    if email:
+                        keys.add(email.lower().strip())
+                parts.append((keys, proj_days, allocation_timeline(proj_id)))
 
         # Workload status: items vs each member's ideal range (level x allocation per sprint); percentile = rank.
-        statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl)
+        statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl, parts=parts)
         for r in result:
             r['todo'] = r['total'] - r['in_progress'] - r['completed']
             r['seniority'] = levels.get(r['email']) or 'mid'

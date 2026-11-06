@@ -379,3 +379,87 @@ class WorkloadWarningsTest(TenantTestCase):
         MonthlyAllocationStatus.objects.create(month=now.month, year=now.year, status='PUBLISHED')
         codes = [w['code'] for w in self.get({}).data['warnings']]
         self.assertIn('allocation_not_published', codes)
+
+
+class TeamWorkloadWindowTest(TenantTestCase):
+    """All Projects: per-project allocation and recent sprints only; project view: members of the viewed months."""
+
+    def setUp(self):
+        from data.models import AIInsight, WorkItem
+        from data.signals import ai_insight_telemetry_signal, work_item_telemetry_signal
+        from users.models import User
+
+        post_save.disconnect(work_item_telemetry_signal, sender=WorkItem)
+        post_save.disconnect(ai_insight_telemetry_signal, sender=AIInsight)
+        super().setUp()
+        self.now = timezone.now()
+        self.viewer = User.objects.create_user(username='viewer', email='viewer@x.test', password='p')
+        self.n = 0
+
+    def project(self, key):
+        from configuration.models import Project, SourceConfiguration
+        project = Project.objects.create(tenant=self.tenant, name=key, key=key)
+        src = SourceConfiguration.objects.create(project=project, source_type='jira', name=key, base_url='https://j.test')
+        return project, src
+
+    def sprint(self, src, start_days_ago, length=14):
+        from data.models import Sprint
+        self.n += 1
+        start = self.now - timezone.timedelta(days=start_days_ago)
+        return Sprint.objects.create(external_id=f's{self.n}', source_config_id=src.id, name=f'S{self.n}',
+                                     start_date=start, end_date=start + timezone.timedelta(days=length))
+
+    def items(self, src, sprint, email, count):
+        from data.models import WorkItem
+        for _ in range(count):
+            self.n += 1
+            WorkItem.objects.create(external_id=f'w{self.n}', source_config_id=src.id, sprint=sprint, title='t',
+                                    status='todo', status_category='todo', created_at=self.now, updated_at=self.now,
+                                    assignee_email=email)
+
+    def allocate(self, email, project, pct, month_offset=0):
+        from users.models import ResourceAllocation, User
+        user = User.objects.filter(email=email).first() or User.objects.create_user(username=email, email=email, password='p')
+        month, year = self.now.month + month_offset, self.now.year
+        if month < 1:
+            month, year = month + 12, year - 1
+        ResourceAllocation.objects.create(developer=user, project=project, month=month, year=year,
+                                          percentage_allocated=pct, status='PUBLISHED')
+
+    def get(self, params=None):
+        from data.views import AssigneeDistributionView
+        request = APIRequestFactory().get('/api/dashboard/assignee-distribution/', params or {})
+        force_authenticate(request, user=self.viewer)
+        return {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
+
+    def test_all_projects_uses_each_projects_allocation(self):
+        x, src_x = self.project('X')
+        y, src_y = self.project('Y')
+        sx, sy = self.sprint(src_x, 3), self.sprint(src_y, 3)
+        self.items(src_x, sx, 'half@x.test', 2)  # 50% on X only
+        self.items(src_x, sx, 'both@x.test', 3)  # 50% on X and 50% on Y
+        self.items(src_y, sy, 'both@x.test', 3)
+        self.allocate('half@x.test', x, 50)
+        self.allocate('both@x.test', x, 50)
+        self.allocate('both@x.test', y, 50)
+        rows = self.get()
+        self.assertEqual((rows['half@x.test']['ideal_min'], rows['half@x.test']['ideal_max']), (2, 2))  # 0.5 capacity
+        self.assertEqual((rows['both@x.test']['ideal_min'], rows['both@x.test']['ideal_max']), (3, 5))  # 0.5 + 0.5
+        self.assertEqual(rows['both@x.test']['workload_status'], 'Overloaded')  # 6 items > 5
+
+    def test_all_projects_skips_stale_projects_sprints(self):
+        _, src_live = self.project('LIVE')
+        _, src_old = self.project('OLD')
+        self.items(src_live, self.sprint(src_live, 3), 'dev@x.test', 3)
+        self.items(src_old, self.sprint(src_old, 300), 'dev@x.test', 10)  # project stopped running sprints
+        self.assertEqual(self.get()['dev@x.test']['total'], 3)
+
+    def test_project_view_members_follow_viewed_sprints_month(self):
+        project, src = self.project('OCS')
+        last_month = self.sprint(src, timezone.localdate().day + 10)  # starts in the previous month
+        self.items(src, last_month, 'old@x.test', 3)
+        self.items(src, last_month, 'new@x.test', 3)
+        self.allocate('old@x.test', project, 100, month_offset=-1)
+        self.allocate('new@x.test', project, 100, month_offset=0)
+        rows = self.get({'project_id': str(project.id), 'sprint_ids': str(last_month.id)})
+        self.assertEqual(set(rows), {'old@x.test'})  # last month's sheet, not this month's
