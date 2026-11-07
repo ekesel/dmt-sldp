@@ -1626,13 +1626,19 @@ class AssigneeDistributionView(APIView):
         # Value: { 'name': str, 'email': str, 'id': int|None, 'is_portal_user': bool, 'total': int, 'in_progress': int, 'completed': int, 'durations': list }
         aggregation = {}
         holiday_dates = MetricService.holiday_dates()
+        # Cycle time uses the dashboard's items (stories only: no subtasks/bugs/epics); counts keep bugs.
+        cycle_ids = set(work_items.filter(
+            (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio']))
+            & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug'),
+            status_category='done',
+        ).values_list('id', flat=True))
 
         # 1. Process Resolved Assignees
         resolved_rows = (
             work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
             .values('resolved_assignee__id', 'resolved_assignee__first_name',
                     'resolved_assignee__last_name', 'resolved_assignee__email',
-                    'resolved_assignee__is_active', 'status_category', 'resolved_at', 'started_at', 'created_at')
+                    'resolved_assignee__is_active', 'id', 'status_category', 'resolved_at', 'started_at', 'created_at')
         )
 
         for row in resolved_rows:
@@ -1659,8 +1665,8 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                # Same rule as the dashboard: no start date = no cycle time; working days, weekends/holidays excluded.
-                if row['resolved_at'] and row['started_at']:
+                # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
+                if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
                     duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
                     if duration is not None:
                         agg['durations'].append(duration)
@@ -1674,7 +1680,7 @@ class AssigneeDistributionView(APIView):
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
             .exclude(assignee_email__in=inactive_user_emails)
-            .values('assignee_email', 'assignee_name', 'status_category', 'started_at', 'resolved_at', 'created_at')
+            .values('assignee_email', 'assignee_name', 'id', 'status_category', 'started_at', 'resolved_at', 'created_at')
         )
 
         for row in fallback_rows:
@@ -1700,8 +1706,8 @@ class AssigneeDistributionView(APIView):
                 agg['in_progress'] += 1
             elif row['status_category'] == 'done':
                 agg['completed'] += 1
-                # Same rule as the dashboard: no start date = no cycle time; working days, weekends/holidays excluded.
-                if row['resolved_at'] and row['started_at']:
+                # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
+                if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
                     duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
                     if duration is not None:
                         agg['durations'].append(duration)
