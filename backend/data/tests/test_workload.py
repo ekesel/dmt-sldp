@@ -166,6 +166,26 @@ class TeamWorkloadAllocationTest(TenantTestCase):
             'sakshi@x.test': (1.0, 3, 5, 'Balanced'),
         })
 
+    def test_cycle_time_skips_bugs_like_dashboard(self):
+        from datetime import datetime
+        from data.models import Sprint, WorkItem
+        from data.views import AssigneeDistributionView
+
+        tz = timezone.get_current_timezone()
+        mon, wed, fri = (timezone.make_aware(datetime(2026, 10, d, 10), tz) for d in (26, 28, 30))
+        sprint = Sprint.objects.get(external_id='s1')
+        for ext, kind, done in (('story', 'story', wed), ('bug', 'bug', fri)):
+            WorkItem.objects.create(external_id=ext, source_config_id=sprint.source_config_id, sprint=sprint,
+                                    title='t', item_type=kind, status='done', status_category='done',
+                                    created_at=mon, updated_at=done, started_at=mon, resolved_at=done,
+                                    assignee_email='sakshi@x.test')
+
+        request = APIRequestFactory().get('/api/dashboard/assignee-distribution/', {'project_id': str(self.project.id)})
+        force_authenticate(request, user=self.viewer)
+        rows = {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
+        self.assertEqual(rows['sakshi@x.test']['completed'], 2)  # bug still counted as work
+        self.assertEqual(rows['sakshi@x.test']['avg_cycle_time_days'], 2.0)  # story only: Mon -> Wed
+
 
 class EffectiveDatedCapacityTests(SimpleTestCase):
     """Each sprint uses the level, settings and allocation in effect on its day."""
