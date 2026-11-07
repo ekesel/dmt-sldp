@@ -110,6 +110,28 @@ class MetricService:
         }
 
     @staticmethod
+    def holiday_dates():
+        try:
+            return set(Holiday.objects.values_list('date', flat=True))
+        except Exception:
+            return set()
+
+    @staticmethod
+    def working_days(start, resolved, holiday_dates):
+        """Working days after the start day up to the done day (Mon -> Tue = 1, same day = 0); None if done before start."""
+        curr_date = timezone.localtime(start).date()
+        end_date = timezone.localtime(resolved).date()
+        if curr_date > end_date:
+            return None
+        days = 0
+        step = curr_date + timedelta(days=1)
+        while step <= end_date:
+            if step.weekday() < 5 and step not in holiday_dates:
+                days += 1
+            step += timedelta(days=1)
+        return days
+
+    @staticmethod
     def calculate_cycle_time(items_qs):
         """
         Average cycle time in working days (weekends & holidays excluded), same as ClickUp:
@@ -120,24 +142,12 @@ class MetricService:
         if not items.exists():
             return 0
 
-        try:
-            holiday_dates = set(Holiday.objects.values_list('date', flat=True))
-        except Exception:
-            holiday_dates = set()
-
-        durations = []
-        for start, resolved in items.values_list('started_at', 'resolved_at'):
-            curr_date = timezone.localtime(start).date()
-            end_date = timezone.localtime(resolved).date()
-            if curr_date > end_date:
-                continue
-            working_days = 0
-            step = curr_date + timedelta(days=1)
-            while step <= end_date:
-                if step.weekday() < 5 and step not in holiday_dates:
-                    working_days += 1
-                step += timedelta(days=1)
-            durations.append(working_days)
+        holiday_dates = MetricService.holiday_dates()
+        durations = [
+            d for d in (MetricService.working_days(start, resolved, holiday_dates)
+                        for start, resolved in items.values_list('started_at', 'resolved_at'))
+            if d is not None
+        ]
 
         if not durations:
             return 0
