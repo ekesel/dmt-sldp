@@ -94,6 +94,7 @@ export default function DashboardPage() {
         return [];
     });
     const [selectedSprintNames, setSelectedSprintNames] = useState<string[]>([]);
+    const [selectedSprints, setSelectedSprints] = useState<Sprint[]>([]);
 
     const prevProjectIdRef = useRef<number | null>(selectedProjectId);
 
@@ -168,24 +169,16 @@ export default function DashboardPage() {
         selectedProjectId,
         hasInvalidDates ? null : (startDate || null),
         hasInvalidDates ? null : (endDate || null),
-        selectedProjectId !== null ? (selectedSprintIds.length > 0 ? selectedSprintIds : null) : null
+        selectedProjectId !== null ? (selectedSprintIds.length > 0 ? selectedSprintIds : null) : null,
+        null,
+        selectedSprints
     );
-
-    // Toast notification if user allocation is missing for the present month
-    useEffect(() => {
-        if (!workloadWarnings || workloadWarnings.length === 0) return;
-        const allocWarning = workloadWarnings.find(
-            w => w.code === 'allocation_not_set' && !w.message.includes('Allocation sheet for')
-        );
-        if (allocWarning) {
-            toast.error(allocWarning.message, { id: 'allocation-warning', duration: 6000 });
-        }
-    }, [workloadWarnings]);
 
     const handleProjectSelect = useCallback((projectId: number | null, project?: Project | null) => {
         setSelectedProjectId(projectId);
         setSelectedSprintIds([]);
         setSelectedSprintNames([]);
+        setSelectedSprints([]);
         if (typeof window !== 'undefined') {
             sessionStorage.removeItem('dashboard_sprintIds');
             sessionStorage.removeItem('dashboard_sprintId');
@@ -197,6 +190,7 @@ export default function DashboardPage() {
     const handleSprintMultiSelect = useCallback((sprintIds: number[], sprintItems: Sprint[]) => {
         setSelectedSprintIds(sprintIds);
         setSelectedSprintNames(sprintItems.map(s => s.name));
+        setSelectedSprints(sprintItems);
         if (sprintIds.length > 0) {
             setStartDate('');
             setEndDate('');
@@ -213,6 +207,7 @@ export default function DashboardPage() {
     const handleClearSprint = () => {
         setSelectedSprintIds([]);
         setSelectedSprintNames([]);
+        setSelectedSprints([]);
         toast.success('Sprint filter cleared', { id: 'sprint-filter' });
     };
 

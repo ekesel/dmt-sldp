@@ -150,47 +150,66 @@ export default function SprintComparisonPage() {
                         <div className="h-6 w-px bg-border hidden md:block" />
 
                         {/* Baseline selector with mode toggle */}
-                        <div className="flex items-center gap-2 sm:gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10 flex-wrap sm:flex-nowrap">
-                            <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2">Baseline:</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-muted/50 p-1.5 sm:p-1 sm:pr-1.5 rounded-lg border border-border w-full sm:w-auto sm:h-10">
+                            <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0">
+                                <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2">Baseline:</span>
 
-                            {/* Mode toggle pills */}
-                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-8 shrink-0">
-                                <button
-                                    onClick={() => handleBaselineModeToggle('sprint')}
-                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
-                                        !useCompanyBaseline
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                    }`}
-                                >
-                                    Sprint
-                                </button>
-                                <button
-                                    onClick={() => handleBaselineModeToggle('company')}
-                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors flex items-center gap-1 cursor-pointer ${
-                                        useCompanyBaseline
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                    }`}
-                                >
-                                    <Building2 size={11} />
-                                    Company
-                                </button>
+                                {/* Mode toggle pills */}
+                                <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-8 shrink-0">
+                                    <button
+                                        onClick={() => handleBaselineModeToggle('sprint')}
+                                        className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+                                            !useCompanyBaseline
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        Sprint
+                                    </button>
+                                    <button
+                                        onClick={() => handleBaselineModeToggle('company')}
+                                        className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors flex items-center gap-1 cursor-pointer ${
+                                            useCompanyBaseline
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        <Building2 size={11} />
+                                        Company
+                                    </button>
+                                </div>
                             </div>
 
                             {useCompanyBaseline ? (
-                                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20 h-8">
-                                    <Building2 size={12} className="text-primary" />
-                                    <span className="text-xs font-bold text-primary truncate max-w-[120px]">{baselineData?.name || 'Company Baseline'}</span>
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded border border-primary/20 h-8 w-full sm:w-auto justify-center sm:justify-start">
+                                    <Building2 size={12} className="text-primary shrink-0" />
+                                    <span className="text-xs font-bold text-primary truncate max-w-[200px] sm:max-w-[120px]">{baselineData?.name || 'Company Baseline'}</span>
                                 </div>
                             ) : (
-                                <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} className="px-3 h-8 text-xs" />
+                                <div className="w-full sm:w-auto">
+                                    <SprintSelector
+                                        projectId={projectId}
+                                        selectedSprintId={sprintAId}
+                                        onSelect={setSprintAId}
+                                        className="px-3 h-8 text-xs"
+                                        popoverAlign="left"
+                                    />
+                                </div>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2 sm:gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
-                            <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2">Target:</span>
-                            <SprintSelector projectId={projectId} selectedSprintId={sprintBId} onSelect={setSprintBId} className="px-3 h-8 text-xs" />
+                        {/* Target selector */}
+                        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-muted/50 p-1.5 sm:p-1 sm:pr-1.5 rounded-lg border border-border min-h-10 w-full sm:w-auto sm:h-10">
+                            <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2 shrink-0">Target:</span>
+                            <div className="flex-1 sm:flex-initial min-w-0">
+                                <SprintSelector
+                                    projectId={projectId}
+                                    selectedSprintId={sprintBId}
+                                    onSelect={setSprintBId}
+                                    className="px-3 h-8 text-xs"
+                                    popoverAlign="left"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -6,7 +6,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useDashboardData } from '../useDashboardData';
-import api, { aiInsights } from '@dmt/api';
+import api, { aiInsights, resourceAllocations, sprints } from '@dmt/api';
 
 vi.mock('../../context/AuthContext', () => ({
     useAuth: () => ({ token: 'mock-token' }),
@@ -23,6 +23,12 @@ vi.mock('@dmt/api', () => ({
     aiInsights: {
         list: vi.fn(),
         refresh: vi.fn(),
+    },
+    resourceAllocations: {
+        getOverview: vi.fn(),
+    },
+    sprints: {
+        list: vi.fn(),
     },
 }));
 
@@ -61,6 +67,12 @@ describe('useDashboardData Hook', () => {
         (aiInsights.list as any).mockResolvedValue([
             { id: 1, summary: 'Insight summary for project', suggestions: [] }
         ]);
+
+        (resourceAllocations.getOverview as any).mockResolvedValue({
+            data: { developers: [] }
+        });
+
+        (sprints.list as any).mockResolvedValue([]);
     });
 
     const createWrapper = () => {
@@ -198,5 +210,83 @@ describe('useDashboardData Hook', () => {
             expect(result.current.loading).toBe(false);
             expect(result.current.summary?.velocity).toBe(25);
         });
+    });
+
+    it('fetches resource allocation for the month of the selected past sprint and assigns correct allocation percentage', async () => {
+        (resourceAllocations.getOverview as any).mockImplementation((params: any) => {
+            if (params?.month === 10 && params?.year === 2026) {
+                return Promise.resolve({
+                    data: {
+                        month: 10,
+                        year: 2026,
+                        developers: [
+                            {
+                                developer_id: 1,
+                                developer_name: 'John Doe',
+                                total_allocated_percentage: 100,
+                                allocations: { '5': 100 }
+                            }
+                        ]
+                    }
+                });
+            }
+            return Promise.resolve({ data: { developers: [] } });
+        });
+
+        (api.get as any).mockImplementation((url: string) => {
+            if (url === 'dashboard/assignee-distribution/') {
+                return Promise.resolve({
+                    data: [
+                        {
+                            id: 1,
+                            name: 'John Doe',
+                            email: 'john@samta.ai',
+                            total: 5,
+                            in_progress: 2,
+                            completed: 3,
+                            avg_cycle_time_days: 2.5
+                        }
+                    ]
+                });
+            }
+            return Promise.resolve({ data: {} });
+        });
+
+        const selectedSprint = {
+            id: 105,
+            name: 'Sprint 105',
+            start_date: '2026-10-01',
+            end_date: '2026-10-15',
+            status: 'closed'
+        };
+
+        const { result } = renderHook(
+            () => useDashboardData(5, null, null, [105], null, [selectedSprint]),
+            { wrapper: createWrapper() }
+        );
+
+        await waitFor(() => {
+            expect(result.current.loading).toBe(false);
+            expect(result.current.assigneeDistribution.length).toBe(1);
+        });
+
+        expect(resourceAllocations.getOverview).toHaveBeenCalledWith({ month: 10, year: 2026 });
+        const dev = result.current.assigneeDistribution[0];
+        expect(dev.allocation_percentage).toBe(100);
+        expect(dev.has_allocation).toBe(true);
+        expect(dev.allocation_period_label).toBe('October 2026');
+    });
+
+    it('fetches resource allocation for the month of a past date range', async () => {
+        const { result } = renderHook(
+            () => useDashboardData(5, '2026-09-01', '2026-09-30', null),
+            { wrapper: createWrapper() }
+        );
+
+        await waitFor(() => {
+            expect(result.current.loading).toBe(false);
+        });
+
+        expect(resourceAllocations.getOverview).toHaveBeenCalledWith({ month: 9, year: 2026 });
     });
 });

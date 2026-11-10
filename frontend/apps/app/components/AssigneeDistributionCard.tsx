@@ -97,6 +97,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 return false;
             }
 
+            // Warnings reflect current month setup gaps; do not flag assignees against current-month warnings when viewing past periods
+            if (person.allocation_period_label && person.allocation_period_label !== 'this month') {
+                return false;
+            }
+
             const nameLower = person.name.toLowerCase();
             const emailPrefix = person.email.split('@')[0].toLowerCase();
             return (
@@ -207,7 +212,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                         )}
                                         {isZeroAllocation && (
                                             <span
-                                                title="0% allocation for this month"
+                                                title={`0% allocation for ${person.allocation_period_label || 'this month'}`}
                                                 className="text-destructive inline-flex items-center cursor-default"
                                             >
                                                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />

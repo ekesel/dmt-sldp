@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, Plus, Shield, Search, Filter, ChevronLeft, ChevronRight, Edit2, Trash2, Mail, Copy, Check } from 'lucide-react';
 import { Badge } from '../../components/UIComponents';
+import { toast } from 'react-hot-toast';
 import { users as usersApi, User } from '@dmt/api';
 import { UserCreateModal } from './UserCreateModal';
 import { UserEditModal } from './UserEditModal';
@@ -78,11 +79,16 @@ export function UserList() {
         if (!userToDelete) return;
         try {
             await usersApi.delete(userToDelete.id);
+            toast.success('User deleted successfully');
             setIsDeleteModalOpen(false);
             setUserToDelete(null);
             fetchUsers();
-        } catch (err: any) {
-            alert(err.message || 'Failed to delete user');
+        } catch (err: unknown) {
+            let errorMsg = 'Failed to delete user';
+            if (err instanceof Error) {
+                errorMsg = err.message;
+            }
+            toast.error(errorMsg);
         }
     };
 
@@ -91,8 +97,20 @@ export function UserList() {
             const res = await usersApi.invite(user.id);
             setInviteLink(res.invite_link);
             setIsInviteModalOpen(true);
-        } catch (err: any) {
-            alert(err.response?.data?.error || err.message || 'Failed to invite user');
+            toast.success('Invite link generated successfully');
+        } catch (err: unknown) {
+            let errorMsg = 'Failed to invite user';
+            if (err && typeof err === 'object' && 'response' in err) {
+                const response = (err as { response?: { data?: { error?: string; message?: string } } }).response;
+                if (response?.data?.error) {
+                    errorMsg = response.data.error;
+                } else if (response?.data?.message) {
+                    errorMsg = response.data.message;
+                }
+            } else if (err instanceof Error) {
+                errorMsg = err.message;
+            }
+            toast.error(errorMsg);
         }
     };
 
@@ -397,6 +415,7 @@ export function UserList() {
                                     onClick={() => {
                                         navigator.clipboard.writeText(inviteLink);
                                         setCopied(true);
+                                        toast.success('Invite link copied to clipboard');
                                         setTimeout(() => setCopied(false), 2000);
                                     }}
                                     className="p-2 hover:bg-accent rounded-lg transition text-muted-foreground flex-shrink-0"

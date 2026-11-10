@@ -173,7 +173,7 @@ export const SprintSelector = React.memo(({
     }
 
     return (
-        <div ref={dropdownRef} className={cn("relative", className && className.includes('w-') ? "" : "w-full sm:w-auto")}>
+        <div ref={dropdownRef} className={cn("relative", isOpen && "z-40", className && className.includes('w-') ? "" : "w-full sm:w-auto")}>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}

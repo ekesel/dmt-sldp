@@ -742,6 +742,8 @@ export const users = {
   updateRole: (id: string | number, role: string) =>
     patch<User, { role: string }>(`/admin/users/${id}/role/`, { role }),
   invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
+  getSeniorityHistory: (id: string | number) =>
+    get<{ id: number; seniority?: string; effective_from: string; created_at?: string }[]>(`/admin/users/${id}/seniority-history/`),
 };
 
 /** ---------- integrations ---------- */
