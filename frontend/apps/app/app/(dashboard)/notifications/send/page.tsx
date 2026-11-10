@@ -337,20 +337,22 @@ export default function SendNotificationPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F3F4F6] p-8">
-            <div className="max-w-5xl mx-auto">
+        <div className="min-h-full bg-[#F3F4F6] p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+            <div className="max-w-7xl w-full mx-auto">
 
                 {/* Header */}
-                <header className="mb-8 bg-white rounded-2xl border border-primary/20 shadow-sm px-8 py-6 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/90 flex items-center justify-center shadow-md shadow-primary/30">
-                        <MessageSquare className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Quick Updates</h1>
-                        <p className="text-primary-dark text-sm font-medium mt-0.5">Send updates to your team members</p>
+                <header className="mb-6 sm:mb-8 bg-white rounded-2xl border border-primary/20 shadow-sm px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/90 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
+                            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Quick Updates</h1>
+                            <p className="text-primary-dark text-xs sm:text-sm font-medium mt-0.5">Send updates to your team members</p>
+                        </div>
                     </div>
                     {selectedIds.size > 0 && (
-                        <div className="ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-sm font-bold px-4 py-2 rounded-full">
+                        <div className="sm:ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
                             <Users className="w-4 h-4" />
                             {selectedIds.size} selected
                         </div>

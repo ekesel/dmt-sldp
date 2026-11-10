@@ -190,9 +190,9 @@ export const CelebrationsCard: React.FC = () => {
     }
 
     return (
-        <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] w-full h-full overflow-hidden flex flex-col">
+        <div className="bg-card rounded-2xl border border-border shadow-sm w-full h-full overflow-hidden flex flex-col">
             {/* Festive Header Section */}
-            <div className="relative h-[5.5rem] sm:h-[6.25rem] w-full flex flex-col items-center justify-start flex-shrink-0">
+            <div className="relative h-20 sm:h-24 md:h-28 w-full flex flex-col items-center justify-start flex-shrink-0">
                 {/* Background Illustration */}
                 <div className="absolute inset-0 z-0 opacity-100">
                     <Image
@@ -205,11 +205,11 @@ export const CelebrationsCard: React.FC = () => {
                 </div>
 
                 {/* Fade-out Gradient at Bottom */}
-                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent z-[5]" />
+                <div className="absolute inset-x-0 bottom-0 h-8 sm:h-10 bg-gradient-to-t from-card to-transparent z-[5]" />
             </div>
 
             {/* Main Highlight Section Overlapping Header */}
-            <div className="relative z-20 px-4 sm:px-6 pt-0 pb-3 flex items-center justify-between -mt-9 sm:-mt-11 flex-shrink-0">
+            <div className="relative z-20 px-3 sm:px-4 md:px-6 pt-0 pb-2 sm:pb-3 flex items-center justify-between -mt-8 sm:-mt-10 flex-shrink-0">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={safeIndex}
@@ -217,10 +217,10 @@ export const CelebrationsCard: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -30 }}
                         transition={{ duration: 0.4, ease: "easeOut" }}
-                        className="flex items-center gap-3 sm:gap-4"
+                        className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2"
                     >
                         {currentUser.name !== 'No Celebrations Today' && (
-                            <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5rem] sm:h-[5rem] rounded-full overflow-hidden border-[0.21875rem] border-card shadow-lg flex-shrink-0 bg-secondary">
+                            <div className="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-card shadow-lg flex-shrink-0 bg-secondary">
                                 <Image
                                     src={currentUser.avatar}
                                     alt={currentUser.name}
@@ -230,11 +230,11 @@ export const CelebrationsCard: React.FC = () => {
                                 />
                             </div>
                         )}
-                        <div className="flex flex-col items-start text-left mt-3 sm:mt-4">
-                            <h3 className="text-[1.125rem] sm:text-[1.25rem] font-bold text-card-foreground leading-tight">
+                        <div className="flex flex-col items-start text-left mt-2 sm:mt-3 min-w-0 flex-1">
+                            <h3 className="text-sm sm:text-base md:text-lg font-bold text-card-foreground leading-tight truncate w-full">
                                 {currentUser.name}
                             </h3>
-                            <p className="text-[0.8125rem] sm:text-[0.875rem] font-medium text-muted-foreground">
+                            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate w-full">
                                 {currentUser.type}
                             </p>
                         </div>
@@ -243,24 +243,24 @@ export const CelebrationsCard: React.FC = () => {
 
                 {/* Navigation Controls */}
                 {highlightUsers.length > 1 && (
-                    <div className="flex gap-1.5 mt-3 sm:mt-4">
+                    <div className="flex gap-1.5 mt-2 sm:mt-3 flex-shrink-0">
                         <button
                             onClick={prevSlide}
                             disabled={safeIndex === 0}
-                            className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="p-1 sm:p-1.5 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Previous celebration"
                         >
-                            <svg className="w-3.5 h-3.5 sm:w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
                             </svg>
                         </button>
                         <button
                             onClick={nextSlide}
                             disabled={safeIndex === highlightUsers.length - 1}
-                            className="p-1.5 sm:p-2 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="p-1 sm:p-1.5 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Next celebration"
                         >
-                            <svg className="w-3.5 h-3.5 sm:w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                             </svg>
                         </button>
@@ -269,21 +269,21 @@ export const CelebrationsCard: React.FC = () => {
             </div>
 
             {/* Divider */}
-            <div className="px-4 sm:px-6">
+            <div className="px-3 sm:px-4 md:px-6">
                 <div className="h-[0.0625rem] bg-border w-full" />
             </div>
 
             {/* Upcoming Section */}
-            <div className="px-4 sm:px-6 pt-1 pb-3 font-sans flex-1 flex flex-col min-h-0">
-                <h4 className="text-[0.875rem] sm:text-[1rem] font-semibold text-muted-foreground mb-1 sm:mb-1.5">
+            <div className="px-3 sm:px-4 md:px-6 pt-1 pb-3 font-sans flex-1 flex flex-col min-h-0">
+                <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground mb-1 sm:mb-1.5">
                     Upcoming:
                 </h4>
 
                 <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-2.5 pr-1 scrollbar-thin scrollbar-thumb-primary min-h-0">
                     {upcoming.length > 0 ? (
                         upcoming.map((item, index) => (
-                            <div key={index} className="flex items-center justify-between group animate-fade-in">
-                                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                            <div key={index} className="flex items-center justify-between gap-2 min-w-0 group animate-fade-in">
+                                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                                     <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden border border-border group-hover:scale-105 transition-transform flex-shrink-0">
                                         <Image
                                             src={item.avatar}
@@ -293,8 +293,8 @@ export const CelebrationsCard: React.FC = () => {
                                             unoptimized
                                         />
                                     </div>
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                        <span className="text-[0.875rem] sm:text-[0.9375rem] font-bold text-card-foreground truncate max-w-[7rem] sm:max-w-[12rem] md:max-w-[16rem]">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                        <span className="text-xs sm:text-sm font-bold text-card-foreground truncate">
                                             {item.name}
                                         </span>
                                         {item.type === 'anniversary' ? (
@@ -308,7 +308,7 @@ export const CelebrationsCard: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                <span className="text-[0.75rem] sm:text-[0.875rem] font-medium text-muted-foreground flex-shrink-0">
+                                <span className="text-[0.7rem] sm:text-xs md:text-sm font-medium text-muted-foreground flex-shrink-0">
                                     ({item.date})
                                 </span>
                             </div>

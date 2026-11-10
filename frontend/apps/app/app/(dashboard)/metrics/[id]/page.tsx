@@ -195,52 +195,52 @@ export default function DeveloperDetailsPage({
     metrics.find((m: any) => m.is_selected) || metrics[0] || {};
 
   return (
-    <main className="min-h-screen bg-background p-8 pb-20 selection:bg-primary/30">
-      <div className="max-w-7xl mx-auto space-y-12 text-foreground">
+    <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 pb-16 sm:pb-20 selection:bg-primary/30 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10 lg:space-y-12 text-foreground">
         {warnings && warnings.length > 0 && (
           <WorkloadWarningsBanner warnings={warnings} className="mb-4" />
         )}
-        <header className="space-y-6">
+        <header className="space-y-4 sm:space-y-6">
           <button
             onClick={() => router.back()}
-            className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-sm font-bold bg-accent px-4 py-2 rounded-full border border-border hover:border-border/80"
+            className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs sm:text-sm font-bold bg-accent px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-border hover:border-border/80 cursor-pointer"
           >
             <ArrowLeft
-              size={16}
+              size={15}
               className="group-hover:-translate-x-1 transition-transform"
             />
             Back to Team
           </button>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 py-4">
-            <div className="flex items-center gap-8">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative w-24 h-24 rounded-3xl bg-card flex items-center justify-center text-primary font-black text-4xl border border-border">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 sm:gap-8 py-2 sm:py-4">
+            <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 min-w-0">
+              <div className="relative group shrink-0">
+                <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-blue-600 rounded-2xl sm:rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl bg-card flex items-center justify-center text-primary font-black text-2xl sm:text-3xl md:text-4xl border border-border">
                   {(developer?.developer_name as string)?.charAt(0)}
                 </div>
               </div>
-              <div>
-                <h1 className="text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground truncate">
                   {developer?.developer_name}
                 </h1>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-muted-foreground font-bold text-lg">
+                <div className="flex items-center gap-3 mt-1 sm:mt-2">
+                  <span className="text-muted-foreground font-bold text-sm sm:text-base md:text-lg truncate">
                     {developer?.developer_email}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full xl:w-auto shrink-0">
               <label className="text-[10px] uppercase font-black tracking-[0.2em] text-muted-foreground ml-1">
                 Current Context
               </label>
-              <div className="flex flex-col gap-3">
-                <div className="relative" ref={dropdownRef}>
+              <div className="flex flex-col sm:flex-row xl:flex-col gap-2.5 sm:gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto flex-1 xl:flex-initial" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen((o) => !o)}
-                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-none transition-all duration-300 w-full min-w-[240px]"
+                    className="flex items-center gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-4 rounded-2xl shadow-none transition-all duration-300 w-full sm:min-w-[240px] cursor-pointer"
                   >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                       <Briefcase size={20} />
@@ -280,7 +280,7 @@ export default function DeveloperDetailsPage({
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-full min-w-[240px] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-none overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute right-0 mt-2 w-full sm:min-w-[240px] max-w-[calc(100vw-2rem)] z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-none overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-1.5 space-y-0.5 max-h-64 overflow-y-auto">
                         {[
                           { id: "all", name: "All Projects Combined" },
@@ -339,22 +339,27 @@ export default function DeveloperDetailsPage({
                     </div>
                   )}
                 </div>
-                <ActiveFolderSelector
-                  projectId={
-                    selectedProjectId === "all"
-                      ? null
-                      : parseInt(selectedProjectId)
-                  }
-                  onFolderChanged={() => {
-                    window.location.reload();
-                  }}
-                />
-                {selectedProjectId !== "all" && (
-                  <SprintSelector
-                    projectId={parseInt(selectedProjectId)}
-                    selectedSprintId={selectedSprintId}
-                    onSelect={setSelectedSprintId}
+                <div className="w-full sm:w-auto flex-1 xl:flex-initial">
+                  <ActiveFolderSelector
+                    projectId={
+                      selectedProjectId === "all"
+                        ? null
+                        : parseInt(selectedProjectId)
+                    }
+                    onFolderChanged={() => {
+                      window.location.reload();
+                    }}
                   />
+                </div>
+                {selectedProjectId !== "all" && (
+                  <div className="w-full sm:w-auto flex-1 xl:flex-initial">
+                    <SprintSelector
+                      projectId={parseInt(selectedProjectId)}
+                      selectedSprintId={selectedSprintId}
+                      onSelect={setSelectedSprintId}
+                      className="w-full sm:w-48"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -362,15 +367,15 @@ export default function DeveloperDetailsPage({
         </header>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          <Card className="p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-primary/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-primary/5 group-hover:text-primary/5 transition-colors">
               <TrendingUp size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <div className="flex items-center gap-3 text-primary">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <TrendingUp size={20} />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6 relative z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-primary">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                  <TrendingUp size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                   Velocity
@@ -378,17 +383,17 @@ export default function DeveloperDetailsPage({
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleHelpClick('velocity'); }}
-                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                 title="Learn more about this metric"
               >
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             </div>
             <div className="relative">
-              <div className="text-5xl font-black">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-black">
                 {latestMetrics.story_points_completed || 0}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 sm:mt-2 font-bold uppercase tracking-wider">
                 {selectedProjectId === "all"
                   ? "Points across active sprints"
                   : `Points in ${comparison?.sprint_name || "latest sprint"}`}
@@ -396,14 +401,14 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-blue-400/10 transition-all duration-500 group overflow-hidden relative">
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-blue-400/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-blue-400/5 group-hover:text-blue-400/5 transition-colors">
               <Sparkles size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <div className="flex items-center gap-3 text-blue-400">
-                <div className="w-10 h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
-                  <Sparkles size={20} />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6 relative z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-blue-400">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20 shrink-0">
+                  <Sparkles size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                   AI Usage
@@ -411,18 +416,18 @@ export default function DeveloperDetailsPage({
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleHelpClick('ai_usage'); }}
-                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                 title="Learn more about this metric"
               >
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             </div>
             <div className="relative">
-              <div className="text-5xl font-black">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-black">
                 {latestMetrics.ai_usage_percent?.toFixed(0) || 0}
-                <span className="text-xl text-blue-500/50 -ml-1">%</span>
+                <span className="text-lg sm:text-xl text-blue-500/50 -ml-1">%</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 sm:mt-2 font-bold uppercase tracking-wider">
                 {selectedProjectId === "all"
                   ? "Average across active sprints"
                   : `Average in ${comparison?.sprint_name || "latest sprint"}`}
@@ -430,14 +435,14 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-warning/10 transition-all duration-500 group overflow-hidden relative">
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-warning/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-warning/5 group-hover:text-warning/5 transition-colors">
               <ShieldCheck size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <div className="flex items-center gap-3 text-warning">
-                <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/20">
-                  <CheckCircle2 size={20} />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6 relative z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-warning">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-warning/10 flex items-center justify-center border border-warning/20 shrink-0">
+                  <CheckCircle2 size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                   Compliance
@@ -445,31 +450,31 @@ export default function DeveloperDetailsPage({
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleHelpClick('compliance'); }}
-                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                 title="Learn more about this metric"
               >
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             </div>
             <div className="relative">
-              <div className="text-5xl font-black">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-black">
                 {latestMetrics.dmt_compliance_rate?.toFixed(0) || 0}
-                <span className="text-xl text-warning/50 -ml-1">%</span>
+                <span className="text-lg sm:text-xl text-warning/50 -ml-1">%</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 sm:mt-2 font-bold uppercase tracking-wider">
                 Standard adherence score
               </p>
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-destructive/10 transition-all duration-500 group overflow-hidden relative">
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-destructive/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-destructive/5 group-hover:text-destructive/5 transition-colors">
               <AlertCircle size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <div className="flex items-center gap-3 text-destructive">
-                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center border border-destructive/20">
-                  <AlertCircle size={20} />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6 relative z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-destructive">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-destructive/10 flex items-center justify-center border border-destructive/20 shrink-0">
+                  <AlertCircle size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                   Bugs
@@ -477,17 +482,17 @@ export default function DeveloperDetailsPage({
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleHelpClick('quality_gap'); }}
-                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                 title="Learn more about this metric"
               >
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             </div>
             <div className="relative">
-              <div className="text-5xl font-black">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-black">
                 {latestMetrics.defects_attributed || 0}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 sm:mt-2 font-bold uppercase tracking-wider">
                 {selectedProjectId === "all"
                   ? "Bugs across active sprints"
                   : `Bugs in ${comparison?.sprint_name || "current sprint"}`}
@@ -495,14 +500,14 @@ export default function DeveloperDetailsPage({
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-emerald-500/10 transition-all duration-500 group overflow-hidden relative">
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-emerald-500/10 transition-all duration-500 group overflow-hidden relative">
             <div className="absolute -right-4 -top-4 text-emerald-500/5 group-hover:text-emerald-500/5 transition-colors">
               <Briefcase size={120} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-2 mb-6 relative z-10">
-              <div className="flex items-center gap-3 text-emerald-500">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                  <Briefcase size={20} />
+            <div className="flex items-center gap-2 mb-4 sm:mb-6 relative z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-emerald-500">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                  <Briefcase size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                   Workload
@@ -510,15 +515,15 @@ export default function DeveloperDetailsPage({
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleHelpClick('workload'); }}
-                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                 title="Learn more about this metric"
               >
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             </div>
             <div className="relative">
               <div className="flex items-baseline justify-between gap-2">
-                <div className="text-5xl font-black">
+                <div className="text-3xl sm:text-4xl lg:text-5xl font-black">
                   {latestMetrics.workload?.completed ?? latestMetrics.items_completed ?? 0}
                 </div>
                 {latestMetrics.workload?.status && (
@@ -528,7 +533,7 @@ export default function DeveloperDetailsPage({
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] sm:text-xs text-muted-foreground mt-1.5 sm:mt-2 font-bold uppercase tracking-wider gap-1">
                 <span>
                   {selectedProjectId === "all"
                     ? "Items across active sprints"
@@ -545,26 +550,26 @@ export default function DeveloperDetailsPage({
         </div>
 
         {/* Performance Trends Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-black flex items-center gap-4">
-                <Activity className="text-primary" />
-                Performance Trends
-                <span className="px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-xl sm:text-2xl font-black flex items-center gap-3 sm:gap-4">
+                <Activity className="text-primary shrink-0" />
+                <span>Performance Trends</span>
+                <span className="px-2.5 sm:px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border shrink-0">
                   Last {metrics.length} Sprints
                 </span>
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
-              <Card className="p-6 bg-card border-border relative group">
-                <div className="flex justify-between items-start mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pb-2 sm:pb-4">
+              <Card className="p-4 sm:p-6 bg-card border-border relative group">
+                <div className="flex justify-between items-start mb-4 sm:mb-6">
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
                       Velocity History
                     </h3>
-                    <p className="text-lg font-bold">Story Points</p>
+                    <p className="text-base sm:text-lg font-bold">Story Points</p>
                   </div>
                   <TrendingUp size={16} className="text-primary" />
                 </div>
@@ -577,13 +582,13 @@ export default function DeveloperDetailsPage({
                 />
               </Card>
 
-              <Card className="p-6 bg-card border-border relative group">
-                <div className="flex justify-between items-start mb-6">
+              <Card className="p-4 sm:p-6 bg-card border-border relative group">
+                <div className="flex justify-between items-start mb-4 sm:mb-6">
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
                       Compliance Trend
                     </h3>
-                    <p className="text-lg font-bold">DMT Score %</p>
+                    <p className="text-base sm:text-lg font-bold">DMT Score %</p>
                   </div>
                   <ShieldCheck size={16} className="text-warning" />
                 </div>
@@ -598,41 +603,41 @@ export default function DeveloperDetailsPage({
               </Card>
             </div>
 
-            <div className="flex items-center justify-between pt-4">
-              <h2 className="text-2xl font-black flex items-center gap-4">
-                <Clock className="text-primary" />
-                Sprint History
+            <div className="flex items-center justify-between pt-2 sm:pt-4 flex-wrap gap-2">
+              <h2 className="text-xl sm:text-2xl font-black flex items-center gap-3 sm:gap-4">
+                <Clock className="text-primary shrink-0" />
+                <span>Sprint History</span>
               </h2>
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportCSV}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-accent text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-accent text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                 >
                   <Download size={13} />
                   CSV
                 </button>
                 <button
                   onClick={exportExcel}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold uppercase tracking-wider text-emerald-500 hover:text-emerald-400 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold uppercase tracking-wider text-emerald-500 hover:text-emerald-400 transition-all cursor-pointer"
                 >
                   <Download size={13} />
                   Excel
                 </button>
               </div>
             </div>
-            <Card className="bg-card border-border overflow-hidden rounded-3xl">
+            <Card className="bg-card border-border overflow-hidden rounded-2xl sm:rounded-3xl">
               <div className="overflow-x-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="bg-muted text-xs uppercase font-black tracking-widest text-muted-foreground">
+                <table className="w-full text-left whitespace-nowrap text-sm">
+                  <thead className="bg-muted text-[10px] sm:text-xs uppercase font-black tracking-widest text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">Project</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">Sprint</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">Points</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">Custom AI Usage</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">PRs Merged</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6">Reviews</th>
-                      <th className="px-3 py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">Project</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">Sprint</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">Points</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">AI Usage (Obj)</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">Custom AI Usage</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">PRs Merged</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">Reviews</th>
+                      <th className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6 text-right">DMT Compliance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border font-medium">
@@ -641,28 +646,28 @@ export default function DeveloperDetailsPage({
                         key={idx}
                         className="hover:bg-gray-100 transition-all group"
                       >
-                        <td className="px-3 py-4 lg:px-6 lg:py-6 font-semibold text-muted-foreground">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6 font-semibold text-muted-foreground">
                           {m.project_names ? m.project_names.join(", ") : (m.project_name || "-")}
                         </td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6 font-bold group-hover:text-primary transition-colors">
                           {m.sprint_name}
                         </td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">{m.story_points_completed}</td>
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
                           <span className="text-blue-400 font-bold">
                             {m.code_ai_usage_percent?.toFixed(1) || 0}%
                           </span>
                         </td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
                           <span className="text-blue-400 font-bold">
                             {m.ai_usage_percent?.toFixed(0) || 0}%
                           </span>
                         </td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6 text-muted-foreground">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">{m.prs_merged}</td>
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6 text-muted-foreground">
                           {m.prs_reviewed || 0}
                         </td>
-                        <td className="px-3 py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
+                        <td className="px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6 text-right font-black text-primary">
                           <div className="flex items-center justify-end gap-2">
                             {m.dmt_compliance_rate?.toFixed(0)}%
                           </div>
@@ -675,26 +680,28 @@ export default function DeveloperDetailsPage({
             </Card>
           </div>
 
-          <div className="space-y-8">
-            <h2 className="text-2xl font-black flex items-center gap-4">
-              <ChartIcon className="text-primary" />
-              Benchmarks
+          <div className="space-y-6 sm:space-y-8">
+            <h2 className="text-xl sm:text-2xl font-black flex items-center gap-3 sm:gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <ChartIcon className="text-primary shrink-0" />
+                <span>Benchmarks</span>
+              </div>
               {comparison?.sprint_name && (
-                <span className="px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border tracking-wider">
+                <span className="px-2.5 sm:px-3 py-1 bg-accent text-accent-foreground text-[10px] font-black uppercase rounded-full border border-border tracking-wider">
                   {comparison.sprint_name}
                 </span>
               )}
             </h2>
-            <Card className="p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-10 rounded-3xl shadow-none relative overflow-hidden">
+            <Card className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-card to-card/50 border-border space-y-6 sm:space-y-10 rounded-2xl sm:rounded-3xl shadow-none relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px]" />
 
-              <div className="space-y-4">
-                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
-                  <div className="flex items-center gap-2">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground flex-wrap gap-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <span>Relative Velocity</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleHelpClick('relative_velocity'); }}
-                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                       title="Learn more about this metric"
                     >
                       <HelpCircle size={14} />
@@ -718,13 +725,13 @@ export default function DeveloperDetailsPage({
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground">
-                  <div className="flex items-center gap-2">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1 text-muted-foreground flex-wrap gap-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <span>DMT Standards</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_standards_benchmark'); }}
-                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                      className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                       title="Learn more about this metric"
                     >
                       <HelpCircle size={14} />
@@ -746,7 +753,7 @@ export default function DeveloperDetailsPage({
                 </p>
               </div>
 
-              <div className="p-4 bg-muted/50 rounded-2xl border border-border">
+              <div className="p-3.5 sm:p-4 bg-muted/50 rounded-2xl border border-border">
                 <p className="text-xs text-muted-foreground italic leading-relaxed">
                   "Your compliance is{" "}
                   <span className="text-primary font-bold">
@@ -761,12 +768,12 @@ export default function DeveloperDetailsPage({
               </div>
             </Card>
 
-            <Card className="p-8 bg-blue-600/10 border-blue-500/20 rounded-3xl">
-              <h3 className="text-lg font-black flex items-center gap-2 mb-4">
-                <Activity className="text-blue-400" size={20} />
+            <Card className="p-4 sm:p-6 lg:p-8 bg-blue-600/10 border-blue-500/20 rounded-2xl sm:rounded-3xl">
+              <h3 className="text-base sm:text-lg font-black flex items-center gap-2 mb-4">
+                <Activity className="text-blue-400" size={18} />
                 Sprint Snapshot
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {[
                   { label: "PRs Merged", value: latestMetrics.prs_merged ?? 0 },
                   {
@@ -785,7 +792,7 @@ export default function DeveloperDetailsPage({
                 ].map(({ label, value }) => (
                   <div
                     key={label}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between text-xs sm:text-sm"
                   >
                     <span className="text-muted-foreground font-medium">
                       {label}
@@ -797,21 +804,21 @@ export default function DeveloperDetailsPage({
             </Card>
 
             {latestMetrics.workload && (
-              <Card className="p-8 bg-blue-600/10 border-blue-500/20 rounded-3xl">
+              <Card className="p-4 sm:p-6 lg:p-8 bg-blue-600/10 border-blue-500/20 rounded-2xl sm:rounded-3xl">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-black flex items-center gap-2">
-                    <Briefcase className="text-blue-400" size={20} />
+                  <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
+                    <Briefcase className="text-blue-400" size={18} />
                     Workload
                   </h3>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleHelpClick('workload'); }}
-                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                     title="Learn more about this metric"
                   >
-                    <HelpCircle size={16} />
+                    <HelpCircle size={15} />
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5 sm:space-y-3">
                   {[
                     { label: "Total", value: latestMetrics.workload.total ?? 0 },
                     { label: "Completed", value: latestMetrics.workload.completed ?? 0 },
@@ -820,7 +827,7 @@ export default function DeveloperDetailsPage({
                   ].map(({ label, value }) => (
                     <div
                       key={label}
-                      className="flex items-center justify-between text-sm"
+                      className="flex items-center justify-between text-xs sm:text-sm"
                     >
                       <span className="text-muted-foreground font-medium">
                         {label}
@@ -829,22 +836,22 @@ export default function DeveloperDetailsPage({
                     </div>
                   ))}
                   {latestMetrics.workload.status && (
-                    <div className="flex items-center justify-between text-sm pt-3 mt-3 border-t border-border/50">
+                    <div className="flex items-center justify-between text-xs sm:text-sm pt-2.5 sm:pt-3 mt-2.5 sm:mt-3 border-t border-border/50">
                       <span className="text-muted-foreground font-medium">
                         Status
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${getWorkloadStatusBadge(latestMetrics.workload.status)?.className || ""}`}>
+                      <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-semibold border ${getWorkloadStatusBadge(latestMetrics.workload.status)?.className || ""}`}>
 
                         {latestMetrics.workload.status}
                       </span>
                     </div>
                   )}
                   {latestMetrics.workload.ideal_min !== undefined && latestMetrics.workload.ideal_max !== undefined && (
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground font-medium">
                         Target Range
                       </span>
-                      <span className="text-foreground font-semibold text-xs">
+                      <span className="text-foreground font-semibold text-[10px] sm:text-xs">
                         Ideal: {latestMetrics.workload.ideal_min}–{latestMetrics.workload.ideal_max} items
                       </span>
                     </div>
@@ -861,6 +868,6 @@ export default function DeveloperDetailsPage({
         onClose={() => setIsHelpOpen(false)}
         activeTermId={activeHelpId}
       />
-    </main>
+    </div>
   );
 }

@@ -34,21 +34,21 @@ export default function SprintAnalysisPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
-            <div className="max-w-7xl mx-auto space-y-8 mt-8">
-                <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-border pb-8 gap-6">
+        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 pb-16 sm:pb-20 selection:bg-primary/30 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 mt-4 sm:mt-8">
+                <header className="flex flex-col xl:flex-row xl:items-end justify-between border-b border-border pb-6 sm:pb-8 gap-4 sm:gap-6">
                     <div>
-                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
                             <Sparkles size={16} />
                             AI Deep Lens
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
                             Deep Sprint Analysis
                         </h1>
-                        <p className="text-muted-foreground mt-2 font-medium">Assignee-centric performance and bottleneck identification.</p>
+                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Assignee-centric performance and bottleneck identification.</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-4 items-center justify-start md:justify-end">
+                    <div className="flex flex-wrap gap-2.5 sm:gap-4 items-center justify-start xl:justify-end w-full xl:w-auto">
                         <ProjectSelector
                             selectedProjectId={selectedProjectId}
                             onSelect={setSelectedProjectId}
@@ -63,7 +63,7 @@ export default function SprintAnalysisPage() {
                         <button
                             onClick={runAnalysis}
                             disabled={isRefreshing || !selectedSprintId}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 ${isRefreshing || !selectedSprintId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 text-sm sm:text-base ${isRefreshing || !selectedSprintId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                 }`}
                         >
                             <RefreshCcw size={18} className={isRefreshing ? 'animate-spin' : ''} />
@@ -127,6 +127,6 @@ export default function SprintAnalysisPage() {
                     <p>© 2026 Elevate AI Engine</p>
                 </footer>
             </div>
-        </main>
+        </div>
     );
 }

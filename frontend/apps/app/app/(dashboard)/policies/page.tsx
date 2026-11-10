@@ -118,9 +118,9 @@ export default function PoliciesPage() {
     };
 
     return (
-        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans">
+        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans overflow-x-hidden">
             <Toaster position="top-center" reverseOrder={false} />
-            <div className="max-w-5xl mx-auto space-y-8">
+            <div className="max-w-7xl w-full mx-auto space-y-6 sm:space-y-8">
                 
                 {/* Header section matching reference image layout */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

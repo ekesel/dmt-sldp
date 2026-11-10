@@ -173,11 +173,11 @@ export const SprintSelector = React.memo(({
     }
 
     return (
-        <div ref={dropdownRef} className="relative">
+        <div ref={dropdownRef} className={cn("relative", className && className.includes('w-') ? "" : "w-full sm:w-auto")}>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={cn("flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-48 justify-between px-4 py-2 h-10 cursor-pointer", className)}
+                className={cn("flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-full sm:w-48 justify-between px-4 py-2 h-10 cursor-pointer", className)}
             >
                 <div className="flex items-center gap-2 truncate min-w-0">
                     <GitBranch size={14} className={cn("flex-shrink-0", activeSelectedIds.length > 0 ? "text-primary" : "text-muted-foreground")} />

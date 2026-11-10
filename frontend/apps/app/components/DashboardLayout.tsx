@@ -43,11 +43,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     }, [token, isLoading]);
 
     const content = (
-        <div className="flex flex-col h-screen bg-background transition-colors duration-200">
+        <div className="flex flex-col h-screen bg-background transition-colors duration-200 overflow-x-hidden">
             <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMenuOpen={sidebarOpen} />
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden min-w-0">
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                <main className="flex-1 overflow-y-auto">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
                     {children}
                 </main>
             </div>

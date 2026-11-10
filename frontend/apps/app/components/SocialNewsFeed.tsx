@@ -68,10 +68,10 @@ export const SocialNewsFeed: React.FC = () => {
     return (
         <div className="w-full h-full flex flex-col">
             {/* Main Card Container */}
-            <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:p-4 w-full h-full flex flex-col overflow-hidden">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-3 sm:p-4 md:p-5 w-full h-full flex flex-col overflow-hidden">
                 {/* Fixed Title Header */}
                 <div className="flex justify-between items-center mb-2.5 flex-shrink-0">
-                    <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-foreground tracking-tight">
+                    <h2 className="text-base sm:text-lg md:text-xl font-black text-foreground tracking-tight">
                         Newsfeed
                     </h2>
                 </div>
@@ -82,7 +82,7 @@ export const SocialNewsFeed: React.FC = () => {
                     onClick={() => router.push(`/newsfeed?openComments=${postId}`)}
                 >
                     {/* Post Author Header */}
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                         <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border flex-shrink-0">
                             <Image
                                 src={latestPost.author?.avatar_url ? getFileUrl(latestPost.author.avatar_url) : `https://i.pravatar.cc/150?u=${latestPost.author?.id || 'user'}`}
@@ -92,11 +92,11 @@ export const SocialNewsFeed: React.FC = () => {
                                 unoptimized
                             />
                         </div>
-                        <div className="flex flex-col overflow-hidden">
-                            <span className="text-[0.75rem] sm:text-[0.8125rem] font-black text-card-foreground leading-tight truncate hover:underline">
+                        <div className="flex flex-col min-w-0 overflow-hidden">
+                            <span className="text-xs sm:text-sm font-black text-card-foreground leading-tight truncate hover:underline">
                                 {getUserDisplayName(latestPost.author, "Unknown User")}
                             </span>
-                             <span className="text-[0.5625rem] sm:text-[0.625rem] text-muted-foreground font-medium truncate mt-0.5">
+                            <span className="text-[0.625rem] sm:text-xs text-muted-foreground font-medium truncate mt-0.5">
                                 {formatTimestamp(latestPost.created_at)}
                             </span>
                         </div>
@@ -104,18 +104,18 @@ export const SocialNewsFeed: React.FC = () => {
 
                     {/* Post Content Body */}
                     <div className="space-y-1 mt-2.5 overflow-hidden">
-                        <h3 className="text-[0.875rem] sm:text-[0.9375rem] font-black text-foreground leading-tight tracking-tight">
+                        <h3 className="text-xs sm:text-sm md:text-base font-black text-foreground leading-tight tracking-tight">
                             {latestPost.title}
                         </h3>
                         {latestPost.content && (
-                            <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground/75 leading-normal font-medium whitespace-pre-wrap">
+                            <p className="text-xs sm:text-sm text-muted-foreground/75 leading-normal font-medium whitespace-pre-wrap">
                                 {latestPost.content}
                             </p>
                         )}
 
                         {/* Image / Media Display */}
                         {latestPost.media_file && (
-                            <div className="relative w-full aspect-[1.8/1] rounded-[0.625rem] overflow-hidden border border-border mt-2.5 bg-muted/20">
+                            <div className="relative w-full aspect-video sm:aspect-[1.8/1] rounded-lg overflow-hidden border border-border mt-2.5 bg-muted/20">
                                 <Image
                                     src={getMediaUrl(latestPost.media_file)}
                                     alt="Post Image"
@@ -132,7 +132,7 @@ export const SocialNewsFeed: React.FC = () => {
                 <div className="flex gap-4 pt-2.5 border-t border-border/40 mt-2.5 flex-shrink-0">
                     <button
                         onClick={handleLikeClick}
-                        className={`flex items-center gap-1 transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                        className={`flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-secondary/60 transition-all font-bold text-xs sm:text-sm ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
                     >
                         <ThumbsUp
                             className={`w-4 h-4 transition-all ${isLiked ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
@@ -141,7 +141,7 @@ export const SocialNewsFeed: React.FC = () => {
                     </button>
                     <button
                         onClick={handleCommentsClick}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-all font-bold text-[0.75rem] sm:text-[0.8125rem] group"
+                        className="flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-all font-bold text-xs sm:text-sm group"
                     >
                         <MessageSquare className="w-4 h-4 group-hover:fill-muted-foreground/10 transition-all" />
                         <span>Comments{commentCount > 0 ? ` (${commentCount})` : ''}</span>

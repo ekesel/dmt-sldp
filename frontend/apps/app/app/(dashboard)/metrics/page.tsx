@@ -50,55 +50,55 @@ export default function MetricsPage() {
     );
 
     return (
-        <main className="min-h-screen bg-background p-8 pb-20 selection:bg-primary/30">
-            <div className="max-w-7xl mx-auto space-y-10">
-                <header className="flex justify-between items-end border-b border-border pb-8">
+        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 pb-16 sm:pb-20 selection:bg-primary/30 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 lg:space-y-10">
+                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-6 sm:pb-8 gap-4 sm:gap-6">
                     <div>
-                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
                             <TrendingUp size={16} />
                             Individual Performance
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
                             Developer Metrics
                         </h1>
-                        <p className="text-muted-foreground mt-2 font-medium">Track individual contributions and compliance across all projects.</p>
+                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Track individual contributions and compliance across all projects.</p>
                     </div>
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-muted/50 border border-border">
-                        <Users size={20} className="text-primary" />
-                        <span className="text-2xl font-black text-foreground">{filteredDevelopers.length}</span>
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Members</span>
+                    <div className="flex items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-muted/50 border border-border shrink-0 self-start sm:self-auto">
+                        <Users size={18} className="text-primary sm:w-5 sm:h-5" />
+                        <span className="text-xl sm:text-2xl font-black text-foreground">{filteredDevelopers.length}</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wider">Members</span>
                     </div>
                 </header>
 
-                <div className="flex items-center gap-4 bg-muted/60 p-4 rounded-2xl border border-border shadow-inner">
-                    <Search className="text-muted-foreground flex-shrink-0" size={20} />
+                <div className="flex items-center gap-3 sm:gap-4 bg-muted/60 p-3 sm:p-4 rounded-2xl border border-border shadow-inner">
+                    <Search className="text-muted-foreground flex-shrink-0" size={18} />
                     <input
                         type="text"
                         placeholder="Search by name or email..."
-                        className="bg-transparent border-none focus:outline-none text-foreground w-full placeholder-muted-foreground font-medium"
+                        className="bg-transparent border-none focus:outline-none text-foreground w-full placeholder-muted-foreground font-medium text-sm sm:text-base"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                         {[1, 2, 3, 4, 5, 6].map(i => (
                             <div key={i} className="h-48 bg-card border border-border rounded-2xl animate-pulse" />
                         ))}
                     </div>
                 ) : filteredDevelopers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-center bg-muted/20 rounded-3xl border-2 border-dashed border-border mt-8 shadow-sm">
-                        <div className="bg-primary/10 p-5 rounded-full mb-5">
-                            <Search className="w-10 h-10 text-primary opacity-80" />
+                    <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center bg-muted/20 rounded-3xl border-2 border-dashed border-border mt-6 sm:mt-8 shadow-sm px-4">
+                        <div className="bg-primary/10 p-4 sm:p-5 rounded-full mb-4 sm:mb-5">
+                            <Search className="w-8 h-8 sm:w-10 sm:h-10 text-primary opacity-80" />
                         </div>
-                        <h3 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">No developers found</h3>
-                        <p className="text-muted-foreground font-medium max-w-md mx-auto text-sm">
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2 tracking-tight">No developers found</h3>
+                        <p className="text-muted-foreground font-medium max-w-md mx-auto text-xs sm:text-sm">
                             We couldn't find any developers matching &quot;{searchTerm}&quot;. Please try a different name or email.
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                         {filteredDevelopers.map((dev) => {
                             // Use lowercase email as uniqueness key
                             const uniqueKey = (dev.developer_email || '').trim().toLowerCase() || dev.id;
@@ -113,18 +113,18 @@ export default function MetricsPage() {
                             });
                             const projectCount = allProjects.length;
                             return (
-                                <Card key={uniqueKey} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent shadow-inner relative overflow-hidden flex-shrink-0">
+                                <Card key={uniqueKey} className="p-4 sm:p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 cursor-pointer group rounded-2xl hover:shadow-xl hover:shadow-primary/5">
+                                    <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-xl sm:text-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-primary/20 group-hover:border-transparent shadow-inner relative overflow-hidden flex-shrink-0">
                                             <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <span className="relative z-10">{initial}</span>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="font-black text-foreground text-lg leading-tight truncate group-hover:text-primary transition-colors" title={dev.developer_name}>{dev.developer_name}</h3>
-                                            <p className="text-sm text-muted-foreground truncate font-medium" title={dev.developer_email}>{dev.developer_email}</p>
+                                            <h3 className="font-black text-foreground text-base sm:text-lg leading-tight truncate group-hover:text-primary transition-colors" title={dev.developer_name}>{dev.developer_name}</h3>
+                                            <p className="text-xs sm:text-sm text-muted-foreground truncate font-medium mt-0.5" title={dev.developer_email}>{dev.developer_email}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 flex-wrap mb-6">
+                                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-4 sm:mb-6">
                                         {allProjects.slice(0, 2).map((p: DevProject) => {
                                             const isActive = p.active === true || p.is_active === true;
                                             return (
@@ -142,8 +142,8 @@ export default function MetricsPage() {
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex justify-between items-center pt-4 border-t border-border">
-                                        <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{projectCount} Project{projectCount !== 1 ? 's' : ''}</span>
+                                    <div className="flex justify-between items-center pt-3 sm:pt-4 border-t border-border">
+                                        <span className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase tracking-wider">{projectCount} Project{projectCount !== 1 ? 's' : ''}</span>
                                         <Link href={`/metrics/${encodeURIComponent(dev.id)}`} className="flex items-center gap-1.5 text-primary font-black text-xs uppercase tracking-widest hover:gap-3 transition-all duration-200 group-hover:underline underline-offset-2">
                                             Analyze <ArrowRight size={12} />
                                         </Link>
@@ -154,6 +154,6 @@ export default function MetricsPage() {
                     </div>
                 )}
             </div>
-        </main>
+        </div>
     );
 }

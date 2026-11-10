@@ -132,14 +132,14 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
     const maxTotal = Math.max(...sortedAssignees.map((a) => a.completed + a.in_progress), 1);
 
     return (
-        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6">
+        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-4 sm:p-6">
             {/* Header */}
-            <div className="flex items-center gap-2 mb-5">
-                <Users className="text-primary w-5 h-5" />
-                <div className="flex items-baseline gap-2">
-                    <h2 className="text-xl font-bold text-foreground">Team Workload</h2>
-                    <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+                <div className="flex items-center gap-2">
+                    <Users className="text-primary w-5 h-5 shrink-0" />
+                    <h2 className="text-lg sm:text-xl font-bold text-foreground">Team Workload</h2>
                 </div>
+                <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
                 <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>
 

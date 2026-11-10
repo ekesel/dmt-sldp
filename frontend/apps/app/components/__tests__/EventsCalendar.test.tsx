@@ -1,18 +1,37 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen, cleanup } from "@testing-library/react";
-import { describe, it, expect, afterEach } from "vitest";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import EventsCalendar from "../EventsCalendar";
+import { dashboard } from "@dmt/api";
+
+vi.mock("@dmt/api", () => ({
+  dashboard: {
+    getHolidays: vi.fn(),
+  },
+}));
 
 describe("EventsCalendar Component", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2023, 9, 25)); // 25 Oct 2023
+    (dashboard.getHolidays as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      holidays: [
+        { id: 1, name: "Autumn Festival", date: "2023-10-29" },
+      ],
+    });
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
+    vi.clearAllMocks();
   });
 
   it("renders the correct month and year", () => {
     render(<EventsCalendar />);
-    expect(screen.getByText("October 2023")).toBeDefined();
+    expect(screen.getByText(/October\s+2023/)).toBeDefined();
   });
 
   it("renders the days of the week headers correctly", () => {
@@ -31,12 +50,12 @@ describe("EventsCalendar Component", () => {
     expect(activeDay.className).toContain("text-primary-foreground");
   });
 
-  it("renders an event marker for days with events", () => {
-    // We know day 29 has an event based on CALENDAR_DAYS in the component
-    const { container } = render(<EventsCalendar />);
+  it("renders an event marker for days with events", async () => {
+    render(<EventsCalendar />);
     
-    // The event marker is a small div with bg-destructive
-    const eventMarkers = container.querySelectorAll(".bg-destructive");
-    expect(eventMarkers.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      const holidayDay = screen.getByText("29");
+      expect(holidayDay.className).toContain("bg-accent");
+    });
   });
 });

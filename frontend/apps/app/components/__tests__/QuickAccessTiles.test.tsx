@@ -31,7 +31,7 @@ describe("QuickAccessTiles Component", () => {
     const tiles = [
       { text: "Org Chart", testId: "icon-network" },
       { text: "Holiday Calendar", testId: "icon-palmtree" },
-      { text: "Employee Engagement Calendar", testId: "icon-calendar-heart" },
+      { text: "Engagement Calendar", testId: "icon-calendar-heart" },
       { text: "Policies", testId: "icon-file-text" },
       { text: "Learning & Development", testId: "icon-graduation-cap" },
       { text: "Onboarding", testId: "icon-rocket" },

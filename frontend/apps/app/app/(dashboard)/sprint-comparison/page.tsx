@@ -138,26 +138,26 @@ export default function SprintComparisonPage() {
     const pendingSelection = useCompanyBaseline ? !sprintBId : (!sprintAId || !sprintBId);
 
     return (
-        <div className="flex flex-col gap-8 w-full min-h-screen bg-background pb-10 px-6">
+        <div className="flex flex-col gap-6 sm:gap-8 w-full min-h-full bg-background pb-10 px-4 sm:px-6 overflow-x-hidden">
             {/* Header / Sticky Filter */}
-            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border py-5 px-6 -mx-6 flex flex-wrap items-center justify-between gap-y-4 transition-all duration-300">
-                <div className="flex items-center gap-6 flex-wrap">
-                    <div className="font-bold text-xl text-foreground tracking-tight mr-2 border-r border-border pr-6">Sprint Comparison</div>
+            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border py-4 sm:py-5 px-4 sm:px-6 -mx-4 sm:-mx-6 flex flex-wrap items-center justify-between gap-3 sm:gap-4 transition-all duration-300">
+                <div className="flex items-center gap-3 sm:gap-6 flex-wrap w-full xl:w-auto">
+                    <div className="font-bold text-lg sm:text-xl text-foreground tracking-tight border-r-0 sm:border-r border-border pr-0 sm:pr-6">Sprint Comparison</div>
 
-                    <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap w-full sm:w-auto">
                         <ProjectSelector selectedProjectId={projectId} onSelect={handleProjectSelect} />
 
                         <div className="h-6 w-px bg-border hidden md:block" />
 
                         {/* Baseline selector with mode toggle */}
-                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
-                            <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Baseline:</span>
+                        <div className="flex items-center gap-2 sm:gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10 flex-wrap sm:flex-nowrap">
+                            <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2">Baseline:</span>
 
                             {/* Mode toggle pills */}
-                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-8">
+                            <div className="flex items-center bg-background rounded-md border border-border overflow-hidden h-8 shrink-0">
                                 <button
                                     onClick={() => handleBaselineModeToggle('sprint')}
-                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
                                         !useCompanyBaseline
                                             ? 'bg-primary text-primary-foreground'
                                             : 'text-muted-foreground hover:text-foreground'
@@ -167,7 +167,7 @@ export default function SprintComparisonPage() {
                                 </button>
                                 <button
                                     onClick={() => handleBaselineModeToggle('company')}
-                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors flex items-center gap-1 ${
+                                    className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors flex items-center gap-1 cursor-pointer ${
                                         useCompanyBaseline
                                             ? 'bg-primary text-primary-foreground'
                                             : 'text-muted-foreground hover:text-foreground'
@@ -181,24 +181,24 @@ export default function SprintComparisonPage() {
                             {useCompanyBaseline ? (
                                 <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded border border-primary/20 h-8">
                                     <Building2 size={12} className="text-primary" />
-                                    <span className="text-xs font-bold text-primary">{baselineData?.name || 'Company Baseline'}</span>
+                                    <span className="text-xs font-bold text-primary truncate max-w-[120px]">{baselineData?.name || 'Company Baseline'}</span>
                                 </div>
                             ) : (
                                 <SprintSelector projectId={projectId} selectedSprintId={sprintAId} onSelect={setSprintAId} className="px-3 h-8 text-xs" />
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
-                            <span className="text-xs font-bold text-muted-foreground uppercase ml-2">Target:</span>
+                        <div className="flex items-center gap-2 sm:gap-3 bg-muted/50 p-1 pr-1.5 rounded-lg border border-border h-10">
+                            <span className="text-xs font-bold text-muted-foreground uppercase ml-1 sm:ml-2">Target:</span>
                             <SprintSelector projectId={projectId} selectedSprintId={sprintBId} onSelect={setSprintBId} className="px-3 h-8 text-xs" />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 bg-primary/10 px-3 rounded-lg border border-primary/20 h-10">
-                    <Users size={16} className="text-primary ml-1" />
+                <div className="flex items-center gap-2 sm:gap-3 bg-primary/10 px-3 rounded-lg border border-primary/20 h-10 w-full sm:w-auto">
+                    <Users size={16} className="text-primary ml-1 shrink-0" />
                     <select
-                        className="bg-transparent text-foreground/80 text-sm font-medium focus:outline-none"
+                        className="bg-transparent text-foreground/80 text-xs sm:text-sm font-medium focus:outline-none cursor-pointer w-full sm:w-auto"
                         value={developerId || ''}
                         onChange={handleDeveloperChange}
                     >

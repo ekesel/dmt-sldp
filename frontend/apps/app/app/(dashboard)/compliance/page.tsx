@@ -246,27 +246,27 @@ export default function CompliancePage() {
     );
 
     return (
-        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <header className="flex justify-between items-end border-b border-border pb-8">
+        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 pb-16 sm:pb-20 selection:bg-primary/30 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+                <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end border-b border-border pb-6 sm:pb-8 gap-4 sm:gap-6">
                     <div>
-                        <div className="flex items-center gap-2 text-destructive text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-destructive text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
                             <AlertCircle size={16} />
                             Governance
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-2 sm:gap-3">
                             Compliance Flags
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_rules'); }}
-                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                                 title="Learn more about DMT compliance rules"
                             >
-                                <HelpCircle size={24} />
+                                <HelpCircle size={20} className="sm:w-6 sm:h-6" />
                             </button>
                         </h1>
-                        <p className="text-muted-foreground mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
+                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap justify-end">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap justify-start xl:justify-end w-full xl:w-auto">
                         {selectedProjectId !== null && (
                             <SprintSelector
                                 projectId={selectedProjectId}
@@ -293,8 +293,8 @@ export default function CompliancePage() {
                 </header>
 
                 {/* KPI Overview — all data from backend /api/compliance-summary/ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <Card className="p-4 sm:p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-10 h-10 rounded-xl bg-green/10 flex items-center justify-center text-green border border-green/20">
                                 <ShieldCheck size={20} />
@@ -322,7 +322,7 @@ export default function CompliancePage() {
                         onClick={() => toggleFilter('critical')}
                         className="cursor-pointer select-none"
                     >
-                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
+                        <Card className={`p-4 sm:p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
                             ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
                             : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
                             }`}>
@@ -624,6 +624,6 @@ export default function CompliancePage() {
                 onClose={handleCloseHelp}
                 activeTermId={activeHelpId}
             />
-        </main>
+        </div>
     );
 }

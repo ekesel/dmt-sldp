@@ -19,6 +19,11 @@ vi.mock("../../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
+// Mock @tanstack/react-query
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: null }),
+}));
+
 describe("WelcomeBanner Component", () => {
   beforeEach(() => {
     vi.useFakeTimers();

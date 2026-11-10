@@ -510,7 +510,7 @@ export default function DashboardPage() {
 
     if (error && !summary) {
         return (
-            <main className="min-h-screen bg-background p-8">
+            <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 overflow-x-hidden">
                 <div className="max-w-7xl mx-auto flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
                         <AlertCircle className="w-8 h-8" />
@@ -518,41 +518,46 @@ export default function DashboardPage() {
                     <h3 className="text-xl font-bold text-foreground">Failed to Load Dashboard</h3>
                     <p className="text-muted-foreground mt-2 max-w-md">{error}</p>
                 </div>
-            </main>
+            </div>
         );
     }
 
     return (
-        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
-            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-8 mt-8">
-                <header className="flex flex-col lg:flex-row items-start justify-between border-b border-border pb-8 gap-6">
+        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 selection:bg-primary/30 overflow-x-hidden">
+            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-6 sm:space-y-8 mt-4 sm:mt-8">
+                <header className="flex flex-col xl:flex-row items-stretch xl:items-start justify-between border-b border-border pb-6 sm:pb-8 gap-6">
                     <div className="shrink-0">
-                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
                             <TrendingUp size={16} />
                             Performance Overview
                         </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3 whitespace-nowrap">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
                             {selectedProjectId ? 'Project Analytics' : 'Organizational Analytics'}
                         </h1>
-                        <p className="text-muted-foreground mt-2 font-medium">Monitoring engineering excellence and DMT compliance.</p>
+                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Monitoring engineering excellence and DMT compliance.</p>
                     </div>
-                    <div className="flex gap-4 items-center flex-wrap justify-start lg:justify-end">
-                        <ProjectSelector
-                            selectedProjectId={selectedProjectId}
-                            onSelect={handleProjectSelect}
-                        />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap justify-start xl:justify-end w-full xl:w-auto">
+                        <div className="w-full sm:w-auto">
+                            <ProjectSelector
+                                selectedProjectId={selectedProjectId}
+                                onSelect={handleProjectSelect}
+                                className="w-full sm:w-auto"
+                            />
+                        </div>
                         {selectedProjectId !== null && (
-                            <div className="flex items-center gap-2">
-                                <SprintSelector
-                                    projectId={selectedProjectId}
-                                    multiSelect={true}
-                                    selectedSprintIds={selectedSprintIds}
-                                    onMultiSelect={handleSprintMultiSelect}
-                                    autoSelectLatest={false}
-                                    allowAll={true}
-                                    popoverAlign="right"
-                                    className="w-56 h-12"
-                                />
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="flex-1 sm:flex-initial">
+                                    <SprintSelector
+                                        projectId={selectedProjectId}
+                                        multiSelect={true}
+                                        selectedSprintIds={selectedSprintIds}
+                                        onMultiSelect={handleSprintMultiSelect}
+                                        autoSelectLatest={false}
+                                        allowAll={true}
+                                        popoverAlign="right"
+                                        className="w-full sm:w-56 h-12"
+                                    />
+                                </div>
                                 {selectedSprintIds.length > 0 && (
                                     <button
                                         onClick={handleClearSprint}
@@ -564,15 +569,16 @@ export default function DashboardPage() {
                                 )}
                             </div>
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                             <DatePicker
                                 label="From"
                                 value={startDate}
                                 min="2000-01-01"
                                 max={endDate && endDate <= todayStr ? endDate : todayStr}
                                 onChange={handleStartDateChange}
+                                className="flex-1 sm:flex-initial sm:w-auto"
                             />
-                            <span className="text-muted-foreground text-sm font-bold">→</span>
+                            <span className="text-muted-foreground text-sm font-bold shrink-0">→</span>
                             <DatePicker
                                 label="To"
                                 value={endDate}
@@ -580,6 +586,7 @@ export default function DashboardPage() {
                                 max={todayStr}
                                 onChange={handleEndDateChange}
                                 popoverAlign="right"
+                                className="flex-1 sm:flex-initial sm:w-auto"
                             />
                             {(startDate || endDate) && (
                                 <button
@@ -591,12 +598,12 @@ export default function DashboardPage() {
                                 </button>
                             )}
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto">
                             {selectedProjectId && (
                                 <button
                                     onClick={handleResync}
                                     disabled={isSyncing}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer h-12 ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer h-12 text-sm sm:text-base ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     title="Resync Project Data"
                                 >
                                     <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
@@ -606,7 +613,7 @@ export default function DashboardPage() {
                             <button
                                 onClick={handleExportPDF}
                                 disabled={isExporting}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer h-12 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer h-12 text-sm sm:text-base ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <FileText size={18} />
                                 {isExporting ? 'Exporting...' : 'Export PDF'}
@@ -737,42 +744,42 @@ export default function DashboardPage() {
                                     />
                                 </div>
 
-                                <Card className="min-h-[450px] flex flex-col p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                                    <div className="flex items-center justify-between mb-10">
+                                <Card className="min-h-[380px] sm:min-h-[450px] flex flex-col p-4 sm:p-6 lg:p-8 bg-card border-border backdrop-blur-xl shadow-none">
+                                    <div className="flex items-center justify-between mb-6 sm:mb-10">
                                         <div>
-                                            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                                                 <BarChart3 className="text-primary" />
                                                 Velocity History
                                             </h2>
-                                            <p className="text-muted-foreground text-sm mt-1">
+                                            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
                                                 {selectedSprintIds.length > 1
                                                     ? `Delivery trends across ${selectedSprintIds.length} selected sprints`
                                                     : 'Sprint-over-sprint delivery trends'}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="w-full h-[380px] min-h-[380px] bg-muted/10 rounded-2xl border border-border p-4">
+                                    <div className="w-full h-[300px] sm:h-[380px] min-h-[280px] sm:min-h-[380px] bg-muted/10 rounded-2xl border border-border p-2 sm:p-4 overflow-hidden">
                                         <VelocityChart data={velocity} />
                                     </div>
                                 </Card>
 
                                 {/* Critical Alerts - Simplified logic based on compliance */}
-                                <div className="space-y-6">
-                                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                                <div className="space-y-4 sm:space-y-6">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                                         <AlertCircle className="text-destructive" />
                                         Compliance Alerts
                                     </h2>
                                     {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                                        <Card className="bg-destructive/5 border-destructive/20 p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
+                                        <Card className="bg-destructive/5 border-destructive/20 p-4 sm:p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
                                             <div className="flex justify-between items-start">
                                                 <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                             </div>
-                                            <p className="text-destructive font-bold mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
-                                            <p className="text-destructive/80 text-sm mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                            <p className="text-destructive font-bold mt-3 sm:mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
+                                            <p className="text-destructive/80 text-xs sm:text-sm mt-1.5 sm:mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
                                         </Card>
                                     )}
                                     {(!summary || (summary.compliance_rate >= 80)) && (
-                                        <p className="text-muted-foreground">No critical alerts at this time.</p>
+                                        <p className="text-muted-foreground text-sm">No critical alerts at this time.</p>
                                     )}
                                 </div>
 
@@ -785,18 +792,18 @@ export default function DashboardPage() {
                                     />
                                 )}
 
-                                <div className="pt-8 border-t border-border">
-                                    <div className="flex items-center justify-between mb-4">
+                                <div className="pt-6 sm:pt-8 border-t border-border">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                                         <div className="flex items-center gap-2">
-                                            <Share2 className="text-primary w-5 h-5" />
-                                            <h2 className="text-2xl font-bold text-foreground">
+                                            <Share2 className="text-primary w-5 h-5 shrink-0" />
+                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                                                 {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
                                             </h2>
                                         </div>
                                         <button
                                             onClick={refreshInsights}
                                             disabled={isRefreshingInsights}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className={`self-start sm:self-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
                                             {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}
@@ -846,6 +853,6 @@ export default function DashboardPage() {
                 onClose={() => setIsHelpOpen(false)}
                 activeTermId={activeHelpId}
             />
-        </main>
+        </div>
     );
 }

@@ -48,9 +48,9 @@ export const KPICard = React.memo(({
   };
 
   return (
-    <Card className={cn("flex flex-col gap-3 p-5 transition-all duration-200 group bg-card border-border", className)}>
+    <Card className={cn("flex flex-col gap-2 sm:gap-3 p-3.5 sm:p-4 lg:p-5 transition-all duration-200 group bg-card border-border", className)}>
       <div className="flex items-center justify-between">
-        <h3 className={cn("text-muted-foreground text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider flex items-center gap-2", labelClassName)}>
+        <h3 className={cn("text-muted-foreground text-xs sm:text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider flex items-center gap-1.5 sm:gap-2", labelClassName)}>
           {label}
           {helpId && onHelpClick && (
             <button
@@ -61,13 +61,13 @@ export const KPICard = React.memo(({
               className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
               title="Learn more about this metric"
             >
-              <HelpCircle size={16} />
+              <HelpCircle size={15} />
             </button>
           )}
         </h3>
       </div>
-      <div className="flex items-end gap-3 flex-wrap">
-        <p className={`text-4xl font-bold tracking-tight ${valueClassName}`}>
+      <div className="flex items-end gap-2 sm:gap-3 flex-wrap">
+        <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight ${valueClassName}`}>
           {value}
         </p>
         {trend && (

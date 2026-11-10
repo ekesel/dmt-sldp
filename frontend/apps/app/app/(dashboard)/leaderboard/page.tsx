@@ -259,27 +259,27 @@ export default function LeaderboardPage() {
     );
 
     return (
-        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
-            <div className="max-w-7xl mx-auto space-y-8 mt-8 pb-16">
-                <header className="flex justify-between items-end border-b border-border pb-8">
+        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 selection:bg-primary/30 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 mt-4 sm:mt-8 pb-16">
+                <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end border-b border-border pb-6 sm:pb-8 gap-4 sm:gap-6">
                     <div>
-                        <div className="flex items-center gap-2 text-primary text-sm font-bold tracking-wider uppercase mb-2">
+                        <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
                             <Award size={16} />
                             Monthly Awards
                         </div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight">Leaderboard</h1>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleHelpClick('leaderboard'); }}
-                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                                 title="Learn more about the leaderboard categories"
                             >
-                                <HelpCircle size={24} />
+                                <HelpCircle size={20} className="sm:w-6 sm:h-6" />
                             </button>
                         </div>
-                        <p className="text-muted-foreground mt-2 font-medium">Recognizing engineering excellence across the organization.</p>
+                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Recognizing engineering excellence across the organization.</p>
                     </div>
-                    <div className="flex gap-4 items-center flex-wrap justify-end">
+                    <div className="flex gap-2.5 sm:gap-4 items-center flex-wrap justify-start xl:justify-end w-full xl:w-auto">
                         <ProjectSelector selectedProjectId={selectedProjectId} onSelect={setSelectedProjectId} />
                         <ActiveFolderSelector
                             projectId={selectedProjectId}
@@ -291,17 +291,17 @@ export default function LeaderboardPage() {
                 {loading ? (
                     <div className="text-primary text-center py-12">Loading competition data...</div>
                 ) : data ? (
-                    <div className="space-y-16">
+                    <div className="space-y-12 sm:space-y-16">
                         <div>
-                            <h2 className="text-2xl font-bold text-foreground mb-6 border-l-4 border-primary pl-4 py-1">Current Month Leaders</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6 border-l-4 border-primary pl-3 sm:pl-4 py-1">Current Month Leaders</h2>
                             {renderGrid(data.current_month)}
                         </div>
 
                         {data.past_month && (
-                            <div className="pt-8 opacity-80 hover:opacity-100 transition-opacity duration-300">
-                                <h2 className="text-2xl font-bold text-foreground mb-6 border-l-4 border-primary pl-4 py-1 flex items-center gap-2">
-                                    <Trophy size={24} className="text-primary" />
-                                    Past Month Leaders
+                            <div className="pt-6 sm:pt-8 opacity-80 hover:opacity-100 transition-opacity duration-300">
+                                <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6 border-l-4 border-primary pl-3 sm:pl-4 py-1 flex items-center gap-2">
+                                    <Trophy size={22} className="text-primary shrink-0" />
+                                    <span>Past Month Leaders</span>
                                 </h2>
                                 {renderGrid(data.past_month)}
                             </div>
@@ -317,6 +317,6 @@ export default function LeaderboardPage() {
                 onClose={() => setIsHelpOpen(false)}
                 activeTermId={activeHelpId}
             />
-        </main>
+        </div>
     );
 }
