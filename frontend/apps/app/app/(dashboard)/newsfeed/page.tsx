@@ -53,16 +53,16 @@ const NewsfeedPage = () => {
     };
 
     if (loading && posts.length === 0) {
-        return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading feed...</div>;
+        return <div className="min-h-full flex items-center justify-center text-muted-foreground py-20">Loading feed...</div>;
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
-            <main className="flex justify-center max-w-screen-xl mx-auto py-10 px-4">
+        <div className="min-h-full bg-background text-foreground selection:bg-primary/30 overflow-x-hidden">
+            <main className="flex justify-center max-w-screen-xl mx-auto py-6 sm:py-10 px-3 sm:px-4">
                 {/* Main Feed Content - Centered and focused */}
                 <div className="w-full max-w-[850px]">
-                    <div className="flex items-center justify-between mb-10">
-                        <h1 className="text-3xl font-bold tracking-tight">Newsfeed</h1>
+                    <div className="flex items-center justify-between mb-6 sm:mb-10">
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Newsfeed</h1>
 
                         {/* Standalone Create Post Button - Only for managers */}
                         {isManager && (

@@ -7,9 +7,10 @@ export type { Project };
 export interface ProjectSelectorProps {
     selectedProjectId: number | null;
     onSelect: (projectId: number | null, project?: Project | null) => void;
+    className?: string;
 }
 
-export const ProjectSelector = React.memo(({ selectedProjectId, onSelect }: ProjectSelectorProps) => {
+export const ProjectSelector = React.memo(({ selectedProjectId, onSelect, className }: ProjectSelectorProps) => {
     const { projects, loading, error } = useProjects();
     const [isOpen, setIsOpen] = React.useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,15 +41,15 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect }: Proj
         };
     }, [isOpen]);
 
-    if (loading) return <div className="animate-pulse w-60 h-12 bg-muted rounded-lg"></div>;
+    if (loading) return <div className={`animate-pulse w-full sm:w-60 h-12 bg-muted rounded-lg ${className || ''}`}></div>;
     if (error) return <div className="text-destructive text-xs">Error loading projects</div>;
 
     return (
-        <div ref={dropdownRef} className="relative">
+        <div ref={dropdownRef} className={`relative ${className || ''}`}>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-5 py-3 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-semibold border border-border w-60 h-12 justify-between text-sm"
+                className="flex items-center gap-2 px-4 sm:px-5 py-3 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-semibold border border-border w-full sm:w-60 h-12 justify-between text-sm cursor-pointer"
             >
                 <div className="flex items-center gap-2.5 truncate">
                     <Folder size={18} className="text-primary flex-shrink-0" />
@@ -58,7 +59,7 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect }: Proj
             </button>
 
             {isOpen && (
-                <div className="absolute top-full mt-2 w-64 bg-popover border border-border rounded-lg shadow-xl z-50 py-1 max-h-64 overflow-y-auto">
+                <div className="absolute top-full mt-2 w-full sm:w-64 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-lg shadow-xl z-50 py-1 max-h-64 overflow-y-auto">
                     <button
                         type="button"
                         onClick={() => {

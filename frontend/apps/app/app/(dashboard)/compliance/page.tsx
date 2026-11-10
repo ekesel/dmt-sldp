@@ -6,7 +6,6 @@ import { AlertCircle, CheckCircle, User, Calendar, Folder, ShieldCheck, Activity
 import { compliance } from '@dmt/api';
 import { ProjectSelector } from "../../../components/ProjectSelector";
 import { SprintSelector } from "../../../components/SprintSelector";
-import { ActiveFolderSelector } from "../../../components/ActiveFolderSelector";
 import { HelpSidebar } from "../../../components/HelpSidebar";
 import { toast } from 'react-hot-toast';
 
@@ -242,31 +241,28 @@ export default function CompliancePage() {
     };
 
     const KpiSkeleton = () => (
-        <div className="h-10 w-24 bg-muted rounded-lg animate-pulse" />
+        <div className="h-8 w-20 bg-muted rounded-lg animate-pulse" />
     );
 
     return (
-        <main className="min-h-screen bg-background p-8 selection:bg-primary/30">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <header className="flex justify-between items-end border-b border-border pb-8">
+        <div className="h-full bg-background p-3 sm:p-4 lg:p-5 selection:bg-primary/30 overflow-hidden flex flex-col">
+            <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-2.5 sm:gap-3 min-h-0">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-2.5 sm:pb-3 gap-2.5 shrink-0">
                     <div>
-                        <div className="flex items-center gap-2 text-destructive text-sm font-bold tracking-wider uppercase mb-2">
-                            <AlertCircle size={16} />
-                            Governance
-                        </div>
-                        <h1 className="text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
                             Compliance Flags
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_rules'); }}
-                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none mt-2"
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
                                 title="Learn more about DMT compliance rules"
                             >
-                                <HelpCircle size={24} />
+                                <HelpCircle size={18} />
                             </button>
                         </h1>
-                        <p className="text-muted-foreground mt-2 font-medium">Active DMT violations requiring attention across your projects.</p>
+                        <p className="text-muted-foreground text-xs font-medium">Active DMT violations requiring attention across your projects.</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap justify-end">
+                    <div className="flex items-center gap-2 flex-wrap justify-start md:justify-end w-full md:w-auto shrink-0">
                         {selectedProjectId !== null && (
                             <SprintSelector
                                 projectId={selectedProjectId}
@@ -282,71 +278,64 @@ export default function CompliancePage() {
                             selectedProjectId={selectedProjectId}
                             onSelect={handleProjectChange}
                         />
-                        <ActiveFolderSelector
-                            projectId={selectedProjectId}
-                            onFolderChanged={() => {
-                                setCurrentPage(1);
-                                fetchData(selectedProjectId, selectedSprintId, workItemId, 1, pageSize, activeFilter);
-                            }}
-                        />
                     </div>
                 </header>
 
                 {/* KPI Overview — all data from backend /api/compliance-summary/ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-green/10 flex items-center justify-center text-green border border-green/20">
-                                <ShieldCheck size={20} />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+                    <Card className="p-3 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <div className="w-8 h-8 rounded-lg bg-green/10 flex items-center justify-center text-green border border-green/20">
+                                <ShieldCheck size={16} />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Overall Health</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_compliance'); }}
                                     className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
                                     title="Learn more about this metric"
                                 >
-                                    <HelpCircle size={16} />
+                                    <HelpCircle size={14} />
                                 </button>
                             </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-foreground">
-                                {summary?.overall_health ?? '—'}<span className="text-sm text-green/50 -ml-0.5">%</span>
+                            <div className="text-2xl font-black text-foreground">
+                                {summary?.overall_health ?? '—'}<span className="text-xs text-green/50 -ml-0.5">%</span>
                             </div>
                         )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">Project compliance rate</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">Project compliance rate</p>
                     </Card>
 
                     <div
                         onClick={() => toggleFilter('critical')}
                         className="cursor-pointer select-none"
                     >
-                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'critical'
-                            ? 'border-destructive ring-2 ring-destructive/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                        <Card className={`p-3 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl ${activeFilter === 'critical'
+                            ? 'border-destructive ring-2 ring-destructive/30 shadow-md'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm'
                             }`}>
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
-                                    <AlertCircle size={20} />
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                                    <AlertCircle size={16} />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
                                         className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
                                         title="Learn more about this metric"
                                     >
-                                        <HelpCircle size={16} />
+                                        <HelpCircle size={14} />
                                     </button>
                                 </div>
                             </div>
                             {summaryLoading ? <KpiSkeleton /> : (
-                                <div className="text-3xl font-black text-destructive">
+                                <div className="text-2xl font-black text-destructive">
                                     {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
                                 </div>
                             )}
-                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                            <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">
                                 {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
                             </p>
                         </Card>
@@ -356,71 +345,71 @@ export default function CompliancePage() {
                         onClick={() => toggleFilter('warning')}
                         className="cursor-pointer select-none"
                     >
-                        <Card className={`p-6 bg-card transition-all duration-300 group ${activeFilter === 'warning'
-                            ? 'border-warning ring-2 ring-warning/30 shadow-lg'
-                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md'
+                        <Card className={`p-3 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl ${activeFilter === 'warning'
+                            ? 'border-warning ring-2 ring-warning/30 shadow-md'
+                            : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm'
                             }`}>
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
-                                    <Activity size={20} />
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
+                                    <Activity size={16} />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
                                         className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
                                         title="Learn more about this metric"
                                     >
-                                        <HelpCircle size={16} />
+                                        <HelpCircle size={14} />
                                     </button>
                                 </div>
                             </div>
                             {summaryLoading ? <KpiSkeleton /> : (
-                                <div className="text-3xl font-black text-warning">
+                                <div className="text-2xl font-black text-warning">
                                     {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
                                 </div>
                             )}
-                            <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">
+                            <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">
                                 {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
                             </p>
                         </Card>
                     </div>
 
-                    <Card className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all duration-300 group">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                                <CheckCircle2 size={20} />
+                    <Card className="p-3 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                <CheckCircle2 size={16} />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliant Items</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleHelpClick('compliant_items'); }}
                                     className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
                                     title="Learn more about this metric"
                                 >
-                                    <HelpCircle size={16} />
+                                    <HelpCircle size={14} />
                                 </button>
                             </div>
                         </div>
                         {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-3xl font-black text-foreground">
+                            <div className="text-2xl font-black text-foreground">
                                 {summary?.compliant_items ?? '—'}
                                 {summary && (
-                                    <span className="text-sm text-muted-foreground font-medium ml-1">/ {summary.total_items}</span>
+                                    <span className="text-xs text-muted-foreground font-medium ml-1">/ {summary.total_items}</span>
                                 )}
                             </div>
                         )}
-                        <p className="text-[10px] text-muted-foreground mt-1 font-bold uppercase tracking-wider">Work items passing DMT</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">Work items passing DMT</p>
                     </Card>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-foreground/90">
-                            <Activity size={20} className="text-primary" />
+                <div className="flex-1 min-h-0 flex flex-col gap-2">
+                    <div className="flex items-center justify-between shrink-0">
+                        <h2 className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground/90">
+                            <Activity size={18} className="text-primary" />
                             Active Violations
                             {activeFilter && (
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${activeFilter === 'critical'
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${activeFilter === 'critical'
                                     ? 'bg-destructive/10 text-destructive border-destructive/30'
                                     : 'bg-warning/10 text-warning border-warning/30'
                                     }`}>
@@ -432,7 +421,7 @@ export default function CompliancePage() {
                                 className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
                                 title="Learn more about this section"
                             >
-                                <HelpCircle size={16} />
+                                <HelpCircle size={14} />
                             </button>
                         </h2>
                         {activeFilter && (
@@ -441,109 +430,109 @@ export default function CompliancePage() {
                                     setActiveFilter(null);
                                     setCurrentPage(1);
                                 }}
-                                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border hover:border-foreground/30 bg-muted"
+                                className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1 rounded-md border border-border hover:border-foreground/30 bg-muted"
                             >
                                 Clear filter
                             </button>
                         )}
                     </div>
-                    <div className="grid gap-4 max-h-[650px] overflow-y-auto pr-2">
+                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1.5 sm:pr-2">
                         {loading ? (
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-2.5">
                                 {[1, 2, 3].map(i => (
-                                    <div key={i} className="h-24 w-full bg-muted border border-border rounded-xl animate-pulse" />
+                                    <div key={i} className="h-20 w-full bg-muted border border-border rounded-xl animate-pulse" />
                                 ))}
                             </div>
                         ) : flags.length === 0 ? (
                             activeFilter ? (
-                                <div className="p-8 text-center bg-muted/30 rounded-2xl border border-border">
+                                <div className="p-6 text-center bg-muted/30 rounded-xl border border-border">
                                     <p className="text-muted-foreground text-sm font-medium">
                                         No {activeFilter} violations in this sprint.
                                     </p>
                                 </div>
                             ) : (
-                                <div className="p-12 text-center bg-green/5 rounded-3xl border border-green/20 shadow-inner">
-                                    <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green/20">
-                                        <CheckCircle className="text-green" size={32} />
+                                <div className="p-8 text-center bg-green/5 rounded-2xl border border-green/20 shadow-inner">
+                                    <div className="w-12 h-12 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-3 border border-green/20">
+                                        <CheckCircle className="text-green" size={24} />
                                     </div>
-                                    <h3 className="text-xl font-black text-foreground tracking-tight">Compliance Maintained</h3>
-                                    <p className="text-emerald-200/60 mt-2 font-medium">No active compliance violations detected for this context.</p>
+                                    <h3 className="text-lg font-black text-foreground tracking-tight">Compliance Maintained</h3>
+                                    <p className="text-emerald-800 dark:text-emerald-300 mt-1 text-xs font-medium">No active compliance violations detected for this context.</p>
                                 </div>
                             )
                         ) : (() => {
                             return flags.map((flag) => (
-                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-6 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-md transition-all group rounded-2xl">
-                                    <div className="space-y-4">
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-3.5 sm:p-4 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all group rounded-xl">
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
                                                 }`}>
                                                 {flag.severity}
                                             </span>
-                                            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
+                                            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
                                                 <Folder size={10} />
                                                 {flag.project_name}
                                             </span>
-                                            <span className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-3 py-1 rounded-full">
-                                                <Calendar size={12} className="text-primary" />
+                                            <span className="flex items-center gap-1 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-2.5 py-0.5 rounded-full">
+                                                <Calendar size={11} className="text-primary" />
                                                 {formatDateTime(flag.created_at)}
                                             </span>
                                             {flag.fixed_later && flag.violations_cleared_at && (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-3 py-1 rounded-full border border-green shadow-sm">
-                                                    <CheckCircle size={12} />
+                                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-2.5 py-0.5 rounded-full border border-green shadow-sm">
+                                                    <CheckCircle size={11} />
                                                     Fixed: {formatDateTime(flag.violations_cleared_at)}
                                                 </span>
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-black text-primary transition-colors tracking-tight">{flag.work_item_title}</h3>
-                                            <p className="text-muted-foreground text-sm mt-1.5 font-medium flex items-center gap-2">
+                                            <h3 className="text-base sm:text-lg font-black text-primary transition-colors tracking-tight leading-snug">{flag.work_item_title}</h3>
+                                            <p className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5 flex-wrap">
                                                 Violation: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border">{FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}</span>
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
                                             {(flag.assignee_names?.length ? flag.assignee_names : [flag.assignee_name]).map((name, i) => (
-                                                <div key={i} className="flex items-center gap-2 text-muted-foreground text-xs bg-muted/50 px-3 py-1.5 rounded-xl border border-border shadow-inner">
-                                                    <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
-                                                        <User size={10} className="text-primary" />
+                                                <div key={i} className="flex items-center gap-1.5 text-muted-foreground text-xs bg-muted/50 px-2.5 py-1 rounded-lg border border-border shadow-inner">
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-primary/20 flex items-center justify-center">
+                                                        <User size={9} className="text-primary" />
                                                     </div>
-                                                    <span className="font-bold text-foreground/80">{name}</span>
+                                                    <span className="font-bold text-foreground/80 text-[11px]">{name}</span>
                                                 </div>
                                             ))}
                                             {flag.responsible_name && (
-                                                <div className="flex items-center gap-2 text-muted-foreground text-xs bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/30 shadow-inner">
-                                                    <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center">
-                                                        <User size={10} className="text-amber-500" />
+                                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30 shadow-inner">
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                        <User size={9} className="text-amber-500" />
                                                     </div>
-                                                    <span className="font-bold text-foreground/80">Responsible {flag.responsible_role}: <span className="text-amber-600 dark:text-amber-400">{flag.responsible_name}</span></span>
+                                                    <span className="font-bold text-foreground/80 text-[11px]">Responsible {flag.responsible_role}: <span className="text-amber-600 dark:text-amber-400">{flag.responsible_name}</span></span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </Card>
-                            ))
+                            ));
                         })()}
                     </div>
                 </div>
 
                 {/* Pagination Controls */}
                 {!loading && (totalPages > 1 || totalCount > 10) && (
-                    <div className="flex flex-wrap items-center justify-between gap-4 py-3 px-6 bg-card border border-border rounded-xl mt-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-4 bg-card border border-border rounded-xl shadow-sm shrink-0">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-muted-foreground">Rows per page</span>
+                            <span className="text-xs font-medium text-muted-foreground">Rows per page</span>
                             <select
                                 value={pageSize}
                                 onChange={(e) => {
                                     setPageSize(Number(e.target.value));
                                     setCurrentPage(1);
                                 }}
-                                className="bg-muted border border-border text-foreground rounded-lg px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                                className="bg-muted border border-border text-foreground rounded-md px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                             >
                                 <option value={10}>10</option>
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span className="text-sm font-medium text-muted-foreground ml-2 border-l border-border pl-4">
+                            <span className="text-xs font-medium text-muted-foreground ml-2 border-l border-border pl-3">
                                 Total {totalCount} items
                             </span>
                         </div>
@@ -551,20 +540,20 @@ export default function CompliancePage() {
                             <button
                                 onClick={() => setCurrentPage(1)}
                                 disabled={currentPage === 1}
-                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
                                 title="First Page"
                             >
-                                <ChevronsLeft size={16} />
+                                <ChevronsLeft size={14} />
                             </button>
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
                                 title="Previous Page"
                             >
-                                <ChevronLeft size={16} />
+                                <ChevronLeft size={14} />
                             </button>
-                            <div className="flex items-center gap-1 px-2">
+                            <div className="flex items-center gap-1 px-1">
                                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                     let pageNum = currentPage;
                                     if (totalPages <= 5) pageNum = i + 1;
@@ -578,7 +567,7 @@ export default function CompliancePage() {
                                         <button
                                             key={pageNum}
                                             onClick={() => setCurrentPage(pageNum)}
-                                            className={`min-w-[32px] h-8 px-2 rounded-full flex items-center justify-center text-sm font-bold transition border ${currentPage === pageNum ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'}`}
+                                            className={`min-w-[28px] h-7 px-1.5 rounded-full flex items-center justify-center text-xs font-bold transition border ${currentPage === pageNum ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'}`}
                                         >
                                             {pageNum}
                                         </button>
@@ -586,10 +575,10 @@ export default function CompliancePage() {
                                 })}
                                 {totalPages > 5 && currentPage < totalPages - 2 && (
                                     <>
-                                        <span className="text-muted-foreground px-1 font-bold">...</span>
+                                        <span className="text-muted-foreground px-0.5 text-xs font-bold">...</span>
                                         <button
                                             onClick={() => setCurrentPage(totalPages)}
-                                            className="min-w-[32px] h-8 px-2 rounded-full flex items-center justify-center text-sm font-bold text-muted-foreground border border-transparent hover:bg-muted hover:border-border transition"
+                                            className="min-w-[28px] h-7 px-1.5 rounded-full flex items-center justify-center text-xs font-bold text-muted-foreground border border-transparent hover:bg-muted hover:border-border transition"
                                         >
                                             {totalPages}
                                         </button>
@@ -600,18 +589,18 @@ export default function CompliancePage() {
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
                                 title="Next Page"
                             >
-                                <ChevronRight size={16} />
+                                <ChevronRight size={14} />
                             </button>
                             <button
                                 onClick={() => setCurrentPage(totalPages)}
                                 disabled={currentPage === totalPages}
-                                className="p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-lg transition"
+                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
                                 title="Last Page"
                             >
-                                <ChevronsRight size={16} />
+                                <ChevronsRight size={14} />
                             </button>
                         </div>
                     </div>
@@ -624,6 +613,6 @@ export default function CompliancePage() {
                 onClose={handleCloseHelp}
                 activeTermId={activeHelpId}
             />
-        </main>
+        </div>
     );
 }

@@ -595,12 +595,12 @@ function OrgChartPageContent() {
 
 
     return (
-        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-6">
+        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-4 sm:gap-6 overflow-x-hidden">
             <Toaster position="top-center" reverseOrder={false} />
 
             {/* Header section matching calendar page layout */}
             <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                     {/* Go Back button */}
                     <button
                         onClick={() => router.push('/home')}
@@ -612,22 +612,20 @@ function OrgChartPageContent() {
 
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <Network className="w-7 h-7 text-primary" strokeWidth={2.5} />
-                            <h1 className="text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
+                            <Network className="w-6 h-6 sm:w-7 sm:h-7 text-primary shrink-0" strokeWidth={2.5} />
+                            <h1 className="text-2xl sm:text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
                                 Organisation Chart
                             </h1>
                         </div>
-
                     </div>
                 </div>
 
                 {/* Float Settings / Controls Panel */}
-                <div className="shrink-0">
+                <div className="shrink-0 w-full sm:w-auto">
                     <OrgChartControls
                         currentDirection={layoutDirection}
                         onAutoArrange={handleAutoArrange}
                         onAddClick={handleAddClick}
-
                         isManager={isManager}
                     />
                 </div>
@@ -636,8 +634,8 @@ function OrgChartPageContent() {
             {/* Core Canvas Wrapper Container */}
             <div
                 ref={reactFlowWrapper}
-                className="w-full bg-card rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
-                style={{ height: 'calc(100vh - 240px)', minHeight: '580px' }}
+                className="w-full bg-card rounded-2xl sm:rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden flex-1"
+                style={{ height: 'calc(100vh - 240px)', minHeight: '480px' }}
             >
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full w-full space-y-4">

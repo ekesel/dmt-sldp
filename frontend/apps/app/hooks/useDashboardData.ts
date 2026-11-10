@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from './useWebSocket';
-import api, { aiInsights, resourceAllocations, DeveloperMatrixRow, WorkloadWarning } from '@dmt/api';
+import api, { aiInsights, resourceAllocations, sprints, DeveloperMatrixRow, WorkloadWarning } from '@dmt/api';
 import { toast } from 'react-hot-toast';
 
 export interface DashboardSummary {
@@ -52,6 +52,15 @@ export interface AssigneeEntry {
   effective_load?: number;
   has_allocation?: boolean;
   allocation_percentage?: number | null;
+  allocation_period_label?: string;
+}
+
+export interface SprintDateInfo {
+  id: number;
+  name?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  status?: string;
 }
 
 export interface DashboardDataResult {
@@ -62,6 +71,7 @@ export interface DashboardDataResult {
   forecast: Record<string, string> | null;
   assigneeDistribution: AssigneeEntry[];
   workloadWarnings: WorkloadWarning[];
+  targetMonth?: { month: number; year: number; label: string };
 }
 
 export function useDashboardData(
@@ -69,7 +79,8 @@ export function useDashboardData(
   startDate?: string | null,
   endDate?: string | null,
   sprintId?: number | number[] | string | null,
-  sprintIds?: number | number[] | string | null
+  sprintIds?: number | number[] | string | SprintDateInfo[] | null,
+  selectedSprints?: SprintDateInfo[] | null
 ) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
@@ -79,13 +90,28 @@ export function useDashboardData(
 
   const { lastMessage } = useWebSocket();
 
+  // Allow flexible sprintIds vs selectedSprints parameter positions
+  const actualSelectedSprints: SprintDateInfo[] | null = (
+    Array.isArray(sprintIds) && sprintIds.length > 0 && typeof sprintIds[0] === 'object'
+      ? (sprintIds as unknown as SprintDateInfo[])
+      : (selectedSprints ?? null)
+  );
+
+  const rawSprintParam = Array.isArray(sprintIds) && sprintIds.length > 0 && typeof sprintIds[0] === 'object'
+    ? null
+    : sprintIds;
+
   // When All Projects is selected (projectId is null/undefined), ignore any sprint IDs
-  const effectiveSprintIds = projectId ? (sprintIds ?? sprintId) : null;
+  const effectiveSprintIds = projectId ? (rawSprintParam ?? sprintId) : null;
   const sprintKey = Array.isArray(effectiveSprintIds)
     ? effectiveSprintIds.join(',')
     : (effectiveSprintIds ?? 'all');
 
-  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? '', sprintKey];
+  const sprintsKeyPart = actualSelectedSprints && actualSelectedSprints.length > 0
+    ? actualSelectedSprints.map(s => `${s.id}:${s.end_date || s.start_date || ''}`).join(',')
+    : sprintKey;
+
+  const queryKey = ['dashboard-data', projectId ?? 'all', startDate ?? '', endDate ?? '', sprintsKeyPart];
 
   const { data, isLoading, isFetching, error, refetch } = useQuery<DashboardDataResult, Error>({
     queryKey,
@@ -109,9 +135,78 @@ export function useDashboardData(
 
       const warningsParams: Record<string, any> = projectId ? { project_id: projectId } : {};
 
+      // Determine the target date / period for resource allocation
       const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+      let targetMonth = now.getMonth() + 1;
+      let targetYear = now.getFullYear();
+      let determinedDateStr: string | null = null;
+
+      if (endDate) {
+        determinedDateStr = endDate;
+      } else if (startDate) {
+        determinedDateStr = startDate;
+      } else if (actualSelectedSprints && actualSelectedSprints.length > 0) {
+        const dates = actualSelectedSprints
+          .map(s => s.end_date || s.start_date)
+          .filter(Boolean) as string[];
+        if (dates.length > 0) {
+          dates.sort();
+          determinedDateStr = dates[dates.length - 1];
+        }
+      } else if (projectId && effectiveSprintIds) {
+        // Fallback: look up sprint dates via API if not passed in actualSelectedSprints
+        try {
+          const list = await sprints.list(projectId);
+          const idSet = new Set(
+            Array.isArray(effectiveSprintIds)
+              ? effectiveSprintIds.map(String)
+              : [String(effectiveSprintIds)]
+          );
+          const matched = (list || []).filter((s: any) => idSet.has(String(s.id)));
+          const dates = matched
+            .map((s: any) => s.end_date || s.start_date)
+            .filter(Boolean) as string[];
+          if (dates.length > 0) {
+            dates.sort();
+            determinedDateStr = dates[dates.length - 1];
+          }
+        } catch {
+          // fallback to now
+        }
+      }
+
+      if (determinedDateStr) {
+        const match = determinedDateStr.match(/^(\d{4})-(\d{2})/);
+        if (match) {
+          targetYear = parseInt(match[1], 10);
+          targetMonth = parseInt(match[2], 10);
+        } else {
+          const d = new Date(determinedDateStr);
+          if (!isNaN(d.getTime())) {
+            targetYear = d.getFullYear();
+            targetMonth = d.getMonth() + 1;
+          }
+        }
+      }
+
+      const MONTH_NAMES = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === (now.getMonth() + 1);
+      const allocationPeriodLabel = isCurrentMonth
+        ? 'this month'
+        : `${MONTH_NAMES[targetMonth - 1]} ${targetYear}`;
+
+      const overviewPromise = resourceAllocations?.getOverview
+        ? resourceAllocations.getOverview({ month: targetMonth, year: targetYear })
+            .then(r => r?.data || null)
+            .catch(() =>
+              resourceAllocations.getOverview?.()
+                ?.then(r => r?.data || null)
+                ?.catch(() => null) ?? null
+            )
+        : Promise.resolve(null);
 
       const [summaryData, velocityData, complianceData, rawAssigneeData, warningsData, allocationOverview] = await Promise.all([
         api.get<DashboardSummary>('dashboard/summary/', { params }).then(r => r.data),
@@ -119,13 +214,7 @@ export function useDashboardData(
         api.get<ComplianceData[]>('dashboard/compliance/', { params }).then(r => r.data),
         api.get<AssigneeEntry[]>('dashboard/assignee-distribution/', { params }).then(r => r.data).catch(() => []),
         api.get<{ warnings: WorkloadWarning[] }>('dashboard/workload-warnings/', { params: warningsParams }).then(r => r.data?.warnings || []).catch(() => []),
-        resourceAllocations.getOverview({ month: currentMonth, year: currentYear })
-          .then(r => r.data)
-          .catch(() =>
-            resourceAllocations.getOverview()
-              .then(r => r.data)
-              .catch(() => null)
-          ),
+        overviewPromise,
       ]);
 
       const devById = new Map<number, DeveloperMatrixRow>();
@@ -155,7 +244,7 @@ export function useDashboardData(
               allocPct = Number(dev.total_allocated_percentage ?? 0);
             }
           } else {
-            // Not in developer allocation sheet for this month => 0% allocation
+            // Not in developer allocation sheet for this period => 0% allocation
             allocPct = 0;
           }
           hasAlloc = allocPct > 0;
@@ -165,6 +254,7 @@ export function useDashboardData(
           ...assignee,
           allocation_percentage: allocPct,
           has_allocation: hasAlloc,
+          allocation_period_label: allocationPeriodLabel,
         };
       });
 
@@ -176,6 +266,11 @@ export function useDashboardData(
         forecast: null,
         assigneeDistribution: assigneeData,
         workloadWarnings: warningsData,
+        targetMonth: {
+          month: targetMonth,
+          year: targetYear,
+          label: allocationPeriodLabel,
+        },
       };
     },
     enabled: Boolean(token),

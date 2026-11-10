@@ -23,17 +23,17 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
     }, []);
 
     if (!isMounted) {
-        return <div className="w-full h-full min-h-[300px]" />;
+        return <div className="w-full h-full min-h-[260px]" />;
     }
 
     if (!data || data.length === 0) {
-        return <div className="w-full h-full min-h-[300px] flex items-center justify-center text-muted-foreground">No velocity data available</div>;
+        return <div className="w-full h-full min-h-[260px] flex items-center justify-center text-muted-foreground text-sm">No velocity data available</div>;
     }
 
     return (
-        <div className="w-full h-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-                <AreaChart data={data} margin={{ top: 10, right: 30, left: 80, bottom: 30 }}>
+        <div className="w-full h-full min-h-[260px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={260}>
+                <AreaChart data={data} margin={{ top: 10, right: 15, left: 0, bottom: 25 }}>
                     <defs>
                         <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
@@ -90,8 +90,9 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
                         }}
                     />
                     <YAxis
+                        width={55}
                         stroke="var(--color-muted-foreground)"
-                        fontSize={12}
+                        fontSize={11}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => `${value} SP`}

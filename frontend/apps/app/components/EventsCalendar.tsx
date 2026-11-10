@@ -30,12 +30,12 @@ const EventsCalendar: React.FC = () => {
     // Fetch holidays once on mount
     useEffect(() => {
         dashboard.getHolidays()
-            .then((data: any) => {
-                // API returns { holidays: [...] } — extract the array
-                const list = Array.isArray(data)
-                    ? data
-                    : Array.isArray(data?.holidays)
-                        ? data.holidays
+            .then((data: unknown) => {
+                const record = data as { holidays?: Holiday[] } | Holiday[] | undefined;
+                const list = Array.isArray(record)
+                    ? record
+                    : Array.isArray(record?.holidays)
+                        ? record.holidays
                         : [];
                 setHolidays(list);
             })
@@ -104,27 +104,27 @@ const EventsCalendar: React.FC = () => {
     }, []);
 
     return (
-        <Card className="overflow-hidden border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] bg-card rounded-[1.5rem] px-3 pb-1 pt-1.5 sm:px-4 sm:pb-1 sm:pt-2 lg:px-5 lg:pb-2 lg:pt-3 xl:px-4 xl:pb-0 xl:pt-2 w-full h-full xl:max-h-[16.25rem]">
-            <div className="flex flex-col space-y-2 sm:space-y-3 lg:space-y-4 xl:space-y-1">
+        <Card className="overflow-hidden border border-border shadow-sm bg-card rounded-2xl p-3 sm:p-4 w-full h-full min-h-[14rem] sm:min-h-[15rem] md:min-h-[16.25rem] xl:max-h-[16.25rem] flex flex-col justify-between">
+            <div className="flex flex-col space-y-1 sm:space-y-1.5 xl:space-y-1">
                 {/* Header */}
                 <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                        <button onClick={handlePrevMonth} className="p-1 rounded-full hover:bg-secondary transition-colors">
-                            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 xl:h-4 xl:w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <button onClick={handlePrevMonth} className="p-1 rounded-full hover:bg-secondary transition-colors" aria-label="Previous month">
+                            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                         </button>
-                        <p className="text-[0.8125rem] sm:text-[0.875rem] lg:text-[1rem] xl:text-[1rem] font-bold text-card-foreground">
+                        <p className="text-xs sm:text-sm md:text-base font-bold text-card-foreground">
                             {MONTH_NAMES[currentMonth]} {currentYear}
                         </p>
-                        <button onClick={handleNextMonth} className="p-1 rounded-full hover:bg-secondary transition-colors">
-                            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 xl:h-4 xl:w-4 text-muted-foreground" />
+                        <button onClick={handleNextMonth} className="p-1 rounded-full hover:bg-secondary transition-colors" aria-label="Next month">
+                            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                         </button>
                     </div>
                 </div>
 
                 {/* Calendar Grid */}
-                <div className="relative grid grid-cols-7 gap-y-1 sm:gap-y-1.5 lg:gap-y-2 xl:gap-y-0.5 text-center">
+                <div className="relative grid grid-cols-7 gap-y-0.5 sm:gap-y-1 text-center">
                     {DAYS.map((d) => (
-                        <span key={d} className="text-[0.625rem] sm:text-[0.6875rem] lg:text-[0.8125rem] xl:text-[0.75rem] font-bold text-muted-foreground mb-0.5 sm:mb-1 lg:mb-1.5 xl:mb-1">
+                        <span key={d} className="text-[0.625rem] sm:text-xs font-bold text-muted-foreground mb-0.5 sm:mb-1">
                             {d.slice(0, 2)}
                         </span>
                     ))}
@@ -144,7 +144,7 @@ const EventsCalendar: React.FC = () => {
                         return (
                             <div
                                 key={i}
-                                className="flex flex-col items-center justify-center relative py-0.5 sm:py-1 lg:py-1.5 xl:py-0"
+                                className="flex flex-col items-center justify-center relative py-0.5"
                             >
                                 <div
                                     title={isHoliday ? holidayNames.join(', ') : undefined}
@@ -154,12 +154,12 @@ const EventsCalendar: React.FC = () => {
                                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                             setTooltip({
                                                 text: holidayNames.join(', '),
-                                                x: rect.left + rect.width / 2,
+                                                x: Math.max(70, Math.min(window.innerWidth - 70, rect.left + rect.width / 2)),
                                                 y: rect.bottom + 6,
                                             });
                                         }
                                     }}
-                                    className={`flex h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 xl:h-7 xl:w-7 items-center justify-center rounded-full text-[0.625rem] sm:text-[0.75rem] lg:text-[0.875rem] xl:text-[0.875rem] font-semibold transition-all ${
+                                    className={`flex h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 xl:h-7 xl:w-7 items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-all ${
                                         isHoliday ? 'cursor-pointer' : 'cursor-default'
                                     } ${
                                         isToday

@@ -97,6 +97,11 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                 return false;
             }
 
+            // Warnings reflect current month setup gaps; do not flag assignees against current-month warnings when viewing past periods
+            if (person.allocation_period_label && person.allocation_period_label !== 'this month') {
+                return false;
+            }
+
             const nameLower = person.name.toLowerCase();
             const emailPrefix = person.email.split('@')[0].toLowerCase();
             return (
@@ -132,14 +137,14 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
     const maxTotal = Math.max(...sortedAssignees.map((a) => a.completed + a.in_progress), 1);
 
     return (
-        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6">
+        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-4 sm:p-6">
             {/* Header */}
-            <div className="flex items-center gap-2 mb-5">
-                <Users className="text-primary w-5 h-5" />
-                <div className="flex items-baseline gap-2">
-                    <h2 className="text-xl font-bold text-foreground">Team Workload</h2>
-                    <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+                <div className="flex items-center gap-2">
+                    <Users className="text-primary w-5 h-5 shrink-0" />
+                    <h2 className="text-lg sm:text-xl font-bold text-foreground">Team Workload</h2>
                 </div>
+                <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
                 <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
             </div>
 
@@ -207,7 +212,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                                         )}
                                         {isZeroAllocation && (
                                             <span
-                                                title="0% allocation for this month"
+                                                title={`0% allocation for ${person.allocation_period_label || 'this month'}`}
                                                 className="text-destructive inline-flex items-center cursor-default"
                                             >
                                                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />

@@ -106,19 +106,19 @@ export default function ProfilePage() {
     ].filter(Boolean) as { label: string; color: string }[];
 
     return (
-        <div className="min-h-screen bg-background p-6 md:p-10">
-            <div className="max-w-2xl mx-auto space-y-6">
+        <div className="min-h-full bg-background p-4 sm:p-6 md:p-10 overflow-x-hidden">
+            <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
 
                 {/* Header card */}
-                <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card/80 to-card/60 backdrop-blur-xl p-8 shadow-2xl">
+                <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card/80 to-card/60 backdrop-blur-xl p-4 sm:p-6 md:p-8 shadow-2xl">
                     {/* Decorative gradient blob */}
                     <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="relative flex items-center gap-6">
+                    <div className="relative flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-6">
                         {/* Avatar */}
                         <button
                             type="button"
-                            className="flex-shrink-0 w-24 h-24 rounded-2xl relative group cursor-pointer overflow-hidden shadow-xl shadow-primary/30"
+                            className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl relative group cursor-pointer overflow-hidden shadow-xl shadow-primary/30"
                             onClick={() => fileInputRef.current?.click()}
                             aria-label="Upload avatar"
                         >
@@ -126,7 +126,7 @@ export default function ProfilePage() {
                                 <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                                    <span className="text-3xl font-bold text-primary-foreground">{initials}</span>
+                                    <span className="text-2xl sm:text-3xl font-bold text-primary-foreground">{initials}</span>
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -142,15 +142,15 @@ export default function ProfilePage() {
                         </button>
 
                         {/* Name + badges */}
-                        <div className="flex-1 min-w-0">
-                            <h1 className="text-2xl font-bold text-foreground truncate">{fullName}</h1>
-                            <p className="text-muted-foreground text-sm mt-0.5">{user?.email}</p>
-                            <p className="text-xs text-primary/80 font-bold uppercase tracking-widest mt-1">
+                        <div className="flex-1 min-w-0 w-full">
+                            <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{fullName}</h1>
+                            <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 truncate">{user?.email}</p>
+                            <p className="text-[10px] sm:text-xs text-primary/80 font-bold uppercase tracking-widest mt-1">
                                 {user?.custom_title || 'Engineering Team'}
                             </p>
 
                             {badges.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
+                                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 sm:gap-2 mt-3">
                                     {badges.map((b) => (
                                         <span
                                             key={b.label}
@@ -168,19 +168,19 @@ export default function ProfilePage() {
 
                 {/* Details card */}
                 <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-xl shadow-xl overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border flex items-center gap-2">
                         <Shield className="w-4 h-4 text-primary" />
-                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Account Details</h2>
+                        <h2 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">Account Details</h2>
                     </div>
 
                     <ul className="divide-y divide-border">
                         {infoItems.map((item) => (
-                            <li key={item.label} className="flex items-center justify-between px-6 py-4 hover:bg-muted/10 transition-colors">
-                                <div className="flex items-center gap-3">
+                            <li key={item.label} className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 hover:bg-muted/10 transition-colors gap-2">
+                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                                     {item.icon}
-                                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                                    <span className="text-xs sm:text-sm text-muted-foreground">{item.label}</span>
                                 </div>
-                                <span className="text-sm font-medium text-foreground text-right max-w-xs truncate">
+                                <span className="text-xs sm:text-sm font-medium text-foreground text-right max-w-[12rem] sm:max-w-xs truncate">
                                     {item.value || '—'}
                                 </span>
                             </li>

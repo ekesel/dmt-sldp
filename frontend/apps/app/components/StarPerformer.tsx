@@ -297,11 +297,11 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
     const isTrophyMuted = !loading && dataList.length === 0;
 
     return (
-        <div className="bg-card rounded-[1.5rem] border border-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.05)] p-3 sm:px-4 sm:pt-3 sm:pb-2 w-full h-full md:min-h-[12rem] lg:min-h-[10.5rem] xl:min-h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col">
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-3 sm:p-4 md:p-5 w-full h-full min-h-[14rem] sm:min-h-[15rem] md:min-h-[16.25rem] xl:h-[16.25rem] xl:max-h-[16.25rem] overflow-hidden flex flex-col justify-between">
             {/* Header Section - Stably rendered at all times to eliminate full card reflows */}
             <div className="flex justify-between items-start mb-1 sm:mb-1.5 flex-shrink-0">
-                <div className="flex flex-col gap-1">
-                    <h2 className="text-[1.125rem] sm:text-[1.25rem] md:text-[1.375rem] font-black text-card-foreground tracking-tight">
+                <div className="flex flex-col gap-1 min-w-0">
+                    <h2 className="text-base sm:text-lg md:text-xl font-black text-card-foreground tracking-tight truncate">
                         Star Performer
                     </h2>
 
@@ -331,7 +331,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                         </div>
                     )}
                 </div>
-                <div className={`relative w-12 h-12 sm:w-16 sm:h-16 -mr-1 -mt-1 transition-opacity duration-300 ${isTrophyMuted ? 'opacity-40' : 'opacity-100'}`}>
+                <div className={`relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 -mr-1 -mt-1 transition-opacity duration-300 ${isTrophyMuted ? 'opacity-40' : 'opacity-100'}`}>
                     <Image
                         src="/assets/trophy.png"
                         alt="Trophy"
@@ -343,14 +343,14 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
             </div>
 
             {/* Divider */}
-            <div className="h-[0.0625rem] bg-border w-full mb-2 sm:mb-3" />
+            <div className="h-[0.0625rem] bg-border w-full mb-1.5 sm:mb-2" />
 
             {/* Body Section */}
             <div className="relative flex-1 flex items-center min-h-0">
                 {loading && dataList.length === 0 ? (
                     /* Inner skeleton only when cold cache, preserving stable outer card shell */
-                    <div className="flex gap-3 sm:gap-5 items-center w-full animate-pulse">
-                        <div className="w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] bg-muted flex-shrink-0" />
+                    <div className="flex gap-3 sm:gap-4 items-center w-full animate-pulse">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl bg-muted flex-shrink-0" />
                         <div className="flex flex-col justify-center py-0.5 flex-1 gap-2">
                             <div className="h-4 w-3/4 bg-muted rounded" />
                             <div className="h-3 w-1/2 bg-muted rounded" />
@@ -360,10 +360,10 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                 ) : dataList.length === 0 ? (
                     /* Empty State */
                     <div className="flex flex-col items-center justify-center flex-1 text-center py-2 px-4">
-                        <p className="text-[0.875rem] font-bold text-muted-foreground mb-1">
+                        <p className="text-sm font-bold text-muted-foreground mb-1">
                             No star performers yet
                         </p>
-                        <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground/70 font-medium max-w-[15rem] leading-snug">
+                        <p className="text-xs sm:text-sm text-muted-foreground/70 font-medium max-w-[15rem] leading-snug">
                             Keep pushing boundaries to claim the trophy next month!
                         </p>
                     </div>
@@ -376,10 +376,10 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -16 }}
                             transition={{ duration: 0.25, ease: "easeOut" }}
-                            className="flex gap-3 sm:gap-5 items-center w-full"
+                            className="flex gap-3 sm:gap-4 items-center w-full"
                         >
                             {/* Avatar */}
-                            <div className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.9375rem] sm:h-[5.9375rem] rounded-[1.125rem] overflow-hidden flex-shrink-0 shadow-sm border border-border bg-muted flex items-center justify-center">
+                            <div className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-border bg-muted flex items-center justify-center">
                                 {isImageError ? (
                                     <span className="text-xl sm:text-2xl font-bold text-primary select-none">
                                         {currentPerformer?.name?.charAt(0)?.toUpperCase() || '★'}
@@ -389,7 +389,7 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                                         src={currentPerformer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentPerformer?.name || 'Star')}&background=0D8ABC&color=fff&size=128&bold=true`}
                                         alt={currentPerformer?.name || 'Star Performer'}
                                         fill
-                                        sizes="(max-width: 640px) 4.5rem, 5.9375rem"
+                                        sizes="(max-width: 640px) 3.5rem, 5rem"
                                         className="object-cover"
                                         unoptimized
                                         priority
@@ -401,13 +401,13 @@ export const StarPerformer: React.FC<StarPerformerProps> = ({
                             </div>
 
                             <div className="flex flex-col justify-center py-0.5 min-w-0 flex-1">
-                                <h3 className="text-[0.9375rem] sm:text-[1rem] font-bold text-card-foreground leading-tight mb-0.5 break-words">
+                                <h3 className="text-sm sm:text-base font-bold text-card-foreground leading-tight mb-0.5 truncate">
                                     {currentPerformer?.name}
                                 </h3>
-                                <p className="text-[0.8125rem] sm:text-[0.875rem] font-bold text-muted-foreground/80 mb-1 leading-none">
+                                <p className="text-xs sm:text-sm font-bold text-muted-foreground/80 mb-1 leading-none truncate">
                                     {currentPerformer?.role}
                                 </p>
-                                <p className="text-[0.75rem] sm:text-[0.8125rem] text-muted-foreground font-medium mb-1.5 sm:mb-2 leading-snug break-words">
+                                <p className="text-xs sm:text-sm text-muted-foreground font-medium leading-snug break-words line-clamp-2 sm:line-clamp-3">
                                     {currentPerformer?.message}
                                 </p>
                             </div>

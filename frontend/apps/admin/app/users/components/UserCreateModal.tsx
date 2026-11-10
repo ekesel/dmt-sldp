@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Shield, User as UserIcon, Mail, Lock, Briefcase, BarChart2 } from 'lucide-react';
-import { users as usersApi, orgChart } from '@dmt/api';
+import { toast } from 'react-hot-toast';
+import { users as usersApi, orgChart, CreateUserPayload } from '@dmt/api';
 import { useAuth } from '../../auth/AuthContext';
 import { PasswordInput } from '@dmt/ui';
 
@@ -68,7 +69,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 is_manager: formData.role === 'Manager',
             };
 
-            const createPayload: any = {
+            const createPayload: CreateUserPayload = {
                 ...formData,
                 role: formData.designation ? Number(formData.designation) : null,
                 ...roleFlags,
@@ -81,6 +82,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 delete createPayload.seniority_effective_from;
             }
             await usersApi.create(createPayload);
+            toast.success('User created successfully');
             onSuccess?.();
             onClose();
             // Reset form
@@ -96,8 +98,40 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                 seniority: '',
                 seniority_effective_from: '',
             });
-        } catch (err: any) {
-            setError(err.message || 'Failed to create user');
+        } catch (err: unknown) {
+            let errorMessage = 'Failed to create user';
+            if (err && typeof err === 'object' && 'response' in err) {
+                const response = (err as { response?: { data?: unknown } }).response;
+                if (response?.data) {
+                    const data = response.data;
+                    if (typeof data === 'string') {
+                        errorMessage = data;
+                    } else if (typeof data === 'object' && data !== null) {
+                        const dataObj = data as Record<string, unknown>;
+                        if (typeof dataObj.message === 'string') {
+                            errorMessage = dataObj.message;
+                        } else if (typeof dataObj.detail === 'string') {
+                            errorMessage = dataObj.detail;
+                        } else if (typeof dataObj.error === 'string') {
+                            errorMessage = dataObj.error;
+                        } else {
+                            const firstKey = Object.keys(dataObj)[0];
+                            if (firstKey) {
+                                const firstVal = dataObj[firstKey];
+                                if (Array.isArray(firstVal) && firstVal.length > 0) {
+                                    errorMessage = `${firstKey}: ${String(firstVal[0])}`;
+                                } else if (typeof firstVal === 'string') {
+                                    errorMessage = `${firstKey}: ${firstVal}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (err instanceof Error) {
+                errorMessage = err.message;
+            }
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
