@@ -37,6 +37,33 @@ def resolved_in_sprint(sprint):
     return window
 
 
+def in_sprint(sprint):
+    """Items whose sprint is this one, or that also sit in its list (ClickUp carry-over / TIML, see WorkItem.sprints)."""
+    members = WorkItem.sprints.through.objects.filter(sprint_id=sprint.id).values('workitem_id')
+    return Q(sprint=sprint) | Q(id__in=members)
+
+
+def counted_done(done_items, sprint, is_clickup):
+    """
+    ClickUp sprint report rules (matched against OCS Sprint 28-36): not items already done before the sprint
+    started (added to a later sprint list after completion), and not 'Closed' (closed without being done).
+    A task carried over and done later still counts in every sprint list it sits in, like ClickUp's report
+    (OCS bulk-closed Sprint 29/30 work in Sprint 33). Jira/ADO are unchanged: not verified against their reports.
+    """
+    if not is_clickup:
+        return done_items
+    if sprint.start_date:
+        done_items = done_items.exclude(resolved_at__date__lt=timezone.localtime(sprint.start_date).date())
+    # 'Closed' means "not done" only once the workspace has a separate Done status: OCS Sprint 1-2 closed
+    # everything as 'Closed', later sprints use 'done' and keep 'Closed' for dropped work.
+    # ponytail: per-sprint guess; make it a per-source status setting if a workspace mixes both meanings.
+    has_done_status = (WorkItem.objects.filter(in_sprint(sprint), source_config_id=sprint.source_config_id, status_category='done')
+                       .exclude(status__iexact='closed').exists())
+    if has_done_status:
+        done_items = done_items.exclude(status__iexact='closed')
+    return done_items
+
+
 # A PR counts for AI % only if its diff was really analyzed and it added code. Connectors store
 # 0% with total_changed_lines=0 when the diff fetch fails, so those must not drag the average down.
 ANALYZED_PRS = Q(ai_code_percent__isnull=False, total_changed_lines__gt=0)
@@ -179,12 +206,15 @@ class MetricService:
         projects = list(Project.objects.all()) + [None] # All projects + Global (None)
         # Bugs Resolved uses the sprint's date window for Jira sprints only (see resolved_in_sprint).
         is_jira_sprint = SourceConfiguration.objects.filter(id=sprint.source_config_id, source_type='jira').exists()
+        is_clickup_sprint = SourceConfiguration.objects.filter(id=sprint.source_config_id, source_type='clickup').exists()
         
         results = []
         for project in projects:
             # 1. Base query for this sprint — exclude sub-tasks and epics/features to avoid double-counting
-            story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
-            work_items = WorkItem.objects.filter(story_filter, sprint=sprint)
+            # Jira/ADO stories sit under epics; in ClickUp any task with a parent (an Epic included) is a subtask.
+            top_level = Q(parent__isnull=True) if is_clickup_sprint else Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])
+            story_filter = top_level & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
+            work_items = WorkItem.objects.filter(story_filter).filter(in_sprint(sprint))
             
             # Apply project and folder filtering
             if project:
@@ -233,7 +263,7 @@ class MetricService:
                 # Existence check must include ALL item types (bugs included) — work_items above
                 # excludes bugs via story_filter, so a bug-only sprint would otherwise be skipped
                 # and its SprintMetrics row (incl. bugs_completed) would never get created/updated.
-                all_items_qs = WorkItem.objects.filter(sprint=sprint, source_config_id__in=source_conf_ids)
+                all_items_qs = WorkItem.objects.filter(in_sprint(sprint), source_config_id__in=source_conf_ids)
                 if has_folder_filters:
                     all_items_qs = all_items_qs.filter(~Q(source_config_id__in=sources_with_folders) | filters)
                 # The project's own sprint still gets a row when empty, so it shows as 0 in the graph
@@ -245,14 +275,14 @@ class MetricService:
                 if not own_sprint and not all_items_qs.exists():
                     continue # Skip projects with no items of any type in this sprint
 
-            completed_items = work_items.filter(status_category='done')
-            
+            completed_items = counted_done(work_items.filter(status_category='done'), sprint, is_clickup_sprint)
+
             # 2. Velocity & Points
             points_stats = completed_items.aggregate(total_points=Sum('story_points'))
             velocity = points_stats['total_points'] or 0
             
             # 3. Throughput & Bugs (query all sprint work_items directly for bugs so ~Q(item_type__iexact='bug') in story_filter doesn't exclude them)
-            all_sprint_items = WorkItem.objects.filter(sprint=sprint)
+            all_sprint_items = WorkItem.objects.filter(in_sprint(sprint))
             if project:
                 all_sprint_items = all_sprint_items.filter(source_config_id__in=source_conf_ids)
                 if has_folder_filters:
@@ -265,6 +295,8 @@ class MetricService:
             # (40 Tatva bugs share one resolved date), so the window would zero them out.
             if is_jira_sprint:
                 done_bugs = done_bugs.filter(resolved_in_sprint(sprint))
+            else:
+                done_bugs = counted_done(done_bugs, sprint, is_clickup_sprint)
             completed_bugs = done_bugs.count()
             completed_stories = completed_items.filter(item_type__iexact='story').count()
             
@@ -277,7 +309,7 @@ class MetricService:
             defects = all_sprint_items.filter(item_type__iexact='bug').count()
             
             # 6. Cycle Time
-            avg_cycle_time = MetricService.calculate_cycle_time(work_items)
+            avg_cycle_time = MetricService.calculate_cycle_time(completed_items)
 
             # 7. AI Usage (Rollup from WorkItems and PRs)
             avg_ai_usage = work_items.filter(ai_usage_percent__gt=0).aggregate(avg=Avg('ai_usage_percent'))['avg'] or 0
@@ -596,13 +628,13 @@ class MetricService:
             
             # 1. Collect developer emails from all work items in this sprint
             raw_emails = set(WorkItem.objects.filter(
-                sprint=sprint,
+                in_sprint(sprint),
                 source_config_id__in=source_conf_ids,
             ).values_list('assignee_email', flat=True).distinct())
 
             # Also include developers who appear as sub-task contributors
             for contrib_item in WorkItem.objects.filter(
-                sprint=sprint,
+                in_sprint(sprint),
                 source_config_id__in=source_conf_ids,
             ).exclude(assignee_contributions=[]).only('assignee_contributions'):
                 for c in (contrib_item.assignee_contributions or []):
@@ -648,7 +680,7 @@ class MetricService:
 
                 base_work_items = WorkItem.objects.filter(
                     contrib_filter,
-                    sprint=sprint,
+                    in_sprint(sprint),
                     source_config_id__in=source_conf_ids,
                 )
                 dev_work_items = base_work_items.filter(story_filter)
@@ -727,7 +759,8 @@ class MetricService:
                 dev_prs = PullRequest.objects.filter(pr_filter)
 
                 # Calculate stats — use contribution SP for multi-assignee items
-                completed_items = list(dev_work_items.filter(status_category='done'))
+                completed_items = list(counted_done(dev_work_items.filter(status_category='done'), sprint,
+                                                   bool(source_config and source_config.source_type == 'clickup')))
                 points = 0
                 items_count = len(completed_items)
                 for wi in completed_items:

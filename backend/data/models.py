@@ -49,6 +49,8 @@ class WorkItem(SoftDeleteMixin, models.Model):
     
     # Core fields
     sprint = models.ForeignKey(Sprint, on_delete=models.SET_NULL, null=True, blank=True, related_name='work_items')
+    # Every sprint the item sits in (ClickUp carry-over keeps a task in several sprint lists); `sprint` is only the latest.
+    sprints = models.ManyToManyField(Sprint, blank=True, related_name='member_items')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subtasks')
     item_type = models.CharField(max_length=20, choices=ITEM_TYPES, default='task')
     title = models.TextField()
