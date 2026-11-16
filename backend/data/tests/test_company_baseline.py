@@ -105,6 +105,24 @@ class CompanyBaselineViewTests(TenantTestCase):
         force_authenticate(request, user=admin)
         self.assertEqual(len(CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']), 1)
 
+    def test_backdated_save_replaces_later_versions(self):
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+
+        def post(over, day):
+            request = self.factory.post('/api/admin/company-baseline/', {
+                "workload_settings": {"per_sprint_limits": {"over": over}}, "workload_settings_effective_from": day,
+            }, format='json')
+            force_authenticate(request, user=admin)
+            return CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']
+
+        post(4, "2026-07-01")
+        post(5, "2026-08-01")
+        post(6, "2026-10-01")
+        # Saving from 1 Sep applies from then on: the 1 Oct version goes, July/August stay.
+        history = post(7, "2026-09-01")
+        self.assertEqual({str(v['effective_from']): v['settings']['per_sprint_limits']['over'] for v in history},
+                         {'2026-07-01': 4, '2026-08-01': 5, '2026-09-01': 7})
+
     def test_sprint_window_must_be_whole_number(self):
         admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
         request = self.factory.post('/api/admin/company-baseline/', {"workload_settings": {"sprint_window": 2.5}}, format='json')

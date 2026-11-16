@@ -1548,7 +1548,8 @@ class AssigneeDistributionView(APIView):
         # sprints that have started (completed ones + the running one).
         from django.db.models import F
         from .analytics.workload import (
-            get_workload_settings, team_workload, workload_items, allocation_timeline, allocation_on, sprint_day,
+            get_workload_settings, team_workload, workload_items, allocation_timeline, allocation_for, sprint_day,
+            member_allocations, workload_note, allocation_note,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
@@ -1733,13 +1734,13 @@ class AssigneeDistributionView(APIView):
         parts = None
         if project_id and project_id not in ['null', 'undefined', '']:
             alloc_tl = allocation_timeline(project_id)
-            # Members = people allocated in the months of the sprints being viewed (a month with nothing
-            # published uses today's sheet, like the capacity does).
-            members = set()
-            for day in days or [timezone.localdate()]:
-                members |= set(allocation_on(alloc_tl, day))
+            # Members = people allocated by the months of the sprints being viewed: their latest published month
+            # on or before it, as the capacity uses (missing from one month's sheet keeps them). No one -> today.
+            emails = [r['email'] for r in result]
+            members = {e for e in emails for day in days if allocation_for(alloc_tl, e, day, earlier_only=True)}
             if not members:
-                members = set(allocation_on(alloc_tl, timezone.localdate()))
+                today = timezone.localdate()
+                members = {e for e in emails if allocation_for(alloc_tl, e, today, earlier_only=True)}
             if members:
                 result = [r for r in result if r['email'] in members]
         elif project_parts:
@@ -1761,11 +1762,30 @@ class AssigneeDistributionView(APIView):
 
         # Workload status: items vs each member's ideal range (level x allocation per sprint); percentile = rank.
         statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl, parts=parts)
+        # Tooltip: allocation per project in the latest viewed sprint's month, and one plain line on the status.
+        unset_project = None  # project view: the person has no allocation on it, so it counts at 100%
+        if parts is not None:
+            ref_day = max((d for _, _, part_days in project_parts for d in part_days), default=timezone.localdate())
+            sprint_count = max((len(part_days) for _, _, part_days in project_parts), default=1)
+            timelines = {proj_id: tl for (proj_id, _, _), (_, _, tl) in zip(project_parts, parts)}
+        else:
+            ref_day = max(days, default=timezone.localdate())
+            sprint_count = len(days) or 1
+            timelines = {}
+            if alloc_tl is not None and str(project_id).isdigit():
+                timelines = {int(project_id): alloc_tl}
+                unset_project = Project.objects.filter(id=project_id).values_list('name', flat=True).first()
+        allocations = member_allocations([r['email'] for r in result], ref_day, timelines)
+        use_allocation = get_workload_settings(ref_day)['use_allocation']
         for r in result:
             r['todo'] = r['total'] - r['in_progress'] - r['completed']
             r['seniority'] = levels.get(r['email']) or 'mid'
             r.update(statuses.get(r['email'], {'percentile': None, 'status': None, 'effective_load': 0}))
             r['workload_status'] = r.pop('status')
+            r['allocations'] = allocations.get(r['email'], [])
+            r['workload_note'] = workload_note(r['total'], r['ideal_min'], r['ideal_max'], sprint_count) if r['workload_status'] else None
+            unset = unset_project and use_allocation and not allocation_for(alloc_tl, r['email'], ref_day)
+            r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None)
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)

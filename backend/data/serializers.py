@@ -120,7 +120,8 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
 
 class WorkloadSettingsVersionSerializer(serializers.Serializer):
     """
-    Saves workload settings from effective_from (default today) until the next saved version.
+    Saves workload settings from effective_from (default today) onward: later-dated versions are
+    removed, so the saved values apply to every sprint from that date. Earlier history is kept.
     Partial: given keys merge over the version in effect on that date.
     """
     settings = serializers.JSONField()
@@ -136,8 +137,10 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
     def save(self, user):
         from configuration.models import WorkloadSettingsVersion
 
+        day = self.validated_data['effective_from']
+        WorkloadSettingsVersion.objects.filter(effective_from__gt=day).delete()
         WorkloadSettingsVersion.objects.update_or_create(
-            effective_from=self.validated_data['effective_from'],
+            effective_from=day,
             defaults={'overrides': self.validated_data['settings'], 'created_by': user},
         )
 
