@@ -2,7 +2,9 @@ from rest_framework import serializers
 from .models import WorkItem, SprintMetrics, DeveloperMetrics, AIInsight
 from configuration.models import CompanyBaseline
 from django.utils import timezone
-from .analytics.workload import DEFAULT_SETTINGS, merge_settings, get_workload_settings, settings_timeline, _as_of
+from .analytics.workload import (
+    DEFAULT_SETTINGS, merge_settings, get_workload_settings, settings_timeline, _as_of, level_ranges,
+)
 
 class WorkItemSerializer(serializers.ModelSerializer):
 
@@ -67,6 +69,7 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
         Custom representation for the CompanyBaseline model
         """
         timeline = settings_timeline()
+        current = get_workload_settings(timeline=timeline)
         return {
             "kpis": {
                 "velocity": instance.velocity,
@@ -80,11 +83,15 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
                     "completed": instance.item_volume_completed
                 }
             },
-            # Settings in effect today, plus every saved version (each in effect until the next one).
-            "workload_settings": get_workload_settings(timeline=timeline),
+            # Settings in effect today (from the version dated workload_settings_effective_from; None = defaults),
+            # plus every saved version (each in effect until the next one).
+            "workload_settings": current,
+            "workload_settings_effective_from": _as_of([(day, day) for day, _ in timeline], timezone.localdate()),
+            # Ideal tasks per sprint at 100% allocation, rounded as the status uses them: show as is.
+            "workload_ranges": level_ranges(current),
             "workload_settings_history": [
-                {"effective_from": day, "settings": merge_settings(overrides)}
-                for day, overrides in timeline
+                {"effective_from": day, "settings": merged, "ranges": level_ranges(merged)}
+                for day, merged in ((day, merge_settings(overrides)) for day, overrides in timeline)
             ],
         }
 
@@ -132,11 +139,16 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
         base = _as_of(settings_timeline(), day) or {}
         attrs['effective_from'] = day
         attrs['settings'] = self._check(attrs['settings'], base)
+        # Same values as the version already in effect then (e.g. a KPI-only save sending the form back):
+        # nothing to save, and later versions must not be dropped.
+        attrs['unchanged'] = bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
         return attrs
 
     def save(self, user):
         from configuration.models import WorkloadSettingsVersion
 
+        if self.validated_data['unchanged']:
+            return
         day = self.validated_data['effective_from']
         WorkloadSettingsVersion.objects.filter(effective_from__gt=day).delete()
         WorkloadSettingsVersion.objects.update_or_create(

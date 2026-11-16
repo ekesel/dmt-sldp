@@ -319,6 +319,25 @@ def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, 
     return result, {k: level_on(t, today) for k, t in levels.items()}
 
 
+def ideal_range(low, high):
+    """
+    Whole-item ideal range (min, max) for raw limits low = Min x capacity, high = Max x capacity:
+    min = ceil(low), Overloaded from ceil(high) (at least min + 1), so max = that - 1.
+    Rounds first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
+    """
+    ideal_min = ceil(round(low, 6))
+    return ideal_min, max(ceil(round(high, 6)), ideal_min + 1) - 1
+
+
+def level_ranges(settings):
+    """{level: {'min', 'max'}} ideal tasks per sprint at 100% allocation (Company Baseline preview)."""
+    limits = settings['per_sprint_limits']
+    return {
+        level: dict(zip(('min', 'max'), ideal_range(limits['under'] * w, limits['over'] * w)))
+        for level, w in settings['seniority_weights'].items()
+    }
+
+
 def classify_workload(counts, capacity, sprint_count, settings):
     """
     counts: {key: item_count}; capacity: {key: (capacity, ideal_low, ideal_high)} from member_capacity;
@@ -338,9 +357,8 @@ def classify_workload(counts, capacity, sprint_count, settings):
         same = bisect_right(ordered, load) - fewer
         pct = (fewer + 0.5 * same) / n * 100
         cap, low, high = capacity[k]
-        # Whole items; round first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
-        ideal_min = ceil(round(low, 6))
-        overload_from = max(ceil(round(high, 6)), ideal_min + 1)
+        ideal_min, ideal_max = ideal_range(low, high)
+        overload_from = ideal_max + 1
         items = counts[k]
         if items >= overload_from and (not gate or pct > settings['overload_percentile']):
             status = 'Overloaded'
@@ -350,7 +368,7 @@ def classify_workload(counts, capacity, sprint_count, settings):
             status = 'Balanced'
         result[k] = {
             'percentile': round(pct, 2), 'status': status, 'effective_load': round(load, 2),
-            'capacity': round(cap / sprints, 2), 'ideal_min': ideal_min, 'ideal_max': overload_from - 1,
+            'capacity': round(cap / sprints, 2), 'ideal_min': ideal_min, 'ideal_max': ideal_max,
         }
     return result
 
