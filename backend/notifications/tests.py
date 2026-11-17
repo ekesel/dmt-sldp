@@ -135,3 +135,23 @@ class QuickUpdateNotificationTest(TenantTestCase):
         self.assertEqual(QuickUpdateNotificationSerializer(n2).data['user_name'], "only_username")
         self.assertEqual(QuickUpdateNotificationSerializer(n3).data['user_name'], "email_only@example.com")
         self.assertEqual(QuickUpdateNotificationSerializer(n4).data['user_name'], "")
+
+
+class QuickUpdateFocusTest(TenantTestCase):
+    """?notification_id= makes an older message stand in for its conversation row."""
+
+    def test_older_message_replaces_latest_in_its_conversation(self):
+        me = User.objects.create_user(username='me', password='p', email='me@x.test')
+        other = User.objects.create_user(username='other', password='p', email='o@x.test')
+        old, new = [Notification.objects.create(user=me, sender=other, tenant=self.tenant, message=m,
+                                                notification_type='qucik_update') for m in ('old', 'new')]
+
+        def ids(params):
+            request = APIRequestFactory().get('/api/notifications/quick-update/', params)
+            force_authenticate(request, user=me)
+            data = NotificationViewSet.as_view({'get': 'quick_update'})(request).data
+            return [n['id'] for n in (data.get('data') or data.get('results'))]
+
+        self.assertEqual(ids({}), [new.id])
+        self.assertEqual(ids({'notification_id': old.id}), [old.id])
+        self.assertEqual(ids({'notification_id': 'abc'}), [new.id])

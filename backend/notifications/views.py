@@ -49,7 +49,12 @@ class NotificationViewSet(viewsets.ModelViewSet):
             notification_type__in =['qucik_update','info','warning','error']
         ).select_related('user', 'sender').order_by('-created_at')
         
-        # Group by conversation partner to only show the latest message per person
+        # Group by conversation partner to only show the latest message per person.
+        # ?notification_id= (a clicked notification) stands in for its conversation's row,
+        # so the page can find and highlight it even when it is not the latest message.
+        focus_id = request.query_params.get('notification_id', '')
+        focus = queryset.filter(id=focus_id).first() if focus_id.isdigit() else None
+        focus_partner = (focus.user if focus.sender == request.user else focus.sender) if focus else None
         seen_users = set()
         unique_conversations = []
         for msg in queryset:
@@ -58,7 +63,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                 continue
             if other_user.id not in seen_users:
                 seen_users.add(other_user.id)
-                unique_conversations.append(msg)
+                unique_conversations.append(focus if other_user == focus_partner else msg)
                 
         paginator = QuickUpdateNotificationPagination()
         page = paginator.paginate_queryset(unique_conversations, request, view=self)

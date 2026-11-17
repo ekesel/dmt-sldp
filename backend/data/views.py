@@ -65,7 +65,7 @@ class DashboardSummaryView(APIView):
         
         if start_date and not end_date:
             end_date = timezone.localdate().strftime('%Y-%m-%d')
-
+        date_range_picked = bool(start_date or end_date)  # before sprint_ids overwrite the dates below
 
         from .analytics.metrics import MetricService
         from .models import PullRequest
@@ -115,9 +115,14 @@ class DashboardSummaryView(APIView):
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
         
-        # Card must reconcile with the Velocity History graph: average the exact rows VelocityView returns.
-        points = [p['velocity'] for p in VelocityView().get(request).data]
-        card_velocity = round(sum(points) / len(points), 1) if points else summary.get('velocity', 0)
+        # Card must reconcile with the Velocity History graph: built from the exact rows VelocityView returns.
+        # A date range can span sprints, so it shows the total points done in that range, not an average.
+        rows = VelocityView().get(request).data
+        if date_range_picked:
+            card_velocity = sum(p['total_story_points_completed'] for p in rows)
+        else:
+            points = [p['velocity'] for p in rows]
+            card_velocity = round(sum(points) / len(points), 1) if points else summary.get('velocity', 0)
 
         data = {
             "velocity": card_velocity,
@@ -1059,6 +1064,24 @@ class SprintListView(APIView):
         return Response(data)
 
 
+def _compliance_sprint_ids(project_id, sprint_id):
+    """Sprints the Compliance screen covers: the chosen one, else each project's latest sprint
+    (same order as the sprint dropdown), so All Projects = every project's default view combined."""
+    if sprint_id and sprint_id not in ['null', 'undefined', '']:
+        return [sprint_id]
+    used_sources = Sprint.objects.values_list('source_config_id', flat=True).distinct()
+    sources = SourceConfiguration.objects.filter(id__in=list(used_sources))
+    if project_id and project_id not in ['null', 'undefined', '']:
+        sources = sources.filter(project_id=project_id)
+    by_project = {}
+    for sid, pid in sources.values_list('id', 'project_id'):
+        by_project.setdefault(pid, []).append(sid)
+    order = (F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+    ids = (Sprint.objects.filter(source_config_id__in=src).order_by(*order).values_list('id', flat=True).first()
+           for src in by_project.values())
+    return [i for i in ids if i]
+
+
 class ComplianceFlagListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1096,16 +1119,17 @@ class ComplianceFlagListView(APIView):
             items = items.filter(source_config_id__in=source_config_ids)
             fixed_later_items = fixed_later_items.filter(source_config_id__in=source_config_ids)
 
-        # Apply same sprint filters
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items = items.filter(sprint_id=sprint_id)
-            fixed_later_items = fixed_later_items.filter(sprint_id=sprint_id)
+        work_item_id = (request.query_params.get('work_item_id') or '').strip()
+        if work_item_id and work_item_id not in ['null', 'undefined']:
+            # Opened for one item (e.g. from a notification): show just its flags, whatever sprint it is in.
+            # Our own id (what the page links with); an ADO-style numeric tool id would clash with it.
+            one = Q(id=work_item_id) if work_item_id.isdigit() else Q(external_id=work_item_id)
+            items = items.filter(one)
+            fixed_later_items = fixed_later_items.filter(one)
         else:
-            # Auto (no / 'null' / 'undefined' sprint): pick items from the latest sprint only
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items = items.filter(sprint_id=latest_sprint.id)
-                fixed_later_items = fixed_later_items.filter(sprint_id=latest_sprint.id)
+            sprint_ids = _compliance_sprint_ids(project_id, sprint_id)
+            items = items.filter(sprint_id__in=sprint_ids)
+            fixed_later_items = fixed_later_items.filter(sprint_id__in=sprint_ids)
 
         flags = []
         
@@ -1120,9 +1144,50 @@ class ComplianceFlagListView(APIView):
         _TECH_VIOLATIONS = {'missing_pr_link', 'unit_testing_not_done', 'missing_dmt_signoff'}
 
         # Helper to get assignee names
-        def get_assignee_names(work_item):
+        # Testers don't own code-level violations (PR link, unit tests, DMT signoff): leave them off those flags.
+        from data.analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        qa_emails = set()
+        for email in User.objects.filter(
+            Q(role__role_category='QA') | Q(role__role_name__icontains='tester') | Q(role__role_name__icontains='qa')
+        ).exclude(email='').values_list('email', flat=True):
+            canonical = resolver.resolve(email.lower())
+            qa_emails.update(e.lower() for e in resolver.all_aliases(canonical))
+            qa_emails.update({email.lower(), canonical.lower()})
+
+        # Responsible Tech Lead = first "lead" above the developer in the org chart (User.parent), so a
+        # backend dev maps to the backend TL and a frontend dev to the frontend TL. Testers are skipped.
+        # Falls back to the ticket's Tech Lead field when the org chart has no lead for them.
+        users_by_id = {u.id: u for u in User.objects.select_related('role').order_by('is_active')}
+        users_by_email = {u.email.lower(): u for u in users_by_id.values() if u.email}  # active wins
+
+        def org_chart_tech_lead(work_item):
+            emails = [c.get('email') for c in (work_item.assignee_contributions or [])] + [work_item.assignee_email]
+            for email in emails:
+                email = (email or '').strip().lower()
+                if not email or email in qa_emails:
+                    continue
+                dev = users_by_email.get(resolver.resolve(email).lower()) or users_by_email.get(email)
+                seen = set()
+                node = users_by_id.get(dev.parent_id) if dev else None
+                while node and node.id not in seen:
+                    label = f"{node.role.role_name if node.role else ''} {node.custom_title or ''}".lower()
+                    if 'lead' in label and (node.email or '').lower() not in qa_emails:
+                        return node.get_full_name() or node.email
+                    seen.add(node.id)
+                    node = users_by_id.get(node.parent_id)
+            return None
+
+        def get_assignee_names(work_item, code_level=False):
+            def keep(email):
+                return not (code_level and email and email.strip().lower() in qa_emails)
             if work_item.assignee_contributions and len(work_item.assignee_contributions) > 1:
-                return [c.get('name') or c.get('email', '') for c in work_item.assignee_contributions if c.get('email')]
+                names = [c.get('name') or c.get('email', '') for c in work_item.assignee_contributions
+                         if c.get('email') and keep(c['email'])]
+                return names or ['Unassigned']
+            if not keep(work_item.assignee_email):
+                return ['Unassigned']
             primary = work_item.assignee_name
             if not primary or primary == 'None':
                 primary = work_item.assignee_email
@@ -1133,7 +1198,6 @@ class ComplianceFlagListView(APIView):
         # Process active non-compliant items
         for item in items:
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-            assignee_names = get_assignee_names(item)
 
             for failure in item.compliance_failures:
                 if failure in _AC_VIOLATIONS:
@@ -1141,7 +1205,7 @@ class ComplianceFlagListView(APIView):
                     responsible_name = item.pm_name or item.pm_email or None
                 elif failure in _TECH_VIOLATIONS:
                     responsible_role = 'Tech Lead'
-                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                    responsible_name = org_chart_tech_lead(item) or item.tech_lead_name or item.tech_lead_email or None
                 else:
                     responsible_role = None
                     responsible_name = None
@@ -1151,6 +1215,7 @@ class ComplianceFlagListView(APIView):
                 if severity_filter and severity_filter != severity:
                     continue
 
+                assignee_names = get_assignee_names(item, code_level=failure in _TECH_VIOLATIONS)
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
@@ -1170,7 +1235,6 @@ class ComplianceFlagListView(APIView):
         # Process historical fixed later items (resolved, so never part of a critical/warning filter or its card count)
         for item in ([] if severity_filter else fixed_later_items):
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-            assignee_names = get_assignee_names(item)
 
             # Get historical failures from violation history
             historical_failures = []
@@ -1188,7 +1252,7 @@ class ComplianceFlagListView(APIView):
                     responsible_name = item.pm_name or item.pm_email or None
                 elif failure in _TECH_VIOLATIONS:
                     responsible_role = 'Tech Lead'
-                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                    responsible_name = org_chart_tech_lead(item) or item.tech_lead_name or item.tech_lead_email or None
                 else:
                     responsible_role = None
                     responsible_name = None
@@ -1198,6 +1262,7 @@ class ComplianceFlagListView(APIView):
                 if severity_filter and severity_filter != severity:
                     continue
 
+                assignee_names = get_assignee_names(item, code_level=failure in _TECH_VIOLATIONS)
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
@@ -1225,9 +1290,12 @@ class ComplianceFlagListView(APIView):
         except ValueError:
             page_size = 10
 
-        total_count = len(flags)
+        # total_count = active violations only, so it equals the Critical + Warning cards;
+        # fixed-later rows still page through the list (total_pages) and are counted separately.
+        fixed_later_count = sum(1 for f in flags if f['fixed_later'])
+        total_count = len(flags) - fixed_later_count
         import math
-        total_pages = math.ceil(total_count / page_size) if total_count > 0 else 0
+        total_pages = math.ceil(len(flags) / page_size) if flags else 0
 
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
@@ -1240,7 +1308,8 @@ class ComplianceFlagListView(APIView):
             "current_page": page,
             "page_size": page_size,
             "total_pages": total_pages,
-            "total_count": total_count
+            "total_count": total_count,
+            "fixed_later_count": fixed_later_count,
         })
 
 class ComplianceFlagResolveView(APIView):
@@ -1290,9 +1359,11 @@ class ComplianceSummaryView(APIView):
             except Sprint.DoesNotExist:
                 sprint_metric = None
         else:
-            sprint_metric = sprints_qs.first()
+            # No sprint picked = several projects' latest sprints; no single SprintMetrics row
+            # covers that, so health comes from the live counts below.
+            sprint_metric = None
 
-        overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
+        overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else None
 
         
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
@@ -1309,12 +1380,7 @@ class ComplianceSummaryView(APIView):
             ).values_list('id', flat=True)
             items_qs = items_qs.filter(source_config_id__in=source_config_ids)
 
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items_qs = items_qs.filter(sprint_id=sprint_id)
-        else:
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items_qs = items_qs.filter(sprint_id=latest_sprint.id)
+        items_qs = items_qs.filter(sprint_id__in=_compliance_sprint_ids(project_id, sprint_id))
 
         total = items_qs.count()
         compliant = items_qs.filter(dmt_compliant=True).count()
@@ -1334,7 +1400,7 @@ class ComplianceSummaryView(APIView):
         
         # If the gap between stored metric and live data is large, trust the live data.
         # This fixes the bug where health showed 7% while cards showed 79%.
-        if abs(overall_health - live_health) > 5:
+        if overall_health is None or abs(overall_health - live_health) > 5:
             overall_health = live_health
 
         return Response({
@@ -1370,12 +1436,7 @@ class ComplianceFixedLaterView(APIView):
             source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             items = items.filter(source_config_id__in=source_config_ids)
 
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items = items.filter(sprint_id=sprint_id)
-        else:
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items = items.filter(sprint_id=latest_sprint.id)
+        items = items.filter(sprint_id__in=_compliance_sprint_ids(project_id, sprint_id))
 
         from configuration.models import SourceConfiguration
         source_to_project = {
@@ -1390,7 +1451,8 @@ class ComplianceFixedLaterView(APIView):
                 assignee = "Unassigned"
             result.append({
                 "id": item.id,
-                "work_item_id": item.external_id,
+                "work_item_id": item.id,  # same id the flags list uses
+                "external_id": item.external_id,
                 "work_item_title": item.title,
                 "assignee_name": assignee,
                 "project_name": source_to_project.get(item.source_config_id, "Unknown Project"),
