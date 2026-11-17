@@ -1505,7 +1505,7 @@ class AIInsightFeedbackView(APIView):
 
 class WorkloadWarningsView(APIView):
     """
-    GET /api/dashboard/workload-warnings/?project_id=
+    GET /api/dashboard/workload-warnings/?project_id=&sprint_ids=1,2
     Setup gaps for the workload screen banner: {"warnings": [{"code", "message"}]}.
     """
     permission_classes = [IsAuthenticated]
@@ -1518,7 +1518,8 @@ class WorkloadWarningsView(APIView):
             project_id = None
         elif not str(project_id).isdigit():
             return Response({'error': 'project_id must be a number.'}, status=400)
-        return Response({'warnings': workload_warnings(project_id)})
+        sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+        return Response({'warnings': workload_warnings(project_id, sprint_ids or None)})
 
 
 class AssigneeDistributionView(APIView):
@@ -1545,16 +1546,17 @@ class AssigneeDistributionView(APIView):
         from collections import defaultdict
 
         # Identify sprints — date range when provided, otherwise the last `sprint_window`
-        # sprints that have started (completed ones + the running one).
+        # completed sprints (the running one is left out, same as the KPI cards).
         from django.db.models import F
         from .analytics.workload import (
-            get_workload_settings, team_workload, workload_items, allocation_timeline, allocation_for, sprint_day,
-            member_allocations, workload_note, allocation_note,
+            get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
+            member_allocations, workload_note, allocation_note, allocation_gaps,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
         now = timezone.now()
-        started = Q(start_date__lte=now) | Q(end_date__lt=now)
+        # Default window = last N completed sprints, same as the KPI cards (running sprint: pick it explicitly).
+        completed = Q(end_date__lt=now)
         # One judging day per sprint in the window (level, settings and allocation in effect then).
         days = []
         project_parts = []  # All Projects: (project id, sprint ids, judging days) per project
@@ -1575,7 +1577,7 @@ class AssigneeDistributionView(APIView):
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                 else:
-                    sprint_qs = sprint_qs.filter(started)[:window]
+                    sprint_qs = sprint_qs.filter(completed)[:window]
                     
                 rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                 relevant_sprint_ids = [r[0] for r in rows]
@@ -1607,7 +1609,7 @@ class AssigneeDistributionView(APIView):
                         if end_date:
                             sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                     else:
-                        sprint_qs = sprint_qs.filter(started).filter(recent)[:window]
+                        sprint_qs = sprint_qs.filter(completed).filter(recent)[:window]
                     rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                     if rows:
                         relevant_sprint_ids.extend(r[0] for r in rows)
@@ -1634,32 +1636,16 @@ class AssigneeDistributionView(APIView):
             status_category='done',
         ).values_list('id', flat=True))
 
-        # 1. Process Resolved Assignees
-        resolved_rows = (
-            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
-            .values('resolved_assignee__id', 'resolved_assignee__first_name',
-                    'resolved_assignee__last_name', 'resolved_assignee__email',
-                    'resolved_assignee__is_active', 'id', 'status_category', 'resolved_at', 'started_at', 'created_at')
-        )
+        credited = defaultdict(set)  # item id -> emails already credited (no double count)
 
-        for row in resolved_rows:
-            email = (row['resolved_assignee__email'] or '').lower().strip()
-            if not email:
-                continue
-
+        def credit(email, name, user_id, is_portal, row):
+            """Count one item for one person: total, in progress / done, and its cycle time when done."""
             if email not in aggregation:
-                name = f"{row['resolved_assignee__first_name']} {row['resolved_assignee__last_name']}".strip()
                 aggregation[email] = {
-                    'id': row['resolved_assignee__id'],
-                    'name': name or email,
-                    'email': email,
-                    'is_portal_user': row['resolved_assignee__is_active'],
-                    'total': 0,
-                    'in_progress': 0,
-                    'completed': 0,
-                    'durations': []
+                    'id': user_id, 'name': name or email, 'email': email, 'is_portal_user': is_portal,
+                    'total': 0, 'in_progress': 0, 'completed': 0, 'durations': [],
                 }
-            
+            credited[row['id']].add(email)
             agg = aggregation[email]
             agg['total'] += 1
             if row['status_category'] == 'in_progress':
@@ -1672,8 +1658,21 @@ class AssigneeDistributionView(APIView):
                     if duration is not None:
                         agg['durations'].append(duration)
 
+        row_fields = ('id', 'status_category', 'resolved_at', 'started_at')
+
+        # 1. Process Resolved Assignees
+        resolved_rows = (
+            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
+            .values('resolved_assignee__id', 'resolved_assignee__first_name',
+                    'resolved_assignee__last_name', 'resolved_assignee__email', *row_fields)
+        )
+        for row in resolved_rows:
+            email = (row['resolved_assignee__email'] or '').lower().strip()
+            if email:
+                name = f"{row['resolved_assignee__first_name']} {row['resolved_assignee__last_name']}".strip()
+                credit(email, name, row['resolved_assignee__id'], True, row)
+
         # 2. Process Fallback Assignees (unlinked)
-    
         from data.analytics.identity_resolver import get_inactive_user_emails_expanded
         inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
@@ -1681,39 +1680,44 @@ class AssigneeDistributionView(APIView):
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
             .exclude(assignee_email__in=inactive_user_emails)
-            .values('assignee_email', 'assignee_name', 'id', 'status_category', 'started_at', 'resolved_at', 'created_at')
+            .values('assignee_email', 'assignee_name', *row_fields)
         )
-
         for row in fallback_rows:
             email = (row['assignee_email'] or '').lower().strip()
-            if not email:
-                continue
+            if email:
+                credit(email, row['assignee_name'], None, False, row)
 
-            if email not in aggregation:
-                aggregation[email] = {
-                    'id': None,
-                    'name': row['assignee_name'] or email,
-                    'email': email,
-                    'is_portal_user': False,
-                    'total': 0,
-                    'in_progress': 0,
-                    'completed': 0,
-                    'durations': []
-                }
-            
-            agg = aggregation[email]
-            agg['total'] += 1
-            if row['status_category'] == 'in_progress':
-                agg['in_progress'] += 1
-            elif row['status_category'] == 'done':
-                agg['completed'] += 1
-                # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
-                if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
-                    duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
-                    if duration is not None:
-                        agg['durations'].append(duration)
+        # 3. Co-assignees: a task with several assignees on the item itself (ClickUp) counts for each of
+        # them, as ClickUp shows it. Not assignee_contributions: that also credits sub-task workers.
+        active_users = {
+            u['email'].lower(): u
+            for u in User.objects.filter(is_active=True).values('id', 'email', 'first_name', 'last_name')
+            if u['email']
+        }
+        resolver = IdentityResolver()
+        resolver.load()
+        from users.models import ExternalIdentity
+        clickup_users = dict(
+            ExternalIdentity.objects.filter(provider='clickup', user__is_active=True).values_list('external_id', 'user__email')
+        )
+        by_name = {f"{u['first_name']} {u['last_name']}".strip().lower(): e for e, u in active_users.items()}
 
-        # 3. Finalize result list
+        def member_email(assignee):
+            """Active user behind a raw ClickUp assignee (UserResolver's order: id, email, name), else None."""
+            email = (clickup_users.get(str(assignee.get('id') or '')) or resolver.resolve(assignee.get('email')) or '')
+            email = email.lower().strip()
+            if email in active_users:
+                return email
+            return by_name.get((assignee.get('username') or '').strip().lower())
+
+        for row in co_assigned(work_items).values('co_assignees', *row_fields):
+            for a in row['co_assignees']:
+                email = member_email(a)
+                if email and email not in credited[row['id']]:
+                    user = active_users[email]
+                    credit(email, f"{user['first_name']} {user['last_name']}".strip(), user['id'], True, row)
+
+        # 4. Finalize result list
         result = []
         for email, agg in aggregation.items():
             avg_ct = round(sum(agg['durations']) / len(agg['durations']), 1) if agg['durations'] else None
@@ -1758,16 +1762,24 @@ class AssigneeDistributionView(APIView):
                     email = resolved_email if resolved_email and active else raw_email
                     if email:
                         keys.add(email.lower().strip())
+                for assignees in co_assigned(work_items.filter(sprint_id__in=sprint_ids)).values_list('co_assignees', flat=True):
+                    keys.update(filter(None, map(member_email, assignees)))
                 parts.append((keys, proj_days, allocation_timeline(proj_id)))
 
         # Workload status: items vs each member's ideal range (level x allocation per sprint); percentile = rank.
         statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl, parts=parts)
         # Tooltip: allocation per project in the latest viewed sprint's month, and one plain line on the status.
         unset_project = None  # project view: the person has no allocation on it, so it counts at 100%
+        gap_parts = []  # (project id, name, member keys, viewed days, allocation timeline)
         if parts is not None:
             ref_day = max((d for _, _, part_days in project_parts for d in part_days), default=timezone.localdate())
             sprint_count = max((len(part_days) for _, _, part_days in project_parts), default=1)
             timelines = {proj_id: tl for (proj_id, _, _), (_, _, tl) in zip(project_parts, parts)}
+            project_names = dict(Project.objects.filter(id__in=timelines).values_list('id', 'name'))
+            gap_parts = [
+                (proj_id, project_names.get(proj_id, str(proj_id)), keys, proj_days, tl)
+                for (proj_id, _, proj_days), (keys, _, tl) in zip(project_parts, parts)
+            ]
         else:
             ref_day = max(days, default=timezone.localdate())
             sprint_count = len(days) or 1
@@ -1775,7 +1787,9 @@ class AssigneeDistributionView(APIView):
             if alloc_tl is not None and str(project_id).isdigit():
                 timelines = {int(project_id): alloc_tl}
                 unset_project = Project.objects.filter(id=project_id).values_list('name', flat=True).first()
+                gap_parts = [(int(project_id), unset_project, [r['email'] for r in result], days, alloc_tl)]
         allocations = member_allocations([r['email'] for r in result], ref_day, timelines)
+        gaps = allocation_gaps(gap_parts) if get_workload_settings(ref_day)['use_allocation'] else {}
         use_allocation = get_workload_settings(ref_day)['use_allocation']
         for r in result:
             r['todo'] = r['total'] - r['in_progress'] - r['completed']
@@ -1785,7 +1799,8 @@ class AssigneeDistributionView(APIView):
             r['allocations'] = allocations.get(r['email'], [])
             r['workload_note'] = workload_note(r['total'], r['ideal_min'], r['ideal_max'], sprint_count) if r['workload_status'] else None
             unset = unset_project and use_allocation and not allocation_for(alloc_tl, r['email'], ref_day)
-            r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None)
+            r['allocation_gaps'] = gaps.get(r['email'], [])
+            r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None, r['allocation_gaps'])
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)

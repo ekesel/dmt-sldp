@@ -853,21 +853,21 @@ export default function CompanyBaselinePage() {
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Junior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {Math.round(Number(currentUnder) * Number(currentJunior))} – {Math.round(Number(currentOver) * Number(currentJunior))}
+                                            {formatIdealRange(Number(currentUnder) * Number(currentJunior), Number(currentOver) * Number(currentJunior))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Mid Senior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {Math.round(Number(currentUnder) * Number(currentMid))} – {Math.round(Number(currentOver) * Number(currentMid))}
+                                            {formatIdealRange(Number(currentUnder) * Number(currentMid), Number(currentOver) * Number(currentMid))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
                                     <div className="bg-card/80 p-2.5 rounded-lg border border-border">
                                         <p className="text-[10px] uppercase text-muted-foreground font-semibold">Senior</p>
                                         <p className="text-sm font-bold text-foreground mt-0.5">
-                                            {Math.round(Number(currentUnder) * Number(currentSenior))} – {Math.round(Number(currentOver) * Number(currentSenior))}
+                                            {formatIdealRange(Number(currentUnder) * Number(currentSenior), Number(currentOver) * Number(currentSenior))}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">tasks/sprint</p>
                                     </div>
@@ -1114,4 +1114,27 @@ export default function CompanyBaselinePage() {
             </div>
         </DashboardLayout>
     );
+}
+
+/**
+ * Ideal task range shown in the live preview, same rule as the backend `ideal_range`
+ * (data/analytics/workload.py): min = ceil(low), Overloaded starts at ceil(high) (at least min + 1),
+ * so max = that - 1. Rounds to 6 decimals first so 3 * 0.7 = 2.0999... does not become 3 by float noise.
+ * @param low - Min tasks per sprint x seniority weight
+ * @param high - Max tasks per sprint x seniority weight
+ * @returns The range as "min – max"
+ */
+function formatIdealRange(low: number, high: number): string {
+    const idealMin = Math.ceil(roundTo6(low));
+    const idealMax = Math.max(Math.ceil(roundTo6(high)), idealMin + 1) - 1;
+    return `${idealMin} – ${idealMax}`;
+}
+
+/**
+ * Rounds a number to 6 decimal places.
+ * @param value - Number to round
+ * @returns The rounded number
+ */
+function roundTo6(value: number): number {
+    return Math.round(value * 1e6) / 1e6;
 }
