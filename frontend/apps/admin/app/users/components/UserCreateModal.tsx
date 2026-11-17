@@ -300,7 +300,7 @@ export function UserCreateModal({ isOpen, onClose, onSuccess, tenantId }: UserCr
                                     onChange={handleChange}
                                     className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none text-sm"
                                 >
-                                    <option value="">Not set (Mid)</option>
+                                    <option value="">default(Mid)</option>
                                     <option value="junior">Junior</option>
                                     <option value="mid">Mid</option>
                                     <option value="senior">Senior</option>

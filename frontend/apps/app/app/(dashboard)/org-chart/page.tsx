@@ -8,7 +8,6 @@ import ReactFlow, {
     Background,
     useNodesState,
     useEdgesState,
-
     Connection,
     Edge,
     MarkerType,
@@ -23,7 +22,7 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 
 import toast, { Toaster } from 'react-hot-toast';
-import { Network, ArrowLeft, Shield, ShieldAlert, RefreshCw } from 'lucide-react';
+import { Network, ArrowLeft, ShieldAlert, RefreshCw } from 'lucide-react';
 
 import { usePermissions } from '@/hooks/usePermissions';
 import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
@@ -44,8 +43,6 @@ export interface OrgChartUser {
 
 /**
  * Represents a single employee record in the org chart dataset.
- * avatarColor is intentionally excluded — node colour is derived from
- * the department string at render time via getDeptStyles.
  */
 interface IEmployee {
     id: string;
@@ -57,22 +54,23 @@ interface IEmployee {
     parentId: string;
 }
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
+const NODE_WIDTH = 384;
+const NODE_HEIGHT = 256;
+
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR' = 'TB') => {
     const isHorizontal = direction === 'LR';
 
-    // Create a fresh graph on every call — reusing a singleton accumulates
-    // stale nodes/edges across renders and breaks layout for new nodes.
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
     dagreGraph.setGraph({
         rankdir: direction,
-        nodesep: 150,
-        ranksep: 180,
-        edgesep: 100,
+        nodesep: isHorizontal ? 80 : 100,
+        ranksep: isHorizontal ? 120 : 140,
+        edgesep: 60,
     });
 
     nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: 420, height: 256 });
+        dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
     });
 
     edges.forEach((edge) => {
@@ -81,119 +79,36 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => 
 
     dagre.layout(dagreGraph);
 
+    const targetPos = isHorizontal ? Position.Left : Position.Top;
+    const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
+
     const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
 
-        let adjustedX = nodeWithPosition.x;
-        let adjustedY = nodeWithPosition.y;
-        const isRoot = !edges.some((edge) => edge.target === node.id);
-
-        if (isRoot) {
-            let minPos = Infinity;
-            let maxPos = -Infinity;
-
-            nodes.forEach(n => {
-                // Ignore root itself when calculating bounds
-                if (n.id === node.id) return;
-
-                const pos = dagreGraph.node(n.id);
-                if (pos) {
-                    const p = isHorizontal ? pos.y : pos.x;
-                    if (p < minPos) minPos = p;
-                    if (p > maxPos) maxPos = p;
-                }
-            });
-
-            if (minPos !== Infinity && maxPos !== -Infinity) {
-                // Center exactly between the furthest left and furthest right nodes
-                const center = (minPos + maxPos) / 2;
-                if (isHorizontal) {
-                    adjustedY = center - 150;
-                } else {
-                    adjustedX = center - 150;
-                }
-            }
-        } else {
-            // For non-root nodes (like the second row), if they have children, center them above their children
-            const childEdges = edges.filter(e => e.source === node.id);
-            if (childEdges.length > 0) {
-                let sumPos = 0;
-                let count = 0;
-                childEdges.forEach(e => {
-                    const childPos = dagreGraph.node(e.target);
-                    if (childPos) {
-                        sumPos += isHorizontal ? childPos.y : childPos.x;
-                        count++;
-                    }
-                });
-                if (count > 0) {
-                    if (isHorizontal) {
-                        adjustedY = sumPos / count;
-                    } else {
-                        adjustedX = sumPos / count;
-                    }
-                }
-            }
-        }
+        const adjustedX = (nodeWithPosition?.x ?? 0) - NODE_WIDTH / 2;
+        const adjustedY = (nodeWithPosition?.y ?? 0) - NODE_HEIGHT / 2;
 
         return {
             ...node,
-            targetPosition: isHorizontal ? Position.Left : Position.Top,
-            sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+            targetPosition: targetPos,
+            sourcePosition: sourcePos,
             position: {
-                x: adjustedX - 192,
-                y: adjustedY - 128
+                x: adjustedX,
+                y: adjustedY
+            },
+            data: {
+                ...node.data,
+                targetPosition: targetPos,
+                sourcePosition: sourcePos,
             }
         };
     });
 
-    // --- POST-PROCESSING: Bottom-up centering for perfect symmetry ---
-    const rootNodes = layoutedNodes.filter(n => !edges.some(e => e.target === n.id));
-    if (rootNodes.length === 1) {
-        const root = rootNodes[0];
-        const secondRow = layoutedNodes.filter(n => edges.some(e => e.source === root.id && e.target === n.id));
-
-        // 1. Center second row nodes over their respective children
-        secondRow.forEach(row2Node => {
-            const children = layoutedNodes.filter(child => edges.some(e => e.source === row2Node.id && e.target === child.id));
-            if (children.length > 0) {
-                let sumPos = 0;
-                children.forEach(child => {
-                    sumPos += isHorizontal ? child.position.y : child.position.x;
-                });
-                const centerPos = sumPos / children.length;
-                // Nudge the second row nodes left by 600 pixels as requested
-                const nudgedPos = centerPos - 600;
-
-                if (isHorizontal) {
-                    row2Node.position.y = nudgedPos;
-                } else {
-                    row2Node.position.x = nudgedPos;
-                }
-            }
-        });
-
-        // 2. Center root node perfectly between its immediate children (the second row)
-        if (secondRow.length > 0) {
-            let sumPos = 0;
-            secondRow.forEach(n => {
-                sumPos += isHorizontal ? n.position.y : n.position.x;
-            });
-            const centerPos = sumPos / secondRow.length;
-            if (isHorizontal) {
-                root.position.y = centerPos;
-            } else {
-                root.position.x = centerPos;
-            }
-        }
-    }
-
     return { nodes: layoutedNodes, edges };
 };
 
-
-// Register custom nodes
-const nodeTypes = {
+// Register custom nodes outside to keep static reference
+const NODE_TYPES = {
     customOrgNode: CustomOrgNode
 };
 
@@ -202,6 +117,7 @@ function OrgChartPageContent() {
     const { isManager } = usePermissions();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { fitView } = useReactFlow();
+    const nodeTypes = React.useMemo(() => NODE_TYPES, []);
 
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
@@ -251,6 +167,7 @@ function OrgChartPageContent() {
                 .catch((err) => {
                     console.error('Failed to fetch departments separately:', err);
                 });
+
             if (hierarchyRes && hierarchyRes.status && hierarchyRes.data) {
                 const flatData = flattenHierarchy(hierarchyRes.data);
                 setEmployees(flatData);
@@ -288,24 +205,7 @@ function OrgChartPageContent() {
         return 'TB';
     });
 
-    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(null as any);
-    if (!nodePositionsRef.current) {
-        let initialPositions = new Map<string, { x: number; y: number }>();
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('orgChartNodePositions');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    initialPositions = new Map(Object.entries(parsed));
-                } catch (e) {
-                    console.error("Failed to parse orgChartNodePositions", e);
-                }
-            }
-        }
-        nodePositionsRef.current = initialPositions;
-    }
-
-    const shouldAutoLayoutRef = useRef(nodePositionsRef.current.size === 0);
+    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
     const handleNodesChange = useCallback(
         (changes: NodeChange[]) => {
@@ -389,35 +289,23 @@ function OrgChartPageContent() {
         }
     }, [isManager, fetchOrgChart]);
 
-    // Compile node list for React Flow based on raw employees dataset
-    const compileNodesAndEdges = useCallback(() => {
-        let hasNewPositions = false;
+    // Helper: build raw React Flow nodes from employees
+    const buildRawNodes = useCallback((empList: IEmployee[], dir: 'TB' | 'LR'): Node[] => {
+        const isHorizontal = dir === 'LR';
+        const targetPos = isHorizontal ? Position.Left : Position.Top;
+        const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
 
-        // Build React Flow nodes
-        const rfNodes: Node[] = employees.map((emp) => {
-            const existingPos = nodePositionsRef.current.get(emp.id);
-
-            // Preserve manual positions; for new nodes, place near parent if possible.
-            const fallbackPos = (() => {
-                if (existingPos) return existingPos;
-                const parentPos = emp.parentId ? nodePositionsRef.current.get(emp.parentId) : undefined;
-                if (parentPos) return { x: parentPos.x, y: parentPos.y + 150 };
-                return { x: 0, y: 0 };
-            })();
-
-            if (!existingPos) {
-                nodePositionsRef.current.set(emp.id, fallbackPos);
-                hasNewPositions = true;
-            }
+        return empList.map((emp) => {
+            const pos = nodePositionsRef.current.get(emp.id) || { x: 0, y: 0 };
 
             return {
                 id: emp.id,
                 type: 'customOrgNode',
-                position: fallbackPos,
-                targetPosition: layoutDirection === 'LR' ? Position.Left : Position.Top,
-                sourcePosition: layoutDirection === 'LR' ? Position.Right : Position.Bottom,
-                width: 384,
-                height: 256,
+                position: pos,
+                targetPosition: targetPos,
+                sourcePosition: sourcePos,
+                width: NODE_WIDTH,
+                height: NODE_HEIGHT,
                 data: {
                     id: emp.id,
                     name: emp.name,
@@ -425,16 +313,20 @@ function OrgChartPageContent() {
                     email: emp.email || '',
                     department: emp.department,
                     isManager,
+                    targetPosition: targetPos,
+                    sourcePosition: sourcePos,
                     onEdit: handleEditNode,
                     onDelete: handleDeleteNode,
                     onAddChild: handleAddReportNode
                 }
             };
         });
+    }, [isManager, handleEditNode, handleDeleteNode, handleAddReportNode]);
 
-        // Build edges based on parentId relationship
-        const rfEdges: Edge[] = employees
-            .filter((emp) => emp.parentId && employees.some(p => p.id === emp.parentId))
+    // Helper: build edges from employees
+    const buildRawEdges = useCallback((empList: IEmployee[]): Edge[] => {
+        return empList
+            .filter((emp) => emp.parentId && empList.some(p => p.id === emp.parentId))
             .map((emp) => ({
                 id: `e-${emp.parentId}-${emp.id}`,
                 source: emp.parentId,
@@ -449,63 +341,103 @@ function OrgChartPageContent() {
                     color: 'var(--color-primary)'
                 }
             }));
+    }, []);
 
-        if (shouldAutoLayoutRef.current) {
-            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-                rfNodes,
-                rfEdges,
-                layoutDirection
-            );
+    // Layout arrangement trigger
+    const handleAutoArrange = useCallback((dir: 'TB' | 'LR') => {
+        if (employees.length === 0) return;
 
-            layoutedNodes.forEach((n) => nodePositionsRef.current.set(n.id, n.position));
-            shouldAutoLayoutRef.current = false;
-
-            if (typeof window !== 'undefined') {
-                const positionsObject = Object.fromEntries(nodePositionsRef.current);
-                localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
-            }
-
-            setNodes(layoutedNodes);
-            setEdges(layoutedEdges);
-            return;
-        }
-
-        if (hasNewPositions && typeof window !== 'undefined') {
-            const positionsObject = Object.fromEntries(nodePositionsRef.current);
-            localStorage.setItem('orgChartNodePositions', JSON.stringify(positionsObject));
-        }
-
-        // Preserve existing positions and only update node data + edges
-        setNodes(rfNodes);
-        setEdges(rfEdges);
-    }, [employees, layoutDirection, isManager, handleEditNode, handleDeleteNode, handleAddReportNode, setNodes, setEdges]);
-
-    // Recalculate graph whenever employees dataset or filters/layouts update
-    useEffect(() => {
-        compileNodesAndEdges();
-    }, [compileNodesAndEdges]);
-
-    // Re-fit view whenever nodes are added/removed so new nodes are always visible
-    useEffect(() => {
-        if (nodes.length === 0) return;
-        const timer = setTimeout(() => {
-            fitView({ padding: 0.3, duration: 600, minZoom: 0.1, maxZoom: 1 });
-        }, 150);
-        return () => clearTimeout(timer);
-    }, [nodes.length, fitView, layoutDirection]);
-
-    // Layout arrangement reset trigger
-    const handleAutoArrange = (dir: 'TB' | 'LR') => {
-        if (layoutDirection === dir) return;
-        shouldAutoLayoutRef.current = true;
         setLayoutDirection(dir);
         if (typeof window !== 'undefined') {
             localStorage.setItem('orgChartLayoutDirection', dir);
         }
+
+        const rawNodes = buildRawNodes(employees, dir);
+        const rawEdges = buildRawEdges(employees);
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges, dir);
+
+        layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
+
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+
+        setTimeout(() => {
+            fitView({ padding: 0.2, duration: 400 });
+        }, 80);
+
+        setTimeout(() => {
+            fitView({ padding: 0.2, duration: 400 });
+        }, 300);
+
         toast.dismiss();
         toast.success(`Chart rearranged ${dir === 'TB' ? 'Vertically' : 'Horizontally'}!`);
-    };
+    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
 
+    // Reset layout trigger
+    const handleResetChart = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('orgChartNodePositions');
+            localStorage.setItem('orgChartLayoutDirection', 'TB');
+        }
+        nodePositionsRef.current.clear();
+        setLayoutDirection('TB');
+
+        if (employees.length > 0) {
+            const rawNodes = buildRawNodes(employees, 'TB');
+            const rawEdges = buildRawEdges(employees);
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges, 'TB');
+
+            layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
+
+            setTimeout(() => {
+                fitView({ padding: 0.2, duration: 400 });
+            }, 80);
+
+            setTimeout(() => {
+                fitView({ padding: 0.2, duration: 400 });
+            }, 300);
+        }
+        toast.success('Chart layout reset successfully.');
+    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
+
+    // Initial compilation when employees data loads or changes
+    useEffect(() => {
+        if (employees.length === 0) {
+            setNodes([]);
+            setEdges([]);
+            return;
+        }
+
+        const rawNodes = buildRawNodes(employees, layoutDirection);
+        const rawEdges = buildRawEdges(employees);
+
+        // Always compute clean, non-overlapping Dagre layout
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+            rawNodes,
+            rawEdges,
+            layoutDirection
+        );
+
+        layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
+
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+
+        const timer1 = setTimeout(() => {
+            fitView({ padding: 0.2, duration: 400 });
+        }, 100);
+
+        const timer2 = setTimeout(() => {
+            fitView({ padding: 0.2, duration: 400 });
+        }, 350);
+
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
+    }, [employees, layoutDirection, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
 
     // Edge drawing/creation handler
     const onConnect = useCallback(async (params: Connection) => {
@@ -578,22 +510,6 @@ function OrgChartPageContent() {
         }
     };
 
-    // Reset initial dataset
-    const handleResetChart = () => {
-        shouldAutoLayoutRef.current = true;
-        nodePositionsRef.current.clear();
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('orgChartNodePositions');
-            localStorage.setItem('orgChartLayoutDirection', 'TB');
-        }
-        setLayoutDirection('TB');
-        fetchOrgChart();
-        setTimeout(() => fitView({ padding: 0.3, duration: 600 }), 150);
-        toast.success('Chart layout reset successfully.');
-    };
-
-
-
     return (
         <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-4 sm:gap-6 overflow-x-hidden">
             <Toaster position="top-center" reverseOrder={false} />
@@ -626,92 +542,94 @@ function OrgChartPageContent() {
                         currentDirection={layoutDirection}
                         onAutoArrange={handleAutoArrange}
                         onAddClick={handleAddClick}
+                        onResetChart={handleResetChart}
                         isManager={isManager}
                     />
                 </div>
             </div>
 
-            {/* Core Canvas Wrapper Container */}
-            <div
-                ref={reactFlowWrapper}
-                className="w-full bg-card rounded-2xl sm:rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden flex-1"
-                style={{ height: 'calc(100vh - 240px)', minHeight: '480px' }}
-            >
-                {isLoading ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                        <p className="text-muted-foreground font-medium">Loading organization chart...</p>
-                    </div>
-                ) : isError ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full space-y-4 text-center px-4">
-                        <div className="bg-destructive/10 p-4 rounded-full">
-                            <ShieldAlert className="w-8 h-8 text-destructive" />
+            {/* Scrollable Container Wrapper for Small Devices / Bottom Scrollbar */}
+            <div className="w-full overflow-x-auto overflow-y-visible pb-2 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-muted/40 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary [scrollbar-width:thin] [scrollbar-color:var(--color-primary)_transparent]">
+                {/* Core Canvas Wrapper Container */}
+                <div
+                    ref={reactFlowWrapper}
+                    className="w-full min-w-[900px] bg-card rounded-2xl sm:rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
+                    style={{ width: '100%', height: 'calc(100vh - 220px)', minHeight: '600px' }}
+                >
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-full w-full space-y-4">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                            <p className="text-muted-foreground font-medium">Loading organization chart...</p>
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-semibold text-foreground">Failed to Load Data</h3>
-                            <p className="text-muted-foreground text-sm max-w-sm">We couldn't retrieve the organizational chart. Please check your connection and try again.</p>
+                    ) : isError ? (
+                        <div className="flex flex-col items-center justify-center h-full w-full space-y-4 text-center px-4">
+                            <div className="bg-destructive/10 p-4 rounded-full">
+                                <ShieldAlert className="w-8 h-8 text-destructive" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-semibold text-foreground">Failed to Load Data</h3>
+                                <p className="text-muted-foreground text-sm max-w-sm">We couldn't retrieve the organizational chart. Please check your connection and try again.</p>
+                            </div>
+                            <button
+                                onClick={fetchOrgChart}
+                                className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                Retry
+                            </button>
                         </div>
-                        <button
-                            onClick={fetchOrgChart}
-                            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
+                    ) : employees.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full w-full space-y-6 text-center px-4 bg-muted/10">
+                            <div className="bg-primary/10 p-6 rounded-full">
+                                <Network className="w-10 h-10 text-primary" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-[800] text-foreground tracking-tight">Empty Organization Chart</h3>
+                                <p className="text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
+                                    Your organization chart is currently empty. Start by adding the very first employee to build out the hierarchy.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleAddClick}
+                                className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[0.925rem] font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer active:scale-95 shadow-md hover:shadow-lg"
+                            >
+                                <span>+ Create First Employee</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <ReactFlow
+                            nodes={nodes}
+                            edges={edges}
+                            style={{ width: '100%', height: '100%' }}
+                            className="w-full h-full"
+                            onNodesChange={handleNodesChange}
+                            onNodeDragStop={onNodeDragStop}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={onConnect}
+                            nodeTypes={nodeTypes}
+                            fitView
+                            fitViewOptions={{ padding: 0.2 }}
+                            minZoom={0.05}
+                            maxZoom={1.5}
+                            connectOnClick={isManager}
+                            nodesConnectable={isManager}
+                            nodesDraggable={isManager}
+                            zoomOnScroll={true}
+                            panOnDrag={true}
+                            proOptions={{ hideAttribution: true }}
                         >
-                            <RefreshCw className="w-4 h-4" />
-                            Retry
-                        </button>
-                    </div>
-                ) : employees.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full space-y-6 text-center px-4 bg-muted/10">
-                        <div className="bg-primary/10 p-6 rounded-full">
-                            <Network className="w-10 h-10 text-primary" />
-                        </div>
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-[800] text-foreground tracking-tight">Empty Organization Chart</h3>
-                            <p className="text-muted-foreground font-medium max-w-md mx-auto leading-relaxed">
-                                Your organization chart is currently empty. Start by adding the very first employee to build out the hierarchy.
-                            </p>
-                        </div>
-                        <button
-                            onClick={handleAddClick}
-                            className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[0.925rem] font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground transition-all cursor-pointer active:scale-95 shadow-md hover:shadow-lg"
-                        >
-                            <span>+ Create First Employee</span>
-                        </button>
-                    </div>
-                ) : (
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={handleNodesChange}
-                        onNodeDragStop={onNodeDragStop}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        nodeTypes={nodeTypes}
-                        fitView
-                        fitViewOptions={{ padding: 0.15 }}
-                        onInit={(instance: ReactFlowInstance) => {
-                            // onInit fires after React Flow has measured the container —
-                            // call fitView here so the CEO node is always centred.
-                            setTimeout(() => instance.fitView({ padding: 0.15, duration: 400 }), 120);
-                        }}
-                        minZoom={0.1}
-                        maxZoom={1.5}
-                        connectOnClick={isManager}
-                        nodesConnectable={isManager}
-                        nodesDraggable={isManager}
-                        zoomOnScroll={false}
-                        panOnScroll={true}
-                        proOptions={{ hideAttribution: true }}
-                    >
-                        <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
-                        <MiniMap
-                            nodeColor={(node) => 'var(--color-primary)'}
-                            nodeStrokeWidth={3}
-                            maskColor="rgba(241, 245, 249, 0.4)"
-                            className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
-                            style={{ height: 90, width: 140 }}
-                        />
-                    </ReactFlow>
-                )}
+                            <Background color="#cbd5e1" gap={24} size={1} />
+                            <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
+                            <MiniMap
+                                nodeColor={() => 'var(--color-primary)'}
+                                nodeStrokeWidth={3}
+                                maskColor="rgba(241, 245, 249, 0.4)"
+                                className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                                style={{ height: 90, width: 140 }}
+                            />
+                        </ReactFlow>
+                    )}
+                </div>
             </div>
 
             {/* Node Edit / Add Modal */}
