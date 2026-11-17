@@ -84,7 +84,7 @@ def latest_sprint_ids_per_project():
 def window_sprints(project_id=None, sprint_ids=None, window=None):
     """
     {project id: [(sprint id, judging day), ...]} of the sprints the team card shows by default: the last
-    `window` started sprints of the project (All Projects: of every project still running sprints), or the
+    `window` completed sprints of the project (All Projects: of every project still running sprints), or the
     picked sprint_ids.
     """
     from django.db.models import F, Q
@@ -94,7 +94,7 @@ def window_sprints(project_id=None, sprint_ids=None, window=None):
 
     window = window or get_workload_settings()['sprint_window']
     now = timezone.now()
-    qs = Sprint.objects.filter(Q(start_date__lte=now) | Q(end_date__lt=now))
+    qs = Sprint.objects.filter(end_date__lt=now)  # completed only, same as the team card and KPI cards
     if project_id:
         qs = qs.filter(source_config_id__in=SourceConfiguration.objects.filter(project_id=project_id).values('id'))
     if sprint_ids:

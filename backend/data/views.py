@@ -1546,7 +1546,7 @@ class AssigneeDistributionView(APIView):
         from collections import defaultdict
 
         # Identify sprints — date range when provided, otherwise the last `sprint_window`
-        # sprints that have started (completed ones + the running one).
+        # completed sprints (the running one is left out, same as the KPI cards).
         from django.db.models import F
         from .analytics.workload import (
             get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
@@ -1555,7 +1555,8 @@ class AssigneeDistributionView(APIView):
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
         now = timezone.now()
-        started = Q(start_date__lte=now) | Q(end_date__lt=now)
+        # Default window = last N completed sprints, same as the KPI cards (running sprint: pick it explicitly).
+        completed = Q(end_date__lt=now)
         # One judging day per sprint in the window (level, settings and allocation in effect then).
         days = []
         project_parts = []  # All Projects: (project id, sprint ids, judging days) per project
@@ -1576,7 +1577,7 @@ class AssigneeDistributionView(APIView):
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                 else:
-                    sprint_qs = sprint_qs.filter(started)[:window]
+                    sprint_qs = sprint_qs.filter(completed)[:window]
                     
                 rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                 relevant_sprint_ids = [r[0] for r in rows]
@@ -1608,7 +1609,7 @@ class AssigneeDistributionView(APIView):
                         if end_date:
                             sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                     else:
-                        sprint_qs = sprint_qs.filter(started).filter(recent)[:window]
+                        sprint_qs = sprint_qs.filter(completed).filter(recent)[:window]
                     rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                     if rows:
                         relevant_sprint_ids.extend(r[0] for r in rows)

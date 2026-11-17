@@ -134,7 +134,7 @@ class TeamWorkloadAllocationTest(TenantTestCase):
         self.project = Project.objects.create(tenant=self.tenant, name='OCS', key='OCS')
         src = SourceConfiguration.objects.create(project=self.project, source_type='jira', name='J', base_url='https://j.test')
         sprint = Sprint.objects.create(external_id='s1', source_config_id=src.id, name='S1',
-                                       start_date=now - timezone.timedelta(days=3), end_date=now + timezone.timedelta(days=11))
+                                       start_date=now - timezone.timedelta(days=2), end_date=now - timezone.timedelta(minutes=1))
         # (email, level, allocation %, items)
         people = [('affan@x.test', 'junior', 30, 2), ('shashi@x.test', 'senior', 100, 3), ('sakshi@x.test', 'mid', 100, 4)]
         n = 0
@@ -374,7 +374,7 @@ class WorkloadWarningsTest(TenantTestCase):
         self.project = Project.objects.create(tenant=self.tenant, name='OCS', key='OCS')
         self.src = SourceConfiguration.objects.create(project=self.project, source_type='jira', name='J', base_url='https://j.test')
         sprint = Sprint.objects.create(external_id='s1', source_config_id=self.src.id, name='S1',
-                                       start_date=now - timezone.timedelta(days=2), end_date=now + timezone.timedelta(days=12))
+                                       start_date=now - timezone.timedelta(days=2), end_date=now - timezone.timedelta(minutes=1))
         for i, name in enumerate(['Asha', 'Bilal']):
             user = User.objects.create_user(username=name, email=f'{name}@x.test', password='p', first_name=name)
             WorkItem.objects.create(external_id=f'w{i}', source_config_id=self.src.id, sprint=sprint, title='t',
@@ -471,8 +471,10 @@ class TeamWorkloadWindowTest(TenantTestCase):
         from data.models import Sprint
         self.n += 1
         start = self.now - timezone.timedelta(days=start_days_ago)
+        # Completed (ended just now at the latest): the default window leaves the running sprint out.
+        end = min(start + timezone.timedelta(days=length), self.now - timezone.timedelta(minutes=1))
         return Sprint.objects.create(external_id=f's{self.n}', source_config_id=src.id, name=f'S{self.n}',
-                                     start_date=start, end_date=start + timezone.timedelta(days=length))
+                                     start_date=start, end_date=end)
 
     def items(self, src, sprint, email, count):
         from data.models import WorkItem
@@ -634,6 +636,20 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.items(src_live, self.sprint(src_live, 3), 'dev@x.test', 3)
         self.items(src_old, self.sprint(src_old, 300), 'dev@x.test', 10)  # project stopped running sprints
         self.assertEqual(self.get()['dev@x.test']['total'], 3)
+
+    def test_running_sprint_only_when_picked(self):
+        from data.models import Sprint
+        project, src = self.project('OCS')
+        self.items(src, self.sprint(src, 3), 'dev@x.test', 3)
+        running = Sprint.objects.create(external_id='run', source_config_id=src.id, name='Running',
+                                        start_date=self.now - timezone.timedelta(days=1),
+                                        end_date=self.now + timezone.timedelta(days=13))
+        self.items(src, running, 'dev@x.test', 5)
+        # Default window = completed sprints, like the KPI cards.
+        self.assertEqual(self.get({'project_id': str(project.id)})['dev@x.test']['total'], 3)
+        self.assertEqual(self.get()['dev@x.test']['total'], 3)  # All Projects too
+        picked = self.get({'project_id': str(project.id), 'sprint_ids': str(running.id)})
+        self.assertEqual(picked['dev@x.test']['total'], 5)
 
     def test_project_view_members_follow_viewed_sprints_month(self):
         project, src = self.project('OCS')
