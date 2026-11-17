@@ -105,8 +105,50 @@ class CompanyBaselineViewTests(TenantTestCase):
         force_authenticate(request, user=admin)
         self.assertEqual(len(CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']), 1)
 
+    def test_backdated_save_replaces_later_versions(self):
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+
+        def post(over, day):
+            request = self.factory.post('/api/admin/company-baseline/', {
+                "workload_settings": {"per_sprint_limits": {"over": over}}, "workload_settings_effective_from": day,
+            }, format='json')
+            force_authenticate(request, user=admin)
+            return CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']
+
+        post(4, "2026-07-01")
+        post(5, "2026-08-01")
+        post(6, "2026-10-01")
+        # Saving from 1 Sep applies from then on: the 1 Oct version goes, July/August stay.
+        history = post(7, "2026-09-01")
+        self.assertEqual({str(v['effective_from']): v['settings']['per_sprint_limits']['over'] for v in history},
+                         {'2026-07-01': 4, '2026-08-01': 5, '2026-09-01': 7})
+
     def test_sprint_window_must_be_whole_number(self):
         admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
         request = self.factory.post('/api/admin/company-baseline/', {"workload_settings": {"sprint_window": 2.5}}, format='json')
         force_authenticate(request, user=admin)
         self.assertEqual(CompanyBaselineView.as_view()(request).status_code, 400)
+
+    def test_unchanged_settings_save_is_a_no_op(self):
+        admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
+
+        def post(payload):
+            request = self.factory.post('/api/admin/company-baseline/', payload, format='json')
+            force_authenticate(request, user=admin)
+            return CompanyBaselineView.as_view()(request).data['data']
+
+        post({"workload_settings": {"per_sprint_limits": {"over": 5}}, "workload_settings_effective_from": "2026-01-01"})
+        post({"workload_settings": {"per_sprint_limits": {"over": 8}}, "workload_settings_effective_from": "2999-01-01"})
+        # KPI save sending today's settings back (dated today): no new version, the future one stays.
+        data = post({"kpis": {"velocity": 30}, "workload_settings": data_limits(5)})
+        self.assertEqual([str(v['effective_from']) for v in data['workload_settings_history']], ['2026-01-01', '2999-01-01'])
+        self.assertEqual(str(data['workload_settings_effective_from']), '2026-01-01')
+        # Min 3 / Max 5: Mid 3-4, Junior 0.7 -> 2.1 / 3.5 -> 3-3, Senior 1.3 -> 3.9 / 6.5 -> 4-6.
+        self.assertEqual(data['workload_ranges'], {'junior': {'min': 3, 'max': 3}, 'mid': {'min': 3, 'max': 4},
+                                                   'senior': {'min': 4, 'max': 6}})
+        self.assertEqual(data['workload_settings_history'][1]['ranges']['mid'], {'min': 3, 'max': 7})
+
+
+def data_limits(over):
+    return {"per_sprint_limits": {"under": 3, "over": over}}
+

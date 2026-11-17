@@ -214,14 +214,20 @@ class EffectiveDatedCapacityTests(SimpleTestCase):
         cap = member_capacity(['a'], [date(2026, 8, 20), date(2026, 9, 5), date(2026, 10, 2)], [], {}, alloc)['a'][0]
         self.assertAlmostEqual(cap, 0.5 + 0.5 + 0.25)  # September uses August's published month
 
-    def test_missing_from_a_month_uses_todays_share(self):
-        from unittest import mock
-        alloc = [((2026, 8), {'a': 0.5}), ((2026, 10), {'a': 0.25, 'b': 0.4})]
-        with mock.patch('django.utils.timezone.localdate', return_value=date(2026, 10, 20)):
-            caps = member_capacity(['a', 'b', 'c'], [date(2026, 9, 5), date(2026, 10, 2)], [], {}, alloc)
-        self.assertAlmostEqual(caps['a'][0], 0.5 + 0.25)
-        self.assertAlmostEqual(caps['b'][0], 0.4 + 0.4)  # joined in October: September uses today's 40%
-        self.assertAlmostEqual(caps['c'][0], 1.0 + 1.0)  # never allocated = 100%
+    def test_missing_from_a_month_uses_nearest_known_month(self):
+        alloc = [((2026, 8), {'a': 0.5}), ((2026, 10), {'b': 0.4}), ((2026, 11), {'a': 0.8, 'b': 0.4})]
+        days = [date(2026, 9, 5), date(2026, 10, 2), date(2026, 11, 3)]
+        caps = member_capacity(['a', 'b', 'c'], days, [], {}, alloc)
+        self.assertAlmostEqual(caps['a'][0], 0.5 + 0.5 + 0.8)  # not in October's sheet: August's 50%, not 100%
+        self.assertAlmostEqual(caps['b'][0], 0.4 + 0.4 + 0.4)  # joined in October: September uses its first month
+        self.assertAlmostEqual(caps['c'][0], 3.0)  # never allocated = 100%
+
+    def test_left_project_is_not_a_gap(self):
+        from data.analytics.workload import allocation_for
+        alloc = [((2026, 7), {'a': 0.8}), ((2026, 8), {'b': 1.0}), ((2026, 9), {'b': 1.0})]
+        self.assertIsNone(allocation_for(alloc, 'a', date(2026, 11, 3)))  # sheets since July without a: left
+        self.assertEqual(allocation_for(alloc, 'a', date(2026, 7, 20)), 0.8)
+        self.assertEqual(allocation_for(alloc[:1], 'a', date(2026, 11, 3)), 0.8)  # no sheet since: still July's
 
 
 class UserLevelSaveTest(TenantTestCase):
@@ -466,6 +472,81 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.assertEqual((rows['half@x.test']['ideal_min'], rows['half@x.test']['ideal_max']), (2, 2))  # 0.5 capacity
         self.assertEqual((rows['both@x.test']['ideal_min'], rows['both@x.test']['ideal_max']), (3, 5))  # 0.5 + 0.5
         self.assertEqual(rows['both@x.test']['workload_status'], 'Overloaded')  # 6 items > 5
+        self.assertEqual(rows['both@x.test']['workload_note'], 'Ideal 3–5 tasks · has 6')
+        self.assertEqual(rows['both@x.test']['allocation_note'], 'X 50% · Y 50%')
+
+    def test_all_projects_skips_project_without_allocation(self):
+        from data.analytics.workload import workload_warnings
+        x, src_x = self.project('X')
+        _, src_y = self.project('Y')
+        sx, sy = self.sprint(src_x, 3), self.sprint(src_y, 3)
+        self.items(src_x, sx, 'dev@x.test', 3)
+        self.items(src_y, sy, 'dev@x.test', 3)  # never allocated to Y
+        self.items(src_y, sy, 'free@x.test', 4)  # allocated nowhere
+        self.allocate('dev@x.test', x, 50)
+        self.allocate('free@x.test', x, 0)
+        from data.models import WorkItem
+        from users.models import User
+        for user in User.objects.filter(email__in=['dev@x.test', 'free@x.test']):
+            WorkItem.objects.filter(assignee_email=user.email).update(resolved_assignee=user)
+        rows = self.get()
+        self.assertEqual(rows['dev@x.test']['capacity'], 0.5)  # Y adds nothing, not another 100%
+        self.assertEqual(rows['dev@x.test']['workload_status'], 'Overloaded')  # 6 items vs 2-2
+        self.assertEqual(rows['free@x.test']['capacity'], 1.0)
+        self.assertEqual(rows['dev@x.test']['allocations'], [{'project_id': x.id, 'project': 'X', 'percent': 50}])
+        self.assertEqual(rows['dev@x.test']['allocation_note'], 'X 50% · 50% unallocated')
+        self.assertEqual(rows['free@x.test']['allocation_note'], 'No allocation set (counted at 100%)')
+        codes = {w['code']: w['message'] for w in workload_warnings()}
+        self.assertIn('dev@x.test', codes['allocation_missing_project'])
+        self.assertNotIn('free@x.test', codes['allocation_missing_project'])
+
+    def test_project_view_note_shows_other_projects_and_gap(self):
+        ocs, src = self.project('OCS')
+        dmt, _ = self.project('DMT')
+        sprint = self.sprint(src, 3)
+        self.items(src, sprint, 'dev@x.test', 10)
+        self.allocate('dev@x.test', ocs, 80)
+        self.allocate('dev@x.test', dmt, 10)
+        row = self.get({'project_id': str(ocs.id)})['dev@x.test']
+        self.assertEqual(row['workload_note'], 'Ideal 3–4 tasks · has 10')
+        self.assertEqual(row['allocation_note'], 'OCS 80% · DMT 10% · 10% unallocated')
+        self.assertEqual([a['percent'] for a in row['allocations']], [80, 10])
+
+    def test_project_view_keeps_member_missing_from_sprint_month(self):
+        project, src = self.project('OCS')
+        dmt, _ = self.project('DMT')
+        last_month = self.sprint(src, timezone.localdate().day + 10)
+        self.items(src, last_month, 'gap@x.test', 3)
+        self.items(src, last_month, 'other@x.test', 3)
+        self.allocate('gap@x.test', project, 80, month_offset=-2)
+        self.allocate('other@x.test', project, 100, month_offset=-1)  # last month's sheet exists without gap
+        self.allocate('gap@x.test', project, 50, month_offset=0)  # back this month: a gap, not leaving
+        self.allocate('dmt@x.test', dmt, 10, month_offset=-1)
+        self.items(src, last_month, 'dmt@x.test', 1)
+        rows = self.get({'project_id': str(project.id), 'sprint_ids': str(last_month.id)})
+        self.assertIn('gap@x.test', rows)  # not in last month's sheet: the month before still applies
+        self.assertEqual(rows['gap@x.test']['capacity'], 0.8)
+        self.assertNotIn('dmt@x.test', rows)  # never allocated to OCS
+
+    def test_project_view_note_when_viewed_project_not_set(self):
+        project, src = self.project('OCS')
+        dmt, _ = self.project('DMT')
+        sprint = self.sprint(src, 3)
+        self.items(src, sprint, 'a@x.test', 3)
+        self.items(src, sprint, 'b@x.test', 3)
+        self.allocate('a@x.test', project, 100)
+        self.allocate('b@x.test', dmt, 10)
+        from data.analytics import workload
+        from unittest import mock
+        with mock.patch.object(workload, 'allocation_timeline', wraps=workload.allocation_timeline) as loads:
+            rows = self.get({'project_id': str(project.id)})
+        self.assertEqual(loads.call_count, 2)  # OCS once (reused for the tooltip) + DMT once
+        self.assertEqual(rows['a@x.test']['allocation_note'], 'OCS 100%')
+        new, new_src = self.project('NEW')  # no sheet at all for NEW: everyone kept, counted at 100%
+        self.items(new_src, self.sprint(new_src, 3), 'b@x.test', 3)
+        row = self.get({'project_id': str(new.id)})['b@x.test']
+        self.assertEqual(row['capacity'], 1.0)
+        self.assertEqual(row['allocation_note'], 'NEW not set (counted at 100%) · DMT 10% · 90% unallocated')
 
     def test_all_projects_skips_stale_projects_sprints(self):
         _, src_live = self.project('LIVE')

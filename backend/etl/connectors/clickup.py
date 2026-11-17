@@ -344,18 +344,19 @@ class ClickupConnector(BaseConnector):
         # Resolve sprint from the task's primary list or secondary lists (for Tasks in Multiple Lists - TIML)
         # to prevent overwriting sprint to None when syncing non-sprint lists.
         resolved_sprint = None
+        sprint_lists = getattr(self, 'sprint_lists', {})
         primary_list_id = task.get('list', {}).get('id')
-        if primary_list_id and hasattr(self, 'sprint_lists') and primary_list_id in self.sprint_lists:
-            resolved_sprint = self.sprint_lists[primary_list_id]
-            
-        if not resolved_sprint and hasattr(self, 'sprint_lists'):
-            # ClickUp returns TIML lists under 'locations' (there is no 'lists' key), e.g. a CR whose
-            # home list is "Reported Bugs" but is also added to "Sprint 40". If it sits in several
-            # sprint lists, use the latest sprint.
-            secondary = task.get('locations') or task.get('lists') or []
-            candidates = [self.sprint_lists[l.get('id')] for l in secondary if l.get('id') in self.sprint_lists]
-            if candidates:
-                resolved_sprint = max(candidates, key=lambda s: s.end_date or s.start_date or timezone.now().replace(year=1970))
+        if primary_list_id in sprint_lists:
+            resolved_sprint = sprint_lists[primary_list_id]
+
+        # ClickUp returns TIML lists under 'locations' (there is no 'lists' key), e.g. a CR whose
+        # home list is "Reported Bugs" but is also added to "Sprint 40", or a task carried over
+        # from Sprint 29 into Sprint 33. The item counts in every sprint list it sits in (`sprints`);
+        # `sprint` stays the primary list, else the latest of them.
+        secondary = task.get('locations') or task.get('lists') or []
+        member_sprints = [sprint_lists[l.get('id')] for l in secondary if l.get('id') in sprint_lists]
+        if not resolved_sprint and member_sprints:
+            resolved_sprint = max(member_sprints, key=lambda s: s.end_date or s.start_date or timezone.now().replace(year=1970))
                     
         if resolved_sprint:
             sprint_obj = resolved_sprint
@@ -648,7 +649,7 @@ class ClickupConnector(BaseConnector):
         work_item_data['compliance_failures'] = compliance_failures
         work_item_data.update(violation_tracking)
 
-        WorkItem.objects.update_or_create(
+        work_item, _ = WorkItem.objects.update_or_create(
             source_config_id=source_id,
             external_id=external_id,
             defaults={
@@ -657,3 +658,4 @@ class ClickupConnector(BaseConnector):
                 'sprint': sprint_obj
             }
         )
+        work_item.sprints.set({s.id for s in member_sprints + [sprint_obj] if s})

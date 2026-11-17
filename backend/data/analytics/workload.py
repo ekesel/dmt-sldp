@@ -1,7 +1,8 @@
 """
 Capacity-based workload status (Team Workload card + Individual workload).
 
-capacity    = seniority_weight * allocation   (allocation = share of time on the project, 1.0 if unknown)
+capacity    = seniority_weight * allocation   (share of time on the project: the sprint month's published %,
+              else the person's nearest published month, else 1.0)
 ideal range = ceil(sum of under * capacity) .. ceil(sum of over * capacity) - 1 items, summed over the sprints
 Level, weights/limits and allocation are effective-dated: each sprint uses the values in effect on its start day.
   Overloaded    : items above the ideal range
@@ -182,24 +183,92 @@ def allocation_on(timeline, day):
     return _as_of(timeline, (day.year, day.month)) or {}
 
 
+def allocation_for(timeline, key, day, earlier_only=False):
+    """
+    key's share in `day`'s month: their latest published month on or before it, else (unless earlier_only)
+    their first month after (joined later); None if never allocated to the project.
+    Left the project = later sheets were published without them and they never come back: None.
+    A gap (missing from one month, back later) keeps the earlier share.
+    """
+    own = [(month, alloc) for month, alloc in ((m, mp.get(key)) for m, mp in timeline) if alloc]
+    if not own:
+        return None
+    month = (day.year, day.month)
+    share = _as_of(own, month)
+    last = own[-1][0]
+    if share and last < month and any(last < m <= month for m, _ in timeline):
+        return None
+    if share or earlier_only:
+        return share
+    return own[0][1]
+
+
+def member_allocations(keys, day, timelines=None):
+    """
+    {key: [{'project_id', 'project', 'percent'}, ...]}: the share on every project of this tenant in `day`'s
+    month (nearest published month, as the capacity uses it), largest first.
+    timelines: {project id: allocation_timeline} already loaded, reused instead of reloading.
+    """
+    from django.db import connection
+    from configuration.models import Project
+    from users.models import ResourceAllocation
+
+    project_ids = set(
+        ResourceAllocation.objects.filter(
+            status='PUBLISHED', percentage_allocated__gt=0, project__tenant_id=getattr(connection.tenant, 'id', None),
+        ).values_list('project_id', flat=True)
+    )
+    names = dict(Project.objects.filter(id__in=project_ids).values_list('id', 'name'))
+    out = {k: [] for k in keys}
+    timelines = timelines or {}
+    for pid in project_ids:
+        tl = timelines[pid] if pid in timelines else allocation_timeline(pid)
+        for k in keys:
+            share = allocation_for(tl, k, day)
+            if share:
+                out[k].append({'project_id': pid, 'project': names.get(pid, str(pid)), 'percent': round(share * 100)})
+    for rows in out.values():
+        rows.sort(key=lambda a: (-a['percent'], a['project']))
+    return out
+
+
+def workload_note(items, ideal_min, ideal_max, sprints):
+    """Tooltip line 1, e.g. 'Ideal 5–9 tasks · has 10'."""
+    span = f' in {sprints} sprints' if sprints > 1 else ''
+    return f'Ideal {ideal_min}–{ideal_max} tasks{span} · has {items}'
+
+
+def allocation_note(allocations, unset_project=None):
+    """
+    Tooltip line 2, e.g. 'OCS 80% · DMT 10% · 10% unallocated'.
+    unset_project: name of the viewed project when the person has no allocation there (counted at 100%).
+    """
+    if not allocations:
+        return f'{unset_project} not set (counted at 100%)' if unset_project else 'No allocation set (counted at 100%)'
+    parts = [f"{a['project']} {a['percent']}%" for a in allocations]
+    if unset_project:
+        parts.insert(0, f'{unset_project} not set (counted at 100%)')
+    total = sum(a['percent'] for a in allocations)
+    if total < 100:
+        parts.append(f'{100 - total}% unallocated')
+    elif total > 100:
+        parts.append(f'{total}% allocated')
+    return ' · '.join(parts)
+
+
 def member_capacity(keys, days, settings_tl, levels, alloc_tl=None):
     """
     {key: (capacity, ideal_low, ideal_high)} summed over the sprints, one judging `day` each: every sprint
     uses the level, weights, limits and allocation in effect on its day. alloc_tl None = allocation not used.
     """
-    from django.utils import timezone
-
-    # Not in a sprint month's published allocation (e.g. joined the project later): use today's share, else 100%.
-    current = allocation_on(alloc_tl, timezone.localdate()) if alloc_tl is not None else {}
-    per_day = [
-        (day, get_workload_settings(day, settings_tl), allocation_on(alloc_tl, day) if alloc_tl is not None else None)
-        for day in days
-    ]
+    per_day = [(day, get_workload_settings(day, settings_tl)) for day in days]
     out = {}
     for k in keys:
         cap = low = high = 0.0
-        for day, s, alloc_map in per_day:
-            alloc = alloc_map.get(k, current.get(k, 1.0)) if alloc_map is not None and s['use_allocation'] else 1.0
+        for day, s in per_day:
+            alloc = 1.0
+            if alloc_tl is not None and s['use_allocation']:
+                alloc = allocation_for(alloc_tl, k, day) or 1.0  # never allocated to the project = 100%
             alloc = min(max(alloc, s['min_allocation'] / 100), 1.0)
             c = (s['seniority_weights'].get(level_on(levels.get(k), day) or 'mid') or 1.0) * alloc
             cap += c
@@ -222,10 +291,19 @@ def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, 
 
     today = timezone.localdate()
     active = [k for k, c in counts.items() if c > 0]
-    if parts is None:
-        parts = [(active, days, alloc_tl)]
     if settings_tl is None:
         settings_tl = settings_timeline()
+    if parts is None:
+        parts = [(active, days, alloc_tl)]
+    elif get_workload_settings(today, settings_tl)['use_allocation']:
+        # All Projects: a project someone was never allocated to adds no capacity when another project has
+        # them allocated (its items still count). Allocated nowhere = every project at 100%.
+        allocated = [{k for k in keys if allocation_for(tl or [], k, today)} for keys, _, tl in parts]
+        anywhere = set().union(*allocated)
+        parts = [
+            ([k for k in keys if k in known or k not in anywhere], part_days, tl)
+            for (keys, part_days, tl), known in zip(parts, allocated)
+        ]
     levels = level_timelines(counts, resolver)
     capacity = {}
     for keys, part_days, part_alloc in parts:
@@ -239,6 +317,25 @@ def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, 
     sprint_count = max((len(part_days) for _, part_days, _ in parts), default=0) or 1
     result = classify_workload(counts, capacity, sprint_count, get_workload_settings(today, settings_tl))
     return result, {k: level_on(t, today) for k, t in levels.items()}
+
+
+def ideal_range(low, high):
+    """
+    Whole-item ideal range (min, max) for raw limits low = Min x capacity, high = Max x capacity:
+    min = ceil(low), Overloaded from ceil(high) (at least min + 1), so max = that - 1.
+    Rounds first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
+    """
+    ideal_min = ceil(round(low, 6))
+    return ideal_min, max(ceil(round(high, 6)), ideal_min + 1) - 1
+
+
+def level_ranges(settings):
+    """{level: {'min', 'max'}} ideal tasks per sprint at 100% allocation (Company Baseline preview)."""
+    limits = settings['per_sprint_limits']
+    return {
+        level: dict(zip(('min', 'max'), ideal_range(limits['under'] * w, limits['over'] * w)))
+        for level, w in settings['seniority_weights'].items()
+    }
 
 
 def classify_workload(counts, capacity, sprint_count, settings):
@@ -260,9 +357,8 @@ def classify_workload(counts, capacity, sprint_count, settings):
         same = bisect_right(ordered, load) - fewer
         pct = (fewer + 0.5 * same) / n * 100
         cap, low, high = capacity[k]
-        # Whole items; round first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
-        ideal_min = ceil(round(low, 6))
-        overload_from = max(ceil(round(high, 6)), ideal_min + 1)
+        ideal_min, ideal_max = ideal_range(low, high)
+        overload_from = ideal_max + 1
         items = counts[k]
         if items >= overload_from and (not gate or pct > settings['overload_percentile']):
             status = 'Overloaded'
@@ -272,7 +368,7 @@ def classify_workload(counts, capacity, sprint_count, settings):
             status = 'Balanced'
         result[k] = {
             'percentile': round(pct, 2), 'status': status, 'effective_load': round(load, 2),
-            'capacity': round(cap / sprints, 2), 'ideal_min': ideal_min, 'ideal_max': overload_from - 1,
+            'capacity': round(cap / sprints, 2), 'ideal_min': ideal_min, 'ideal_max': ideal_max,
         }
     return result
 
@@ -343,5 +439,24 @@ def workload_warnings(project_id=None):
         if allocation and no_alloc:
             warnings.append({'code': 'allocation_not_set', 'message': (
                 f'No {month_label} allocation for this project for {len(no_alloc)} employee(s): {names(no_alloc)}. '
-                'They are counted at 100%. Please update it from Resource Allocation.')})
+                'Their nearest published month is used, else 100%. Please update it from Resource Allocation.')})
+    elif not project_id and settings['use_allocation']:
+        # All Projects: items on a project the person was never allocated to add no capacity (see team_workload).
+        project_of = dict(SourceConfiguration.objects.values_list('id', 'project_id'))
+        worked = {
+            (user_id, project_of.get(src))
+            for user_id, src in items.filter(resolved_assignee__in=members)
+            .values_list('resolved_assignee_id', 'source_config_id').distinct()
+        }
+        allocated = set(
+            ResourceAllocation.objects.filter(status='PUBLISHED', percentage_allocated__gt=0, developer__in=members)
+            .values_list('developer_id', 'project_id')
+        )
+        allocated_users = {user_id for user_id, _ in allocated}
+        gaps = {user_id for user_id, proj in worked if user_id in allocated_users and (user_id, proj) not in allocated}
+        no_alloc = [u for u in members if u.id in gaps]
+        if no_alloc:
+            warnings.append({'code': 'allocation_missing_project', 'message': (
+                f'{len(no_alloc)} employee(s) have items on a project they are not allocated to: {names(no_alloc)}. '
+                'That project adds no capacity for them in All Projects. Please update it from Resource Allocation.')})
     return warnings
