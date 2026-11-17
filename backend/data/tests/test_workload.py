@@ -186,6 +186,45 @@ class TeamWorkloadAllocationTest(TenantTestCase):
         self.assertEqual(rows['sakshi@x.test']['completed'], 2)  # bug still counted as work
         self.assertEqual(rows['sakshi@x.test']['avg_cycle_time_days'], 2.0)  # story only: Mon -> Wed
 
+    def test_closed_without_work_is_not_workload(self):
+        from data.models import Sprint, WorkItem
+        from data.views import AssigneeDistributionView
+
+        sprint = Sprint.objects.get(external_id='s1')
+        now = timezone.now()
+        for st in ('Closed', 'duplicate', 'not a bug', 'done'):
+            WorkItem.objects.create(external_id=st, source_config_id=sprint.source_config_id, sprint=sprint, title='t',
+                                    status=st, status_category='done', created_at=now, updated_at=now,
+                                    assignee_email='sakshi@x.test')
+
+        request = APIRequestFactory().get('/api/dashboard/assignee-distribution/', {'project_id': str(self.project.id)})
+        force_authenticate(request, user=self.viewer)
+        rows = {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
+        self.assertEqual((rows['sakshi@x.test']['total'], rows['sakshi@x.test']['completed']), (5, 1))  # only 'done'
+
+    def test_co_assignee_gets_credit(self):
+        from data.models import Sprint, WorkItem
+        from data.views import AssigneeDistributionView
+
+        sprint = Sprint.objects.get(external_id='s1')
+        now = timezone.now()
+        WorkItem.objects.create(external_id='joint', source_config_id=sprint.source_config_id, sprint=sprint,
+                                title='t', status='done', status_category='done', created_at=now, updated_at=now,
+                                assignee_email='sakshi@x.test',
+                                # ghost: no portal user behind it, so no separate row.
+                                raw_source_data={'assignees': [{'email': 'sakshi@x.test'}, {'email': 'Shashi@x.test'},
+                                                               {'email': 'ghost@x.test'}]},
+                                # Sub-task worker only: not an assignee of the item, gets no credit.
+                                assignee_contributions=[{'email': 'affan@x.test'}])
+
+        request = APIRequestFactory().get('/api/dashboard/assignee-distribution/', {'project_id': str(self.project.id)})
+        force_authenticate(request, user=self.viewer)
+        rows = {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
+        self.assertEqual((rows['sakshi@x.test']['total'], rows['sakshi@x.test']['completed']), (5, 1))  # not twice
+        self.assertEqual((rows['shashi@x.test']['total'], rows['shashi@x.test']['completed']), (4, 1))
+        self.assertEqual(rows['affan@x.test']['total'], 2)
+        self.assertNotIn('ghost@x.test', rows)
+
 
 class EffectiveDatedCapacityTests(SimpleTestCase):
     """Each sprint uses the level, settings and allocation in effect on its day."""
@@ -560,6 +599,34 @@ class TeamWorkloadWindowTest(TenantTestCase):
             codes = [w['code'] for w in workload_warnings()]
         self.assertEqual(row['allocation_note'], 'OCS 80% · 20% unallocated')
         self.assertNotIn('allocation_not_published', codes)
+
+    def test_zero_in_a_viewed_month_is_flagged(self):
+        # Awantika: 0% last month, allocated this month; the card shows both months' sprints.
+        from calendar import month_abbr
+        from data.analytics.workload import workload_warnings
+        from data.models import WorkItem
+        from users.models import User
+        ocs, src = self.project('OCS')
+        old = self.sprint(src, timezone.localdate().day + 10)
+        new = self.sprint(src, 1)
+        self.items(src, old, 'aw@x.test', 1)
+        self.items(src, new, 'aw@x.test', 1)
+        self.items(src, new, 'ok@x.test', 1)
+        self.allocate('aw@x.test', ocs, 0, month_offset=-1)
+        self.allocate('ok@x.test', ocs, 100, month_offset=-1)  # last month's sheet is published
+        self.allocate('aw@x.test', ocs, 50)
+        self.allocate('ok@x.test', ocs, 100)
+        for user in User.objects.filter(email__in=['aw@x.test', 'ok@x.test']):
+            WorkItem.objects.filter(assignee_email=user.email).update(resolved_assignee=user)
+        rows = self.get({'project_id': str(ocs.id)})
+        last = old.start_date.astimezone(timezone.get_current_timezone())
+        month = f'{last.year}-{last.month:02d}'
+        self.assertEqual(rows['aw@x.test']['allocation_gaps'], [{'project_id': ocs.id, 'project': 'OCS', 'month': month}])
+        self.assertIn(f'No allocation in {month_abbr[last.month]} {last.year} (OCS)', rows['aw@x.test']['allocation_note'])
+        self.assertEqual(rows['ok@x.test']['allocation_gaps'], [])
+        message = {w['code']: w['message'] for w in workload_warnings(ocs.id)}['allocation_not_set']
+        self.assertIn('aw@x.test', message)
+        self.assertNotIn('ok@x.test', message)
 
     def test_all_projects_skips_stale_projects_sprints(self):
         _, src_live = self.project('LIVE')

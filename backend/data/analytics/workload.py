@@ -34,13 +34,28 @@ DEFAULT_SETTINGS = {
 
 
 def workload_items(qs, settings):
-    """WorkItem queryset narrowed to what counts as workload: never epics, sub-tasks only if enabled."""
+    """
+    WorkItem queryset narrowed to what counts as workload: never epics, sub-tasks only if enabled, and never
+    items closed without being done (Closed / duplicate / not a bug / invalid / won't fix: no work happened).
+    """
     from django.db.models import Q
+    from data.analytics.metrics import NOT_FIXED_BUG_STATUSES
 
-    qs = qs.exclude(item_type='epic')
+    # ponytail: 'Closed' read as "dropped" everywhere; OCS Sprint 1-2 used it as done (see counted_done),
+    # move to a per-source status setting if old sprints must count.
+    qs = qs.exclude(item_type='epic').exclude(Q(status_category='done') & NOT_FIXED_BUG_STATUSES)
     if not settings['count_subtasks']:
         qs = qs.filter(Q(parent__isnull=True) | Q(parent__item_type='epic'))
     return qs
+
+
+def co_assigned(qs):
+    """Items with 2+ assignees on the item itself (ClickUp raw `assignees`), annotated `co_assignees`."""
+    from django.db.models.fields.json import KeyTransform
+
+    return qs.filter(raw_source_data__assignees__1__isnull=False).annotate(
+        co_assignees=KeyTransform('assignees', 'raw_source_data'),
+    )
 
 
 def latest_sprint_ids_per_project():
@@ -64,6 +79,41 @@ def latest_sprint_ids_per_project():
         latest.setdefault(project_of.get(src), sprint_id)
     latest.pop(None, None)
     return list(latest.values())
+
+
+def window_sprints(project_id=None, sprint_ids=None, window=None):
+    """
+    {project id: [(sprint id, judging day), ...]} of the sprints the team card shows by default: the last
+    `window` started sprints of the project (All Projects: of every project still running sprints), or the
+    picked sprint_ids.
+    """
+    from django.db.models import F, Q
+    from django.utils import timezone
+    from configuration.models import SourceConfiguration
+    from data.models import Sprint
+
+    window = window or get_workload_settings()['sprint_window']
+    now = timezone.now()
+    qs = Sprint.objects.filter(Q(start_date__lte=now) | Q(end_date__lt=now))
+    if project_id:
+        qs = qs.filter(source_config_id__in=SourceConfiguration.objects.filter(project_id=project_id).values('id'))
+    if sprint_ids:
+        qs = qs.filter(id__in=sprint_ids)
+    elif not project_id:
+        # Same cut-off as the team card: projects that stopped running sprints are left out.
+        cutoff = now - timezone.timedelta(days=window * 14)
+        qs = qs.filter(Q(end_date__gte=cutoff) | Q(end_date__isnull=True, start_date__gte=cutoff))
+    rows = list(
+        qs.order_by(F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+        .values_list('id', 'source_config_id', 'start_date', 'end_date')
+    )
+    project_of = dict(SourceConfiguration.objects.filter(id__in={r[1] for r in rows}).values_list('id', 'project_id'))
+    out = {}
+    for sprint_id, src, start, end in rows:
+        pid = project_of.get(src)
+        if pid is not None and (sprint_ids or len(out.get(pid, [])) < window):
+            out.setdefault(pid, []).append((sprint_id, sprint_day(start, end)))
+    return out
 
 
 def merge_settings(overrides):
@@ -232,17 +282,56 @@ def member_allocations(keys, day, timelines=None):
     return out
 
 
+def allocation_gaps(parts):
+    """
+    parts: [(project_id, project name, keys, days, allocation_timeline)].
+    {key: [{'project_id', 'project', 'month': 'YYYY-MM'}]}: months of the viewed sprints whose sheet is published
+    for that project but has no share for the person (0% or not listed).
+    """
+    out = {}
+    for pid, name, keys, days, tl in parts:
+        by_month = dict(tl or [])
+        for month in sorted({(d.year, d.month) for d in days}):
+            sheet = by_month.get(month)
+            if not sheet:
+                continue  # month not published: reported as an unpublished sheet instead
+            for k in keys:
+                if not sheet.get(k):
+                    out.setdefault(k, []).append({'project_id': pid, 'project': name, 'month': f'{month[0]}-{month[1]:02d}'})
+    return out
+
+
+def month_label(month):
+    """'2026-10' -> 'Oct 2026'."""
+    from calendar import month_abbr
+    year, mon = month.split('-')
+    return f'{month_abbr[int(mon)]} {year}'
+
+
+def gaps_text(gaps):
+    """'Oct 2026 (OCS), Sep 2026 (DMT)'."""
+    return ', '.join(f"{month_label(g['month'])} ({g['project']})" for g in gaps)
+
+
 def workload_note(items, ideal_min, ideal_max, sprints):
     """Tooltip line 1, e.g. 'Ideal 5–9 tasks · has 10'."""
     span = f' in {sprints} sprints' if sprints > 1 else ''
     return f'Ideal {ideal_min}–{ideal_max} tasks{span} · has {items}'
 
 
-def allocation_note(allocations, unset_project=None):
+def allocation_note(allocations, unset_project=None, gaps=None):
     """
-    Tooltip line 2, e.g. 'OCS 80% · DMT 10% · 10% unallocated'.
+    Tooltip line 2, e.g. 'OCS 80% · DMT 10% · 10% unallocated · No allocation in Oct 2026 (OCS)'.
     unset_project: name of the viewed project when the person has no allocation there (counted at 100%).
+    gaps: allocation_gaps rows (viewed sprint months without a share).
     """
+    note = _allocation_text(allocations, unset_project)
+    if gaps:
+        note += f' · No allocation in {gaps_text(gaps)}'
+    return note
+
+
+def _allocation_text(allocations, unset_project):
     if not allocations:
         return f'{unset_project} not set (counted at 100%)' if unset_project else 'No allocation set (counted at 100%)'
     parts = [f"{a['project']} {a['percent']}%" for a in allocations]
@@ -373,10 +462,11 @@ def classify_workload(counts, capacity, sprint_count, settings):
     return result
 
 
-def workload_warnings(project_id=None):
+def workload_warnings(project_id=None, sprint_ids=None):
     """
     Setup gaps that make the workload screen less accurate, as [{'code', 'message'}] for a banner.
     Members = active portal users assigned in the latest started sprint (of the project, or of every project).
+    Allocation gaps cover the months of the sprints the team card shows (sprint_ids, else its default window).
     """
     from calendar import month_name
     from django.utils import timezone
@@ -395,18 +485,18 @@ def workload_warnings(project_id=None):
             'Workload settings are not set in Company Baseline, so default level weights and Min/Max limits '
             'are used. Please update them from Company Baseline.')})
 
-    month_label = f'{month_name[today.month]} {today.year}'
+    this_month = f'{month_name[today.month]} {today.year}'
     # This tenant's (or project's) sheet; MonthlyAllocationStatus is global across tenants, so not used.
     published = ResourceAllocation.objects.filter(month=today.month, year=today.year, status='PUBLISHED')
     published = published.filter(project_id=project_id) if project_id else published.filter(
         project__tenant__schema_name=connection.schema_name)
     if settings['use_allocation'] and not published.exists():
         warnings.append({'code': 'allocation_not_published', 'message': (
-            f'Allocation sheet for {month_label} is not completed. Workload may be affected. '
+            f'Allocation sheet for {this_month} is not completed. Workload may be affected. '
             'Please complete and publish it from Resource Allocation.')})
 
-    sprint_ids = latest_sprint_ids_per_project()
-    items = WorkItem.objects.filter(sprint_id__in=sprint_ids)
+    latest_ids = latest_sprint_ids_per_project()
+    items = WorkItem.objects.filter(sprint_id__in=latest_ids)
     if project_id:
         items = items.filter(
             source_config_id__in=SourceConfiguration.objects.filter(project_id=project_id).values('id')
@@ -432,15 +522,34 @@ def workload_warnings(project_id=None):
             f'Level is not set for {len(no_level)} employee(s): {names(no_level)}. They are counted as Mid. '
             'Please set it from Users.')})
 
-    if project_id and settings['use_allocation']:
-        # This month's sheet only; an unpublished month is already reported above.
-        allocation = dict(allocation_timeline(project_id)).get((today.year, today.month), {})
-        no_alloc = [u for u in members if u.email.lower() not in allocation]
-        if allocation and no_alloc:
+    if settings['use_allocation']:
+        # Viewed sprints' months (not just this one): a published sheet without the person's share.
+        from configuration.models import Project
+        windows = window_sprints(project_id, sprint_ids, settings['sprint_window'])
+        names_of = dict(Project.objects.filter(id__in=windows).values_list('id', 'name'))
+        gap_parts = []
+        for pid, rows in windows.items():
+            users = (
+                WorkItem.objects.filter(sprint_id__in=[sid for sid, _ in rows], resolved_assignee__is_active=True)
+                .values_list('resolved_assignee__email', flat=True).distinct()
+            )
+            keys = [e.lower() for e in users if e]
+            gap_parts.append((pid, names_of.get(pid, str(pid)), keys, [d for _, d in rows], allocation_timeline(pid)))
+        gaps = allocation_gaps(gap_parts)
+        people = []
+        if gaps:
+            from django.db.models.functions import Lower
+            people = list(
+                User.objects.annotate(email_l=Lower('email')).filter(email_l__in=list(gaps))
+                .order_by('first_name', 'last_name')
+            )
+        if people:
+            shown = '; '.join(f'{u.get_full_name() or u.email} ({gaps_text(gaps[u.email.lower()])})' for u in people[:5])
+            more = f' and {len(people) - 5} more' if len(people) > 5 else ''
             warnings.append({'code': 'allocation_not_set', 'message': (
-                f'No {month_label} allocation for this project for {len(no_alloc)} employee(s): {names(no_alloc)}. '
-                'Their nearest published month is used, else 100%. Please update it from Resource Allocation.')})
-    elif not project_id and settings['use_allocation']:
+                f'No allocation in the viewed sprints for {len(people)} employee(s): {shown}{more}. '
+                'Their nearest allocated month is used, else 100%. Please update it from Resource Allocation.')})
+    if not project_id and settings['use_allocation']:
         # All Projects: items on a project the person was never allocated to add no capacity (see team_workload).
         project_of = dict(SourceConfiguration.objects.values_list('id', 'project_id'))
         worked = {
