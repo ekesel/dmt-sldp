@@ -215,7 +215,7 @@ def member_allocations(keys, day, timelines=None):
 
     project_ids = set(
         ResourceAllocation.objects.filter(
-            status='PUBLISHED', percentage_allocated__gt=0, project__tenant_id=getattr(connection.tenant, 'id', None),
+            status='PUBLISHED', percentage_allocated__gt=0, project__tenant__schema_name=connection.schema_name,
         ).values_list('project_id', flat=True)
     )
     names = dict(Project.objects.filter(id__in=project_ids).values_list('id', 'name'))
@@ -399,7 +399,7 @@ def workload_warnings(project_id=None):
     # This tenant's (or project's) sheet; MonthlyAllocationStatus is global across tenants, so not used.
     published = ResourceAllocation.objects.filter(month=today.month, year=today.year, status='PUBLISHED')
     published = published.filter(project_id=project_id) if project_id else published.filter(
-        project__tenant_id=getattr(connection.tenant, 'id', None))
+        project__tenant__schema_name=connection.schema_name)
     if settings['use_allocation'] and not published.exists():
         warnings.append({'code': 'allocation_not_published', 'message': (
             f'Allocation sheet for {month_label} is not completed. Workload may be affected. '

@@ -548,6 +548,19 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.assertEqual(row['capacity'], 1.0)
         self.assertEqual(row['allocation_note'], 'NEW not set (counted at 100%) · DMT 10% · 90% unallocated')
 
+    def test_allocations_found_under_x_tenant_header(self):
+        # X-Tenant header -> schema_context, whose connection.tenant has no id: match the tenant by schema.
+        from django_tenants.utils import schema_context
+        from data.analytics.workload import workload_warnings
+        ocs, src = self.project('OCS')
+        self.items(src, self.sprint(src, 3), 'dev@x.test', 4)
+        self.allocate('dev@x.test', ocs, 80)
+        with schema_context(self.tenant.schema_name):
+            row = self.get({'project_id': str(ocs.id)})['dev@x.test']
+            codes = [w['code'] for w in workload_warnings()]
+        self.assertEqual(row['allocation_note'], 'OCS 80% · 20% unallocated')
+        self.assertNotIn('allocation_not_published', codes)
+
     def test_all_projects_skips_stale_projects_sprints(self):
         _, src_live = self.project('LIVE')
         _, src_old = self.project('OLD')
