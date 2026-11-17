@@ -94,12 +94,14 @@ def window_sprints(project_id=None, sprint_ids=None, window=None):
 
     window = window or get_workload_settings()['sprint_window']
     now = timezone.now()
-    qs = Sprint.objects.filter(end_date__lt=now)  # completed only, same as the team card and KPI cards
+    qs = Sprint.objects.all()
     if project_id:
         qs = qs.filter(source_config_id__in=SourceConfiguration.objects.filter(project_id=project_id).values('id'))
     if sprint_ids:
-        qs = qs.filter(id__in=sprint_ids)
-    elif not project_id:
+        qs = qs.filter(id__in=sprint_ids)  # a picked running sprint counts, as on the card
+    else:
+        qs = qs.filter(end_date__lt=now)  # completed only, same as the team card and KPI cards
+    if not sprint_ids and not project_id:
         # Same cut-off as the team card: projects that stopped running sprints are left out.
         cutoff = now - timezone.timedelta(days=window * 14)
         qs = qs.filter(Q(end_date__gte=cutoff) | Q(end_date__isnull=True, start_date__gte=cutoff))
