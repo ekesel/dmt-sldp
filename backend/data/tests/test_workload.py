@@ -629,6 +629,14 @@ class TeamWorkloadWindowTest(TenantTestCase):
         message = {w['code']: w['message'] for w in workload_warnings(ocs.id)}['allocation_not_set']
         self.assertIn('aw@x.test', message)
         self.assertNotIn('ok@x.test', message)
+        # Banner window: completed sprints by default; a picked running sprint still counts, as on the card.
+        from data.analytics.workload import window_sprints
+        from data.models import Sprint
+        running = Sprint.objects.create(external_id='run', source_config_id=src.id, name='Run',
+                                        start_date=self.now - timezone.timedelta(days=1),
+                                        end_date=self.now + timezone.timedelta(days=13))
+        self.assertNotIn(running.id, [sid for sid, _ in window_sprints(ocs.id)[ocs.id]])
+        self.assertEqual([sid for sid, _ in window_sprints(ocs.id, [str(running.id)])[ocs.id]], [running.id])
 
     def test_all_projects_skips_stale_projects_sprints(self):
         _, src_live = self.project('LIVE')
