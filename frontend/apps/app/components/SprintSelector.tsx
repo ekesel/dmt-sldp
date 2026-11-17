@@ -24,6 +24,8 @@ export interface SprintSelectorProps {
     allowAll?: boolean;
     allLabel?: string;
     popoverAlign?: 'left' | 'right';
+    showDoneButton?: boolean;
+    showClearButton?: boolean;
 }
 
 export const SprintSelector = React.memo(({
@@ -37,7 +39,9 @@ export const SprintSelector = React.memo(({
     autoSelectLatest = true,
     allowAll = false,
     allLabel = 'All Sprints',
-    popoverAlign = 'right'
+    popoverAlign = 'right',
+    showDoneButton = false,
+    showClearButton = false
 }: SprintSelectorProps) => {
     const [sprintList, setSprintList] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
@@ -227,11 +231,6 @@ export const SprintSelector = React.memo(({
                                         {activeSelectedIds.length === 0 && <Check size={11} strokeWidth={3} />}
                                     </div>
                                     <span className="font-semibold">{allLabel}</span>
-                                    {activeSelectedIds.length === 0 && (
-                                        <span className="ml-auto text-[0.5625rem] font-black uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                                            Active
-                                        </span>
-                                    )}
                                 </button>
                             </div>
 
@@ -283,34 +282,38 @@ export const SprintSelector = React.memo(({
                                 })}
                             </div>
 
-                            {/* Multi-select Footer: Count & Done button */}
+                            {/* Multi-select Footer: Count */}
                             <div className="px-3 py-2 border-t border-border/60 flex items-center justify-between text-xs bg-muted/20">
                                 <span className="text-muted-foreground text-[11px]">
                                     {activeSelectedIds.length === 0
                                         ? 'All sprints'
                                         : `${activeSelectedIds.length} of ${sprintList.length} selected`}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                    {activeSelectedIds.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onMultiSelect?.([], []);
-                                                onSelect?.(null, null);
-                                            }}
-                                            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xs"
-                                        >
-                                            Clear
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsOpen(false)}
-                                        className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors cursor-pointer"
-                                    >
-                                        Done
-                                    </button>
-                                </div>
+                                {(showClearButton || showDoneButton) && (
+                                    <div className="flex items-center gap-2">
+                                        {showClearButton && activeSelectedIds.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    onMultiSelect?.([], []);
+                                                    onSelect?.(null, null);
+                                                }}
+                                                className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xs"
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                        {showDoneButton && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsOpen(false)}
+                                                className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors cursor-pointer"
+                                            >
+                                                Done
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </>
                     ) : (

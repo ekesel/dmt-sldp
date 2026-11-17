@@ -13,6 +13,34 @@ interface UserEditModalProps {
     user: User;
 }
 
+const getUserEffectiveDateKey = (userId?: string | number): string => `user_seniority_effective_from_${userId ?? ''}`;
+
+const getStoredUserEffectiveDate = (userId?: string | number): string => {
+    if (!userId || typeof window === 'undefined') return '';
+    try {
+        const key = getUserEffectiveDateKey(userId);
+        return window.localStorage?.getItem(key) || window.sessionStorage?.getItem(key) || '';
+    } catch {
+        return '';
+    }
+};
+
+const saveStoredUserEffectiveDate = (userId?: string | number, date?: string): void => {
+    if (!userId || typeof window === 'undefined') return;
+    try {
+        const key = getUserEffectiveDateKey(userId);
+        if (date) {
+            window.localStorage?.setItem(key, date);
+            window.sessionStorage?.setItem(key, date);
+        } else {
+            window.localStorage?.removeItem(key);
+            window.sessionStorage?.removeItem(key);
+        }
+    } catch {
+        // Ignore storage errors
+    }
+};
+
 /**
  * Modal dialog card for editing user details in the Admin Portal.
  */
@@ -27,7 +55,10 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
         seniority: '' as string,
         seniority_effective_from: '' as string,
     });
-    const rawEffectiveFrom = typeof user?.seniority_effective_from === 'string' ? user.seniority_effective_from : '';
+    const storedEffectiveFrom = getStoredUserEffectiveDate(user?.id);
+    const rawEffectiveFrom = (typeof user?.seniority_effective_from === 'string' && user.seniority_effective_from)
+        ? user.seniority_effective_from
+        : (storedEffectiveFrom || '');
     const [lastEffectiveFrom, setLastEffectiveFrom] = useState<string>(rawEffectiveFrom);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -61,13 +92,29 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
             try {
                 const history = await usersApi.getSeniorityHistory(user.id);
                 if (isMounted && Array.isArray(history) && history.length > 0) {
-                    const lastEntry = history[history.length - 1];
-                    if (lastEntry?.effective_from && typeof lastEntry.effective_from === 'string') {
-                        const historyDate = lastEntry.effective_from;
+                    const storedDate = getStoredUserEffectiveDate(user.id);
+
+                    // Prefer entry matching storedDate if it exists in history
+                    let matchedEntry = storedDate ? history.find(h => h.effective_from === storedDate) : undefined;
+
+                    // Otherwise sort by id descending (most recently created entry first) or created_at descending
+                    if (!matchedEntry) {
+                        const sortedHistory = [...history].sort((a, b) => {
+                            const idA = typeof a.id === 'number' ? a.id : 0;
+                            const idB = typeof b.id === 'number' ? b.id : 0;
+                            if (idB !== idA) return idB - idA;
+                            return (b.created_at || '').localeCompare(a.created_at || '');
+                        });
+                        matchedEntry = sortedHistory[0];
+                    }
+
+                    if (matchedEntry?.effective_from && typeof matchedEntry.effective_from === 'string') {
+                        const historyDate = matchedEntry.effective_from;
                         setLastEffectiveFrom(historyDate);
+                        saveStoredUserEffectiveDate(user.id, historyDate);
                         setFormData(prev => {
                             const userDate = typeof user.seniority_effective_from === 'string' ? user.seniority_effective_from : '';
-                            if (!prev.seniority_effective_from || prev.seniority_effective_from === userDate) {
+                            if (!prev.seniority_effective_from || prev.seniority_effective_from === userDate || prev.seniority_effective_from === storedDate) {
                                 return { ...prev, seniority_effective_from: historyDate };
                             }
                             return prev;
@@ -107,7 +154,11 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 }
             }
 
-            const initialEffectiveDate = typeof user.seniority_effective_from === 'string' ? user.seniority_effective_from : '';
+            const storedDate = getStoredUserEffectiveDate(user.id);
+            const initialEffectiveDate = (typeof user.seniority_effective_from === 'string' && user.seniority_effective_from)
+                ? user.seniority_effective_from
+                : (storedDate || '');
+
             setLastEffectiveFrom(initialEffectiveDate);
 
             setFormData({
@@ -147,9 +198,13 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                 custom_title: formData.custom_title,
                 ...roleFlags,
             };
+
+            const prevEffectiveFrom = lastEffectiveFrom;
+            const newEffectiveFrom = formData.seniority_effective_from;
+
             // Seniority and Effective From (hidden on own profile per api-contract)
             if (!isOwnProfile) {
-                if (!formData.seniority_effective_from) {
+                if (!newEffectiveFrom) {
                     const validationMsg = 'Effective From date is required';
                     setError(validationMsg);
                     toast.error(validationMsg);
@@ -157,9 +212,42 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                     return;
                 }
                 updatePayload.seniority = formData.seniority || null;
-                updatePayload.seniority_effective_from = formData.seniority_effective_from;
+                updatePayload.seniority_effective_from = newEffectiveFrom;
             }
+
+            // 1. Update the user record with the new level & effective date
             await usersApi.update(user.id, updatePayload);
+
+            // 2. Persist updated effective date immediately to local storage
+            if (!isOwnProfile && newEffectiveFrom) {
+                saveStoredUserEffectiveDate(user.id, newEffectiveFrom);
+                setLastEffectiveFrom(newEffectiveFrom);
+
+                // 3. Remove superseded previous dates from backend history so stale entries do not persist
+                try {
+                    const currentHistory = await usersApi.getSeniorityHistory(user.id);
+                    if (Array.isArray(currentHistory)) {
+                        for (const item of currentHistory) {
+                            if (item.effective_from && item.effective_from !== newEffectiveFrom) {
+                                try {
+                                    await usersApi.deleteSeniorityHistory(user.id, item.effective_from);
+                                } catch (delErr) {
+                                    console.warn('Failed deleting obsolete seniority history entry:', item.effective_from, delErr);
+                                }
+                            }
+                        }
+                    }
+                } catch (historyErr) {
+                    if (prevEffectiveFrom && prevEffectiveFrom !== newEffectiveFrom) {
+                        try {
+                            await usersApi.deleteSeniorityHistory(user.id, prevEffectiveFrom);
+                        } catch {
+                            // ignore
+                        }
+                    }
+                }
+            }
+
             toast.success('User details updated successfully');
             onSuccess?.();
             onClose();
@@ -302,7 +390,7 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                         onChange={handleChange}
                                         className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition appearance-none text-sm"
                                     >
-                                        <option value="">Not set (Mid)</option>
+                                        <option value="">default(Mid)</option>
                                         <option value="junior">Junior</option>
                                         <option value="mid">Mid</option>
                                         <option value="senior">Senior</option>
@@ -341,14 +429,15 @@ export function UserEditModal({ isOpen, onClose, onSuccess, user }: UserEditModa
                                         onChange={handleChange}
                                         className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition text-sm"
                                     />
-                                    {loadingHistory ? (
+                                    {lastEffectiveFrom ? (
+                                        <p className="text-[11px] text-muted-foreground mt-1">
+                                            Last Effective Date: <span className="text-foreground font-medium">{formatDate(lastEffectiveFrom)}</span>
+                                            {loadingHistory && <span className="ml-1.5 text-[10px] text-muted-foreground/70">(syncing...)</span>}
+                                        </p>
+                                    ) : loadingHistory ? (
                                         <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
                                             <span className="w-2.5 h-2.5 border-2 border-primary/40 border-t-primary rounded-full animate-spin inline-block"></span>
                                             Loading last effective date...
-                                        </p>
-                                    ) : lastEffectiveFrom ? (
-                                        <p className="text-[11px] text-muted-foreground mt-1">
-                                            Last Effective Date: <span className="text-foreground font-medium">{formatDate(lastEffectiveFrom)}</span>
                                         </p>
                                     ) : (
                                         <p className="text-[11px] text-muted-foreground mt-1">

@@ -744,6 +744,8 @@ export const users = {
   invite: (id: string | number) => post<{ message: string; invite_link: string; user: any }, any>(`/users/${id}/invite/`, {}),
   getSeniorityHistory: (id: string | number) =>
     get<{ id: number; seniority?: string; effective_from: string; created_at?: string }[]>(`/admin/users/${id}/seniority-history/`),
+  deleteSeniorityHistory: (id: string | number, effectiveFrom: string) =>
+    del<any>(`/admin/users/${id}/seniority-history/?effective_from=${encodeURIComponent(effectiveFrom)}`),
 };
 
 /** ---------- integrations ---------- */
@@ -1139,7 +1141,7 @@ export const orgChart = {
   createDepartment: (name: string) => post<{ status: boolean; message: string; data: { id: number; name: string } }, { name: string }>('/org-departments/', { name }),
 };
 export const companyBaseline = {
-  getBaseline: () => get<any>('/admin/company-baseline/'),
+  getBaseline: (params?: Record<string, unknown>) => get<any>('/admin/company-baseline/', params),
   updateBaseline: (data: any) => post<any, any>('/admin/company-baseline/', data),
   deleteWorkloadSettingsVersion: (effectiveFrom: string) =>
     del<any>(`/admin/company-baseline/?workload_settings_effective_from=${encodeURIComponent(effectiveFrom)}`),

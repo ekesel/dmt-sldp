@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Plus, Grid, Layers } from 'lucide-react';
+import { Plus, Grid, Layers, RotateCcw } from 'lucide-react';
 
 interface OrgChartControlsProps {
     currentDirection: 'TB' | 'LR';
     onAutoArrange: (direction: 'TB' | 'LR') => void;
     onAddClick: () => void;
-
+    onResetChart?: () => void;
     isManager: boolean;
 }
 
@@ -15,7 +15,7 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
     currentDirection,
     onAutoArrange,
     onAddClick,
-
+    onResetChart,
     isManager
 }) => {
     return (
@@ -50,9 +50,16 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                     </button>
                 </div>
 
-
-
-
+                {onResetChart && (
+                    <button
+                        onClick={onResetChart}
+                        className="px-2.5 py-1.5 rounded-xl text-[0.75rem] font-bold flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer border border-border/40 shrink-0"
+                        title="Reset Chart View"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Reset</span>
+                    </button>
+                )}
             </div>
         </div>
     );

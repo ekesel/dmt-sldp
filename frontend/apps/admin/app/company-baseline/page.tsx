@@ -77,6 +77,7 @@ export interface CompanyBaselineData {
         [key: string]: number | { total: number; completed: number } | undefined;
     };
     workload_settings?: WorkloadSettings;
+    workload_settings_effective_from?: string;
     workload_settings_history?: WorkloadSettingsHistoryItem[];
 }
 
@@ -88,6 +89,74 @@ const getTodayStr = () => {
     return `${year}-${month}-${day}`;
 };
 
+const STORAGE_KEY = 'company_baseline_effective_from';
+
+const getStoredEffectiveDate = (): string | null => {
+    try {
+        if (typeof window !== 'undefined') {
+            const localVal = window.localStorage?.getItem(STORAGE_KEY);
+            if (localVal) return localVal;
+            const sessionVal = window.sessionStorage?.getItem(STORAGE_KEY);
+            if (sessionVal) return sessionVal;
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return null;
+};
+
+const setStoredEffectiveDate = (date: string | null) => {
+    try {
+        if (typeof window !== 'undefined') {
+            if (date) {
+                window.localStorage?.setItem(STORAGE_KEY, date);
+                window.sessionStorage?.setItem(STORAGE_KEY, date);
+            } else {
+                window.localStorage?.removeItem(STORAGE_KEY);
+                window.sessionStorage?.removeItem(STORAGE_KEY);
+            }
+        }
+    } catch {
+        // Ignore storage errors
+    }
+};
+
+const resolveEffectiveDate = (data: CompanyBaselineData): string => {
+    const history = data.workload_settings_history || [];
+    const todayStr = getTodayStr();
+    const storedDate = getStoredEffectiveDate();
+
+    // 1. If user previously selected a date that exists in history, honor it
+    if (storedDate && /^\d{4}-\d{2}-\d{2}$/.test(storedDate) && history.some(h => h.effective_from === storedDate)) {
+        return storedDate;
+    }
+
+    // 2. If workload_settings_effective_from is provided directly
+    if (data.workload_settings_effective_from && typeof data.workload_settings_effective_from === 'string') {
+        return data.workload_settings_effective_from;
+    }
+
+    // 3. If history has entries:
+    if (history.length > 0) {
+        // Sort history by effective_from ascending
+        const sorted = [...history].sort((a, b) => a.effective_from.localeCompare(b.effective_from));
+        // Prefer the active version in effect today (effective_from <= today)
+        const activeItem = [...sorted].reverse().find(h => h.effective_from <= todayStr);
+        if (activeItem?.effective_from) {
+            return activeItem.effective_from;
+        }
+        // If all are in the future, use the latest
+        return sorted[sorted.length - 1].effective_from;
+    }
+
+    // 4. Fallback to storedDate if valid, else today
+    if (storedDate && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)) {
+        return storedDate;
+    }
+
+    return todayStr;
+};
+
 export default function CompanyBaselinePage() {
     const { user } = useAuth();
     const isSuperAdmin = !!user?.is_superuser;
@@ -97,6 +166,7 @@ export default function CompanyBaselinePage() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [baseline, setBaseline] = useState<CompanyBaselineData | null>(null);
     const [effectiveFrom, setEffectiveFrom] = useState<string>(getTodayStr());
+    const [savedEffectiveFrom, setSavedEffectiveFrom] = useState<string | null>(null);
     const [showHistory, setShowHistory] = useState<boolean>(false);
     const [deletingDate, setDeletingDate] = useState<string | null>(null);
 
@@ -110,26 +180,31 @@ export default function CompanyBaselinePage() {
             const response = await companyBaseline.getBaseline();
             if (response && response.data) {
                 const data: CompanyBaselineData = response.data;
-                // Ensure workload_settings has sensible fallback defaults if missing
-                if (!data.workload_settings) {
-                    data.workload_settings = {
-                        seniority_weights: { junior: 0.7, mid: 1.0, senior: 1.3 },
-                        per_sprint_limits: { under: 3, over: 6 },
-                    };
-                } else {
-                    data.workload_settings = {
-                        ...data.workload_settings,
-                        seniority_weights: {
-                            junior: data.workload_settings.seniority_weights?.junior ?? 0.7,
-                            mid: data.workload_settings.seniority_weights?.mid ?? 1.0,
-                            senior: data.workload_settings.seniority_weights?.senior ?? 1.3,
-                        },
-                        per_sprint_limits: {
-                            under: data.workload_settings.per_sprint_limits?.under ?? 3,
-                            over: data.workload_settings.per_sprint_limits?.over ?? 6,
-                        },
-                    };
-                }
+                const selectedDate = resolveEffectiveDate(data);
+                setEffectiveFrom(selectedDate);
+                setSavedEffectiveFrom(selectedDate);
+                setStoredEffectiveDate(selectedDate);
+                setHasUnsavedChanges(false);
+
+                // Priority for settings:
+                // 1. If selectedDate matches a specific history item, use that version's settings;
+                // 2. Otherwise use the active workload_settings from backend.
+                const matchingHistory = data.workload_settings_history?.find(h => h.effective_from === selectedDate);
+                const activeSettings = data.workload_settings;
+                const baseSettings = matchingHistory?.settings || activeSettings;
+
+                const underLimit = Number(baseSettings?.per_sprint_limits?.under ?? activeSettings?.per_sprint_limits?.under ?? 3);
+                const overLimit = Number(baseSettings?.per_sprint_limits?.over ?? activeSettings?.per_sprint_limits?.over ?? 6);
+
+                const juniorWeight = Number(baseSettings?.seniority_weights?.junior ?? activeSettings?.seniority_weights?.junior ?? 0.7);
+                const midWeight = Number(baseSettings?.seniority_weights?.mid ?? activeSettings?.seniority_weights?.mid ?? 1.0);
+                const seniorWeight = Number(baseSettings?.seniority_weights?.senior ?? activeSettings?.seniority_weights?.senior ?? 1.3);
+
+                data.workload_settings = {
+                    ...(baseSettings || {}),
+                    seniority_weights: { junior: juniorWeight, mid: midWeight, senior: seniorWeight },
+                    per_sprint_limits: { under: underLimit, over: overLimit },
+                };
                 setBaseline(data);
             } else {
                 toast.error('Failed to load company baseline data');
@@ -219,6 +294,19 @@ export default function CompanyBaselinePage() {
         setHasUnsavedChanges(true);
     };
 
+    const handleDateChange = (val: string) => {
+        setEffectiveFrom(val);
+        setStoredEffectiveDate(val);
+        setHasUnsavedChanges(val !== savedEffectiveFrom);
+    };
+
+    const handleSetToToday = () => {
+        const today = getTodayStr();
+        setEffectiveFrom(today);
+        setStoredEffectiveDate(today);
+        setHasUnsavedChanges(today !== savedEffectiveFrom);
+    };
+
     const saveChanges = async () => {
         if (!baseline) return;
 
@@ -288,14 +376,26 @@ export default function CompanyBaselinePage() {
             if (res && (res.status_code === 200 || res.status_code === 201)) {
                 toast.success('Company baseline updated successfully');
                 setHasUnsavedChanges(false);
+                setSavedEffectiveFrom(effectiveFrom);
+                setStoredEffectiveDate(effectiveFrom);
                 if (res.data) {
                     const data: CompanyBaselineData = res.data;
-                    if (!data.workload_settings) {
-                        data.workload_settings = {
-                            seniority_weights: { junior: 0.7, mid: 1.0, senior: 1.3 },
-                            per_sprint_limits: { under: 3, over: 6 },
-                        };
-                    }
+                    const matchingHistory = data.workload_settings_history?.find(h => h.effective_from === effectiveFrom);
+                    const activeSettings = data.workload_settings;
+                    const baseSettings = matchingHistory?.settings || activeSettings;
+
+                    const underLimit = Number(baseSettings?.per_sprint_limits?.under ?? payload.workload_settings?.per_sprint_limits?.under ?? 3);
+                    const overLimit = Number(baseSettings?.per_sprint_limits?.over ?? payload.workload_settings?.per_sprint_limits?.over ?? 6);
+
+                    const juniorWeight = Number(baseSettings?.seniority_weights?.junior ?? payload.workload_settings?.seniority_weights?.junior ?? 0.7);
+                    const midWeight = Number(baseSettings?.seniority_weights?.mid ?? payload.workload_settings?.seniority_weights?.mid ?? 1.0);
+                    const seniorWeight = Number(baseSettings?.seniority_weights?.senior ?? payload.workload_settings?.seniority_weights?.senior ?? 1.3);
+
+                    data.workload_settings = {
+                        ...(baseSettings || {}),
+                        seniority_weights: { junior: juniorWeight, mid: midWeight, senior: seniorWeight },
+                        per_sprint_limits: { under: underLimit, over: overLimit },
+                    };
                     setBaseline(data);
                 }
             } else {
@@ -329,6 +429,35 @@ export default function CompanyBaselinePage() {
         }
     };
 
+    const handleSelectHistoryVersion = (hist: WorkloadSettingsHistoryItem) => {
+        setEffectiveFrom(hist.effective_from);
+        setSavedEffectiveFrom(hist.effective_from);
+        setStoredEffectiveDate(hist.effective_from);
+        if (baseline && hist.settings) {
+            setBaseline(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    workload_settings: {
+                        ...prev.workload_settings,
+                        ...hist.settings,
+                        seniority_weights: {
+                            junior: hist.settings.seniority_weights?.junior ?? prev.workload_settings?.seniority_weights?.junior ?? 0.7,
+                            mid: hist.settings.seniority_weights?.mid ?? prev.workload_settings?.seniority_weights?.mid ?? 1.0,
+                            senior: hist.settings.seniority_weights?.senior ?? prev.workload_settings?.seniority_weights?.senior ?? 1.3,
+                        },
+                        per_sprint_limits: {
+                            under: hist.settings.per_sprint_limits?.under ?? prev.workload_settings?.per_sprint_limits?.under ?? 3,
+                            over: hist.settings.per_sprint_limits?.over ?? prev.workload_settings?.per_sprint_limits?.over ?? 6,
+                        },
+                    },
+                };
+            });
+        }
+        setHasUnsavedChanges(false);
+        toast.success(`Loaded settings for ${hist.effective_from}`);
+    };
+
     const handleDeleteVersion = async (dateStr: string) => {
         if (!isSuperAdmin) {
             toast.error('Only superadmins can delete workload settings versions.');
@@ -342,8 +471,32 @@ export default function CompanyBaselinePage() {
             const res = await companyBaseline.deleteWorkloadSettingsVersion(dateStr);
             if (res && res.status_code === 200) {
                 toast.success(`Settings version for ${dateStr} deleted`);
+                if (getStoredEffectiveDate() === dateStr) {
+                    setStoredEffectiveDate(null);
+                }
                 if (res.data) {
-                    setBaseline(res.data);
+                    const data: CompanyBaselineData = res.data;
+                    const nextDate = resolveEffectiveDate(data);
+                    setEffectiveFrom(nextDate);
+                    setSavedEffectiveFrom(nextDate);
+                    setStoredEffectiveDate(nextDate);
+
+                    const matchingHistory = data.workload_settings_history?.find(h => h.effective_from === nextDate);
+                    const baseSettings = matchingHistory?.settings || data.workload_settings;
+                    data.workload_settings = {
+                        ...(baseSettings || {}),
+                        seniority_weights: {
+                            junior: baseSettings?.seniority_weights?.junior ?? 0.7,
+                            mid: baseSettings?.seniority_weights?.mid ?? 1.0,
+                            senior: baseSettings?.seniority_weights?.senior ?? 1.3,
+                        },
+                        per_sprint_limits: {
+                            under: baseSettings?.per_sprint_limits?.under ?? 3,
+                            over: baseSettings?.per_sprint_limits?.over ?? 6,
+                        },
+                    };
+                    setBaseline(data);
+                    setHasUnsavedChanges(false);
                 } else {
                     loadData();
                 }
@@ -383,7 +536,7 @@ export default function CompanyBaselinePage() {
     const currentUnder = baseline.workload_settings?.per_sprint_limits?.under ?? 3;
     const currentOver = baseline.workload_settings?.per_sprint_limits?.over ?? 6;
 
-    const isLimitInvalid = Number(currentUnder) >= Number(currentOver);
+    const isLimitInvalid = (currentUnder as any) !== '' && (currentOver as any) !== '' && Number(currentUnder) >= Number(currentOver);
 
     return (
         <DashboardLayout>
@@ -648,17 +801,31 @@ export default function CompanyBaselinePage() {
                                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
                                         <Calendar size={15} className="text-primary" /> Effective From Date
                                     </label>
-                                    <button
-                                        type="button"
-                                        disabled={!isSuperAdmin}
-                                        onClick={() => {
-                                            setEffectiveFrom(getTodayStr());
-                                            setHasUnsavedChanges(true);
-                                        }}
-                                        className="text-xs text-primary hover:underline font-medium disabled:opacity-50"
-                                    >
-                                        Set to Today
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {savedEffectiveFrom && effectiveFrom !== savedEffectiveFrom && (
+                                            <button
+                                                type="button"
+                                                disabled={!isSuperAdmin}
+                                                onClick={() => {
+                                                    setEffectiveFrom(savedEffectiveFrom);
+                                                    setStoredEffectiveDate(savedEffectiveFrom);
+                                                    setHasUnsavedChanges(false);
+                                                }}
+                                                className="text-xs text-muted-foreground hover:text-primary hover:underline font-medium disabled:opacity-50"
+                                                title="Reset to saved effective date"
+                                            >
+                                                Reset to Saved ({savedEffectiveFrom})
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            disabled={!isSuperAdmin}
+                                            onClick={handleSetToToday}
+                                            className="text-xs text-primary hover:underline font-medium disabled:opacity-50"
+                                        >
+                                            Set to Today
+                                        </button>
+                                    </div>
                                 </div>
                                 <p className="text-xs text-muted-foreground mb-3">
                                     Sprints starting on or after this date will apply these settings. Past sprints remain unchanged.
@@ -667,10 +834,7 @@ export default function CompanyBaselinePage() {
                                     type="date"
                                     disabled={!isSuperAdmin}
                                     value={effectiveFrom}
-                                    onChange={(e) => {
-                                        setEffectiveFrom(e.target.value);
-                                        setHasUnsavedChanges(true);
-                                    }}
+                                    onChange={(e) => handleDateChange(e.target.value)}
                                     className="w-full px-3.5 py-2.5 bg-muted/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed transition text-sm"
                                 />
                             </div>
@@ -739,42 +903,79 @@ export default function CompanyBaselinePage() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border">
-                                                    {baseline.workload_settings_history.map((hist, idx) => {
-                                                        const s = hist.settings || {};
-                                                        const w: Partial<SeniorityWeights> = s.seniority_weights || {};
-                                                        const l: Partial<PerSprintLimits> = s.per_sprint_limits || {};
-                                                        return (
-                                                            <tr key={idx} className="hover:bg-muted/20 transition">
-                                                                <td className="px-4 py-3 font-medium text-foreground font-mono">
-                                                                    {hist.effective_from}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-muted-foreground font-mono">
-                                                                    {w.junior ?? 0.7} / {w.mid ?? 1.0} / {w.senior ?? 1.3}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-muted-foreground font-mono">
-                                                                    {l.under ?? 3} – {l.over ?? 6} tasks
-                                                                </td>
-                                                                {isSuperAdmin && (
-                                                                    <td className="px-4 py-3 text-right">
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={deletingDate === hist.effective_from}
-                                                                            onClick={() => handleDeleteVersion(hist.effective_from)}
-                                                                            className="inline-flex items-center gap-1 text-destructive hover:underline disabled:opacity-50"
-                                                                            title="Delete this settings version"
-                                                                        >
-                                                                            {deletingDate === hist.effective_from ? (
-                                                                                <RefreshCcw size={12} className="animate-spin" />
-                                                                            ) : (
-                                                                                <Trash2 size={13} />
+                                                    {(() => {
+                                                        const todayStr = getTodayStr();
+                                                        const activeVersionDate = baseline.workload_settings_history
+                                                            ? [...baseline.workload_settings_history].reverse().find(h => h.effective_from <= todayStr)?.effective_from
+                                                            : null;
+                                                        return baseline.workload_settings_history.map((hist, idx) => {
+                                                            const s = hist.settings || {};
+                                                            const w: Partial<SeniorityWeights> = s.seniority_weights || {};
+                                                            const l: Partial<PerSprintLimits> = s.per_sprint_limits || {};
+                                                            const isSelected = hist.effective_from === effectiveFrom;
+                                                            const isFuture = hist.effective_from > todayStr;
+                                                            const isCurrentActive = activeVersionDate === hist.effective_from;
+                                                            return (
+                                                                <tr key={idx} className={`transition ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/20'}`}>
+                                                                    <td className="px-4 py-3 font-medium text-foreground font-mono">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span>{hist.effective_from}</span>
+                                                                            {isSelected && (
+                                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                                                                                    Selected
+                                                                                </span>
                                                                             )}
-                                                                            <span>Delete</span>
-                                                                        </button>
+                                                                            {isCurrentActive && !isSelected && (
+                                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                                                    Active
+                                                                                </span>
+                                                                            )}
+                                                                            {isFuture && !isSelected && (
+                                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                                                                    Upcoming
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                     </td>
-                                                                )}
-                                                            </tr>
-                                                        );
-                                                    })}
+                                                                    <td className="px-4 py-3 text-muted-foreground font-mono">
+                                                                        {w.junior ?? 0.7} / {w.mid ?? 1.0} / {w.senior ?? 1.3}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-muted-foreground font-mono">
+                                                                        {l.under ?? 3} – {l.over ?? 6} tasks
+                                                                    </td>
+                                                                    {isSuperAdmin && (
+                                                                        <td className="px-4 py-3 text-right">
+                                                                            <div className="flex items-center justify-end gap-3">
+                                                                                {!isSelected && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleSelectHistoryVersion(hist)}
+                                                                                        className="text-primary hover:underline text-xs font-medium"
+                                                                                    >
+                                                                                        Load
+                                                                                    </button>
+                                                                                )}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={deletingDate === hist.effective_from}
+                                                                                    onClick={() => handleDeleteVersion(hist.effective_from)}
+                                                                                    className="inline-flex items-center gap-1 text-destructive hover:underline disabled:opacity-50"
+                                                                                    title="Delete this settings version"
+                                                                                >
+                                                                                    {deletingDate === hist.effective_from ? (
+                                                                                        <RefreshCcw size={12} className="animate-spin" />
+                                                                                    ) : (
+                                                                                        <Trash2 size={13} />
+                                                                                    )}
+                                                                                    <span>Delete</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    )}
+                                                                </tr>
+                                                            );
+                                                        });
+                                                    })()}
                                                 </tbody>
                                             </table>
                                         </div>
