@@ -68,8 +68,21 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
         """
         Custom representation for the CompanyBaseline model
         """
+        from django_tenants.utils import schema_context
+        from configuration.models import WorkloadSettingsVersion
+
         timeline = settings_timeline()
         current = get_workload_settings(timeline=timeline)
+        with schema_context('public'):
+            saved = {
+                v.effective_from: v for v in WorkloadSettingsVersion.objects.select_related('created_by')
+            }
+
+        def saved_by(day):
+            user = saved[day].created_by if day in saved else None
+            if not user:
+                return None
+            return user.get_full_name() or user.email or user.username
         return {
             "kpis": {
                 "velocity": instance.velocity,
@@ -95,6 +108,9 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
                     "effective_to": timeline[i + 1][0] - timezone.timedelta(days=1) if i + 1 < len(timeline) else None,
                     "settings": merge_settings(overrides),
                     "ranges": level_ranges(merge_settings(overrides)),
+                    # Last saved by / at (re-saving the same date updates both).
+                    "created_by": saved_by(day),
+                    "created_at": saved[day].created_at if day in saved else None,
                 }
                 for i, (day, overrides) in enumerate(timeline)
             ],
@@ -156,7 +172,7 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
             return
         WorkloadSettingsVersion.objects.update_or_create(
             effective_from=self.validated_data['effective_from'],
-            defaults={'overrides': self.validated_data['settings'], 'created_by': user},
+            defaults={'overrides': self.validated_data['settings'], 'created_by': user, 'created_at': timezone.now()},
         )
 
     @staticmethod

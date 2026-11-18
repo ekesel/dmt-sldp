@@ -124,6 +124,8 @@ class CompanyBaselineViewTests(TenantTestCase):
                           for v in history],
                          [('2026-07-01', '2026-07-31', 4), ('2026-08-01', '2026-08-31', 5),
                           ('2026-09-01', '2026-09-30', 7), ('2026-10-01', 'None', 6)])
+        self.assertEqual(history[0]['created_by'], 'root@example.com')
+        self.assertIsNotNone(history[0]['created_at'])
 
     def test_sprint_window_must_be_whole_number(self):
         admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
