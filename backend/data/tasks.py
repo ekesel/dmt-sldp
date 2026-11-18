@@ -408,6 +408,10 @@ def backfill_identity_merge(mapping_id, schema_name=None):
     if canonical_user:
         WorkItem.objects.filter(assignee_email=canonical_email).exclude(
             resolved_assignee=canonical_user).update(resolved_assignee=canonical_user)
+        # Tool accounts (e.g. a ClickUp user id) linked to the alias user move too, so workload's
+        # co-assignee lookup and later syncs land on the canonical user instead of re-linking the alias.
+        from users.models import ExternalIdentity
+        ExternalIdentity.objects.filter(user__email__in=aliases).exclude(user=canonical_user).update(user=canonical_user)
     
     # 2. Update PullRequests
     PullRequest.objects.filter(author_email__in=all_emails).update(

@@ -146,7 +146,11 @@ class IdentityMergeRelinksUserTest(TenantTestCase):
                                     created_at=now, updated_at=now, assignee_email=client.email, resolved_assignee=linked)
         mapping = UserIdentityMapping.objects.create(canonical_email=real.email, canonical_name='Burhanuddin',
                                                      source_identities=[{'email': client.email}])
+        from users.models import ExternalIdentity
+        clickup = ExternalIdentity.objects.create(user=client, provider='clickup', external_id='89244146')
         with mock.patch('data.tasks.update_all_sprint_metrics.delay'):
             backfill_identity_merge(mapping.id, schema_name=self.tenant.schema_name)
         self.assertEqual(set(WorkItem.objects.values_list('assignee_email', 'resolved_assignee')),
                          {(real.email, real.id)})
+        clickup.refresh_from_db()
+        self.assertEqual(clickup.user, real)  # workload co-assignees + later syncs use the real user
