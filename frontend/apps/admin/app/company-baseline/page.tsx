@@ -107,33 +107,7 @@ const getTodayStr = () => {
     return `${year}-${month}-${day}`;
 };
 
-const SELECTED_VERSION_KEY = 'company_baseline_selected_version';
 const DRAFT_DATE_KEY = 'company_baseline_draft_date';
-
-const getStoredSelectedVersion = (): string | null => {
-    try {
-        if (typeof window !== 'undefined') {
-            return window.localStorage?.getItem(SELECTED_VERSION_KEY) || null;
-        }
-    } catch {
-        // Ignore storage errors
-    }
-    return null;
-};
-
-const setStoredSelectedVersion = (dateStr: string | null) => {
-    try {
-        if (typeof window !== 'undefined') {
-            if (dateStr) {
-                window.localStorage?.setItem(SELECTED_VERSION_KEY, dateStr);
-            } else {
-                window.localStorage?.removeItem(SELECTED_VERSION_KEY);
-            }
-        }
-    } catch {
-        // Ignore storage errors
-    }
-};
 
 const getDraftDate = (): string | null => {
     try {
@@ -446,7 +420,6 @@ export default function CompanyBaselinePage() {
                 const history = data.workload_settings_history || [];
 
                 const draft = getDraftDate();
-                const storedSelected = getStoredSelectedVersion();
 
                 let chosenDate = activeServerDate;
                 let isUnsavedDraft = false;
@@ -454,14 +427,6 @@ export default function CompanyBaselinePage() {
                 if (draft && /^\d{4}-\d{2}-\d{2}$/.test(draft)) {
                     chosenDate = draft;
                     isUnsavedDraft = true;
-                } else if (storedSelected && /^\d{4}-\d{2}-\d{2}$/.test(storedSelected)) {
-                    const matchingHistory = history.find(h => h.effective_from === storedSelected);
-                    if (matchingHistory || storedSelected === activeServerDate) {
-                        chosenDate = storedSelected;
-                    } else {
-                        setStoredSelectedVersion(null);
-                        chosenDate = activeServerDate;
-                    }
                 }
 
                 const historyMatch = history.find(h => h.effective_from === chosenDate);
@@ -469,7 +434,7 @@ export default function CompanyBaselinePage() {
                 const ranges = historyMatch?.ranges || data.workload_ranges || null;
 
                 setEffectiveFrom(chosenDate);
-                setSavedEffectiveFrom(isUnsavedDraft ? (storedSelected || activeServerDate) : chosenDate);
+                setSavedEffectiveFrom(activeServerDate);
                 setCurrentRanges(ranges);
                 setHasUnsavedChanges(isUnsavedDraft);
 
@@ -757,7 +722,6 @@ export default function CompanyBaselinePage() {
                     : user?.username || user?.email || 'Admin';
                 const nowIso = new Date().toISOString();
                 saveVersionMeta(effectiveFrom, authorName, nowIso);
-                setStoredSelectedVersion(effectiveFrom);
                 setDraftDate(null);
                 setHasUnsavedChanges(false);
                 setIsFieldChanged(false);
@@ -830,40 +794,6 @@ export default function CompanyBaselinePage() {
         }
     };
 
-    const handleSelectHistoryVersion = (historyEntry: WorkloadSettingsHistoryItem) => {
-        setEffectiveFrom(historyEntry.effective_from);
-        setSavedEffectiveFrom(historyEntry.effective_from);
-        setStoredSelectedVersion(historyEntry.effective_from);
-        setDraftDate(null);
-        setCurrentRanges(historyEntry.ranges || null);
-        if (baseline && historyEntry.settings) {
-            setBaseline(prev => {
-                if (!prev) return prev;
-                const nextSettings = {
-                    ...prev.workload_settings,
-                    ...historyEntry.settings,
-                    seniority_weights: {
-                        junior: historyEntry.settings.seniority_weights?.junior ?? prev.workload_settings?.seniority_weights?.junior ?? 0.7,
-                        mid: historyEntry.settings.seniority_weights?.mid ?? prev.workload_settings?.seniority_weights?.mid ?? 1.0,
-                        senior: historyEntry.settings.seniority_weights?.senior ?? prev.workload_settings?.seniority_weights?.senior ?? 1.3,
-                    },
-                    per_sprint_limits: {
-                        under: Math.round(Number(historyEntry.settings.per_sprint_limits?.under ?? prev.workload_settings?.per_sprint_limits?.under ?? 3)),
-                        over: Math.round(Number(historyEntry.settings.per_sprint_limits?.over ?? prev.workload_settings?.per_sprint_limits?.over ?? 6)),
-                    },
-                };
-                const updated = {
-                    ...prev,
-                    workload_settings: nextSettings,
-                };
-                return updated;
-            });
-        }
-        setHasUnsavedChanges(false);
-        setIsFieldChanged(false);
-        toast.success(`Loaded settings for ${historyEntry.effective_from}`);
-    };
-
     const handleDeleteVersion = async (dateStr: string) => {
         if (!isSuperAdmin) {
             toast.error('Only superadmins can delete workload settings versions.');
@@ -877,9 +807,6 @@ export default function CompanyBaselinePage() {
             const res = await companyBaseline.deleteWorkloadSettingsVersion(dateStr);
             if (res && res.status_code === 200) {
                 toast.success(`Settings version for ${dateStr} deleted`);
-                if (getStoredSelectedVersion() === dateStr) {
-                    setStoredSelectedVersion(null);
-                }
                 setDraftDate(null);
                 if (res.data) {
                     const data: CompanyBaselineData = res.data;
@@ -1497,7 +1424,6 @@ export default function CompanyBaselinePage() {
                                                             const settings = historyEntry.settings || {};
                                                             const seniorityWeights: Partial<SeniorityWeights> = settings.seniority_weights || {};
                                                             const sprintLimits: Partial<PerSprintLimits> = settings.per_sprint_limits || {};
-                                                            const isSelected = historyEntry.effective_from === effectiveFrom;
                                                             const isFuture = historyEntry.effective_from > todayStr;
                                                             const isCurrentActive = activeVersionDate === historyEntry.effective_from;
                                                             const effectiveTo = resolveEffectiveTo(historyEntry, sortedAsc);
@@ -1505,23 +1431,18 @@ export default function CompanyBaselinePage() {
                                                             const vRanges = formatHistoryRanges(historyEntry);
 
                                                             return (
-                                                                <tr key={historyEntry.effective_from || historyIndex} className={`transition ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/20'}`}>
+                                                                <tr key={historyEntry.effective_from || historyIndex} className="transition hover:bg-muted/20">
                                                                     <td className="px-4 py-3 font-medium text-foreground">
                                                                         <div className="flex items-center gap-2 font-mono">
                                                                             <span>
                                                                                 {historyEntry.effective_from} – {effectiveTo || 'Present'}
                                                                             </span>
-                                                                            {isSelected && (
-                                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                                                                                    Selected
-                                                                                </span>
-                                                                            )}
-                                                                            {isCurrentActive && !isSelected && (
+                                                                            {isCurrentActive && (
                                                                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                                                                                     Active
                                                                                 </span>
                                                                             )}
-                                                                            {isFuture && !isSelected && (
+                                                                            {isFuture && (
                                                                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
                                                                                     Upcoming
                                                                                 </span>
@@ -1547,15 +1468,6 @@ export default function CompanyBaselinePage() {
                                                                     {isSuperAdmin && (
                                                                         <td className="px-4 py-3 text-right">
                                                                             <div className="flex items-center justify-end gap-3">
-                                                                                {!isSelected && (
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => handleSelectHistoryVersion(historyEntry)}
-                                                                                        className="text-primary hover:underline text-xs font-medium"
-                                                                                    >
-                                                                                        Load
-                                                                                    </button>
-                                                                                )}
                                                                                 <button
                                                                                     type="button"
                                                                                     disabled={deletingDate === historyEntry.effective_from}
