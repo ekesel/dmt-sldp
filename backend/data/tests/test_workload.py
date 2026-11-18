@@ -499,6 +499,25 @@ class TeamWorkloadWindowTest(TenantTestCase):
         force_authenticate(request, user=self.viewer)
         return {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
 
+    def test_ado_tasks_under_issues_count_but_jira_subtasks_do_not(self):
+        from configuration.models import SourceConfiguration
+        from data.models import WorkItem
+        project, jira = self.project('MIX')
+        ado = SourceConfiguration.objects.create(project=project, source_type='azure_devops', name='ado',
+                                                 base_url='https://dev.azure.com/x')
+        sj, sa = self.sprint(jira, 5), self.sprint(ado, 5)
+
+        def item(src, sprint, item_type, parent=None):
+            self.n += 1
+            return WorkItem.objects.create(external_id=f'm{self.n}', source_config_id=src.id, sprint=sprint, title='t',
+                                           status='In Progress', status_category='in_progress', item_type=item_type,
+                                           parent=parent, created_at=self.now, updated_at=self.now,
+                                           assignee_email='dev@x.test')
+
+        item(jira, sj, 'task', item(jira, sj, 'story'))  # Jira story + sub-task: story only
+        item(ado, sa, 'task', item(ado, sa, 'issue'))  # ADO issue + task: both
+        self.assertEqual(self.get({'project_id': project.id})['dev@x.test']['in_progress'], 3)
+
     def test_jira_carried_over_open_issue_counts_in_window(self):
         from data.models import Sprint, WorkItem
         project, src = self.project('SM')

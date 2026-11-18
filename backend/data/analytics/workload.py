@@ -43,9 +43,13 @@ def workload_items(qs, settings):
 
     # ponytail: 'Closed' read as "dropped" everywhere; OCS Sprint 1-2 used it as done (see counted_done),
     # move to a per-source status setting if old sprints must count.
+    from configuration.models import SourceConfiguration
+
     qs = qs.exclude(item_type='epic').exclude(Q(status_category='done') & NOT_FIXED_BUG_STATUSES)
     if not settings['count_subtasks']:
-        qs = qs.filter(Q(parent__isnull=True) | Q(parent__item_type='epic'))
+        # Azure DevOps Tasks/Bugs under an Issue/Story are the actual work items there, not sub-tasks.
+        ado = SourceConfiguration.objects.filter(source_type__in=['azure_devops', 'azure_boards']).values('id')
+        qs = qs.filter(Q(parent__isnull=True) | Q(parent__item_type='epic') | Q(source_config_id__in=ado))
     return qs
 
 

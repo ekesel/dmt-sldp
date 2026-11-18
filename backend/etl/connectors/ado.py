@@ -476,6 +476,9 @@ class AzureDevOpsConnector(BaseConnector):
 
     def _status_category(self, project_name: str, work_item_type: str, state: str) -> str:
         """todo / in_progress / done from the state's ADO category; name lists when it's unknown."""
+        # Shipped or waiting only on the release: the work is done, whatever category the process gives it.
+        if any(word in state.lower() for word in ('ready for deployment', 'ready for release', 'deployed')):
+            return 'done'
         category = self._state_categories(project_name, work_item_type).get(state.lower()) if project_name else None
         if category in self.STATE_CATEGORY_TO_STATUS:
             return self.STATE_CATEGORY_TO_STATUS[category]
