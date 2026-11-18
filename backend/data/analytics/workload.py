@@ -58,6 +58,46 @@ def co_assigned(qs):
     )
 
 
+def with_carried_over(sprint_ids):
+    """
+    Q for the items of these sprints plus unfinished Jira issues that passed through one of them and were
+    carried over to a later sprint (an issue is stored in its latest sprint only; Jira lists every sprint).
+    """
+    import re
+    from django.db.models import Q
+    from data.models import Sprint, WorkItem
+
+    sprint_ids = list(sprint_ids)
+    jira = dict(
+        Sprint.objects.filter(id__in=sprint_ids, external_id__startswith='jira_sprint_')
+        .values_list('external_id', 'source_config_id')
+    )
+    window = {ext.rsplit('_', 1)[-1] for ext in jira}
+    carried = []
+    if window:
+        # ponytail: scans open issues of these sources in Python (the sprint field id differs per Jira site);
+        # store every sprint of an issue if this gets slow.
+        open_items = (
+            WorkItem.objects.filter(source_config_id__in=set(jira.values()), sprint__isnull=False)
+            .exclude(sprint_id__in=sprint_ids).exclude(status_category='done')
+            .values_list('id', 'raw_source_data__fields')
+        )
+        for item_id, fields in open_items.iterator():
+            for key, value in (fields or {}).items():
+                if not key.startswith('customfield_') or not isinstance(value, list):
+                    continue
+                ids = set()
+                for v in value:  # sprint field only: other list fields have ids too
+                    if isinstance(v, dict) and ('boardId' in v or 'state' in v) and v.get('id') is not None:
+                        ids.add(str(v['id']))
+                    elif isinstance(v, str) and 'sprint' in v.lower():
+                        ids.update(re.findall(r'id=(\d+)', v))
+                if ids & window:
+                    carried.append(item_id)
+                    break
+    return Q(sprint_id__in=sprint_ids) | Q(id__in=carried)
+
+
 def latest_sprint_ids_per_project():
     """Id of the latest started sprint of each project in the current tenant schema."""
     from django.db.models import F, Q
