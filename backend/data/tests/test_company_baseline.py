@@ -151,6 +151,10 @@ class CompanyBaselineViewTests(TenantTestCase):
         self.assertEqual(data['workload_ranges'], {'junior': {'min': 3, 'max': 3}, 'mid': {'min': 3, 'max': 4},
                                                    'senior': {'min': 4, 'max': 6}})
         self.assertEqual(data['workload_settings_history'][1]['ranges']['mid'], {'min': 3, 'max': 7})
+        # Same values on another date still start a version (Jan - Feb, Mar - ...).
+        data = post({"workload_settings": data_limits(5), "workload_settings_effective_from": "2026-03-01"})
+        self.assertEqual([(str(v['effective_from']), str(v['effective_to'])) for v in data['workload_settings_history']],
+                         [('2026-01-01', '2026-02-28'), ('2026-03-01', '2998-12-31'), ('2999-01-01', 'None')])
 
 
 def data_limits(over):

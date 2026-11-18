@@ -160,9 +160,11 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
         base = _as_of(settings_timeline(), day) or {}
         attrs['effective_from'] = day
         attrs['settings'] = self._check(attrs['settings'], base)
-        # Same values as the version already in effect then (e.g. a KPI-only save sending the form back):
-        # nothing to save.
-        attrs['unchanged'] = bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
+        # A KPI-only save sends the form back dated today: same values as today's version, nothing to save.
+        # Any other date starts a version even with the same values (the admin is splitting the timeline).
+        attrs['unchanged'] = (
+            day == timezone.localdate() and bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
+        )
         return attrs
 
     def save(self, user):
