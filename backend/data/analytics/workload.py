@@ -3,7 +3,7 @@ Capacity-based workload status (Team Workload card + Individual workload).
 
 capacity    = seniority_weight * allocation   (share of time on the project: the sprint month's published %,
               else the person's nearest published month, else 1.0)
-ideal range = ceil(sum of under * capacity) .. ceil(sum of over * capacity) - 1 items, summed over the sprints
+ideal range = ceil(sum of under * capacity) .. floor(sum of over * capacity) items, summed over the sprints
 Level, weights/limits and allocation are effective-dated: each sprint uses the values in effect on its start day.
   Overloaded    : items above the ideal range
   Underutilised : items below the ideal range
@@ -12,7 +12,7 @@ The team percentile of items / capacity is always returned as a rank. With use_p
 gates the status (above overload_percentile / at or below underutil_percentile) for teams of small_team_min+.
 """
 from bisect import bisect_left, bisect_right
-from math import ceil
+from math import ceil, floor
 
 DEFAULT_SETTINGS = {
     'sprint_window': 5,
@@ -457,11 +457,11 @@ def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, 
 def ideal_range(low, high):
     """
     Whole-item ideal range (min, max) for raw limits low = Min x capacity, high = Max x capacity:
-    min = ceil(low), Overloaded from ceil(high) (at least min + 1), so max = that - 1.
+    min = ceil(low), max = floor(high) (Max is inclusive; never below min), Overloaded above max.
     Rounds first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
     """
     ideal_min = ceil(round(low, 6))
-    return ideal_min, max(ceil(round(high, 6)), ideal_min + 1) - 1
+    return ideal_min, max(floor(round(high, 6)), ideal_min)
 
 
 def level_ranges(settings):
