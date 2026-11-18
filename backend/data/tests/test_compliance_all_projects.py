@@ -115,12 +115,13 @@ class ComplianceAllProjectsTest(TenantTestCase):
         self.assertEqual(by_item[('b-bad', 'missing_pr_link')], 'Generic Lead')
 
 
-    def test_work_item_id_shows_only_that_item_in_any_sprint(self):
+    def test_work_item_id_does_not_trap_list_on_one_item(self):
+        # A notification link keeps work_item_id in the URL; the list must stay the full view.
         from data.models import WorkItem
         from data.views import ComplianceFlagListView
-        old = WorkItem.objects.get(external_id='old-bad')  # older sprint, outside the default view
-        flags = self.get(ComplianceFlagListView, {'work_item_id': old.id})
-        self.assertEqual([f['work_item_id'] for f in flags['data']], [old.id])
+        one = WorkItem.objects.get(external_id='b-bad')
+        self.assertEqual(self.get(ComplianceFlagListView, {'work_item_id': one.id})['total_count'],
+                         self.get(ComplianceFlagListView)['total_count'])
 
     def test_fixed_later_api_uses_same_id_as_flags(self):
         from data.models import WorkItem
@@ -128,6 +129,17 @@ class ComplianceAllProjectsTest(TenantTestCase):
         fixed = WorkItem.objects.get(external_id='a-fixed')
         rows = self.get(ComplianceFixedLaterView)
         self.assertEqual([(r['work_item_id'], r['external_id']) for r in rows], [(fixed.id, 'a-fixed')])
+
+    def test_stale_sprint_from_other_project_or_all_projects_is_ignored(self):
+        # Bug 10558 / notification links: the URL keeps the old project's sprint_id.
+        from data.models import Sprint
+        from data.views import ComplianceSummaryView
+        p2_sprint = Sprint.objects.get(name='P2-new')
+        fresh = self.get(ComplianceSummaryView, {'project_id': self.p1.id})
+        stale = self.get(ComplianceSummaryView, {'project_id': self.p1.id, 'sprint_id': p2_sprint.id})
+        self.assertEqual(stale, fresh)  # not all zeros
+        self.assertEqual(self.get(ComplianceSummaryView, {'sprint_id': p2_sprint.id}),
+                         self.get(ComplianceSummaryView))  # All Projects ignores a leftover sprint
 
 class IdentityMergeRelinksUserTest(TenantTestCase):
     """Bug 10570: merging a client email into the real one also moves items off the client-email user."""
@@ -146,7 +158,11 @@ class IdentityMergeRelinksUserTest(TenantTestCase):
                                     created_at=now, updated_at=now, assignee_email=client.email, resolved_assignee=linked)
         mapping = UserIdentityMapping.objects.create(canonical_email=real.email, canonical_name='Burhanuddin',
                                                      source_identities=[{'email': client.email}])
+        from users.models import ExternalIdentity
+        clickup = ExternalIdentity.objects.create(user=client, provider='clickup', external_id='89244146')
         with mock.patch('data.tasks.update_all_sprint_metrics.delay'):
             backfill_identity_merge(mapping.id, schema_name=self.tenant.schema_name)
         self.assertEqual(set(WorkItem.objects.values_list('assignee_email', 'resolved_assignee')),
                          {(real.email, real.id)})
+        clickup.refresh_from_db()
+        self.assertEqual(clickup.user, real)  # workload co-assignees + later syncs use the real user
