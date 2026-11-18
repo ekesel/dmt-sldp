@@ -84,14 +84,19 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
                 }
             },
             # Settings in effect today (from the version dated workload_settings_effective_from; None = defaults),
-            # plus every saved version (each in effect until the next one).
+            # plus every saved version, in effect from effective_from to effective_to (None = still in effect).
             "workload_settings": current,
             "workload_settings_effective_from": _as_of([(day, day) for day, _ in timeline], timezone.localdate()),
             # Ideal tasks per sprint at 100% allocation, rounded as the status uses them: show as is.
             "workload_ranges": level_ranges(current),
             "workload_settings_history": [
-                {"effective_from": day, "settings": merged, "ranges": level_ranges(merged)}
-                for day, merged in ((day, merge_settings(overrides)) for day, overrides in timeline)
+                {
+                    "effective_from": day,
+                    "effective_to": timeline[i + 1][0] - timezone.timedelta(days=1) if i + 1 < len(timeline) else None,
+                    "settings": merge_settings(overrides),
+                    "ranges": level_ranges(merge_settings(overrides)),
+                }
+                for i, (day, overrides) in enumerate(timeline)
             ],
         }
 
@@ -127,8 +132,8 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
 
 class WorkloadSettingsVersionSerializer(serializers.Serializer):
     """
-    Saves workload settings from effective_from (default today) onward: later-dated versions are
-    removed, so the saved values apply to every sprint from that date. Earlier history is kept.
+    Saves a workload settings version from effective_from (default today) until the next saved version.
+    Other versions are kept: a date between two versions just ends the earlier one a day before.
     Partial: given keys merge over the version in effect on that date.
     """
     settings = serializers.JSONField()
@@ -140,7 +145,7 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
         attrs['effective_from'] = day
         attrs['settings'] = self._check(attrs['settings'], base)
         # Same values as the version already in effect then (e.g. a KPI-only save sending the form back):
-        # nothing to save, and later versions must not be dropped.
+        # nothing to save.
         attrs['unchanged'] = bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
         return attrs
 
@@ -149,10 +154,8 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
 
         if self.validated_data['unchanged']:
             return
-        day = self.validated_data['effective_from']
-        WorkloadSettingsVersion.objects.filter(effective_from__gt=day).delete()
         WorkloadSettingsVersion.objects.update_or_create(
-            effective_from=day,
+            effective_from=self.validated_data['effective_from'],
             defaults={'overrides': self.validated_data['settings'], 'created_by': user},
         )
 

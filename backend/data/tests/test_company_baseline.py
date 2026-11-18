@@ -105,7 +105,7 @@ class CompanyBaselineViewTests(TenantTestCase):
         force_authenticate(request, user=admin)
         self.assertEqual(len(CompanyBaselineView.as_view()(request).data['data']['workload_settings_history']), 1)
 
-    def test_backdated_save_replaces_later_versions(self):
+    def test_save_between_versions_keeps_later_ones(self):
         admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
 
         def post(over, day):
@@ -118,10 +118,12 @@ class CompanyBaselineViewTests(TenantTestCase):
         post(4, "2026-07-01")
         post(5, "2026-08-01")
         post(6, "2026-10-01")
-        # Saving from 1 Sep applies from then on: the 1 Oct version goes, July/August stay.
+        # Saving from 1 Sep slots in between: August now ends 31 Aug, the 1 Oct version stays.
         history = post(7, "2026-09-01")
-        self.assertEqual({str(v['effective_from']): v['settings']['per_sprint_limits']['over'] for v in history},
-                         {'2026-07-01': 4, '2026-08-01': 5, '2026-09-01': 7})
+        self.assertEqual([(str(v['effective_from']), str(v['effective_to']), v['settings']['per_sprint_limits']['over'])
+                          for v in history],
+                         [('2026-07-01', '2026-07-31', 4), ('2026-08-01', '2026-08-31', 5),
+                          ('2026-09-01', '2026-09-30', 7), ('2026-10-01', 'None', 6)])
 
     def test_sprint_window_must_be_whole_number(self):
         admin = User.objects.create_superuser(username='root', email='root@example.com', password='password123')
