@@ -1064,6 +1064,18 @@ class SprintListView(APIView):
         return Response(data)
 
 
+def _valid_compliance_sprint(project_id, sprint_id):
+    """Drop a sprint the screen can't be showing: a stale one left in the URL (notification link or the
+    previous project) that isn't the chosen project's, or any sprint on All Projects (it has no sprint
+    picker). The views then fall back to each project's latest sprint instead of returning nothing."""
+    if not str(sprint_id or '').isdigit():
+        return None
+    if not str(project_id or '').isdigit():
+        return None
+    sources = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+    return sprint_id if Sprint.objects.filter(id=sprint_id, source_config_id__in=list(sources)).exists() else None
+
+
 def _compliance_sprint_ids(project_id, sprint_id):
     """Sprints the Compliance screen covers: the chosen one, else each project's latest sprint
     (same order as the sprint dropdown), so All Projects = every project's default view combined."""
@@ -1088,6 +1100,7 @@ class ComplianceFlagListView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
         
         severity_filter = request.query_params.get('severity')
         if severity_filter:
@@ -1119,17 +1132,11 @@ class ComplianceFlagListView(APIView):
             items = items.filter(source_config_id__in=source_config_ids)
             fixed_later_items = fixed_later_items.filter(source_config_id__in=source_config_ids)
 
-        work_item_id = (request.query_params.get('work_item_id') or '').strip()
-        if work_item_id and work_item_id not in ['null', 'undefined']:
-            # Opened for one item (e.g. from a notification): show just its flags, whatever sprint it is in.
-            # Our own id (what the page links with); an ADO-style numeric tool id would clash with it.
-            one = Q(id=work_item_id) if work_item_id.isdigit() else Q(external_id=work_item_id)
-            items = items.filter(one)
-            fixed_later_items = fixed_later_items.filter(one)
-        else:
-            sprint_ids = _compliance_sprint_ids(project_id, sprint_id)
-            items = items.filter(sprint_id__in=sprint_ids)
-            fixed_later_items = fixed_later_items.filter(sprint_id__in=sprint_ids)
+        # work_item_id (from a notification link) is deliberately not a filter: the page highlights that
+        # item in the full list, and filtering trapped the list on one item since the URL keeps the id.
+        sprint_ids = _compliance_sprint_ids(project_id, sprint_id)
+        items = items.filter(sprint_id__in=sprint_ids)
+        fixed_later_items = fixed_later_items.filter(sprint_id__in=sprint_ids)
 
         flags = []
         
@@ -1343,6 +1350,7 @@ class ComplianceSummaryView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
 
         # --- Overall Health: use SprintMetrics (same as Dashboard) ---
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
@@ -1421,6 +1429,7 @@ class ComplianceFixedLaterView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
 
         
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
