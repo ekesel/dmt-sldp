@@ -400,6 +400,18 @@ def backfill_identity_merge(mapping_id, schema_name=None):
         assignee_name=mapping.canonical_name
     )
     WorkItem.objects.filter(creator_email__in=all_emails).update(creator_email=canonical_email)
+    # Workload/developer views read the linked portal user first, so repoint items still linked to an
+    # alias account (e.g. a client-email user) at the canonical user too.
+    from users.models import User
+    canonical_user = (User.objects.filter(email__iexact=canonical_email, is_active=True).first()
+                      or User.objects.filter(email__iexact=canonical_email).first())
+    if canonical_user:
+        WorkItem.objects.filter(assignee_email=canonical_email).exclude(
+            resolved_assignee=canonical_user).update(resolved_assignee=canonical_user)
+        # Tool accounts (e.g. a ClickUp user id) linked to the alias user move too, so workload's
+        # co-assignee lookup and later syncs land on the canonical user instead of re-linking the alias.
+        from users.models import ExternalIdentity
+        ExternalIdentity.objects.filter(user__email__in=aliases).exclude(user=canonical_user).update(user=canonical_user)
     
     # 2. Update PullRequests
     PullRequest.objects.filter(author_email__in=all_emails).update(

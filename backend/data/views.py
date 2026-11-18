@@ -65,7 +65,7 @@ class DashboardSummaryView(APIView):
         
         if start_date and not end_date:
             end_date = timezone.localdate().strftime('%Y-%m-%d')
-
+        date_range_picked = bool(start_date or end_date)  # before sprint_ids overwrite the dates below
 
         from .analytics.metrics import MetricService
         from .models import PullRequest
@@ -115,9 +115,14 @@ class DashboardSummaryView(APIView):
         live_code_ai = pr_qs.aggregate(avg=Avg('ai_code_percent'))['avg'] or 0
 
         
-        # Card must reconcile with the Velocity History graph: average the exact rows VelocityView returns.
-        points = [p['velocity'] for p in VelocityView().get(request).data]
-        card_velocity = round(sum(points) / len(points), 1) if points else summary.get('velocity', 0)
+        # Card must reconcile with the Velocity History graph: built from the exact rows VelocityView returns.
+        # A date range can span sprints, so it shows the total points done in that range, not an average.
+        rows = VelocityView().get(request).data
+        if date_range_picked:
+            card_velocity = sum(p['total_story_points_completed'] for p in rows)
+        else:
+            points = [p['velocity'] for p in rows]
+            card_velocity = round(sum(points) / len(points), 1) if points else summary.get('velocity', 0)
 
         data = {
             "velocity": card_velocity,
@@ -1059,12 +1064,43 @@ class SprintListView(APIView):
         return Response(data)
 
 
+def _valid_compliance_sprint(project_id, sprint_id):
+    """Drop a sprint the screen can't be showing: a stale one left in the URL (notification link or the
+    previous project) that isn't the chosen project's, or any sprint on All Projects (it has no sprint
+    picker). The views then fall back to each project's latest sprint instead of returning nothing."""
+    if not str(sprint_id or '').isdigit():
+        return None
+    if not str(project_id or '').isdigit():
+        return None
+    sources = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
+    return sprint_id if Sprint.objects.filter(id=sprint_id, source_config_id__in=list(sources)).exists() else None
+
+
+def _compliance_sprint_ids(project_id, sprint_id):
+    """Sprints the Compliance screen covers: the chosen one, else each project's latest sprint
+    (same order as the sprint dropdown), so All Projects = every project's default view combined."""
+    if sprint_id and sprint_id not in ['null', 'undefined', '']:
+        return [sprint_id]
+    used_sources = Sprint.objects.values_list('source_config_id', flat=True).distinct()
+    sources = SourceConfiguration.objects.filter(id__in=list(used_sources))
+    if project_id and project_id not in ['null', 'undefined', '']:
+        sources = sources.filter(project_id=project_id)
+    by_project = {}
+    for sid, pid in sources.values_list('id', 'project_id'):
+        by_project.setdefault(pid, []).append(sid)
+    order = (F('end_date').desc(nulls_last=True), F('start_date').desc(nulls_last=True))
+    ids = (Sprint.objects.filter(source_config_id__in=src).order_by(*order).values_list('id', flat=True).first()
+           for src in by_project.values())
+    return [i for i in ids if i]
+
+
 class ComplianceFlagListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
         
         severity_filter = request.query_params.get('severity')
         if severity_filter:
@@ -1096,16 +1132,11 @@ class ComplianceFlagListView(APIView):
             items = items.filter(source_config_id__in=source_config_ids)
             fixed_later_items = fixed_later_items.filter(source_config_id__in=source_config_ids)
 
-        # Apply same sprint filters
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items = items.filter(sprint_id=sprint_id)
-            fixed_later_items = fixed_later_items.filter(sprint_id=sprint_id)
-        else:
-            # Auto (no / 'null' / 'undefined' sprint): pick items from the latest sprint only
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items = items.filter(sprint_id=latest_sprint.id)
-                fixed_later_items = fixed_later_items.filter(sprint_id=latest_sprint.id)
+        # work_item_id (from a notification link) is deliberately not a filter: the page highlights that
+        # item in the full list, and filtering trapped the list on one item since the URL keeps the id.
+        sprint_ids = _compliance_sprint_ids(project_id, sprint_id)
+        items = items.filter(sprint_id__in=sprint_ids)
+        fixed_later_items = fixed_later_items.filter(sprint_id__in=sprint_ids)
 
         flags = []
         
@@ -1120,9 +1151,50 @@ class ComplianceFlagListView(APIView):
         _TECH_VIOLATIONS = {'missing_pr_link', 'unit_testing_not_done', 'missing_dmt_signoff'}
 
         # Helper to get assignee names
-        def get_assignee_names(work_item):
+        # Testers don't own code-level violations (PR link, unit tests, DMT signoff): leave them off those flags.
+        from data.analytics.identity_resolver import IdentityResolver
+        resolver = IdentityResolver()
+        resolver.load()
+        qa_emails = set()
+        for email in User.objects.filter(
+            Q(role__role_category='QA') | Q(role__role_name__icontains='tester') | Q(role__role_name__icontains='qa')
+        ).exclude(email='').values_list('email', flat=True):
+            canonical = resolver.resolve(email.lower())
+            qa_emails.update(e.lower() for e in resolver.all_aliases(canonical))
+            qa_emails.update({email.lower(), canonical.lower()})
+
+        # Responsible Tech Lead = first "lead" above the developer in the org chart (User.parent), so a
+        # backend dev maps to the backend TL and a frontend dev to the frontend TL. Testers are skipped.
+        # Falls back to the ticket's Tech Lead field when the org chart has no lead for them.
+        users_by_id = {u.id: u for u in User.objects.select_related('role').order_by('is_active')}
+        users_by_email = {u.email.lower(): u for u in users_by_id.values() if u.email}  # active wins
+
+        def org_chart_tech_lead(work_item):
+            emails = [c.get('email') for c in (work_item.assignee_contributions or [])] + [work_item.assignee_email]
+            for email in emails:
+                email = (email or '').strip().lower()
+                if not email or email in qa_emails:
+                    continue
+                dev = users_by_email.get(resolver.resolve(email).lower()) or users_by_email.get(email)
+                seen = set()
+                node = users_by_id.get(dev.parent_id) if dev else None
+                while node and node.id not in seen:
+                    label = f"{node.role.role_name if node.role else ''} {node.custom_title or ''}".lower()
+                    if 'lead' in label and (node.email or '').lower() not in qa_emails:
+                        return node.get_full_name() or node.email
+                    seen.add(node.id)
+                    node = users_by_id.get(node.parent_id)
+            return None
+
+        def get_assignee_names(work_item, code_level=False):
+            def keep(email):
+                return not (code_level and email and email.strip().lower() in qa_emails)
             if work_item.assignee_contributions and len(work_item.assignee_contributions) > 1:
-                return [c.get('name') or c.get('email', '') for c in work_item.assignee_contributions if c.get('email')]
+                names = [c.get('name') or c.get('email', '') for c in work_item.assignee_contributions
+                         if c.get('email') and keep(c['email'])]
+                return names or ['Unassigned']
+            if not keep(work_item.assignee_email):
+                return ['Unassigned']
             primary = work_item.assignee_name
             if not primary or primary == 'None':
                 primary = work_item.assignee_email
@@ -1133,7 +1205,6 @@ class ComplianceFlagListView(APIView):
         # Process active non-compliant items
         for item in items:
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-            assignee_names = get_assignee_names(item)
 
             for failure in item.compliance_failures:
                 if failure in _AC_VIOLATIONS:
@@ -1141,7 +1212,7 @@ class ComplianceFlagListView(APIView):
                     responsible_name = item.pm_name or item.pm_email or None
                 elif failure in _TECH_VIOLATIONS:
                     responsible_role = 'Tech Lead'
-                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                    responsible_name = org_chart_tech_lead(item) or item.tech_lead_name or item.tech_lead_email or None
                 else:
                     responsible_role = None
                     responsible_name = None
@@ -1151,6 +1222,7 @@ class ComplianceFlagListView(APIView):
                 if severity_filter and severity_filter != severity:
                     continue
 
+                assignee_names = get_assignee_names(item, code_level=failure in _TECH_VIOLATIONS)
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
@@ -1170,7 +1242,6 @@ class ComplianceFlagListView(APIView):
         # Process historical fixed later items (resolved, so never part of a critical/warning filter or its card count)
         for item in ([] if severity_filter else fixed_later_items):
             project_name = source_to_project.get(item.source_config_id, "Unknown Project")
-            assignee_names = get_assignee_names(item)
 
             # Get historical failures from violation history
             historical_failures = []
@@ -1188,7 +1259,7 @@ class ComplianceFlagListView(APIView):
                     responsible_name = item.pm_name or item.pm_email or None
                 elif failure in _TECH_VIOLATIONS:
                     responsible_role = 'Tech Lead'
-                    responsible_name = item.tech_lead_name or item.tech_lead_email or None
+                    responsible_name = org_chart_tech_lead(item) or item.tech_lead_name or item.tech_lead_email or None
                 else:
                     responsible_role = None
                     responsible_name = None
@@ -1198,6 +1269,7 @@ class ComplianceFlagListView(APIView):
                 if severity_filter and severity_filter != severity:
                     continue
 
+                assignee_names = get_assignee_names(item, code_level=failure in _TECH_VIOLATIONS)
                 flags.append({
                     "id": f"{item.id}-{failure}",
                     "work_item_id": item.id,
@@ -1225,9 +1297,12 @@ class ComplianceFlagListView(APIView):
         except ValueError:
             page_size = 10
 
-        total_count = len(flags)
+        # total_count = active violations only, so it equals the Critical + Warning cards;
+        # fixed-later rows still page through the list (total_pages) and are counted separately.
+        fixed_later_count = sum(1 for f in flags if f['fixed_later'])
+        total_count = len(flags) - fixed_later_count
         import math
-        total_pages = math.ceil(total_count / page_size) if total_count > 0 else 0
+        total_pages = math.ceil(len(flags) / page_size) if flags else 0
 
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
@@ -1240,7 +1315,8 @@ class ComplianceFlagListView(APIView):
             "current_page": page,
             "page_size": page_size,
             "total_pages": total_pages,
-            "total_count": total_count
+            "total_count": total_count,
+            "fixed_later_count": fixed_later_count,
         })
 
 class ComplianceFlagResolveView(APIView):
@@ -1274,6 +1350,7 @@ class ComplianceSummaryView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
 
         # --- Overall Health: use SprintMetrics (same as Dashboard) ---
         sprints_qs = SprintMetrics.objects.order_by('-sprint_end_date')
@@ -1290,9 +1367,11 @@ class ComplianceSummaryView(APIView):
             except Sprint.DoesNotExist:
                 sprint_metric = None
         else:
-            sprint_metric = sprints_qs.first()
+            # No sprint picked = several projects' latest sprints; no single SprintMetrics row
+            # covers that, so health comes from the live counts below.
+            sprint_metric = None
 
-        overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else 0
+        overall_health = round(sprint_metric.compliance_rate_percent, 1) if sprint_metric else None
 
         
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
@@ -1309,12 +1388,7 @@ class ComplianceSummaryView(APIView):
             ).values_list('id', flat=True)
             items_qs = items_qs.filter(source_config_id__in=source_config_ids)
 
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items_qs = items_qs.filter(sprint_id=sprint_id)
-        else:
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items_qs = items_qs.filter(sprint_id=latest_sprint.id)
+        items_qs = items_qs.filter(sprint_id__in=_compliance_sprint_ids(project_id, sprint_id))
 
         total = items_qs.count()
         compliant = items_qs.filter(dmt_compliant=True).count()
@@ -1334,7 +1408,7 @@ class ComplianceSummaryView(APIView):
         
         # If the gap between stored metric and live data is large, trust the live data.
         # This fixes the bug where health showed 7% while cards showed 79%.
-        if abs(overall_health - live_health) > 5:
+        if overall_health is None or abs(overall_health - live_health) > 5:
             overall_health = live_health
 
         return Response({
@@ -1355,6 +1429,7 @@ class ComplianceFixedLaterView(APIView):
     def get(self, request):
         project_id = request.query_params.get('project_id')
         sprint_id = request.query_params.get('sprint_id')
+        sprint_id = _valid_compliance_sprint(project_id, sprint_id)
 
         
         story_filter = (Q(parent__isnull=True) | Q(parent__item_type__in=['epic', 'feature', 'portfolio'])) & ~Q(item_type__in=['epic', 'feature', 'portfolio']) & ~Q(item_type__iexact='bug')
@@ -1370,12 +1445,7 @@ class ComplianceFixedLaterView(APIView):
             source_config_ids = SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True)
             items = items.filter(source_config_id__in=source_config_ids)
 
-        if sprint_id and sprint_id not in ['null', 'undefined', '']:
-            items = items.filter(sprint_id=sprint_id)
-        else:
-            latest_sprint = Sprint.objects.order_by('-end_date', '-start_date').first()
-            if latest_sprint:
-                items = items.filter(sprint_id=latest_sprint.id)
+        items = items.filter(sprint_id__in=_compliance_sprint_ids(project_id, sprint_id))
 
         from configuration.models import SourceConfiguration
         source_to_project = {
@@ -1390,7 +1460,8 @@ class ComplianceFixedLaterView(APIView):
                 assignee = "Unassigned"
             result.append({
                 "id": item.id,
-                "work_item_id": item.external_id,
+                "work_item_id": item.id,  # same id the flags list uses
+                "external_id": item.external_id,
                 "work_item_title": item.title,
                 "assignee_name": assignee,
                 "project_name": source_to_project.get(item.source_config_id, "Unknown Project"),
@@ -1505,7 +1576,7 @@ class AIInsightFeedbackView(APIView):
 
 class WorkloadWarningsView(APIView):
     """
-    GET /api/dashboard/workload-warnings/?project_id=
+    GET /api/dashboard/workload-warnings/?project_id=&sprint_ids=1,2
     Setup gaps for the workload screen banner: {"warnings": [{"code", "message"}]}.
     """
     permission_classes = [IsAuthenticated]
@@ -1518,7 +1589,8 @@ class WorkloadWarningsView(APIView):
             project_id = None
         elif not str(project_id).isdigit():
             return Response({'error': 'project_id must be a number.'}, status=400)
-        return Response({'warnings': workload_warnings(project_id)})
+        sprint_ids = [i for i in (request.query_params.get('sprint_ids') or '').split(',') if i.isdigit()]
+        return Response({'warnings': workload_warnings(project_id, sprint_ids or None)})
 
 
 class AssigneeDistributionView(APIView):
@@ -1545,16 +1617,17 @@ class AssigneeDistributionView(APIView):
         from collections import defaultdict
 
         # Identify sprints — date range when provided, otherwise the last `sprint_window`
-        # sprints that have started (completed ones + the running one).
+        # completed sprints (the running one is left out, same as the KPI cards).
         from django.db.models import F
         from .analytics.workload import (
-            get_workload_settings, team_workload, workload_items, allocation_timeline, allocation_for, sprint_day,
-            member_allocations, workload_note, allocation_note,
+            get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
+            member_allocations, workload_note, allocation_note, allocation_gaps,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
         now = timezone.now()
-        started = Q(start_date__lte=now) | Q(end_date__lt=now)
+        # Default window = last N completed sprints, same as the KPI cards (running sprint: pick it explicitly).
+        completed = Q(end_date__lt=now)
         # One judging day per sprint in the window (level, settings and allocation in effect then).
         days = []
         project_parts = []  # All Projects: (project id, sprint ids, judging days) per project
@@ -1575,7 +1648,7 @@ class AssigneeDistributionView(APIView):
                     if end_date:
                         sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                 else:
-                    sprint_qs = sprint_qs.filter(started)[:window]
+                    sprint_qs = sprint_qs.filter(completed)[:window]
                     
                 rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                 relevant_sprint_ids = [r[0] for r in rows]
@@ -1607,7 +1680,7 @@ class AssigneeDistributionView(APIView):
                         if end_date:
                             sprint_qs = sprint_qs.filter(end_date__lte=end_date)
                     else:
-                        sprint_qs = sprint_qs.filter(started).filter(recent)[:window]
+                        sprint_qs = sprint_qs.filter(completed).filter(recent)[:window]
                     rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                     if rows:
                         relevant_sprint_ids.extend(r[0] for r in rows)
@@ -1634,32 +1707,16 @@ class AssigneeDistributionView(APIView):
             status_category='done',
         ).values_list('id', flat=True))
 
-        # 1. Process Resolved Assignees
-        resolved_rows = (
-            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
-            .values('resolved_assignee__id', 'resolved_assignee__first_name',
-                    'resolved_assignee__last_name', 'resolved_assignee__email',
-                    'resolved_assignee__is_active', 'id', 'status_category', 'resolved_at', 'started_at', 'created_at')
-        )
+        credited = defaultdict(set)  # item id -> emails already credited (no double count)
 
-        for row in resolved_rows:
-            email = (row['resolved_assignee__email'] or '').lower().strip()
-            if not email:
-                continue
-
+        def credit(email, name, user_id, is_portal, row):
+            """Count one item for one person: total, in progress / done, and its cycle time when done."""
             if email not in aggregation:
-                name = f"{row['resolved_assignee__first_name']} {row['resolved_assignee__last_name']}".strip()
                 aggregation[email] = {
-                    'id': row['resolved_assignee__id'],
-                    'name': name or email,
-                    'email': email,
-                    'is_portal_user': row['resolved_assignee__is_active'],
-                    'total': 0,
-                    'in_progress': 0,
-                    'completed': 0,
-                    'durations': []
+                    'id': user_id, 'name': name or email, 'email': email, 'is_portal_user': is_portal,
+                    'total': 0, 'in_progress': 0, 'completed': 0, 'durations': [],
                 }
-            
+            credited[row['id']].add(email)
             agg = aggregation[email]
             agg['total'] += 1
             if row['status_category'] == 'in_progress':
@@ -1672,8 +1729,21 @@ class AssigneeDistributionView(APIView):
                     if duration is not None:
                         agg['durations'].append(duration)
 
+        row_fields = ('id', 'status_category', 'resolved_at', 'started_at')
+
+        # 1. Process Resolved Assignees
+        resolved_rows = (
+            work_items.filter(resolved_assignee__isnull=False, resolved_assignee__is_active=True)
+            .values('resolved_assignee__id', 'resolved_assignee__first_name',
+                    'resolved_assignee__last_name', 'resolved_assignee__email', *row_fields)
+        )
+        for row in resolved_rows:
+            email = (row['resolved_assignee__email'] or '').lower().strip()
+            if email:
+                name = f"{row['resolved_assignee__first_name']} {row['resolved_assignee__last_name']}".strip()
+                credit(email, name, row['resolved_assignee__id'], True, row)
+
         # 2. Process Fallback Assignees (unlinked)
-    
         from data.analytics.identity_resolver import get_inactive_user_emails_expanded
         inactive_user_emails = get_inactive_user_emails_expanded(tenant=getattr(request.user, 'tenant', None))
 
@@ -1681,39 +1751,44 @@ class AssigneeDistributionView(APIView):
             work_items.filter(resolved_assignee__isnull=True, assignee_email__isnull=False)
             .exclude(assignee_email='')
             .exclude(assignee_email__in=inactive_user_emails)
-            .values('assignee_email', 'assignee_name', 'id', 'status_category', 'started_at', 'resolved_at', 'created_at')
+            .values('assignee_email', 'assignee_name', *row_fields)
         )
-
         for row in fallback_rows:
             email = (row['assignee_email'] or '').lower().strip()
-            if not email:
-                continue
+            if email:
+                credit(email, row['assignee_name'], None, False, row)
 
-            if email not in aggregation:
-                aggregation[email] = {
-                    'id': None,
-                    'name': row['assignee_name'] or email,
-                    'email': email,
-                    'is_portal_user': False,
-                    'total': 0,
-                    'in_progress': 0,
-                    'completed': 0,
-                    'durations': []
-                }
-            
-            agg = aggregation[email]
-            agg['total'] += 1
-            if row['status_category'] == 'in_progress':
-                agg['in_progress'] += 1
-            elif row['status_category'] == 'done':
-                agg['completed'] += 1
-                # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
-                if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
-                    duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
-                    if duration is not None:
-                        agg['durations'].append(duration)
+        # 3. Co-assignees: a task with several assignees on the item itself (ClickUp) counts for each of
+        # them, as ClickUp shows it. Not assignee_contributions: that also credits sub-task workers.
+        active_users = {
+            u['email'].lower(): u
+            for u in User.objects.filter(is_active=True).values('id', 'email', 'first_name', 'last_name')
+            if u['email']
+        }
+        resolver = IdentityResolver()
+        resolver.load()
+        from users.models import ExternalIdentity
+        clickup_users = dict(
+            ExternalIdentity.objects.filter(provider='clickup', user__is_active=True).values_list('external_id', 'user__email')
+        )
+        by_name = {f"{u['first_name']} {u['last_name']}".strip().lower(): e for e, u in active_users.items()}
 
-        # 3. Finalize result list
+        def member_email(assignee):
+            """Active user behind a raw ClickUp assignee (UserResolver's order: id, email, name), else None."""
+            email = (clickup_users.get(str(assignee.get('id') or '')) or resolver.resolve(assignee.get('email')) or '')
+            email = email.lower().strip()
+            if email in active_users:
+                return email
+            return by_name.get((assignee.get('username') or '').strip().lower())
+
+        for row in co_assigned(work_items).values('co_assignees', *row_fields):
+            for a in row['co_assignees']:
+                email = member_email(a)
+                if email and email not in credited[row['id']]:
+                    user = active_users[email]
+                    credit(email, f"{user['first_name']} {user['last_name']}".strip(), user['id'], True, row)
+
+        # 4. Finalize result list
         result = []
         for email, agg in aggregation.items():
             avg_ct = round(sum(agg['durations']) / len(agg['durations']), 1) if agg['durations'] else None
@@ -1758,16 +1833,24 @@ class AssigneeDistributionView(APIView):
                     email = resolved_email if resolved_email and active else raw_email
                     if email:
                         keys.add(email.lower().strip())
+                for assignees in co_assigned(work_items.filter(sprint_id__in=sprint_ids)).values_list('co_assignees', flat=True):
+                    keys.update(filter(None, map(member_email, assignees)))
                 parts.append((keys, proj_days, allocation_timeline(proj_id)))
 
         # Workload status: items vs each member's ideal range (level x allocation per sprint); percentile = rank.
         statuses, levels = team_workload({r['email']: r['total'] for r in result}, days, alloc_tl, parts=parts)
         # Tooltip: allocation per project in the latest viewed sprint's month, and one plain line on the status.
         unset_project = None  # project view: the person has no allocation on it, so it counts at 100%
+        gap_parts = []  # (project id, name, member keys, viewed days, allocation timeline)
         if parts is not None:
             ref_day = max((d for _, _, part_days in project_parts for d in part_days), default=timezone.localdate())
             sprint_count = max((len(part_days) for _, _, part_days in project_parts), default=1)
             timelines = {proj_id: tl for (proj_id, _, _), (_, _, tl) in zip(project_parts, parts)}
+            project_names = dict(Project.objects.filter(id__in=timelines).values_list('id', 'name'))
+            gap_parts = [
+                (proj_id, project_names.get(proj_id, str(proj_id)), keys, proj_days, tl)
+                for (proj_id, _, proj_days), (keys, _, tl) in zip(project_parts, parts)
+            ]
         else:
             ref_day = max(days, default=timezone.localdate())
             sprint_count = len(days) or 1
@@ -1775,7 +1858,9 @@ class AssigneeDistributionView(APIView):
             if alloc_tl is not None and str(project_id).isdigit():
                 timelines = {int(project_id): alloc_tl}
                 unset_project = Project.objects.filter(id=project_id).values_list('name', flat=True).first()
+                gap_parts = [(int(project_id), unset_project, [r['email'] for r in result], days, alloc_tl)]
         allocations = member_allocations([r['email'] for r in result], ref_day, timelines)
+        gaps = allocation_gaps(gap_parts) if get_workload_settings(ref_day)['use_allocation'] else {}
         use_allocation = get_workload_settings(ref_day)['use_allocation']
         for r in result:
             r['todo'] = r['total'] - r['in_progress'] - r['completed']
@@ -1785,7 +1870,8 @@ class AssigneeDistributionView(APIView):
             r['allocations'] = allocations.get(r['email'], [])
             r['workload_note'] = workload_note(r['total'], r['ideal_min'], r['ideal_max'], sprint_count) if r['workload_status'] else None
             unset = unset_project and use_allocation and not allocation_for(alloc_tl, r['email'], ref_day)
-            r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None)
+            r['allocation_gaps'] = gaps.get(r['email'], [])
+            r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None, r['allocation_gaps'])
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)
