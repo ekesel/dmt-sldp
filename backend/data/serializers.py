@@ -68,8 +68,21 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
         """
         Custom representation for the CompanyBaseline model
         """
+        from django_tenants.utils import schema_context
+        from configuration.models import WorkloadSettingsVersion
+
         timeline = settings_timeline()
         current = get_workload_settings(timeline=timeline)
+        with schema_context('public'):
+            saved = {
+                v.effective_from: v for v in WorkloadSettingsVersion.objects.select_related('created_by')
+            }
+
+        def saved_by(day):
+            user = saved[day].created_by if day in saved else None
+            if not user:
+                return None
+            return user.get_full_name() or user.email or user.username
         return {
             "kpis": {
                 "velocity": instance.velocity,
@@ -84,14 +97,22 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
                 }
             },
             # Settings in effect today (from the version dated workload_settings_effective_from; None = defaults),
-            # plus every saved version (each in effect until the next one).
+            # plus every saved version, in effect from effective_from to effective_to (None = still in effect).
             "workload_settings": current,
             "workload_settings_effective_from": _as_of([(day, day) for day, _ in timeline], timezone.localdate()),
             # Ideal tasks per sprint at 100% allocation, rounded as the status uses them: show as is.
             "workload_ranges": level_ranges(current),
             "workload_settings_history": [
-                {"effective_from": day, "settings": merged, "ranges": level_ranges(merged)}
-                for day, merged in ((day, merge_settings(overrides)) for day, overrides in timeline)
+                {
+                    "effective_from": day,
+                    "effective_to": timeline[i + 1][0] - timezone.timedelta(days=1) if i + 1 < len(timeline) else None,
+                    "settings": merge_settings(overrides),
+                    "ranges": level_ranges(merge_settings(overrides)),
+                    # Last saved by / at (re-saving the same date updates both).
+                    "created_by": saved_by(day),
+                    "created_at": saved[day].created_at if day in saved else None,
+                }
+                for i, (day, overrides) in enumerate(timeline)
             ],
         }
 
@@ -127,8 +148,8 @@ class CompanyBaselineSerializer(serializers.ModelSerializer):
 
 class WorkloadSettingsVersionSerializer(serializers.Serializer):
     """
-    Saves workload settings from effective_from (default today) onward: later-dated versions are
-    removed, so the saved values apply to every sprint from that date. Earlier history is kept.
+    Saves a workload settings version from effective_from (default today) until the next saved version.
+    Other versions are kept: a date between two versions just ends the earlier one a day before.
     Partial: given keys merge over the version in effect on that date.
     """
     settings = serializers.JSONField()
@@ -139,9 +160,11 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
         base = _as_of(settings_timeline(), day) or {}
         attrs['effective_from'] = day
         attrs['settings'] = self._check(attrs['settings'], base)
-        # Same values as the version already in effect then (e.g. a KPI-only save sending the form back):
-        # nothing to save, and later versions must not be dropped.
-        attrs['unchanged'] = bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
+        # A KPI-only save sends the form back dated today: same values as today's version, nothing to save.
+        # Any other date starts a version even with the same values (the admin is splitting the timeline).
+        attrs['unchanged'] = (
+            day == timezone.localdate() and bool(base) and merge_settings(attrs['settings']) == merge_settings(base)
+        )
         return attrs
 
     def save(self, user):
@@ -149,11 +172,9 @@ class WorkloadSettingsVersionSerializer(serializers.Serializer):
 
         if self.validated_data['unchanged']:
             return
-        day = self.validated_data['effective_from']
-        WorkloadSettingsVersion.objects.filter(effective_from__gt=day).delete()
         WorkloadSettingsVersion.objects.update_or_create(
-            effective_from=day,
-            defaults={'overrides': self.validated_data['settings'], 'created_by': user},
+            effective_from=self.validated_data['effective_from'],
+            defaults={'overrides': self.validated_data['settings'], 'created_by': user, 'created_at': timezone.now()},
         )
 
     @staticmethod

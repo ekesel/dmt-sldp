@@ -1621,7 +1621,7 @@ class AssigneeDistributionView(APIView):
         from django.db.models import F
         from .analytics.workload import (
             get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
-            member_allocations, workload_note, allocation_note, allocation_gaps,
+            member_allocations, workload_note, allocation_note, allocation_gaps, with_carried_over,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
@@ -1630,7 +1630,7 @@ class AssigneeDistributionView(APIView):
         completed = Q(end_date__lt=now)
         # One judging day per sprint in the window (level, settings and allocation in effect then).
         days = []
-        project_parts = []  # All Projects: (project id, sprint ids, judging days) per project
+        project_parts = []  # All Projects: (project id, Q of its window items, judging days) per project
         try:
             if project_id and project_id not in ['null', 'undefined']:
                 source_ids = list(SourceConfiguration.objects.filter(project_id=project_id).values_list('id', flat=True))
@@ -1655,7 +1655,7 @@ class AssigneeDistributionView(APIView):
                 days = [sprint_day(start, end) for _, start, end in rows]
 
                 if relevant_sprint_ids:
-                    work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
+                    work_items = WorkItem.objects.filter(with_carried_over(relevant_sprint_ids))
                 else:
                     work_items = WorkItem.objects.filter(source_config_id__in=source_ids).none()
             else:
@@ -1684,10 +1684,11 @@ class AssigneeDistributionView(APIView):
                     rows = list(sprint_qs.values_list('id', 'start_date', 'end_date'))
                     if rows:
                         relevant_sprint_ids.extend(r[0] for r in rows)
-                        project_parts.append((proj.id, [r[0] for r in rows], [sprint_day(s, e) for _, s, e in rows]))
+                        project_parts.append((proj.id, with_carried_over([r[0] for r in rows]),
+                                              [sprint_day(s, e) for _, s, e in rows]))
 
-                if relevant_sprint_ids:
-                    work_items = WorkItem.objects.filter(sprint_id__in=relevant_sprint_ids)
+                if project_parts:
+                    work_items = WorkItem.objects.filter(functools.reduce(operator.or_, (q for _, q, _ in project_parts)))
                 else:
                     work_items = WorkItem.objects.none()
         except Exception:
@@ -1822,10 +1823,10 @@ class AssigneeDistributionView(APIView):
             # All Projects: each member's capacity adds up over the projects they worked on, each project's
             # sprints with that project's allocation.
             parts = []
-            for proj_id, sprint_ids, proj_days in project_parts:
+            for proj_id, in_window, proj_days in project_parts:
                 keys = set()
                 rows = (
-                    work_items.filter(sprint_id__in=sprint_ids)
+                    work_items.filter(in_window)
                     .values_list('resolved_assignee__email', 'resolved_assignee__is_active', 'assignee_email')
                     .distinct()
                 )
@@ -1833,7 +1834,7 @@ class AssigneeDistributionView(APIView):
                     email = resolved_email if resolved_email and active else raw_email
                     if email:
                         keys.add(email.lower().strip())
-                for assignees in co_assigned(work_items.filter(sprint_id__in=sprint_ids)).values_list('co_assignees', flat=True):
+                for assignees in co_assigned(work_items.filter(in_window)).values_list('co_assignees', flat=True):
                     keys.update(filter(None, map(member_email, assignees)))
                 parts.append((keys, proj_days, allocation_timeline(proj_id)))
 

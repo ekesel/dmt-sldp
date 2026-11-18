@@ -499,6 +499,32 @@ class TeamWorkloadWindowTest(TenantTestCase):
         force_authenticate(request, user=self.viewer)
         return {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
 
+    def test_jira_carried_over_open_issue_counts_in_window(self):
+        from data.models import Sprint, WorkItem
+        project, src = self.project('SM')
+        done_sprint = self.sprint(src, 20)
+        done_sprint.external_id = 'jira_sprint_24'
+        done_sprint.save()
+        running = Sprint.objects.create(external_id='jira_sprint_25', source_config_id=src.id, name='S25',
+                                        start_date=self.now - timezone.timedelta(days=1),
+                                        end_date=self.now + timezone.timedelta(days=13))
+
+        def issue(key, status_category, sprints, other=None):
+            fields = {'customfield_10020': [{'id': n, 'state': 'closed', 'boardId': 1} for n in sprints]}
+            fields.update(other or {})
+            WorkItem.objects.create(external_id=key, source_config_id=src.id, sprint=running, title='t', status='s',
+                                    status_category=status_category, created_at=self.now, updated_at=self.now,
+                                    assignee_email='dev@x.test', raw_source_data={'fields': fields})
+
+        issue('SM-1', 'in_progress', [24, 25])  # carried over from Sprint 24: counts
+        issue('SM-2', 'done', [24, 25])  # done in Sprint 25: belongs to Sprint 25
+        issue('SM-3', 'in_progress', [25])  # never in the window
+        issue('SM-4', 'in_progress', [25], {'customfield_1': [{'id': 24, 'value': 'option'}]})  # not a sprint field
+        row = self.get({'project_id': project.id})['dev@x.test']
+        self.assertEqual((row['total'], row['in_progress'], row['completed']), (1, 1, 0))
+        # All Projects counts it too.
+        self.assertEqual(self.get()['dev@x.test']['in_progress'], 1)
+
     def test_all_projects_uses_each_projects_allocation(self):
         x, src_x = self.project('X')
         y, src_y = self.project('Y')
