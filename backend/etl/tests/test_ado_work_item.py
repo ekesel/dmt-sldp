@@ -75,6 +75,12 @@ class AdoStatusAndLinkingTest(TenantTestCase):
         self.assertEqual(self.process(2, 'QA Verified').status_category, 'done')
         self.assertEqual(self.process(3, 'To Do').status_category, 'todo')
 
+    def test_ready_for_deployment_is_done_even_in_progress_category(self):
+        self.categories['ready for deployment (prod)'] = 'InProgress'
+        item = self.process(7, 'Ready for Deployment (Prod)')
+        self.assertEqual(item.status_category, 'done')
+        self.assertIsNotNone(item.resolved_at)
+
     def test_unknown_state_without_category_is_in_progress(self):
         self.categories = {}
         self.conn._state_categories = lambda project, wtype: {}
