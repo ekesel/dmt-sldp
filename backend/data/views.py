@@ -1726,11 +1726,12 @@ class AssigneeDistributionView(APIView):
                 agg['completed'] += 1
                 # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
                 if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
-                    duration = MetricService.working_days(row['started_at'], row['resolved_at'], holiday_dates)
+                    end = MetricService.cycle_end(row['resolved_at'], row[MetricService.FIRST_RESOLUTION])
+                    duration = MetricService.working_days(row['started_at'], end, holiday_dates)
                     if duration is not None:
                         agg['durations'].append(duration)
 
-        row_fields = ('id', 'status_category', 'resolved_at', 'started_at')
+        row_fields = ('id', 'status_category', 'resolved_at', 'started_at', MetricService.FIRST_RESOLUTION)
 
         # 1. Process Resolved Assignees
         resolved_rows = (
