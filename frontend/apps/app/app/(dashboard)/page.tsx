@@ -518,20 +518,22 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="min-h-full bg-background p-4 sm:p-6 lg:p-8 selection:bg-primary/30 overflow-x-hidden">
-            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-6 sm:space-y-8 mt-4 sm:mt-8">
-                <header className="flex flex-col xl:flex-row items-stretch xl:items-start justify-between border-b border-border pb-6 sm:pb-8 gap-6">
-                    <div className="shrink-0">
-                        <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1.5 sm:mb-2">
-                            <TrendingUp size={16} />
+        <div className="min-h-full bg-background p-3 sm:p-5 lg:p-8 selection:bg-primary/30 overflow-x-hidden">
+            <div ref={dashboardRef} id="dashboard-container" className="max-w-7xl mx-auto space-y-5 sm:space-y-8 mt-2 sm:mt-6">
+                <header className="flex flex-col xl:flex-row items-stretch xl:items-start justify-between border-b border-border pb-5 sm:pb-7 gap-4 sm:gap-6">
+                    <div className="shrink-0 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-primary text-xs sm:text-sm font-bold tracking-wider uppercase mb-1 sm:mb-2">
+                            <TrendingUp size={16} className="shrink-0" />
                             Performance Overview
                         </div>
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight flex items-center gap-2 sm:gap-3 break-words">
                             {selectedProjectId ? 'Project Analytics' : 'Organizational Analytics'}
                         </h1>
-                        <p className="text-muted-foreground mt-1.5 sm:mt-2 text-sm sm:text-base font-medium">Monitoring engineering excellence and DMT compliance.</p>
+                        <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm md:text-base font-medium break-words">
+                            Monitoring engineering excellence and DMT compliance.
+                        </p>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap justify-start xl:justify-end w-full xl:w-auto">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3.5 flex-wrap justify-start xl:justify-end w-full xl:w-auto">
                         <div className="w-full sm:w-auto">
                             <ProjectSelector
                                 selectedProjectId={selectedProjectId}
@@ -550,13 +552,13 @@ export default function DashboardPage() {
                                         autoSelectLatest={false}
                                         allowAll={true}
                                         popoverAlign="right"
-                                        className="w-full sm:w-56 h-12"
+                                        className="w-full sm:w-56 h-11 sm:h-12"
                                     />
                                 </div>
                                 {selectedSprintIds.length > 0 && (
                                     <button
                                         onClick={handleClearSprint}
-                                        className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
+                                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
                                         title="Clear sprint filter"
                                     >
                                         <X size={16} />
@@ -564,16 +566,16 @@ export default function DashboardPage() {
                                 )}
                             </div>
                         )}
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
                             <DatePicker
                                 label="From"
                                 value={startDate}
                                 min="2000-01-01"
                                 max={endDate && endDate <= todayStr ? endDate : todayStr}
                                 onChange={handleStartDateChange}
-                                className="flex-1 sm:flex-initial sm:w-auto"
+                                className="flex-1 min-w-[7.5rem] sm:min-w-0 sm:flex-initial sm:w-auto"
                             />
-                            <span className="text-muted-foreground text-sm font-bold shrink-0">→</span>
+                            <span className="text-muted-foreground text-xs sm:text-sm font-bold shrink-0">→</span>
                             <DatePicker
                                 label="To"
                                 value={endDate}
@@ -581,12 +583,12 @@ export default function DashboardPage() {
                                 max={todayStr}
                                 onChange={handleEndDateChange}
                                 popoverAlign="right"
-                                className="flex-1 sm:flex-initial sm:w-auto"
+                                className="flex-1 min-w-[7.5rem] sm:min-w-0 sm:flex-initial sm:w-auto"
                             />
                             {(startDate || endDate) && (
                                 <button
                                     onClick={handleClearDateFilter}
-                                    className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
+                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
                                     title="Clear date filter"
                                 >
                                     <X size={16} />
@@ -598,19 +600,19 @@ export default function DashboardPage() {
                                 <button
                                     onClick={handleResync}
                                     disabled={isSyncing}
-                                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer h-12 text-sm sm:text-base ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all font-bold border border-border cursor-pointer h-11 sm:h-12 text-xs sm:text-sm md:text-base ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     title="Resync Project Data"
                                 >
-                                    <RefreshCcw size={18} className={isSyncing ? 'animate-spin' : ''} />
+                                    <RefreshCcw size={16} className={isSyncing ? 'animate-spin' : ''} />
                                     {isSyncing ? 'Syncing...' : 'Resync'}
                                 </button>
                             )}
                             <button
                                 onClick={handleExportPDF}
                                 disabled={isExporting}
-                                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer h-12 text-sm sm:text-base ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20 cursor-pointer h-11 sm:h-12 text-xs sm:text-sm md:text-base ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <FileText size={18} />
+                                <FileText size={16} />
                                 {isExporting ? 'Exporting...' : 'Export PDF'}
                             </button>
                         </div>
@@ -632,21 +634,21 @@ export default function DashboardPage() {
                         if (loading && !summary) {
                             return (
                                 <div className="space-y-8 animate-pulse">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
                                         {[...Array(5)].map((_, i) => (
-                                            <div key={i} className="h-36 rounded-2xl bg-card border-2 border-primary/20 p-6 flex flex-col justify-between">
+                                            <div key={i} className={`h-36 rounded-2xl bg-card border-2 border-primary/20 p-5 sm:p-6 flex flex-col justify-between ${i === 4 ? 'sm:col-span-2 md:col-span-1 xl:col-span-1' : ''}`}>
                                                 <div className="h-4 w-24 bg-muted rounded"></div>
                                                 <div className="h-8 w-32 bg-muted rounded"></div>
                                                 <div className="h-3 w-28 bg-muted rounded"></div>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="min-h-[450px] rounded-2xl bg-card border border-border p-8 flex flex-col justify-between">
+                                    <div className="min-h-[380px] sm:min-h-[450px] rounded-2xl bg-card border border-border p-5 sm:p-8 flex flex-col justify-between">
                                         <div className="space-y-2">
                                             <div className="h-6 w-40 bg-muted rounded"></div>
                                             <div className="h-4 w-60 bg-muted rounded"></div>
                                         </div>
-                                        <div className="h-[380px] w-full bg-muted/20 rounded-xl"></div>
+                                        <div className="h-[280px] sm:h-[380px] w-full bg-muted/20 rounded-xl"></div>
                                     </div>
                                 </div>
                             );
@@ -680,15 +682,15 @@ export default function DashboardPage() {
 
                         return (
                             <div className={`space-y-8 transition-opacity duration-200 ${loading && summary ? 'opacity-40 pointer-events-none' : ''}`}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
                                     <KPICard
                                         label="Sprint Velocity"
                                         value={`${summary?.velocity || 0} SP`}
                                         trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: 'neutral', value: 'Avg' }}
                                         description={<span className="text-primary">{sprintAverageLabel || (selectedProjectId ? sprintRangeLabel(startDate, endDate) : `Average of ${sprintRangeLabel(startDate, endDate).toLowerCase()}`)}</span>}
-                                        valueClassName="text-accent !text-2xl"
+                                        valueClassName="text-accent !text-xl sm:!text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        labelClassName="font-bold text-xs sm:text-sm md:text-base text-primary break-words"
                                         helpId="velocity"
                                         onHelpClick={handleHelpClick}
                                     />
@@ -697,9 +699,9 @@ export default function DashboardPage() {
                                         value={`${summary?.cycle_time || 0} Days`}
                                         trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: 'neutral', value: 'Avg' }}
                                         description={<span className="text-primary">{sprintAverageLabel || (selectedProjectId ? 'Resolution duration' : 'Average resolution duration')}</span>}
-                                        valueClassName="text-accent !text-2xl"
+                                        valueClassName="text-accent !text-xl sm:!text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        labelClassName="font-bold text-xs sm:text-sm md:text-base text-primary break-words"
                                         helpId="cycle_time"
                                         onHelpClick={handleHelpClick}
                                     />
@@ -708,9 +710,9 @@ export default function DashboardPage() {
                                         value={`${(summary?.compliance_rate || 0).toFixed(1)}%`}
                                         trend={selectedProjectId && selectedSprintIds.length === 1 ? undefined : { direction: summary?.compliance_rate && summary.compliance_rate >= 80 ? 'up' : 'down', value: 'Avg' }}
                                         description={<span className="text-primary">Minimum Threshold: 80%</span>}
-                                        valueClassName="text-accent !text-2xl"
+                                        valueClassName="text-accent !text-xl sm:!text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        labelClassName="font-bold text-xs sm:text-sm md:text-base text-primary break-words"
                                         helpId="compliance"
                                         onHelpClick={handleHelpClick}
                                     />
@@ -720,9 +722,9 @@ export default function DashboardPage() {
                                         trend={{ direction: 'neutral', value: 'Analyzed' }}
                                         description={<span className="text-primary">PR-based AI evaluation</span>}
                                         icon={<Sparkles size={16} className="text-brand-primary" />}
-                                        valueClassName="text-accent !text-2xl"
+                                        valueClassName="text-accent !text-xl sm:!text-2xl"
                                         className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        labelClassName="font-bold text-xs sm:text-sm md:text-base text-primary break-words"
                                         helpId="objective_ai"
                                         onHelpClick={handleHelpClick}
                                     />
@@ -731,50 +733,54 @@ export default function DashboardPage() {
                                         value={(summary?.bugs_resolved || 0).toString()}
                                         trend={{ direction: 'neutral', value: 'Total' }}
                                         description={<span className="text-primary">{selectedSprintIds.length > 1 ? `Bugs fixed across ${selectedSprintIds.length} selected sprints` : `Bugs fixed in ${sprintRangeLabel(startDate, endDate, sprintDisplayLabel).toLowerCase()}`}</span>}
-                                        valueClassName="text-accent !text-2xl"
-                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center"
-                                        labelClassName="font-bold text-base whitespace-nowrap text-primary"
+                                        valueClassName="text-accent !text-xl sm:!text-2xl"
+                                        className="border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary bg-none backdrop-blur-none text-center [&>div.flex]:justify-center sm:col-span-2 md:col-span-1 xl:col-span-1"
+                                        labelClassName="font-bold text-xs sm:text-sm md:text-base text-primary break-words"
                                         helpId="bugs_resolved"
                                         onHelpClick={handleHelpClick}
                                     />
                                 </div>
 
-                                <Card className="min-h-[380px] sm:min-h-[450px] flex flex-col p-4 sm:p-6 lg:p-8 bg-card border-border backdrop-blur-xl shadow-none">
-                                    <div className="flex items-center justify-between mb-6 sm:mb-10">
+                                <Card className="min-h-[340px] sm:min-h-[450px] flex flex-col p-3.5 sm:p-6 lg:p-8 bg-card border-border backdrop-blur-xl shadow-none">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-8 gap-2">
                                         <div>
-                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-                                                <BarChart3 className="text-primary" />
+                                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+                                                <BarChart3 className="text-primary shrink-0" />
                                                 Velocity History
                                             </h2>
-                                            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+                                            <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 sm:mt-1">
                                                 {selectedSprintIds.length > 1
                                                     ? `Delivery trends across ${selectedSprintIds.length} selected sprints`
                                                     : 'Sprint-over-sprint delivery trends'}
                                             </p>
                                         </div>
+                                        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground/80 self-end sm:self-auto shrink-0">
+                                            <span>Scroll horizontally</span>
+                                            <span className="text-primary font-bold">→</span>
+                                        </div>
                                     </div>
-                                    <div className="w-full h-[300px] sm:h-[380px] min-h-[280px] sm:min-h-[380px] bg-muted/10 rounded-2xl border border-border p-2 sm:p-4 overflow-hidden">
+                                    <div className="w-full h-[270px] sm:h-[350px] md:h-[390px] min-h-[250px] sm:min-h-[340px] bg-muted/10 rounded-xl sm:rounded-2xl border border-border p-1.5 sm:p-4 pb-2 sm:pb-3 overflow-x-auto overflow-y-hidden chart-scrollbar">
                                         <VelocityChart data={velocity} />
                                     </div>
                                 </Card>
 
                                 {/* Critical Alerts - Simplified logic based on compliance */}
-                                <div className="space-y-4 sm:space-y-6">
-                                    <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                                <div className="space-y-3 sm:space-y-5">
+                                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
                                         <AlertCircle className="text-destructive" />
                                         Compliance Alerts
                                     </h2>
                                     {summary?.compliance_rate !== undefined && summary.compliance_rate < 80 && (
-                                        <Card className="bg-destructive/5 border-destructive/20 p-4 sm:p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
+                                        <Card className="bg-destructive/5 border-destructive/20 p-3.5 sm:p-6 group hover:bg-destructive/10 transition-colors cursor-default shadow-none">
                                             <div className="flex justify-between items-start">
                                                 <span className="px-2 py-1 rounded text-[10px] font-black uppercase bg-destructive text-destructive-foreground leading-none">High Risk</span>
                                             </div>
-                                            <p className="text-destructive font-bold mt-3 sm:mt-4 group-hover:text-foreground transition-colors">Low Compliance Rate</p>
-                                            <p className="text-destructive/80 text-xs sm:text-sm mt-1.5 sm:mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
+                                            <p className="text-destructive font-bold mt-2.5 sm:mt-4 group-hover:text-foreground transition-colors text-sm sm:text-base">Low Compliance Rate</p>
+                                            <p className="text-destructive/80 text-xs sm:text-sm mt-1 sm:mt-2 leading-relaxed group-hover:text-foreground/80 transition-colors">Overall compliance is {summary.compliance_rate}%, below the 80% threshold.</p>
                                         </Card>
                                     )}
                                     {(!summary || (summary.compliance_rate >= 80)) && (
-                                        <p className="text-muted-foreground text-sm">No critical alerts at this time.</p>
+                                        <p className="text-muted-foreground text-xs sm:text-sm">No critical alerts at this time.</p>
                                     )}
                                 </div>
 
@@ -788,17 +794,17 @@ export default function DashboardPage() {
                                 )}
 
                                 <div className="pt-6 sm:pt-8 border-t border-border">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                                        <div className="flex items-center gap-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2.5 sm:gap-4">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             <Share2 className="text-primary w-5 h-5 shrink-0" />
-                                            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                                            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate">
                                                 {insights.length > 0 && insights[0].project_name ? `Insights for ${insights[0].project_name}` : "Project Insights"}
                                             </h2>
                                         </div>
                                         <button
                                             onClick={refreshInsights}
                                             disabled={isRefreshingInsights}
-                                            className={`self-start sm:self-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className={`self-start sm:self-auto flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-bold border border-border shrink-0 cursor-pointer ${isRefreshingInsights ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <RefreshCcw size={14} className={isRefreshingInsights ? 'animate-spin' : ''} />
                                             {isRefreshingInsights ? 'Refreshing...' : 'Refresh Insights'}

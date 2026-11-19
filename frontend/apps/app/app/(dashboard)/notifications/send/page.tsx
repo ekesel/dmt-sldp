@@ -337,35 +337,35 @@ export default function SendNotificationPage() {
     };
 
     return (
-        <div className="min-h-full bg-[#F3F4F6] p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+        <div className="min-h-full bg-[#F3F4F6] px-2.5 py-3 sm:p-6 lg:p-8 overflow-x-hidden">
             <div className="max-w-7xl w-full mx-auto">
 
                 {/* Header */}
-                <header className="mb-6 sm:mb-8 bg-white rounded-2xl border border-primary/20 shadow-sm px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <header className="mb-4 sm:mb-8 bg-white rounded-xl sm:rounded-2xl border border-primary/20 shadow-sm px-3.5 sm:px-8 py-3.5 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                     <div className="flex items-center gap-3 sm:gap-4">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/90 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
+                        <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/90 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
                             <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Quick Updates</h1>
+                            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Quick Updates</h1>
                             <p className="text-primary-dark text-xs sm:text-sm font-medium mt-0.5">Send updates to your team members</p>
                         </div>
                     </div>
                     {selectedIds.size > 0 && (
-                        <div className="sm:ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
-                            <Users className="w-4 h-4" />
+                        <div className="sm:ml-auto flex items-center gap-2 bg-primary/20 text-primary-dark text-xs sm:text-sm font-bold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full">
+                            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             {selectedIds.size} selected
                         </div>
                     )}
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
                     {/* ── User list panel ── */}
-                    <div className="lg:col-span-1 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[48.125rem]">
+                    <div className="lg:col-span-1 bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[20rem] sm:h-[24rem] md:h-[28rem] lg:h-[48.125rem]">
 
                         {/* Panel header */}
-                        <div className="px-4 py-3 bg-primary/90 flex items-center gap-2">
+                        <div className="px-3.5 sm:px-4 py-2.5 sm:py-3 bg-primary/90 flex items-center gap-2">
                             <Users className="w-4 h-4 text-white/80" />
                             <span className="text-white font-semibold text-sm">Team Members</span>
                             {!loading && (
@@ -374,7 +374,7 @@ export default function SendNotificationPage() {
                         </div>
 
                         {/* Search */}
-                        <div className="p-3 border-b border-gray-200 bg-white space-y-2">
+                        <div className="p-2.5 sm:p-3 border-b border-gray-200 bg-white space-y-2">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/80" />
                                 <input
@@ -419,7 +419,7 @@ export default function SendNotificationPage() {
                                         <div
                                             key={u.id}
                                             onClick={() => toggleUser(uid)}
-                                            className={`w-full text-left p-3 rounded-xl flex items-center gap-3 cursor-pointer transition select-none ${selected
+                                            className={`w-full text-left p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 sm:gap-3 cursor-pointer transition select-none ${selected
                                                 ? 'bg-gray-100 border border-gray-300 shadow-sm'
                                                 : 'hover:bg-gray-100 border border-transparent'
                                                 }`}
@@ -430,13 +430,13 @@ export default function SendNotificationPage() {
                                                 ariaLabel={`Select ${displayName(u)}`}
                                                 size="sm"
                                             />
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition ${selected ? 'bg-primary/90 border-primary/80' : 'bg-gray-100 border-gray-200'
+                                            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center flex-shrink-0 border transition ${selected ? 'bg-primary/90 border-primary/80' : 'bg-gray-100 border-gray-200'
                                                 }`}>
                                                 <UserIcon className={`w-4 h-4 ${selected ? 'text-white' : 'text-primary'}`} />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-gray-800 truncate">{displayName(u)}</p>
-                                                <p className="text-xs text-accent truncate">{u.email}</p>
+                                                <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{displayName(u)}</p>
+                                                <p className="text-[11px] sm:text-xs text-accent truncate">{u.email}</p>
                                             </div>
                                         </div>
                                     );
@@ -446,36 +446,36 @@ export default function SendNotificationPage() {
                     </div>
 
                     {/* ── Right side panels ── */}
-                    <div className="lg:col-span-2 flex flex-col gap-6 h-[48.125rem]">
+                    <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6 min-h-0 lg:h-[48.125rem]">
 
                         {/* ── Compose panel ── */}
                         <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
 
                             {/* Panel header */}
-                            <div className="px-6 py-3 bg-primary/90 flex items-center gap-2">
+                            <div className="px-3.5 sm:px-6 py-2.5 sm:py-3 bg-primary/90 flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4 text-white/80" />
                                 <span className="text-white font-semibold text-sm">Compose Message</span>
                             </div>
 
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                            <div className="flex-1 p-3.5 sm:p-6 overflow-y-auto custom-scrollbar">
                                 {selectedIds.size > 0 ? (
-                                    <form onSubmit={handleSend} className="space-y-5 h-full flex flex-col">
+                                    <form onSubmit={handleSend} className="space-y-4 sm:space-y-5 h-full flex flex-col">
 
                                         {/* Recipient badge */}
-                                        <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200">
-                                            <div className="p-2 bg-primary/90 rounded-full shadow shadow-primary/30">
-                                                <Users className="w-5 h-5 text-white" />
+                                        <div className="flex items-center gap-2.5 sm:gap-4 p-3 sm:p-4 bg-white rounded-xl border border-gray-200">
+                                            <div className="p-1.5 sm:p-2 bg-primary/90 rounded-full shadow shadow-primary/30 shrink-0">
+                                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                             </div>
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-[0.625rem] text-primary uppercase font-bold tracking-wider">
                                                     {selectedIds.size === 1 ? 'Recipient' : `Recipients (${selectedIds.size})`}
                                                 </p>
-                                                <p className="text-sm font-bold text-gray-800 truncate">{recipientLabel()}</p>
+                                                <p className="text-xs sm:text-sm font-bold text-gray-800 break-words leading-tight">{recipientLabel()}</p>
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedIds(new Set())}
-                                                className="ml-auto text-xs text-primary/80 hover:text-rose-500 transition font-medium"
+                                                className="ml-auto text-xs text-primary/80 hover:text-rose-500 transition font-medium shrink-0 cursor-pointer"
                                             >
                                                 Clear
                                             </button>
@@ -487,38 +487,38 @@ export default function SendNotificationPage() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                                 Notification Type
                                             </label>
-                                            <div className="grid grid-cols-4 gap-3">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                                                 <button
                                                     type="button"
                                                     onClick={() => setType('info')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'info' ? 'bg-primary/5 border-primary ring-2 ring-primary/30' : 'bg-white border-gray-200 hover:border-primary/50'}`}
+                                                    className={`p-2.5 sm:p-3 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${type === 'info' ? 'bg-primary/5 border-primary ring-2 ring-primary/30' : 'bg-white border-gray-200 hover:border-primary/50'}`}
                                                 >
-                                                    <Info className="w-6 h-6 text-primary" />
-                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'info' ? 'text-primary' : 'text-gray-500'}`}>Info</span>
+                                                    <Info className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                                                    <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${type === 'info' ? 'text-primary' : 'text-gray-500'}`}>Info</span>
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setType('success')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'success' ? 'bg-green/5 border-green ring-2 ring-green/30' : 'bg-white border-gray-200 hover:border-green/50'}`}
+                                                    className={`p-2.5 sm:p-3 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${type === 'success' ? 'bg-green/5 border-green ring-2 ring-green/30' : 'bg-white border-gray-200 hover:border-green/50'}`}
                                                 >
-                                                    <CheckCircle className="w-6 h-6 text-green" />
-                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'success' ? 'text-green' : 'text-gray-500'}`}>Success</span>
+                                                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green" />
+                                                    <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${type === 'success' ? 'text-green' : 'text-gray-500'}`}>Success</span>
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setType('warning')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'warning' ? 'bg-warning/5 border-warning ring-2 ring-warning/30' : 'bg-white border-gray-200 hover:border-warning/50'}`}
+                                                    className={`p-2.5 sm:p-3 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${type === 'warning' ? 'bg-warning/5 border-warning ring-2 ring-warning/30' : 'bg-white border-gray-200 hover:border-warning/50'}`}
                                                 >
-                                                    <AlertTriangle className="w-6 h-6 text-warning" />
-                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'warning' ? 'text-warning' : 'text-gray-500'}`}>Warning</span>
+                                                    <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
+                                                    <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${type === 'warning' ? 'text-warning' : 'text-gray-500'}`}>Warning</span>
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setType('error')}
-                                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${type === 'error' ? 'bg-destructive/5 border-destructive ring-2 ring-destructive/30' : 'bg-white border-gray-200 hover:border-destructive/50'}`}
+                                                    className={`p-2.5 sm:p-3 rounded-xl border flex flex-col items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${type === 'error' ? 'bg-destructive/5 border-destructive ring-2 ring-destructive/30' : 'bg-white border-gray-200 hover:border-destructive/50'}`}
                                                 >
-                                                    <XCircle className="w-6 h-6 text-destructive" />
-                                                    <span className={`text-xs font-bold uppercase tracking-wider ${type === 'error' ? 'text-destructive' : 'text-gray-500'}`}>Error</span>
+                                                    <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-destructive" />
+                                                    <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${type === 'error' ? 'text-destructive' : 'text-gray-500'}`}>Error</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -531,7 +531,7 @@ export default function SendNotificationPage() {
                                             <input
                                                 type="text"
                                                 placeholder="Brief summary..."
-                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition"
+                                                className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition"
                                                 value={title}
                                                 onChange={(e) => {
                                                     setTitle(e.target.value);
@@ -547,8 +547,8 @@ export default function SendNotificationPage() {
                                             </label>
                                             <textarea
                                                 placeholder="Type your message here..."
-                                                rows={5}
-                                                className="flex-1 w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
+                                                rows={4}
+                                                className="flex-1 w-full px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
                                                 value={message}
                                                 onChange={(e) => {
                                                     setMessage(e.target.value);
@@ -560,18 +560,18 @@ export default function SendNotificationPage() {
 
                                         {/* Status feedback */}
                                         {status && (
-                                            <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${status.kind === 'success'
+                                            <div className={`p-3.5 sm:p-4 rounded-xl flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium ${status.kind === 'success'
                                                 ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
                                                 : status.kind === 'partial'
                                                     ? 'bg-amber-50 border border-amber-200 text-amber-700'
                                                     : 'bg-rose-50 border border-rose-200 text-rose-700'
                                                 }`}>
                                                 {status.kind === 'success' ? (
-                                                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                                                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                                                 ) : status.kind === 'partial' ? (
-                                                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                                                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                                                 ) : (
-                                                    <XCircle className="w-5 h-5 flex-shrink-0" />
+                                                    <XCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                                                 )}
                                                 {status.message}
                                             </div>
@@ -581,7 +581,7 @@ export default function SendNotificationPage() {
                                         <button
                                             type="submit"
                                             disabled={sending || !message}
-                                            className="w-full bg-primary/90 hover:bg-primary-dark active:bg-primary-dark text-white font-bold py-4 rounded-xl shadow-md shadow-primary/30 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
+                                            className="w-full bg-primary/90 hover:bg-primary-dark active:bg-primary-dark text-white font-bold py-3 sm:py-4 rounded-xl shadow-md shadow-primary/30 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed group text-xs sm:text-sm cursor-pointer"
                                         >
                                             {sending ? (
                                                 <span className="flex items-center gap-2">
@@ -595,16 +595,16 @@ export default function SendNotificationPage() {
                                                 </>
                                             )}
                                         </button>
-                                        <div className="h-2 shrink-0"></div>
+                                        <div className="h-1 sm:h-2 shrink-0"></div>
                                     </form>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 border-2 border-gray-200">
-                                            <MessageSquare className="w-9 h-9 text-gray-400" />
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-12">
+                                        <div className="w-14 h-14 sm:w-20 sm:h-20 bg-gray-50 rounded-full flex items-center justify-center mb-3 sm:mb-5 border-2 border-gray-200">
+                                            <MessageSquare className="w-7 h-7 sm:w-9 sm:h-9 text-gray-400" />
                                         </div>
-                                        <h3 className="text-xl font-bold text-gray-700 mb-2">No Recipients Yet</h3>
-                                        <p className="text-accent text-sm max-w-xs">
-                                            Select one or more team members from the list on the left to start composing your message.
+                                        <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-1.5 sm:mb-2">No Recipients Yet</h3>
+                                        <p className="text-accent text-xs sm:text-sm max-w-xs leading-relaxed">
+                                            Select one or more team members from the Team Members list to start composing your message.
                                         </p>
                                     </div>
                                 )}
@@ -612,9 +612,9 @@ export default function SendNotificationPage() {
                         </div>
 
                         {/* ── Received Notifications panel ── */}
-                        <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[15.625rem] max-h-[23.4375rem]">
+                        <div className="bg-white border border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[14rem] sm:min-h-[15.625rem] max-h-[22rem] sm:max-h-[23.4375rem]">
                             {/* Panel header */}
-                            <div className="px-6 py-3 bg-primary/90 flex items-center justify-between">
+                            <div className="px-3.5 sm:px-6 py-2.5 sm:py-3 bg-primary/90 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Bell className="w-4 h-4 text-white/80" />
                                     <span className="text-white font-semibold text-sm">Messages</span>
@@ -642,7 +642,7 @@ export default function SendNotificationPage() {
 
                                             const senderName = n.user_name || n.data?.sender_name;
                                             const initials = senderName
-                                                ? senderName.split(/\\s+/).map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()
+                                                ? senderName.split(/\s+/).map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()
                                                 : '';
                                             const senderUser = users.find(u => {
                                                 const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
@@ -656,9 +656,9 @@ export default function SendNotificationPage() {
                                                     key={n.id}
                                                     id={`notification-${n.id}`}
                                                     onClick={() => handleProfileClick(n, senderName || 'System')}
-                                                    className={`p-4 flex items-start gap-3 transition-all duration-1000 relative cursor-pointer ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
+                                                    className={`p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3 transition-all duration-1000 relative cursor-pointer ${highlightId === String(n.id) ? 'bg-accent/20 ring-2 ring-accent shadow-md rounded-xl z-10 m-1' : 'hover:bg-gray-50'}`}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${senderName && !showImage ? 'bg-slate-200 text-slate-600' : (!showImage ? style.bg : '')} overflow-hidden`}>
+                                                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${senderName && !showImage ? 'bg-slate-200 text-slate-600' : (!showImage ? style.bg : '')} overflow-hidden`}>
                                                         {showImage ? (
                                                             <img
                                                                 src={getFileUrl(avatarUrl)}
@@ -667,37 +667,39 @@ export default function SendNotificationPage() {
                                                                 onError={() => setImageErrors(prev => ({ ...prev, [String(n.id)]: true }))}
                                                             />
                                                         ) : senderName ? (
-                                                            <span className="text-sm font-medium tracking-wide">{initials}</span>
+                                                            <span className="text-xs sm:text-sm font-medium tracking-wide">{initials}</span>
                                                         ) : (
                                                             style.icon
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0 pt-0.5">
-                                                        <div className="flex items-start justify-between gap-4">
-                                                            <h4 className="text-[0.9375rem] font-bold text-gray-900 break-words leading-tight">
-                                                                {senderName || 'System'}
-                                                            </h4>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className={`text-[0.625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${style.bg} ${style.textClass}`}>
-                                                                    {n.notification_type === 'qucik_update' ? 'INFO' : (n.notification_type || 'INFO')}
-                                                                </span>
-                                                                <span className="text-[0.6875rem] font-medium text-gray-400 whitespace-nowrap">
+                                                        <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="text-xs sm:text-[0.9375rem] font-bold text-gray-900 break-words leading-tight">
+                                                                    {senderName || 'System'}
+                                                                </h4>
+                                                                {(n.title || !senderName) && (
+                                                                    <p className="text-[11px] sm:text-[0.875rem] text-gray-500 mb-0.5 leading-snug break-words">
+                                                                        {n.title || 'System'}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 shrink-0">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className={`text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase tracking-wider px-1 sm:px-1.5 py-0.5 rounded ${style.bg} ${style.textClass}`}>
+                                                                        {n.notification_type === 'qucik_update' ? 'INFO' : (n.notification_type || 'INFO')}
+                                                                    </span>
+                                                                    {!n.is_read && (
+                                                                        <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary rounded-full shrink-0" title="Unread" />
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[0.625rem] sm:text-[0.6875rem] font-medium text-gray-400 whitespace-nowrap">
                                                                     {new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        {(n.title || !senderName) && (
-                                                            <p className="text-[0.875rem] text-gray-500 mb-0.5 leading-snug">
-                                                                {n.title || 'System'}
-                                                            </p>
-                                                        )}
-                                                        <p className="text-[0.875rem] text-gray-800 break-words whitespace-pre-wrap leading-relaxed mt-0.5">{n.message}</p>
+                                                        <p className="text-xs sm:text-[0.875rem] text-gray-800 break-words whitespace-pre-wrap leading-relaxed mt-1">{n.message}</p>
                                                     </div>
-                                                    {!n.is_read && (
-                                                        <div className="shrink-0 pt-2">
-                                                            <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -707,21 +709,21 @@ export default function SendNotificationPage() {
 
                             {/* Pagination Controls */}
                             {totalPages > 1 && (
-                                <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
+                                <div className="px-3 sm:px-4 py-2 border-t border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
                                     <button
                                         onClick={() => setPage(p => Math.max(1, p - 1))}
                                         disabled={page === 1}
-                                        className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                         Previous
                                     </button>
-                                    <span className="text-xs font-medium text-gray-500">
+                                    <span className="text-[11px] sm:text-xs font-medium text-gray-500">
                                         Page <span className="font-bold text-gray-700">{page}</span> of <span className="font-bold text-gray-700">{totalPages}</span>
                                     </span>
                                     <button
                                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                         disabled={page >= totalPages}
-                                        className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded shadow-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                         Next
                                     </button>
@@ -734,38 +736,38 @@ export default function SendNotificationPage() {
 
             {/* Chat History Modal */}
             {chatHistoryModal.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-[37.5rem] max-h-[85vh] animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white relative z-10 shadow-sm shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shadow-inner">
-                                    <MessageSquare className="w-5 h-5 text-primary" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-[30rem] sm:h-[37.5rem] max-h-[90vh] animate-in zoom-in-95 duration-200">
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex items-center justify-between bg-white relative z-10 shadow-sm shrink-0">
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center shadow-inner shrink-0">
+                                    <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-base">Chat History</h3>
-                                    <p className="text-xs text-gray-500 font-medium">with <span className="text-primary-dark">{chatHistoryModal.user_name}</span></p>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">Chat History</h3>
+                                    <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate">with <span className="text-primary-dark">{chatHistoryModal.user_name}</span></p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setChatHistoryModal({ isOpen: false })}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors group shrink-0 cursor-pointer"
                             >
-                                <XCircle className="w-6 h-6 text-gray-400 group-hover:text-rose-500 transition-colors" />
+                                <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-rose-500 transition-colors" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FAFB] custom-scrollbar flex flex-col gap-4">
+                        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-[#F9FAFB] custom-scrollbar flex flex-col gap-3 sm:gap-4">
                             {loadingHistory ? (
                                 <div className="flex flex-col items-center justify-center flex-1 py-12 gap-3 h-full">
-                                    <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                                    <span className="text-sm font-medium text-gray-500 animate-pulse">Loading history...</span>
+                                    <div className="w-7 h-7 sm:w-8 sm:h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                    <span className="text-xs sm:text-sm font-medium text-gray-500 animate-pulse">Loading history...</span>
                                 </div>
                             ) : chatHistory.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-80">
-                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-100">
-                                        <MessageSquare className="w-8 h-8 text-gray-300" />
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-8 opacity-80">
+                                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center mb-3 sm:mb-4 shadow-sm border border-gray-100">
+                                        <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-gray-300" />
                                     </div>
-                                    <p className="text-gray-500 font-medium">No messages yet.</p>
+                                    <p className="text-xs sm:text-sm text-gray-500 font-medium">No messages yet.</p>
                                 </div>
                             ) : (
                                 chatHistory.map((item, idx) => {
@@ -773,31 +775,31 @@ export default function SendNotificationPage() {
 
                                     return (
                                         <div key={idx} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${isSentByMe
+                                            <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm ${isSentByMe
                                                 ? 'bg-primary text-white rounded-tr-sm'
                                                 : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
                                                 }`}>
                                                 {!isSentByMe && (
-                                                    <div className="text-[0.6875rem] font-bold text-primary-dark mb-1">
+                                                    <div className="text-[0.625rem] sm:text-[0.6875rem] font-bold text-primary-dark mb-0.5 sm:mb-1">
                                                         {item.user_name || chatHistoryModal.user_name || 'User'}
                                                     </div>
                                                 )}
                                                 {item.title && (
-                                                    <div className={`text-[0.8125rem] font-bold mb-1 ${isSentByMe ? 'text-white' : 'text-gray-900'}`}>
+                                                    <div className={`text-xs sm:text-[0.8125rem] font-bold mb-0.5 sm:mb-1 ${isSentByMe ? 'text-white' : 'text-gray-900'}`}>
                                                         {item.title}
                                                     </div>
                                                 )}
                                                 {item.message && (
-                                                    <p className={`text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
+                                                    <p className={`text-xs sm:text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
                                                         {item.message}
                                                     </p>
                                                 )}
                                                 {!item.title && !item.message && (
-                                                    <p className={`text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
+                                                    <p className={`text-xs sm:text-[0.875rem] leading-relaxed break-words ${isSentByMe ? 'text-white/90' : 'text-gray-700'}`}>
                                                         {JSON.stringify(item)}
                                                     </p>
                                                 )}
-                                                <div className={`text-[0.625rem] mt-1.5 text-right ${isSentByMe ? 'text-white/70' : 'text-gray-400'}`}>
+                                                <div className={`text-[0.5625rem] sm:text-[0.625rem] mt-1 sm:mt-1.5 text-right ${isSentByMe ? 'text-white/70' : 'text-gray-400'}`}>
                                                     {item.created_at ? new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                                                 </div>
                                             </div>

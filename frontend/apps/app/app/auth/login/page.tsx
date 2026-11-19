@@ -217,6 +217,26 @@ function RightBackgroundGraphic() {
     );
 }
 
+interface ApiErrorData {
+    error?: string;
+    detail?: string;
+    message?: string;
+    email?: string[];
+    non_field_errors?: string[];
+}
+
+interface ApiErrorResponse {
+    response?: {
+        data?: ApiErrorData | string;
+    };
+    data?: ApiErrorData;
+    message?: string;
+}
+
+/**
+ * LoginForm component handles user credentials input, validation,
+ * persistence of remembered username, and authentication state transitions.
+ */
 function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -309,18 +329,24 @@ function LoginForm() {
             }
 
             router.push('/home');
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const apiErr = err as ApiErrorResponse;
+            const resData = apiErr?.response?.data;
+            const isDataObj = typeof resData === 'object' && resData !== null;
+            const dataObj = isDataObj ? (resData as ApiErrorData) : undefined;
+            const directData = apiErr?.data;
+
             const errorMsg =
-                (typeof err.response?.data === 'string' && err.response.data) ||
-                err.response?.data?.error ||
-                err.response?.data?.detail ||
-                err.response?.data?.message ||
-                err.data?.error ||
-                err.data?.detail ||
-                err.data?.message ||
-                (Array.isArray(err.response?.data?.email) && err.response.data.email[0]) ||
-                (Array.isArray(err.response?.data?.non_field_errors) && err.response.data.non_field_errors[0]) ||
-                (err.message && !err.message.includes('Request failed') ? err.message : null) ||
+                (typeof resData === 'string' && resData) ||
+                dataObj?.error ||
+                dataObj?.detail ||
+                dataObj?.message ||
+                directData?.error ||
+                directData?.detail ||
+                directData?.message ||
+                (Array.isArray(dataObj?.email) && dataObj.email[0]) ||
+                (Array.isArray(dataObj?.non_field_errors) && dataObj.non_field_errors[0]) ||
+                (apiErr?.message && !apiErr.message.includes('Request failed') ? apiErr.message : null) ||
                 'Invalid credentials provided or not accepted.';
             setError(errorMsg);
             setUsernameError(true);
@@ -331,10 +357,10 @@ function LoginForm() {
     };
 
     return (
-        <div className="h-screen w-full flex flex-col lg:flex-row bg-background overflow-hidden relative">
+        <div className="min-h-screen min-h-[100dvh] w-full flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
 
-            {/* Left Hero Panel with global primary color palette */}
-            <div className="relative w-full lg:w-[42%] xl:w-[40%] bg-gradient-to-br from-[#124068] via-[#1a6396] to-primary flex flex-col justify-between p-6 sm:p-8 lg:p-10 xl:p-12 overflow-hidden shrink-0 h-full select-none">
+            {/* Left Hero Panel with global primary color palette - hidden on mobile/tablet for focused login flow */}
+            <div className="relative hidden lg:flex lg:w-[42%] xl:w-[40%] bg-gradient-to-br from-[#124068] via-[#1a6396] to-primary flex-col justify-between p-8 lg:p-10 xl:p-12 overflow-hidden shrink-0 lg:h-screen lg:overflow-y-auto select-none">
                 {/* Background decorative dot matrices & wave graphics */}
                 <DotGrid className="absolute -bottom-10 -left-10 text-white/15 pointer-events-none" />
                 <DotGrid className="absolute top-6 left-8 text-white/10 pointer-events-none" />
@@ -362,7 +388,7 @@ function LoginForm() {
                 </motion.div>
 
                 {/* Left Middle: Hero Header & Features */}
-                <div className="relative z-10 my-auto py-4">
+                <div className="relative z-10 my-auto py-6">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -443,19 +469,19 @@ function LoginForm() {
             </div>
 
             {/* Right Form Area */}
-            <div className="relative w-full lg:w-[58%] xl:w-[60%] h-full bg-background flex flex-col justify-between items-center p-4 sm:p-6 lg:p-8 overflow-hidden">
+            <div className="relative w-full lg:w-[58%] xl:w-[60%] min-h-screen min-h-[100dvh] lg:h-screen bg-background flex flex-col justify-between items-center px-4 py-6 sm:px-6 sm:py-8 lg:p-8 overflow-y-auto overflow-x-hidden">
                 {/* Background subtle dot pattern on top-right */}
                 <DotGrid className="absolute top-3 right-3 text-slate-300/40 pointer-events-none hidden sm:block z-0" />
                 {/* Background wave graphics around & behind the card */}
                 <RightBackgroundGraphic />
 
                 {/* Card Container */}
-                <div className="w-full max-w-[420px] xl:max-w-[440px] my-auto relative z-10">
+                <div className="w-full max-w-[420px] xl:max-w-[440px] my-auto py-2 sm:py-4 relative z-10">
                     <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                        className="bg-card rounded-2xl p-6 sm:p-7 xl:p-8 shadow-xl shadow-slate-200/70 border border-border relative z-10 overflow-hidden"
+                        className="bg-card rounded-2xl p-5 sm:p-7 xl:p-8 shadow-xl shadow-slate-200/70 border border-border relative z-10 overflow-hidden"
                     >
                         {/* Samta Logo above Sign in */}
                         <div className="flex justify-center mb-4 sm:mb-5">
@@ -470,7 +496,7 @@ function LoginForm() {
                                     alt="Samta Logo"
                                     width={440}
                                     height={164}
-                                    className="h-16 sm:h-20 w-auto object-contain"
+                                    className="h-14 sm:h-18 md:h-20 w-auto object-contain"
                                     priority
                                 />
                             </motion.div>
@@ -526,7 +552,7 @@ function LoginForm() {
                                         id="username"
                                         type="text"
                                         required
-                                        className={`w-full bg-background border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 transition-all outline-none text-xs sm:text-sm ${
+                                        className={`w-full bg-background border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 transition-all outline-none text-base sm:text-sm min-h-[42px] ${
                                             usernameError
                                                 ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
                                                 : 'border-border focus:ring-primary/20 focus:border-primary'
@@ -558,13 +584,13 @@ function LoginForm() {
 
                             {/* Password */}
                             <div className="space-y-1">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between gap-2">
                                     <label htmlFor="password" className="block text-xs sm:text-sm font-semibold text-slate-700">
                                         Password
                                     </label>
                                     <Link
                                         href="/auth/forgot-password"
-                                        className="text-[11px] sm:text-xs font-semibold text-primary hover:text-primary/80 hover:underline transition"
+                                        className="text-[11px] sm:text-xs font-semibold text-primary hover:text-primary/80 hover:underline transition shrink-0"
                                     >
                                         Forgot password?
                                     </Link>
@@ -575,20 +601,19 @@ function LoginForm() {
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
                                         required
-                                        className="w-full bg-background border border-border rounded-xl pl-9 pr-9 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-xs sm:text-sm"
+                                        className="w-full bg-background border border-border rounded-xl pl-9 pr-10 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-base sm:text-sm min-h-[42px]"
                                         placeholder="••••••••"
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     />
-                                    <motion.button
+                                    <button
                                         type="button"
-                                        whileTap={{ scale: 0.85 }}
                                         onClick={() => setShowPassword(!showPassword)}
                                         aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition rounded-lg focus:outline-none"
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </motion.button>
+                                    </button>
                                 </div>
                             </div>
 
@@ -599,7 +624,7 @@ function LoginForm() {
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-slate-300 text-primary focus:ring-primary/40 cursor-pointer accent-primary"
+                                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/40 cursor-pointer accent-primary"
                                     />
                                     <span className="text-xs sm:text-sm font-medium text-slate-600">Remember me</span>
                                 </label>
@@ -612,7 +637,7 @@ function LoginForm() {
                                 whileHover={{ scale: 1.015 }}
                                 whileTap={{ scale: 0.985 }}
                                 transition={{ duration: 0.15 }}
-                                className="w-full mt-1 bg-primary hover:bg-primary/90 active:bg-[#2072a4] text-primary-foreground font-semibold py-2.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm cursor-pointer"
+                                className="w-full mt-1 bg-primary hover:bg-primary/90 active:bg-[#2072a4] text-primary-foreground font-semibold py-2.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base cursor-pointer min-h-[44px]"
                             >
                                 {isLoading ? (
                                     <>
@@ -648,13 +673,11 @@ function LoginForm() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.6, delay: 0.4 }}
-                    className="w-full pt-1 pb-1 flex flex-wrap items-center justify-center gap-y-1 gap-x-3 text-[11px] sm:text-xs text-muted-foreground text-center select-none"
+                    className="w-full pt-4 pb-2 flex items-center justify-center text-[11px] sm:text-xs text-muted-foreground text-center select-none"
                 >
-
-                    <span className="text-slate-300 hidden sm:inline">|</span>
-                    <div className="flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>This is a secure system. Unauthorized access is prohibited.</span>
+                    <div className="flex items-center justify-center gap-1.5 px-2">
+                        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="leading-tight">This is a secure system. Unauthorized access is prohibited.</span>
                     </div>
                 </motion.div>
             </div>
@@ -662,11 +685,14 @@ function LoginForm() {
     );
 }
 
+/**
+ * Main Login Page entry point with Suspense boundary for search parameters.
+ */
 export default function LoginPage() {
     return (
         <Suspense
             fallback={
-                <div className="h-screen bg-background flex items-center justify-center p-4">
+                <div className="min-h-screen min-h-[100dvh] bg-background flex items-center justify-center p-4">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
             }

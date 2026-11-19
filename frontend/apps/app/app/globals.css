@@ -297,6 +297,58 @@ input[type="number"] {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Visible Light Scrollbar for Newsfeed Posts (Content & Images) */
+.post-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(40, 138, 198, 0.5) rgba(229, 231, 235, 0.7);
+}
+
+.post-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.post-scrollbar::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.7);
+  border-radius: 9999px;
+}
+
+.post-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(40, 138, 198, 0.5);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.post-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(40, 138, 198, 0.75);
+}
+
+/* Visible Light Horizontal Scrollbar for Charts */
+.chart-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(40, 138, 198, 0.55) rgba(229, 231, 235, 0.85);
+}
+
+.chart-scrollbar::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+
+.chart-scrollbar::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.85);
+  border-radius: 9999px;
+}
+
+.chart-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(40, 138, 198, 0.55);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.chart-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(40, 138, 198, 0.85);
+}
+
 /* Global Interactive Elements Cursor */
 button,
 a,

@@ -100,8 +100,8 @@ const PostCard = ({
       className="bg-card border border-border rounded-xl shadow-lg mb-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
     >
       {/* Post Header */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start sm:items-center justify-between p-3.5 sm:p-4 gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <img
             src={
               author?.avatar_url
@@ -109,13 +109,13 @@ const PostCard = ({
                 : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"
             }
             alt={authorName}
-            className="w-10 h-10 rounded-full object-cover border border-border cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-border cursor-pointer shrink-0"
           />
-          <div className="flex flex-col">
-            <span className="text-foreground font-bold text-sm hover:underline cursor-pointer">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-foreground font-bold text-xs sm:text-sm hover:underline cursor-pointer truncate">
               {authorName}
             </span>
-            <div className="flex items-center flex-wrap gap-2 text-muted-foreground text-xs mt-0.5">
+            <div className="flex items-center flex-wrap gap-1 sm:gap-2 text-muted-foreground text-[11px] sm:text-xs mt-0.5">
               {isEdited ? (
                 <span className="italic" title={formatTimestamp(updated_at)}>
                   Edited {formatTimestamp(updated_at)}
@@ -127,7 +127,7 @@ const PostCard = ({
               {post.category && (
                 <>
                   <span className={cn(
-                    "px-2 py-0.5 rounded-full text-[0.625rem] font-medium uppercase tracking-wider",
+                    "px-1.5 sm:px-2 py-0.5 rounded-full text-[0.5625rem] sm:text-[0.625rem] font-medium uppercase tracking-wider",
                     post.category.toLowerCase() === 'tech' && "bg-primary/10 text-primary border border-primary/20",
                     post.category.toLowerCase() === 'news' && "bg-accent/10 text-accent border border-accent/20",
                     post.category.toLowerCase() === 'general' && "bg-secondary text-secondary-foreground border border-border",
@@ -138,7 +138,7 @@ const PostCard = ({
                   <span>•</span>
                 </>
               )}
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 012 2v1.5a.5.5 0 00.5.5.5.5 0 00.5-.5V10a5 5 0 00-10 0v.107l-1.668-2.08zM13.828 10.172l-3.656 3.656A2 2 0 0010 16v1a1 1 0 001 1h5.828a2 2 0 001.414-.586l.288-.288A2 2 0 0018 14.718V13a2 2 0 00-2-2h-1a2 2 0 00-1.172.172z"
@@ -148,15 +148,15 @@ const PostCard = ({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {(isManager && user?.id === author?.id) && (
             <div className="flex items-center gap-1 mr-1">
               <button
                 onClick={() => onEdit?.(post)}
-                className="text-muted-foreground hover:bg-primary/10 hover:text-primary p-2 rounded-full transition-all active:scale-90"
+                className="text-muted-foreground hover:bg-primary/10 hover:text-primary p-1.5 sm:p-2 rounded-full transition-all active:scale-90"
                 title="Edit Post"
               >
-                <Edit3 className="w-4 h-4" />
+                <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <button
                 onClick={async () => {
@@ -170,13 +170,13 @@ const PostCard = ({
                   }
                 }}
                 disabled={isDeleting}
-                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive p-2 rounded-full transition-all active:scale-90 disabled:opacity-50"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive p-1.5 sm:p-2 rounded-full transition-all active:scale-90 disabled:opacity-50"
                 title="Delete Post"
               >
                 {isDeleting ? (
-                  <div className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 )}
               </button>
             </div>
@@ -185,15 +185,17 @@ const PostCard = ({
       </div>
 
       {/* Post Content */}
-      <div className="px-4 pb-3 space-y-2">
-        <h2 className="text-lg font-bold text-foreground leading-tight">
+      <div className="px-3.5 sm:px-4 pb-2.5 sm:pb-3 space-y-1.5 sm:space-y-2">
+        <h2 className="text-base sm:text-lg font-bold text-foreground leading-snug break-words">
           {title || "No Title Available"}
         </h2>
-        <p className="text-foreground text-[0.9375rem] leading-relaxed">{content}</p>
+        <div className="max-h-60 sm:max-h-72 overflow-y-auto post-scrollbar pr-1">
+          <p className="text-foreground text-xs sm:text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap">{content}</p>
+        </div>
       </div>
 
       {image && (
-        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/50 max-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
+        <div className="relative group cursor-pointer border-t border-b border-border/50 bg-muted/30 max-h-[300px] sm:max-h-[400px] overflow-y-auto overflow-x-hidden post-scrollbar">
           <img
             src={getMediaUrl(image)}
             alt="post media"
@@ -207,7 +209,7 @@ const PostCard = ({
       )}
 
       {/* Post Footer Stats */}
-      <div className="px-4 py-2.5 flex items-center justify-between text-muted-foreground text-sm border-b border-border/50">
+      <div className="px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between text-muted-foreground text-xs sm:text-sm border-b border-border/50">
         <div 
           className="flex items-center gap-1 group cursor-pointer"
           onClick={() => setShowReactionsModal(true)}
@@ -227,7 +229,7 @@ const PostCard = ({
                 {total > 0 && (
                   <div className="flex items-center gap-0.5 mr-1">
                     {activeReactionTypes.map((type) => (
-                      <span key={type} className="text-sm select-none">
+                      <span key={type} className="text-xs sm:text-sm select-none">
                         {REACTION_EMOJI_MAP[type] || ""}
                       </span>
                     ))}
@@ -250,8 +252,8 @@ const PostCard = ({
 
       {/* Post Actions & Reactions */}
       <div className="flex flex-col border-t border-border/50">
-        <div className="flex items-center px-1 py-1">
-          <div className="flex-1">
+        <div className="flex items-center px-1 py-1 gap-1">
+          <div className="flex-1 min-w-0">
             <ReactionBar
               postId={post.post_id}
               summary={reactions[post.post_id]}
@@ -261,12 +263,12 @@ const PostCard = ({
           <button
             onClick={() => setShowComments(!showComments)}
             className={cn(
-              "flex items-center justify-center gap-2 py-3 px-6 text-muted-foreground font-semibold hover:bg-muted rounded-xl transition-all active:scale-95",
+              "flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 px-3 sm:px-6 text-muted-foreground font-semibold hover:bg-muted rounded-xl transition-all active:scale-95 shrink-0 cursor-pointer",
               showComments && "text-primary bg-primary/5"
             )}
           >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-sm">Comment</span>
+            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <span className="text-xs sm:text-sm">Comment</span>
           </button>
         </div>
 

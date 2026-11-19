@@ -27,13 +27,21 @@ export const VelocityChart: React.FC<VelocityChartProps> = ({ data }) => {
     }
 
     if (!data || data.length === 0) {
-        return <div className="w-full h-full min-h-[260px] flex items-center justify-center text-muted-foreground text-sm">No velocity data available</div>;
+        return <div className="w-full h-full min-h-[240px] flex items-center justify-center text-muted-foreground text-sm">No velocity data available</div>;
     }
 
+    // Dynamic minimum width so each sprint has ample space (at least 90px per sprint),
+    // and ensuring on narrow viewports (e.g. mobile 320px) there is at least 520px
+    // of horizontal space so that sprint names, data points, and area curve stay legible.
+    const minWidth = Math.max(data.length * 90, 520);
+
     return (
-        <div className="w-full h-full min-h-[260px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={260}>
-                <AreaChart data={data} margin={{ top: 10, right: 15, left: 0, bottom: 25 }}>
+        <div
+            className="h-full min-h-[240px]"
+            style={{ width: '100%', minWidth: `${minWidth}px` }}
+        >
+            <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+                <AreaChart data={data} margin={{ top: 10, right: 15, left: -5, bottom: 20 }}>
                     <defs>
                         <linearGradient id="colorVel" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />

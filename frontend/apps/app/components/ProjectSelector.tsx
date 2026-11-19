@@ -49,13 +49,13 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect, classN
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 sm:px-5 py-3 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-semibold border border-border w-full sm:w-60 h-12 justify-between text-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-semibold border border-border w-full sm:w-60 min-h-[3rem] justify-between text-sm cursor-pointer"
             >
-                <div className="flex items-center gap-2.5 truncate">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <Folder size={18} className="text-primary flex-shrink-0" />
-                    <span className="truncate">{selectedProject ? selectedProject.name : 'All Projects'}</span>
+                    <span className="break-words leading-snug text-left">{selectedProject ? selectedProject.name : 'All Projects'}</span>
                 </div>
-                <ChevronDown size={16} className={`transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`transition-transform duration-200 flex-shrink-0 ml-1.5 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
@@ -68,8 +68,8 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect, classN
                         }}
                         className={`w-full px-5 py-2.5 text-left text-sm hover:bg-accent flex items-center gap-2.5 ${!selectedProjectId ? 'text-primary bg-accent/50' : 'text-muted-foreground'}`}
                     >
-                        <Folder size={14} />
-                        All Projects
+                        <Folder size={14} className="shrink-0" />
+                        <span className="break-words leading-snug flex-1">All Projects</span>
                     </button>
                     {projects.map(project => (
                         <button
@@ -79,10 +79,10 @@ export const ProjectSelector = React.memo(({ selectedProjectId, onSelect, classN
                                 onSelect(project.id, project);
                                 setIsOpen(false);
                             }}
-                            className={`w-full px-5 py-2.5 text-left text-sm hover:bg-accent flex items-center gap-2.5 ${selectedProjectId === project.id ? 'text-primary bg-accent/50' : 'text-muted-foreground'}`}
+                            className={`w-full px-5 py-2.5 text-left text-sm hover:bg-accent flex items-start gap-2.5 ${selectedProjectId === project.id ? 'text-primary bg-accent/50' : 'text-muted-foreground'}`}
                         >
-                            <span className="w-1 h-1 rounded-full bg-current opacity-50"></span>
-                            {project.name}
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50 shrink-0 mt-1.5"></span>
+                            <span className="break-words leading-snug flex-1">{project.name}</span>
                         </button>
                     ))}
                 </div>

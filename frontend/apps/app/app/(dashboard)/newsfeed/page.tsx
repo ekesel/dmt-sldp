@@ -58,11 +58,11 @@ const NewsfeedPage = () => {
 
     return (
         <div className="min-h-full bg-background text-foreground selection:bg-primary/30 overflow-x-hidden">
-            <main className="flex justify-center max-w-screen-xl mx-auto py-6 sm:py-10 px-3 sm:px-4">
+            <main className="flex justify-center max-w-screen-xl mx-auto py-4 sm:py-10 px-2.5 sm:px-4">
                 {/* Main Feed Content - Centered and focused */}
                 <div className="w-full max-w-[850px]">
-                    <div className="flex items-center justify-between mb-6 sm:mb-10">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Newsfeed</h1>
+                    <div className="flex items-center justify-between mb-4 sm:mb-10 gap-3">
+                        <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Newsfeed</h1>
 
                         {/* Standalone Create Post Button - Only for managers */}
                         {isManager && (

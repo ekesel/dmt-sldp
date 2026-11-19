@@ -178,7 +178,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-2.5 sm:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity"
@@ -186,14 +186,14 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-125 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-border">
           <div className="w-8" /> {/* Spacer */}
-          <h2 className="text-xl font-bold text-foreground">{editingPost ? 'Edit Post' : 'Create Post'}</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">{editingPost ? 'Edit Post' : 'Create Post'}</h2>
           <button
             onClick={onClose}
-            className="bg-muted p-2 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
+            className="bg-muted p-1.5 sm:p-2 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
           >
             <svg
               className="w-5 h-5"
@@ -212,17 +212,17 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-3.5 sm:p-4 space-y-4 sm:space-y-6 max-h-[75vh] overflow-y-auto">
           {/* User Info */}
           <div className="flex items-center gap-3">
             {userProfile?.avatar_url ? (
               <img
                 src={getFileUrl(userProfile.avatar_url)}
                 alt={getUserDisplayName(userProfile, "User")}
-                className="w-10 h-10 rounded-full object-cover border border-border"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-border"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-lg font-bold border border-border uppercase">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-base sm:text-lg font-bold border border-border uppercase">
                 {userProfile?.first_name?.charAt(0) ||
                   userProfile?.last_name?.charAt(0) ||
                   userProfile?.username?.charAt(0) ||
@@ -230,7 +230,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
               </div>
             )}
             <div className="flex flex-col">
-              <span className="text-foreground font-semibold">
+              <span className="text-foreground font-semibold text-xs sm:text-sm">
                 {getUserDisplayName(userProfile, "User")}
               </span>
               <div className="bg-muted rounded px-2 py-0.5 mt-0.5 flex items-center gap-1 w-fit">
@@ -245,7 +245,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-[0.6875rem] font-bold text-muted-foreground">
+                <span className="text-[0.625rem] sm:text-[0.6875rem] font-bold text-muted-foreground">
                   Public
                 </span>
               </div>
@@ -259,21 +259,21 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
               placeholder="Add a title..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-muted/50 border border-border rounded-lg px-4 py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-semibold text-lg"
+              className="w-full bg-muted/50 border border-border rounded-lg px-3.5 sm:px-4 py-2.5 sm:py-3 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-semibold text-base sm:text-lg"
             />
           </div>
 
           {/* Category Selection */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-muted-foreground mb-2 sm:mb-3 uppercase tracking-wider">
               Select Category
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               {["General", "Tech", "News"].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`flex-1 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all active:scale-95 ${category === cat
+                  className={`flex-1 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg border text-xs sm:text-sm font-medium transition-all active:scale-95 cursor-pointer ${category === cat
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-muted border-border text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                     }`}
@@ -290,7 +290,7 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
               placeholder="What's on your mind?"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full h-32 bg-transparent border-none outline-none text-xl text-foreground placeholder-muted-foreground resize-none py-2"
+              className="w-full h-24 sm:h-32 bg-transparent border-none outline-none text-base sm:text-xl text-foreground placeholder-muted-foreground resize-none py-1 sm:py-2"
             />
 
             {/* Image Preview */}
@@ -376,13 +376,13 @@ const StaticPostModal: React.FC<StaticPostModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-muted/30">
+        <div className="p-3.5 sm:p-4 bg-muted/30">
           <button
             onClick={handlePost}
             disabled={
               isSubmitting || isUploading || !title.trim() || !content.trim()
             }
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg transition-all active:scale-[0.98] shadow-lg shadow-primary/20 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2.5 sm:py-3 rounded-lg transition-all active:scale-[0.98] shadow-lg shadow-primary/20 text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSubmitting
               ? (editingPost ? "Saving..." : "Posting...")
