@@ -186,6 +186,33 @@ class TeamWorkloadAllocationTest(TenantTestCase):
         self.assertEqual(rows['sakshi@x.test']['completed'], 2)  # bug still counted as work
         self.assertEqual(rows['sakshi@x.test']['avg_cycle_time_days'], 2.0)  # story only: Mon -> Wed
 
+    def test_cycle_time_ends_at_jira_first_resolution(self):
+        from datetime import datetime
+        from data.analytics.metrics import MetricService
+        from data.models import Sprint, WorkItem
+        from data.views import AssigneeDistributionView
+
+        tz = timezone.get_current_timezone()
+        mon, fri = (timezone.make_aware(datetime(2026, 10, d, 10), tz) for d in (26, 30))
+        sprint = Sprint.objects.get(external_id='s1')
+        # Resolved Wed, moved back into Done on release day (Fri): cycle time ends Wed, like Jira.
+        WorkItem.objects.create(external_id='SM-1', source_config_id=sprint.source_config_id, sprint=sprint,
+                                title='t', item_type='story', status='Done', status_category='done',
+                                created_at=mon, updated_at=fri, started_at=mon, resolved_at=fri,
+                                assignee_email='sakshi@x.test',
+                                raw_source_data={'fields': {'resolutiondate': '2026-10-28T10:00:00.000+0530'}})
+        WorkItem.objects.create(external_id='other', source_config_id=sprint.source_config_id, sprint=sprint,
+                                title='t', item_type='story', status='Done', status_category='done',
+                                created_at=mon, updated_at=fri, started_at=mon, resolved_at=fri,
+                                assignee_email='shashi@x.test')  # no resolutiondate: resolved_at
+
+        request = APIRequestFactory().get('/api/dashboard/assignee-distribution/', {'project_id': str(self.project.id)})
+        force_authenticate(request, user=self.viewer)
+        rows = {r['email']: r for r in AssigneeDistributionView.as_view()(request).data}
+        self.assertEqual(rows['sakshi@x.test']['avg_cycle_time_days'], 2.0)
+        self.assertEqual(rows['shashi@x.test']['avg_cycle_time_days'], 4.0)
+        self.assertEqual(MetricService.calculate_cycle_time(WorkItem.objects.filter(external_id='SM-1')), 2.0)
+
     def test_closed_without_work_is_not_workload(self):
         from data.models import Sprint, WorkItem
         from data.views import AssigneeDistributionView

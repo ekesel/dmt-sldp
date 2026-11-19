@@ -12,6 +12,7 @@ from datetime import timedelta
 from homepage.models import Holiday
 from configuration.models import Project
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.db.models import Sum, Avg
 
 # Closed-but-not-fixed bug statuses: ClickUp maps them to 'done', but they are not resolved bugs.
@@ -158,6 +159,18 @@ class MetricService:
             step += timedelta(days=1)
         return days
 
+    # Jira's own resolution date (first resolution), read from the raw issue.
+    FIRST_RESOLUTION = 'raw_source_data__fields__resolutiondate'
+
+    @staticmethod
+    def cycle_end(resolved, first_resolution):
+        """
+        Cycle time end: Jira's resolutiondate (first resolution, as Jira reports cycle time) — SM moves Done
+        issues through deployment back into Done on release day, which resolved_at (last Done move) picks up.
+        Other tools have no such field and use resolved_at.
+        """
+        return (parse_datetime(first_resolution) if isinstance(first_resolution, str) else None) or resolved
+
     @staticmethod
     def calculate_cycle_time(items_qs):
         """
@@ -170,9 +183,10 @@ class MetricService:
             return 0
 
         holiday_dates = MetricService.holiday_dates()
+        rows = items.values_list('started_at', 'resolved_at', MetricService.FIRST_RESOLUTION)
         durations = [
-            d for d in (MetricService.working_days(start, resolved, holiday_dates)
-                        for start, resolved in items.values_list('started_at', 'resolved_at'))
+            d for d in (MetricService.working_days(start, MetricService.cycle_end(resolved, first), holiday_dates)
+                        for start, resolved, first in rows)
             if d is not None
         ]
 
