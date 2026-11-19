@@ -202,11 +202,11 @@ export default function KnowledgeBasePage() {
   const currentUser = user ? `${user.first_name} ${user.last_name || ""}`.trim() : "Unknown User";
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden animate-in fade-in duration-700 relative">
+    <div className="flex h-[calc(100dvh-4rem)] w-full bg-background overflow-hidden animate-in fade-in duration-700 relative">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 xl:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 xl:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -247,7 +247,7 @@ export default function KnowledgeBasePage() {
         isManager={isManager}
       />
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 w-full">
         <KnowledgeHeader
           activeItem={headerTitle}
           searchTerm={searchInput || activeTag?.name || ""}
@@ -258,8 +258,8 @@ export default function KnowledgeBasePage() {
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <div className="flex-1 flex overflow-hidden">
-          <main className="flex-1 overflow-y-auto scroll-smooth">
+        <div className="flex-1 flex overflow-hidden relative min-w-0">
+          <main className="flex-1 overflow-y-auto scroll-smooth min-w-0 w-full">
             <RecordList
               selectedId={selectedRecord?.id || null}
               activeTeam={activeTeam}

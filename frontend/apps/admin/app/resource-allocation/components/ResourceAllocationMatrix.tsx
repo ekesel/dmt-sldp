@@ -500,9 +500,9 @@ export function ResourceAllocationMatrix() {
   const renderMatrixContent = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <RefreshCw className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground font-medium">
+        <div className="flex flex-col items-center justify-center py-16 sm:py-24 gap-3 px-4 text-center">
+          <RefreshCw className="w-7 h-7 sm:w-8 sm:h-8 text-primary animate-spin" />
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium">
             Loading allocation matrix for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}...
           </p>
         </div>
@@ -511,16 +511,16 @@ export function ResourceAllocationMatrix() {
 
     if (loadError) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <div className="p-3.5 bg-destructive/10 text-destructive rounded-2xl mb-3 border border-destructive/20">
-            <AlertTriangle className="w-8 h-8" />
+        <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
+          <div className="p-3 sm:p-3.5 bg-destructive/10 text-destructive rounded-xl sm:rounded-2xl mb-3 border border-destructive/20">
+            <AlertTriangle className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground">Failed to Load Allocations</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1">{loadError}</p>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Failed to Load Allocations</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mt-1 break-words">{loadError}</p>
           <button
             type="button"
             onClick={() => fetchOverview()}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow transition"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg sm:rounded-xl shadow transition"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Retry Loading</span>
@@ -531,10 +531,10 @@ export function ResourceAllocationMatrix() {
 
     if (projects.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <Briefcase className="w-12 h-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-semibold text-foreground">No Active Projects Found</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1">
+        <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
+          <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/40 mb-3" />
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">No Active Projects Found</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mt-1">
             There are no active projects configured in the system for resource allocation.
           </p>
         </div>
@@ -543,10 +543,10 @@ export function ResourceAllocationMatrix() {
 
     if (developers.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <Users className="w-12 h-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-semibold text-foreground">No Developers Found</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1">
+        <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-center px-4">
+          <Users className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/40 mb-3" />
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">No Developers Found</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mt-1">
             No active technical developers found.
           </p>
         </div>
@@ -554,36 +554,38 @@ export function ResourceAllocationMatrix() {
     }
 
     return (
-      <div className="overflow-auto max-h-[calc(100vh-280px)] min-h-[400px]">
+      <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] min-h-[260px] sm:min-h-[400px]">
         <table className="w-full text-left border-collapse min-w-max">
           {/* Header */}
           <thead>
-            <tr className="border-b border-border bg-muted text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+            <tr className="border-b border-border bg-muted text-[10px] sm:text-xs font-semibold uppercase text-muted-foreground tracking-wider">
               {/* Developer Name Column (Sticky top-left) */}
-              <th className="sticky top-0 left-0 z-30 bg-muted px-4 py-3.5 min-w-56 max-w-64 border-r border-b border-border">
-                Developer (Rows)
+              <th className="sticky top-0 left-0 z-30 bg-muted px-2 sm:px-4 py-2 sm:py-3.5 min-w-32 sm:min-w-56 max-w-36 sm:max-w-64 border-r border-b border-border break-words whitespace-normal">
+                Developer
               </th>
 
               {/* Dynamic Project Columns */}
               {projects.map((proj) => (
                 <th
                   key={proj.id}
-                  className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-32 border-r border-b border-border/50"
+                  className="sticky top-0 z-20 bg-muted px-2 sm:px-4 py-2 sm:py-3.5 text-center min-w-24 sm:min-w-32 border-r border-b border-border/50"
                 >
-                  <div className="font-semibold text-foreground truncate" title={proj.name}>
+                  <div className="font-semibold text-foreground break-words whitespace-normal leading-tight line-clamp-2 max-w-[100px] sm:max-w-[150px] mx-auto" title={proj.name}>
                     {proj.name}
                   </div>
                 </th>
               ))}
 
               {/* Total Allocated Column */}
-              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-36 border-r border-b border-border/50">
-                Total Capacity
+              <th className="sticky top-0 z-20 bg-muted px-2 sm:px-4 py-2 sm:py-3.5 text-center min-w-24 sm:min-w-36 border-r border-b border-border/50 break-words whitespace-normal">
+                <span className="sm:hidden">Total</span>
+                <span className="hidden sm:inline">Total Capacity</span>
               </th>
 
               {/* Remaining Column */}
-              <th className="sticky top-0 z-20 bg-muted px-4 py-3.5 text-center min-w-24 border-r border-b border-border/50">
-                Remaining
+              <th className="sticky top-0 z-20 bg-muted px-1.5 sm:px-4 py-2 sm:py-3.5 text-center min-w-16 sm:min-w-24 border-r border-b border-border/50 break-words whitespace-normal">
+                <span className="sm:hidden">Left</span>
+                <span className="hidden sm:inline">Remaining</span>
               </th>
 
 
@@ -591,7 +593,7 @@ export function ResourceAllocationMatrix() {
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-border/60 text-sm">
+          <tbody className="divide-y divide-border/60 text-xs sm:text-sm">
             {developers.map((dev) => {
               const total = dev.total_allocated_percentage;
               const isOver = dev.is_over_capacity;
@@ -604,15 +606,15 @@ export function ResourceAllocationMatrix() {
                 >
                   {/* Sticky Developer Row Header */}
                   <td
-                    className={`sticky left-0 z-10 px-4 py-3.5 border-r border-border backdrop-blur-sm ${isOver
+                    className={`sticky left-0 z-10 px-2 sm:px-4 py-2 sm:py-3.5 border-r border-border backdrop-blur-sm min-w-32 sm:min-w-56 max-w-36 sm:max-w-64 ${isOver
                       ? 'bg-destructive/10'
                       : 'bg-card'
                       }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-3">
                       {/* Avatar Initials */}
                       <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${isOver
+                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center font-bold text-[9px] sm:text-xs flex-shrink-0 ${isOver
                           ? 'bg-destructive/20 text-destructive border border-destructive/30'
                           : 'bg-primary/10 text-primary border border-primary/20'
                           }`}
@@ -625,12 +627,12 @@ export function ResourceAllocationMatrix() {
                           .toUpperCase()}
                       </div>
 
-                      <div className="min-w-0">
-                        <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
-                          <span>{dev.developer_name}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-xs sm:text-sm text-foreground break-words whitespace-normal leading-tight line-clamp-2 flex items-center gap-1" title={dev.developer_name}>
+                          <span className="break-words">{dev.developer_name}</span>
                           {dev.isDirty && (
                             <span
-                              className="w-2 h-2 rounded-full bg-primary"
+                              className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary"
                               title="Unsaved changes"
                             />
                           )}
@@ -647,7 +649,7 @@ export function ResourceAllocationMatrix() {
                     return (
                       <td
                         key={proj.id}
-                        className="px-3 py-2.5 text-center border-r border-border/50"
+                        className="px-1.5 sm:px-3 py-1.5 sm:py-2.5 text-center border-r border-border/50 min-w-24 sm:min-w-32"
                       >
                         <div className="relative inline-flex items-center justify-center group">
                           <input
@@ -670,12 +672,12 @@ export function ResourceAllocationMatrix() {
                                 proj.id
                               )
                             }
-                            className={`w-16 text-center text-sm font-semibold rounded-lg px-1.5 py-1.5 border transition ${getCellInputClasses(
+                            className={`w-12 sm:w-16 text-center text-xs sm:text-sm font-semibold rounded-md sm:rounded-lg px-1 sm:px-1.5 py-1 sm:py-1.5 border transition ${getCellInputClasses(
                               isOver,
                               hasAllocation
                             )}`}
                           />
-                          <span className="ml-1 text-xs text-muted-foreground font-medium">
+                          <span className="ml-0.5 sm:ml-1 text-[10px] sm:text-xs text-muted-foreground font-medium">
                             %
                           </span>
                         </div>
@@ -684,21 +686,21 @@ export function ResourceAllocationMatrix() {
                   })}
 
                   {/* Total Allocation Progress Bar */}
-                  <td className="px-4 py-3.5 border-r border-border/50">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold">
+                  <td className="px-2 sm:px-4 py-1.5 sm:py-3.5 border-r border-border/50 min-w-24 sm:min-w-36">
+                    <div className="flex flex-col gap-1 sm:gap-1.5">
+                      <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold">
                         <span className={getCapacityTextClass(isOver, isFull)}>
                           {total}%
                         </span>
                         {isFull && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-success/20 text-success rounded font-bold uppercase">
+                          <span className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 bg-success/20 text-success rounded font-bold uppercase">
                             FULL
                           </span>
                         )}
                       </div>
 
                       {/* Progress bar */}
-                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all duration-300 ${getProgressBarFillClass(isOver, isFull)}`}
                           style={{ width: `${Math.min(100, total)}%` }}
@@ -708,7 +710,7 @@ export function ResourceAllocationMatrix() {
                   </td>
 
                   {/* Remaining Capacity */}
-                  <td className="px-4 py-3.5 text-center border-r border-border/50">
+                  <td className="px-1.5 sm:px-4 py-1.5 sm:py-3.5 text-center border-r border-border/50 min-w-16 sm:min-w-24">
                     <span
                       className={`text-xs font-medium ${dev.remaining_capacity_percentage > 0
                         ? 'text-warning'
@@ -730,28 +732,28 @@ export function ResourceAllocationMatrix() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* Top Header & Action Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card/60 border border-border/80 backdrop-blur-md p-6 rounded-2xl shadow-sm">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 text-primary rounded-xl border border-primary/20">
-              <Layers className="w-6 h-6" />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 bg-card/60 border border-border/80 backdrop-blur-md p-3 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm">
+        <div className="min-w-0">
+          <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-primary/10 text-primary rounded-lg sm:rounded-xl border border-primary/20 shrink-0 mt-0.5 sm:mt-0">
+              <Layers className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                Resource Allocation Matrix
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-foreground flex flex-wrap items-center gap-1.5 sm:gap-2 leading-tight">
+                <span>Resource Allocation Matrix</span>
                 {monthlyStatus === 'PUBLISHED' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-success/10 text-success border border-success/30">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Published
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-success/10 text-success border border-success/30">
+                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Published
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/30">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Draft Mode
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-warning/10 text-warning border border-warning/30">
+                    <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Draft Mode
                   </span>
                 )}
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-[11px] sm:text-sm text-muted-foreground mt-0.5 leading-snug">
                 Assign and monitor technical developer capacity across active projects.
               </p>
             </div>
@@ -759,153 +761,161 @@ export function ResourceAllocationMatrix() {
         </div>
 
         {/* Date & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Month Picker */}
-          <div className="flex items-center gap-2 bg-muted/60 border border-border px-3 py-1.5 rounded-xl">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => handleMonthChange(Number(e.target.value))}
-              className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer"
-            >
-              {MONTH_NAMES.map((name, idx) => (
-                <option key={idx + 1} value={idx + 1} className="bg-popover text-foreground">
-                  {name}
-                </option>
-              ))}
-            </select>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
+          {/* Top row on mobile: Month/Year Picker and Refresh Button */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Month & Year Picker */}
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2 bg-muted/60 border border-border px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm flex-1 sm:flex-initial min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => handleMonthChange(Number(e.target.value))}
+                  className="bg-transparent text-xs sm:text-sm font-medium text-foreground focus:outline-none cursor-pointer"
+                >
+                  {MONTH_NAMES.map((name, idx) => (
+                    <option key={idx + 1} value={idx + 1} className="bg-popover text-foreground">
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <span className="text-muted-foreground">/</span>
+              <span className="text-muted-foreground">/</span>
 
-            {/* Year Picker */}
-            <select
-              value={selectedYear}
-              onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="bg-transparent text-sm font-medium text-foreground focus:outline-none cursor-pointer"
+              {/* Year Picker */}
+              <select
+                value={selectedYear}
+                onChange={(e) => handleYearChange(Number(e.target.value))}
+                className="bg-transparent text-xs sm:text-sm font-medium text-foreground focus:outline-none cursor-pointer"
+              >
+                {yearsList.map((yr) => (
+                  <option key={yr} value={yr} className="bg-popover text-foreground">
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              title="Refresh Matrix"
+              className="p-2 sm:p-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg sm:rounded-xl border border-border transition disabled:opacity-50 shrink-0"
             >
-              {yearsList.map((yr) => (
-                <option key={yr} value={yr} className="bg-popover text-foreground">
-                  {yr}
-                </option>
-              ))}
-            </select>
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
-          {/* Refresh Button */}
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading}
-            title="Refresh Matrix"
-            className="p-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl border border-border transition disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
+          {/* Action buttons (Save & Publish) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Bulk Save Button */}
+            {metrics.dirtyCount > 0 && (
+              <button
+                onClick={saveAllDirtyRows}
+                disabled={isBulkSaving || metrics.overAllocated > 0}
+                className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs sm:text-sm rounded-lg sm:rounded-xl shadow transition disabled:opacity-50 flex-1 sm:flex-initial min-w-0"
+              >
+                <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Save ({metrics.dirtyCount})</span>
+              </button>
+            )}
 
-          {/* Bulk Save Button */}
-          {metrics.dirtyCount > 0 && (
+            {/* Publish Month Button */}
             <button
-              onClick={saveAllDirtyRows}
-              disabled={isBulkSaving || metrics.overAllocated > 0}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-xl shadow transition disabled:opacity-50"
+              onClick={() => setShowPublishModal(true)}
+              disabled={
+                isPublishing ||
+                metrics.overAllocated > 0 ||
+                metrics.dirtyCount > 0 ||
+                monthlyStatus === 'PUBLISHED'
+              }
+              className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 font-medium text-xs sm:text-sm rounded-lg sm:rounded-xl shadow transition flex-1 sm:flex-initial min-w-0 ${monthlyStatus === 'PUBLISHED'
+                ? 'bg-success/20 text-success border border-success/30 cursor-not-allowed'
+                : 'bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50'
+                }`}
             >
-              <Save className="w-4 h-4" />
-              <span>Save ({metrics.dirtyCount})</span>
+              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">{monthlyStatus === 'PUBLISHED' ? 'Published' : 'Publish Allocations'}</span>
             </button>
-          )}
-
-          {/* Publish Month Button */}
-          <button
-            onClick={() => setShowPublishModal(true)}
-            disabled={
-              isPublishing ||
-              metrics.overAllocated > 0 ||
-              metrics.dirtyCount > 0 ||
-              monthlyStatus === 'PUBLISHED'
-            }
-            className={`flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-xl shadow transition ${monthlyStatus === 'PUBLISHED'
-              ? 'bg-success/20 text-success border border-success/30 cursor-not-allowed'
-              : 'bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50'
-              }`}
-          >
-            <Send className="w-4 h-4" />
-            <span>{monthlyStatus === 'PUBLISHED' ? 'Published' : 'Publish Allocations'}</span>
-          </button>
+          </div>
         </div>
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card/50 border border-border p-4 rounded-xl flex items-center gap-3.5">
-          <div className="p-3 bg-info/10 text-info rounded-xl">
-            <Users className="w-5 h-5" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 items-stretch">
+        <div className="bg-card/50 border border-border p-2.5 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-3.5 h-full min-w-0">
+          <div className="p-1.5 sm:p-2.5 bg-info/10 text-info rounded-lg sm:rounded-xl shrink-0">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight" title="Developers">
               Developers
             </p>
-            <p className="text-xl font-bold text-foreground">{metrics.totalDevs}</p>
+            <p className="text-base sm:text-xl font-bold text-foreground mt-0.5">{metrics.totalDevs}</p>
           </div>
         </div>
 
-        <div className="bg-card/50 border border-border p-4 rounded-xl flex items-center gap-3.5">
-          <div className="p-3 bg-primary/10 text-primary rounded-xl">
-            <Briefcase className="w-5 h-5" />
+        <div className="bg-card/50 border border-border p-2.5 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-3.5 h-full min-w-0">
+          <div className="p-1.5 sm:p-2.5 bg-primary/10 text-primary rounded-lg sm:rounded-xl shrink-0">
+            <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight" title="Active Projects">
               Active Projects
             </p>
-            <p className="text-xl font-bold text-foreground">{projects.length}</p>
+            <p className="text-base sm:text-xl font-bold text-foreground mt-0.5">{projects.length}</p>
           </div>
         </div>
 
-        <div className="bg-card/50 border border-border p-4 rounded-xl flex items-center gap-3.5">
-          <div className="p-3 bg-success/10 text-success rounded-xl">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-card/50 border border-border p-2.5 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-3.5 h-full min-w-0">
+          <div className="p-1.5 sm:p-2.5 bg-success/10 text-success rounded-lg sm:rounded-xl shrink-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight" title="100% Allocated">
               100% Allocated
             </p>
-            <p className="text-xl font-bold text-foreground">{metrics.fullyAllocated}</p>
+            <p className="text-base sm:text-xl font-bold text-foreground mt-0.5">{metrics.fullyAllocated}</p>
           </div>
         </div>
 
-        <div className="bg-card/50 border border-border p-4 rounded-xl flex items-center gap-3.5">
-          <div className="p-3 bg-warning/10 text-warning rounded-xl">
-            <TrendingUp className="w-5 h-5" />
+        <div className="bg-card/50 border border-border p-2.5 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-3.5 h-full min-w-0">
+          <div className="p-1.5 sm:p-2.5 bg-warning/10 text-warning rounded-lg sm:rounded-xl shrink-0">
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-semibold tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight" title="Under-Allocated">
               Under-Allocated
             </p>
-            <p className="text-xl font-bold text-foreground">{metrics.underAllocated}</p>
+            <p className="text-base sm:text-xl font-bold text-foreground mt-0.5">{metrics.underAllocated}</p>
           </div>
         </div>
       </div>
 
       {/* Matrix Table Container */}
-      <div className="bg-card/50 border border-border rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-card/50 border border-border rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
         {renderMatrixContent()}
       </div>
 
       {/* Publish Confirmation Modal */}
       {showPublishModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-success/10 text-success rounded-xl border border-success/20">
-                <Send className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl sm:rounded-2xl w-full max-w-md p-3.5 sm:p-6 shadow-2xl space-y-3 sm:space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-success/10 text-success rounded-lg sm:rounded-xl border border-success/20 shrink-0">
+                <Send className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Publish Monthly Allocations</h3>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-lg font-bold text-foreground truncate">Publish Monthly Allocations</h3>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">
                   {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
                 </p>
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Publishing will transition all draft resource allocations for{' '}
               <strong>
                 {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
@@ -914,7 +924,7 @@ export function ResourceAllocationMatrix() {
               across the system.
             </p>
 
-            <div className="bg-muted/50 p-3.5 rounded-xl border border-border space-y-2 text-xs">
+            <div className="bg-muted/50 p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-border space-y-1.5 sm:space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Developers included:</span>
                 <span className="font-semibold text-foreground">{developers.length}</span>
@@ -927,34 +937,34 @@ export function ResourceAllocationMatrix() {
 
             {/* Warning for unallocated developers */}
             {metrics.unallocatedCount > 0 && (
-              <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl space-y-2 text-xs">
-                <div className="flex items-start gap-2 text-warning font-semibold">
+              <div className="p-2.5 sm:p-3.5 bg-warning/10 border border-warning/30 rounded-lg sm:rounded-xl space-y-1.5 sm:space-y-2 text-xs">
+                <div className="flex items-start gap-1.5 sm:gap-2 text-warning font-semibold">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <span>
                     Warning: {metrics.unallocatedCount}{' '}
                     {metrics.unallocatedCount === 1 ? 'user is' : 'users are'} not allocated to any project (0% capacity):
                   </span>
                 </div>
-                <div className="max-h-28 overflow-y-auto pl-6 space-y-1">
+                <div className="max-h-24 sm:max-h-28 overflow-y-auto pl-5 sm:pl-6 space-y-1">
                   {metrics.unallocatedDevs.map((dev) => (
                     <div key={dev.developer_id} className="text-muted-foreground flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-warning/70 flex-shrink-0" />
-                      <span className="font-medium text-foreground">{dev.developer_name}</span>
-                      <span className="text-[11px] text-muted-foreground">(0% allocated)</span>
+                      <span className="font-medium text-foreground truncate">{dev.developer_name}</span>
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground shrink-0">(0%)</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground pl-6">
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground pl-5 sm:pl-6">
                   Publishing will proceed with zero allocation for {metrics.unallocatedCount === 1 ? 'this user' : 'these users'}.
                 </p>
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowPublishModal(false)}
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted rounded-xl transition"
+                className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted rounded-lg sm:rounded-xl transition text-center"
               >
                 Cancel
               </button>
@@ -962,16 +972,16 @@ export function ResourceAllocationMatrix() {
                 type="button"
                 onClick={handlePublishMonth}
                 disabled={isPublishing}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-success hover:bg-success/90 text-success-foreground rounded-xl shadow transition disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-medium bg-success hover:bg-success/90 text-success-foreground rounded-lg sm:rounded-xl shadow transition disabled:opacity-50 text-center"
               >
                 {isPublishing ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                     <span>Publishing...</span>
                   </>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span>Confirm & Publish</span>
                   </>
                 )}
@@ -983,37 +993,37 @@ export function ResourceAllocationMatrix() {
 
       {/* Unsaved Changes Navigation Modal */}
       {pendingNavigation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-warning/10 text-warning rounded-xl border border-warning/20">
-                <AlertTriangle className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl sm:rounded-2xl w-full max-w-md p-3.5 sm:p-6 shadow-2xl space-y-3 sm:space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-warning/10 text-warning rounded-lg sm:rounded-xl border border-warning/20 shrink-0">
+                <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Unsaved Changes Detected</h3>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-lg font-bold text-foreground truncate">Unsaved Changes Detected</h3>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">
                   {metrics.dirtyCount} developer allocation(s) modified
                 </p>
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               You have unsaved changes in the allocation matrix. Changing view or refreshing will discard
               these edits. How would you like to proceed?
             </p>
 
-            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setPendingNavigation(null)}
-                className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted rounded-xl transition"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted rounded-lg sm:rounded-xl transition text-center"
               >
                 Keep Editing
               </button>
               <button
                 type="button"
                 onClick={() => executePendingNavigation(pendingNavigation)}
-                className="px-4 py-2 text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 rounded-xl transition"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 rounded-lg sm:rounded-xl transition text-center"
               >
                 Discard Changes
               </button>
@@ -1021,7 +1031,7 @@ export function ResourceAllocationMatrix() {
                 type="button"
                 onClick={handleSaveAndProceed}
                 disabled={isBulkSaving || metrics.overAllocated > 0}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow transition disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg sm:rounded-xl shadow transition disabled:opacity-50 text-center"
               >
                 {isBulkSaving ? (
                   <>

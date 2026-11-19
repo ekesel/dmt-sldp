@@ -51,43 +51,43 @@ const RecordCard: React.FC<RecordCardProps> = ({
     <div
       onClick={onClick}
       className={cn(
-        "group relative p-3 lg:p-4 border rounded-lg transition-all duration-300 cursor-pointer hover:shadow-md hover:shadow-primary/5",
+        "group relative p-3 sm:p-4 border rounded-xl transition-all duration-300 cursor-pointer hover:shadow-md hover:shadow-primary/5 w-full",
         isSelected
           ? "bg-primary/10 border-primary/40 shadow-sm"
           : "bg-background/60 border-border/40 hover:bg-background/80 hover:border-primary/20"
       )}
     >
-      <div className="flex items-center gap-3 lg:gap-4">
+      <div className="flex items-start sm:items-center gap-3 lg:gap-4">
         <div className={cn(
-          "w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm shrink-0",
+          "w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm shrink-0 mt-0.5 sm:mt-0",
           isSelected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary/15"
         )}>
-          <FileText className="w-4 h-4 lg:w-5 h-5" />
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1.5 sm:mb-0.5">
-            <h3 className="text-sm lg:text-base font-bold text-foreground truncate group-hover:text-foreground/80 transition-colors duration-300">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+            <h3 className="text-sm sm:text-base font-bold text-foreground break-words line-clamp-2 sm:line-clamp-1 group-hover:text-foreground/80 transition-colors duration-300">
               {record.title}
             </h3>
-            <span className="text-[0.5625rem] lg:text-[0.625rem] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0 self-start sm:self-auto">
+            <span className="text-[0.5625rem] lg:text-[0.625rem] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0">
               {record.version}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 lg:gap-x-4 gap-y-1 text-[0.5625rem] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-4 gap-y-1 text-[0.5625rem] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-muted-foreground truncate max-w-[5rem]">
+              <span className="text-muted-foreground truncate max-w-[6rem] sm:max-w-none">
                 {record.date}
               </span>
-              <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
-              <span className="text-muted-foreground truncate max-w-[5rem]">
+              <span className="inline w-1 h-1 bg-border rounded-full shrink-0" />
+              <span className="text-muted-foreground truncate max-w-[6rem] sm:max-w-none">
                 {authorName}
               </span>
             </div>
-            <span className="hidden sm:inline w-1 h-1 bg-border rounded-full" />
-            <span className="flex items-center gap-1 min-w-0">
+            <span className="hidden sm:inline w-1 h-1 bg-border rounded-full shrink-0" />
+            <span className="flex items-center gap-1 min-w-0 max-w-full">
               <Paperclip className="w-3 h-3 shrink-0" />
-              <span className="text-foreground/40 font-bold">Files</span>
-              <span className="truncate normal-case tracking-normal">
+              <span className="text-foreground/40 font-bold shrink-0">Files</span>
+              <span className="truncate normal-case tracking-normal max-w-[12rem] sm:max-w-none">
                 {record.filesPreview.total > 0
                   ? `${record.filesPreview.total} • ${record.filesPreview.firstFileName ?? "Attached"} • ${record.filesPreview.totalSize}`
                   : "No files"}
@@ -97,7 +97,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
 
           {/* Tags Section added back */}
           {record.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
               {record.tags.map(tag => (
                 <button
                   key={tag}
@@ -105,7 +105,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
                     e.stopPropagation();
                     onTagClick?.({ id: tag, name: tag }); // Fallback for string-based tags
                   }}
-                  className="px-2 py-0.5 bg-secondary/50 text-[0.5625rem] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded border border-border/40 transition-colors uppercase tracking-tight"
+                  className="px-2 py-0.5 bg-secondary/50 text-[0.5625rem] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded border border-border/40 transition-colors uppercase tracking-tight break-all"
                 >
                   {tag}
                 </button>
@@ -113,22 +113,22 @@ const RecordCard: React.FC<RecordCardProps> = ({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-start sm:self-center">
           <div className="flex items-center gap-1">
 
             <button
               onClick={onView}
               disabled={record.versionCount === 0 || isViewing}
               className={cn(
-                "p-2 rounded-lg transition-all border border-primary/10 bg-primary/5 hover:bg-primary/10 active:scale-95 disabled:opacity-50 text-primary",
+                "p-1.5 sm:p-2 rounded-lg transition-all border border-primary/10 bg-primary/5 hover:bg-primary/10 active:scale-95 disabled:opacity-50 text-primary",
                 "shadow-sm"
               )}
               title={record.versionCount > 0 ? "View online" : "No file available to view"}
             >
               {isViewing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <Eye className="w-4 h-4" />
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
             </button>
 
@@ -136,38 +136,35 @@ const RecordCard: React.FC<RecordCardProps> = ({
               onClick={onDownload}
               disabled={record.versionCount === 0 || isDownloading}
               className={cn(
-                "p-2 rounded-lg transition-all border border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 disabled:opacity-50 text-emerald-600",
+                "p-1.5 sm:p-2 rounded-lg transition-all border border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10 active:scale-95 disabled:opacity-50 text-emerald-600",
                 "shadow-sm"
               )}
               title={record.versionCount > 0 ? "Download latest version" : "No file available to download"}
             >
               {isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
             </button>
           </div>
-
-
 
           {isManager && (
             <button
               onClick={onDelete}
               disabled={isDeleting}
               className={cn(
-                "p-2 rounded-lg transition-all border border-transparent hover:border-destructive/20 hover:bg-destructive/5 active:scale-95 disabled:opacity-50 text-muted-foreground hover:text-destructive"
+                "p-1.5 sm:p-2 rounded-lg transition-all border border-transparent hover:border-destructive/20 hover:bg-destructive/5 active:scale-95 disabled:opacity-50 text-muted-foreground hover:text-destructive"
               )}
               title="Delete document"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
             </button>
           )}
-
 
         </div>
       </div>
@@ -327,14 +324,14 @@ export const RecordList: React.FC<RecordListProps> = ({
   }
 
   return (
-    <div className="p-2 lg:p-4 xl:p-6 space-y-3 max-w-5xl mx-auto">
+    <div className="p-2 sm:p-4 lg:p-6 space-y-2.5 sm:space-y-3 max-w-5xl mx-auto w-full">
       {isFetching && !isLoading && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground pb-1">
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Updating…</span>
         </div>
       )}
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         {displayRecords.length > 0 ? (
           displayRecords.map((record) => (
             <RecordCard
@@ -355,8 +352,8 @@ export const RecordList: React.FC<RecordListProps> = ({
             />
           ))
         ) : (
-          <div className="p-12 text-center bg-background/40 rounded-3xl border border-dashed border-border/60">
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+          <div className="p-6 sm:p-12 text-center bg-background/40 rounded-2xl sm:rounded-3xl border border-dashed border-border/60">
+            <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest break-words">
               {isSearching ? "No records match your search" : "No records found for this team"}
             </p>
           </div>

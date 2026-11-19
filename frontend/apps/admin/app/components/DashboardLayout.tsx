@@ -21,7 +21,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <div className="flex flex-1 overflow-hidden">
                     <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                     <main className="flex-1 overflow-y-auto">
-                        <div className="p-6 lg:p-8">
+                        <div className="p-2 sm:p-4 md:p-6 lg:p-8">
                             {children}
                         </div>
                     </main>

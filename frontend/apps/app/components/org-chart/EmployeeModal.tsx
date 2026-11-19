@@ -303,7 +303,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
     const eligibleParents = employeesList.filter(emp => !employeeData || emp.id !== employeeData.id);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
             {/* Backdrop Blur */}
             <div 
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
@@ -311,7 +311,7 @@ export const EmployeeModal: React.FC<EmployeeModalProps> = ({
             />
 
             {/* Modal Box */}
-            <div className="relative bg-card rounded-3xl w-full max-w-[28.75rem] p-6 sm:p-7 shadow-[0_0.625rem_2.5rem_rgba(0,0,0,0.12)] border border-border z-10 scale-100 transform transition-all duration-300">
+            <div className="relative bg-card rounded-2xl sm:rounded-3xl w-full max-w-[28.75rem] max-h-[90dvh] overflow-y-auto p-4 sm:p-7 shadow-[0_0.625rem_2.5rem_rgba(0,0,0,0.12)] border border-border z-10 scale-100 transform transition-all duration-300">
                 
                 {/* Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-border mb-5">

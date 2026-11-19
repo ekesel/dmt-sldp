@@ -67,8 +67,8 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
   }, [mode, record, allValues, categories]);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-1.5 sm:space-y-2">
         <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em]">
           Document Title
         </label>
@@ -77,14 +77,14 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Enter document title..."
-          className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-background border border-border/60 rounded-xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm"
         />
       </div>
 
       {isMetadataLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 bg-secondary/40 rounded-xl animate-pulse" />
+            <div key={i} className="h-10 sm:h-12 bg-secondary/40 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -92,15 +92,15 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
           const values = valuesByCategory[category.id] ?? [];
           const selectedVal = metadataSelections[category.id] ?? "";
           return (
-            <div key={category.id} className="space-y-2">
-              <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em] capitalize">
+            <div key={category.id} className="space-y-1.5 sm:space-y-2">
+              <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em] capitalize truncate block">
                 {category.name}
               </label>
               <div className="relative">
                 <select
                   value={selectedVal}
                   onChange={(e) => onMetadataChange(category.id, e.target.value)}
-                  className="w-full appearance-none px-4 py-3 bg-background border border-border/60 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
+                  className="w-full appearance-none px-3 sm:px-4 py-2.5 sm:py-3 bg-background border border-border/60 rounded-xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-sm pr-10"
                 >
                   <option value="" disabled>
                     Select {category.name}...

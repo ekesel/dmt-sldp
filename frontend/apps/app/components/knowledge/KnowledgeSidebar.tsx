@@ -66,20 +66,20 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
 
   return (
     <aside className={cn(
-      "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/50 flex flex-col h-full transition-all duration-300 xl:static lg:w-56 lg:bg-card xl:translate-x-0 xl:z-auto",
+      "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-card border-r border-border/50 flex flex-col h-full transition-all duration-300 xl:static xl:w-60 xl:translate-x-0 xl:z-auto shadow-2xl xl:shadow-none",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
-      <div className="pl-4 pr-6 pt-8 pb-12 flex-1 flex flex-col min-h-0 overflow-y-auto">
-        <div className="flex items-center justify-end mb-6 shrink-0 xl:hidden">
+      <div className="p-4 sm:pl-4 sm:pr-6 sm:pt-8 sm:pb-12 flex-1 flex flex-col min-h-0 overflow-y-auto">
+        <div className="flex items-center justify-end mb-4 sm:mb-6 shrink-0 xl:hidden">
           <button
             onClick={onClose}
-            className="p-2 hover:bg-secondary rounded-lg text-muted-foreground"
+            className="p-2 hover:bg-secondary rounded-lg text-muted-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-12">
+        <div className="space-y-8 sm:space-y-12">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -137,13 +137,13 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                     key={category.id}
                     onClick={() => onCategoryChange(category.id)}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 group",
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 group text-left",
                       isSelected
                         ? "bg-primary/20 text-primary border-primary/30 font-bold"
                         : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                     )}
                   >
-                    <span className="text-sm font-medium capitalize">{category.name}</span>
+                    <span className="text-sm font-medium capitalize truncate">{category.name}</span>
                   </button>
                 );
               })}
@@ -204,17 +204,17 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                   key={item.name}
                   onClick={() => onTeamChange(item.name)}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-all duration-200 group",
+                    "w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-all duration-200 group text-left",
                     activeTeam === item.name
                       ? "bg-primary/20 text-primary border-primary/30 font-bold"
                       : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                   )}
                 >
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-sm font-medium truncate mr-2">{item.name}</span>
                   {item.count !== undefined && (
                     <span
                       className={cn(
-                        "text-xs font-bold px-2 py-0.5 rounded-full transition-colors",
+                        "text-xs font-bold px-2 py-0.5 rounded-full transition-colors shrink-0",
                         activeTeam === item.name ? "bg-primary/20 text-primary" : "bg-secondary text-foreground/70"
                       )}
                     >

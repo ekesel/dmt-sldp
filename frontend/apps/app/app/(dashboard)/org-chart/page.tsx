@@ -22,7 +22,7 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 
 import toast, { Toaster } from 'react-hot-toast';
-import { Network, ArrowLeft, ShieldAlert, RefreshCw } from 'lucide-react';
+import { Network, ArrowLeft, ShieldAlert, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { usePermissions } from '@/hooks/usePermissions';
 import CustomOrgNode from '@/components/org-chart/CustomOrgNode';
@@ -79,6 +79,10 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR
 
     dagre.layout(dagreGraph);
 
+    const graphInfo = dagreGraph.graph();
+    const graphWidth = graphInfo?.width ?? 0;
+    const graphHeight = graphInfo?.height ?? 0;
+
     const targetPos = isHorizontal ? Position.Left : Position.Top;
     const sourcePos = isHorizontal ? Position.Right : Position.Bottom;
 
@@ -104,7 +108,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR
         };
     });
 
-    return { nodes: layoutedNodes, edges };
+    return { nodes: layoutedNodes, edges, graphWidth, graphHeight };
 };
 
 // Register custom nodes outside to keep static reference
@@ -116,8 +120,11 @@ function OrgChartPageContent() {
     const router = useRouter();
     const { isManager } = usePermissions();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { fitView } = useReactFlow();
     const nodeTypes = React.useMemo(() => NODE_TYPES, []);
+
+    const [canvasWidth, setCanvasWidth] = useState<number | string>('100%');
 
     // Employees list holds the underlying raw dataset for easy CRUD
     const [employees, setEmployees] = useState<IEmployee[]>([]);
@@ -125,6 +132,19 @@ function OrgChartPageContent() {
     const [departmentsList, setDepartmentsList] = useState<Array<{ id: string | number; name: string }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isError, setIsError] = useState(false);
+
+    const centerScroll = useCallback(() => {
+        if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const scrollableWidth = container.scrollWidth - container.clientWidth;
+            if (scrollableWidth > 0) {
+                container.scrollTo({
+                    left: scrollableWidth / 2,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, []);
 
     const flattenHierarchy = (nodes: OrgChartUser[]): IEmployee[] => {
         let flat: IEmployee[] = [];
@@ -354,7 +374,10 @@ function OrgChartPageContent() {
 
         const rawNodes = buildRawNodes(employees, dir);
         const rawEdges = buildRawEdges(employees);
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges, dir);
+        const { nodes: layoutedNodes, edges: layoutedEdges, graphWidth } = getLayoutedElements(rawNodes, rawEdges, dir);
+
+        const requiredWidth = Math.max((graphWidth || 0) + 160, 850);
+        setCanvasWidth(requiredWidth);
 
         layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
 
@@ -362,16 +385,18 @@ function OrgChartPageContent() {
         setEdges(layoutedEdges);
 
         setTimeout(() => {
-            fitView({ padding: 0.2, duration: 400 });
+            fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+            centerScroll();
         }, 80);
 
         setTimeout(() => {
-            fitView({ padding: 0.2, duration: 400 });
+            fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+            centerScroll();
         }, 300);
 
         toast.dismiss();
         toast.success(`Chart rearranged ${dir === 'TB' ? 'Vertically' : 'Horizontally'}!`);
-    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
+    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges, centerScroll]);
 
     // Reset layout trigger
     const handleResetChart = useCallback(() => {
@@ -385,28 +410,34 @@ function OrgChartPageContent() {
         if (employees.length > 0) {
             const rawNodes = buildRawNodes(employees, 'TB');
             const rawEdges = buildRawEdges(employees);
-            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges, 'TB');
+            const { nodes: layoutedNodes, edges: layoutedEdges, graphWidth } = getLayoutedElements(rawNodes, rawEdges, 'TB');
+
+            const requiredWidth = Math.max((graphWidth || 0) + 160, 850);
+            setCanvasWidth(requiredWidth);
 
             layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
             setNodes(layoutedNodes);
             setEdges(layoutedEdges);
 
             setTimeout(() => {
-                fitView({ padding: 0.2, duration: 400 });
+                fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+                centerScroll();
             }, 80);
 
             setTimeout(() => {
-                fitView({ padding: 0.2, duration: 400 });
+                fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+                centerScroll();
             }, 300);
         }
         toast.success('Chart layout reset successfully.');
-    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
+    }, [employees, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges, centerScroll]);
 
     // Initial compilation when employees data loads or changes
     useEffect(() => {
         if (employees.length === 0) {
             setNodes([]);
             setEdges([]);
+            setCanvasWidth('100%');
             return;
         }
 
@@ -414,11 +445,14 @@ function OrgChartPageContent() {
         const rawEdges = buildRawEdges(employees);
 
         // Always compute clean, non-overlapping Dagre layout
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        const { nodes: layoutedNodes, edges: layoutedEdges, graphWidth } = getLayoutedElements(
             rawNodes,
             rawEdges,
             layoutDirection
         );
+
+        const requiredWidth = Math.max((graphWidth || 0) + 160, 850);
+        setCanvasWidth(requiredWidth);
 
         layoutedNodes.forEach(n => nodePositionsRef.current.set(n.id, n.position));
 
@@ -426,18 +460,20 @@ function OrgChartPageContent() {
         setEdges(layoutedEdges);
 
         const timer1 = setTimeout(() => {
-            fitView({ padding: 0.2, duration: 400 });
+            fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+            centerScroll();
         }, 100);
 
         const timer2 = setTimeout(() => {
-            fitView({ padding: 0.2, duration: 400 });
+            fitView({ padding: 0.15, maxZoom: 1, duration: 400 });
+            centerScroll();
         }, 350);
 
         return () => {
             clearTimeout(timer1);
             clearTimeout(timer2);
         };
-    }, [employees, layoutDirection, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges]);
+    }, [employees, layoutDirection, buildRawNodes, buildRawEdges, fitView, setNodes, setEdges, centerScroll]);
 
     // Edge drawing/creation handler
     const onConnect = useCallback(async (params: Connection) => {
@@ -511,28 +547,26 @@ function OrgChartPageContent() {
     };
 
     return (
-        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8 font-sans flex flex-col gap-4 sm:gap-6 overflow-x-hidden">
+        <main className="bg-background text-foreground min-h-[calc(100vh-4rem)] p-3 sm:p-6 lg:p-8 font-sans flex flex-col gap-3 sm:gap-6 overflow-x-hidden">
             <Toaster position="top-center" reverseOrder={false} />
 
             {/* Header section matching calendar page layout */}
-            <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start lg:items-center justify-between gap-3 sm:gap-4 shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
                     {/* Go Back button */}
                     <button
                         onClick={() => router.push('/home')}
-                        className="mt-1 p-2 rounded-full hover:bg-muted text-foreground transition-colors border border-border bg-card shadow-sm flex items-center justify-center cursor-pointer shrink-0"
+                        className="p-1.5 sm:p-2 rounded-full hover:bg-muted text-foreground transition-colors border border-border bg-card shadow-sm flex items-center justify-center cursor-pointer shrink-0"
                         aria-label="Go back to Home"
                     >
-                        <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
                     </button>
 
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <Network className="w-6 h-6 sm:w-7 sm:h-7 text-primary shrink-0" strokeWidth={2.5} />
-                            <h1 className="text-2xl sm:text-[1.75rem] font-[900] text-accent tracking-tight leading-none">
-                                Organisation Chart
-                            </h1>
-                        </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Network className="w-5 h-5 sm:w-7 sm:h-7 text-primary shrink-0" strokeWidth={2.5} />
+                        <h1 className="text-xl sm:text-2xl lg:text-[1.75rem] font-[900] text-accent tracking-tight leading-tight truncate break-words">
+                            Organisation Chart
+                        </h1>
                     </div>
                 </div>
 
@@ -548,13 +582,51 @@ function OrgChartPageContent() {
                 </div>
             </div>
 
-            {/* Scrollable Container Wrapper for Small Devices / Bottom Scrollbar */}
-            <div className="w-full overflow-x-auto overflow-y-visible pb-2 [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-muted/40 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary [scrollbar-width:thin] [scrollbar-color:var(--color-primary)_transparent]">
+            {/* Mobile horizontal scroll helper indicator */}
+            <div className="flex sm:hidden items-center justify-between px-1 text-xs text-muted-foreground font-medium shrink-0">
+                <span className="flex items-center gap-1.5">
+                    <span className="text-primary font-bold">⇄</span>
+                    <span>Scroll horizontally to navigate chart</span>
+                </span>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => scrollContainerRef.current?.scrollBy({ left: -240, behavior: 'smooth' })}
+                        className="p-1 rounded-md bg-muted hover:bg-accent text-foreground transition-colors cursor-pointer border border-border/50"
+                        title="Scroll left"
+                        aria-label="Scroll left"
+                    >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => scrollContainerRef.current?.scrollBy({ left: 240, behavior: 'smooth' })}
+                        className="p-1 rounded-md bg-muted hover:bg-accent text-foreground transition-colors cursor-pointer border border-border/50"
+                        title="Scroll right"
+                        aria-label="Scroll right"
+                    >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Scrollable Container Wrapper with Prominent Horizontal Scrollbar */}
+            <div
+                ref={scrollContainerRef}
+                tabIndex={0}
+                aria-label="Organization chart canvas, scrollable horizontally"
+                className="w-full overflow-x-auto overflow-y-hidden pb-3 pt-0.5 rounded-2xl sm:rounded-3xl border border-border bg-card shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative select-none focus:outline-none focus:ring-1 focus:ring-primary/20 [scrollbar-width:auto] [scrollbar-color:var(--color-primary)_hsl(var(--muted))] [&::-webkit-scrollbar]:h-3 sm:[&::-webkit-scrollbar]:h-3.5 [&::-webkit-scrollbar-track]:bg-muted/60 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary/70 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-background"
+            >
                 {/* Core Canvas Wrapper Container */}
                 <div
                     ref={reactFlowWrapper}
-                    className="w-full min-w-[900px] bg-card rounded-2xl sm:rounded-3xl border border-border shadow-[0_4px_24px_rgba(0,0,0,0.02)] relative overflow-hidden"
-                    style={{ width: '100%', height: 'calc(100vh - 220px)', minHeight: '600px' }}
+                    className="h-full relative overflow-hidden"
+                    style={{
+                        width: typeof canvasWidth === 'number' ? `max(100%, ${canvasWidth}px)` : '100%',
+                        minWidth: typeof canvasWidth === 'number' ? `${canvasWidth}px` : '100%',
+                        height: 'calc(100dvh - 210px)',
+                        minHeight: '500px'
+                    }}
                 >
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-full w-full space-y-4">
@@ -608,8 +680,8 @@ function OrgChartPageContent() {
                             onConnect={onConnect}
                             nodeTypes={nodeTypes}
                             fitView
-                            fitViewOptions={{ padding: 0.2 }}
-                            minZoom={0.05}
+                            fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+                            minZoom={0.2}
                             maxZoom={1.5}
                             connectOnClick={isManager}
                             nodesConnectable={isManager}
@@ -619,12 +691,12 @@ function OrgChartPageContent() {
                             proOptions={{ hideAttribution: true }}
                         >
                             <Background color="#cbd5e1" gap={24} size={1} />
-                            <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden" />
+                            <Controls showInteractive={false} className="!bg-background !border-border !shadow-md !rounded-xl overflow-hidden !bottom-4 !left-4" />
                             <MiniMap
                                 nodeColor={() => 'var(--color-primary)'}
                                 nodeStrokeWidth={3}
                                 maskColor="rgba(241, 245, 249, 0.4)"
-                                className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden"
+                                className="!bg-background !border-border !shadow-md !rounded-xl !right-4 !top-4 overflow-hidden hidden sm:block"
                                 style={{ height: 90, width: 140 }}
                             />
                         </ReactFlow>

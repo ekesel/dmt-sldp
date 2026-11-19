@@ -357,10 +357,10 @@ function LoginForm() {
     };
 
     return (
-        <div className="min-h-screen min-h-[100dvh] w-full flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
+        <div className="min-h-screen min-h-[100dvh] w-full flex flex-col lg:flex-row bg-background relative overflow-x-hidden lg:h-screen lg:overflow-hidden">
 
             {/* Left Hero Panel with global primary color palette - hidden on mobile/tablet for focused login flow */}
-            <div className="relative hidden lg:flex lg:w-[42%] xl:w-[40%] bg-gradient-to-br from-[#124068] via-[#1a6396] to-primary flex-col justify-between p-8 lg:p-10 xl:p-12 overflow-hidden shrink-0 lg:h-screen lg:overflow-y-auto select-none">
+            <div className="relative hidden lg:flex lg:w-[42%] xl:w-[40%] bg-gradient-to-br from-[#124068] via-[#1a6396] to-primary flex-col justify-between p-6 lg:p-7 xl:p-10 overflow-hidden shrink-0 lg:h-screen select-none">
                 {/* Background decorative dot matrices & wave graphics */}
                 <DotGrid className="absolute -bottom-10 -left-10 text-white/15 pointer-events-none" />
                 <DotGrid className="absolute top-6 left-8 text-white/10 pointer-events-none" />
@@ -371,14 +371,14 @@ function LoginForm() {
                     initial={{ opacity: 0, y: -16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: 'easeOut' }}
-                    className="relative z-10 flex items-center gap-3 shrink-0"
+                    className="relative z-10 flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap"
                 >
                     <Image
                         src="/assets/samta.png"
                         alt="Samta Logo"
                         width={160}
                         height={80}
-                        className="h-10 sm:h-12 w-auto object-contain shrink-0"
+                        className="h-8 sm:h-10 lg:h-10 xl:h-12 w-auto object-contain shrink-0"
                         priority
                     />
                     <span className="text-white/30 font-light text-sm sm:text-base select-none">|</span>
@@ -388,23 +388,23 @@ function LoginForm() {
                 </motion.div>
 
                 {/* Left Middle: Hero Header & Features */}
-                <div className="relative z-10 my-auto py-6">
+                <div className="relative z-10 my-auto py-4 xl:py-6">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
                     >
-                        <h1 className="text-2xl sm:text-3xl xl:text-[40px] font-bold text-white tracking-tight leading-[1.16]">
+                        <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-[38px] font-bold text-white tracking-tight leading-[1.18] break-words">
                             Welcome back <br />
-                            to <span className={`${dancingScript.className} text-accent font-bold text-3xl sm:text-4xl xl:text-[48px] inline-block tracking-normal ml-1`}>Elevate</span>
+                            to <span className={`${dancingScript.className} text-accent font-bold text-2xl sm:text-3xl lg:text-3xl xl:text-[46px] inline-block tracking-normal ml-1`}>Elevate</span>
                         </h1>
-                        <p className="mt-2.5 text-xs sm:text-sm text-white/80 max-w-sm xl:max-w-md leading-relaxed">
+                        <p className="mt-2 xl:mt-2.5 text-xs sm:text-sm text-white/80 max-w-sm xl:max-w-md leading-relaxed break-words">
                             Your workspace for tools, insights and everything you need to do your best.
                         </p>
                     </motion.div>
 
                     {/* Value Props / Feature List */}
-                    <div className="mt-6 xl:mt-8 space-y-3.5 xl:space-y-4 max-w-md">
+                    <div className="mt-5 xl:mt-7 space-y-3 xl:space-y-3.5 max-w-md">
                         {/* Feature 1 */}
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
@@ -416,9 +416,9 @@ function LoginForm() {
                             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm transition-all group-hover:bg-white/20 group-hover:scale-105 group-hover:border-white/30">
                                 <Shield className="w-4 h-4 text-white" />
                             </div>
-                            <div>
-                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight">Secure Access</h2>
-                                <p className="text-xs text-white/70 mt-0.5 leading-snug">
+                            <div className="min-w-0">
+                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight break-words">Secure Access</h2>
+                                <p className="text-xs text-white/70 mt-0.5 leading-snug break-words">
                                     Enterprise-grade security to keep your data safe
                                 </p>
                             </div>
@@ -435,9 +435,9 @@ function LoginForm() {
                             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm transition-all group-hover:bg-white/20 group-hover:scale-105 group-hover:border-white/30">
                                 <Zap className="w-4 h-4 text-white" />
                             </div>
-                            <div>
-                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight">Built for Efficiency</h2>
-                                <p className="text-xs text-white/70 mt-0.5 leading-snug">
+                            <div className="min-w-0">
+                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight break-words">Built for Efficiency</h2>
+                                <p className="text-xs text-white/70 mt-0.5 leading-snug break-words">
                                     Streamlined tools and resources at your fingertips
                                 </p>
                             </div>
@@ -454,9 +454,9 @@ function LoginForm() {
                             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm transition-all group-hover:bg-white/20 group-hover:scale-105 group-hover:border-white/30">
                                 <Users className="w-4 h-4 text-white" />
                             </div>
-                            <div>
-                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight">For Our People</h2>
-                                <p className="text-xs text-white/70 mt-0.5 leading-snug">
+                            <div className="min-w-0">
+                                <h2 className="text-sm xl:text-base font-semibold text-white leading-tight break-words">For Our People</h2>
+                                <p className="text-xs text-white/70 mt-0.5 leading-snug break-words">
                                     Empowering teams to achieve more, together
                                 </p>
                             </div>
@@ -469,22 +469,22 @@ function LoginForm() {
             </div>
 
             {/* Right Form Area */}
-            <div className="relative w-full lg:w-[58%] xl:w-[60%] min-h-screen min-h-[100dvh] lg:h-screen bg-background flex flex-col justify-between items-center px-4 py-6 sm:px-6 sm:py-8 lg:p-8 overflow-y-auto overflow-x-hidden">
+            <div className="relative w-full lg:w-[58%] xl:w-[60%] min-h-screen min-h-[100dvh] lg:h-screen bg-background flex flex-col justify-between items-center px-3 py-4 sm:px-6 sm:py-6 lg:py-6 lg:px-8 xl:p-8 overflow-y-auto overflow-x-hidden">
                 {/* Background subtle dot pattern on top-right */}
                 <DotGrid className="absolute top-3 right-3 text-slate-300/40 pointer-events-none hidden sm:block z-0" />
                 {/* Background wave graphics around & behind the card */}
                 <RightBackgroundGraphic />
 
                 {/* Card Container */}
-                <div className="w-full max-w-[420px] xl:max-w-[440px] my-auto py-2 sm:py-4 relative z-10">
+                <div className="w-full max-w-[420px] xl:max-w-[440px] my-auto py-2 sm:py-3 relative z-10">
                     <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                        className="bg-card rounded-2xl p-5 sm:p-7 xl:p-8 shadow-xl shadow-slate-200/70 border border-border relative z-10 overflow-hidden"
+                        className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-7 xl:p-8 shadow-xl shadow-slate-200/70 border border-border relative z-10 overflow-hidden"
                     >
                         {/* Samta Logo above Sign in */}
-                        <div className="flex justify-center mb-4 sm:mb-5">
+                        <div className="flex justify-center mb-3 sm:mb-5">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -496,18 +496,18 @@ function LoginForm() {
                                     alt="Samta Logo"
                                     width={440}
                                     height={164}
-                                    className="h-14 sm:h-18 md:h-20 w-auto object-contain"
+                                    className="h-12 sm:h-16 md:h-20 w-auto object-contain"
                                     priority
                                 />
                             </motion.div>
                         </div>
 
                         {/* Heading */}
-                        <div className="text-center mb-4 sm:mb-5">
-                            <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                        <div className="text-center mb-3 sm:mb-5">
+                            <h2 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight break-words">
                                 Sign in to Elevate
                             </h2>
-                            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Access your company portal</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 break-words">Access your company portal</p>
                         </div>
 
                         {/* Alerts */}
@@ -521,7 +521,7 @@ function LoginForm() {
                                     className="mb-3.5 bg-destructive/10 border border-destructive/20 rounded-lg p-2.5 flex items-start gap-2.5 overflow-hidden"
                                 >
                                     <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-                                    <p className="text-xs text-destructive">{error}</p>
+                                    <p className="text-xs text-destructive break-words flex-1 leading-snug">{error}</p>
                                 </motion.div>
                             )}
                             {infoMessage && !error && (
@@ -533,7 +533,7 @@ function LoginForm() {
                                     className="mb-3.5 bg-primary/10 border border-primary/20 rounded-lg p-2.5 flex items-start gap-2.5 overflow-hidden"
                                 >
                                     <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                                    <p className="text-xs text-primary">{infoMessage}</p>
+                                    <p className="text-xs text-primary break-words flex-1 leading-snug">{infoMessage}</p>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -542,17 +542,17 @@ function LoginForm() {
                         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
                             {/* Email or Username */}
                             <div className="space-y-1">
-                                <label htmlFor="username" className={`block text-xs sm:text-sm font-semibold transition-colors ${usernameError ? 'text-destructive' : 'text-slate-700'}`}>
+                                <label htmlFor="username" className={`block text-xs sm:text-sm font-semibold transition-colors break-words ${usernameError ? 'text-destructive' : 'text-slate-700'}`}>
                                     Email or Username
                                 </label>
                                 <div className="relative">
-                                    <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${usernameError ? 'text-destructive' : 'text-slate-400'}`} />
+                                    <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors shrink-0 ${usernameError ? 'text-destructive' : 'text-slate-400'}`} />
                                     <input
                                         ref={usernameInputRef}
                                         id="username"
                                         type="text"
                                         required
-                                        className={`w-full bg-background border rounded-xl pl-9 pr-3.5 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 transition-all outline-none text-base sm:text-sm min-h-[42px] ${
+                                        className={`w-full bg-background border rounded-xl pl-9 pr-3.5 py-2 sm:py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 transition-all outline-none text-base sm:text-sm min-h-[40px] sm:min-h-[42px] ${
                                             usernameError
                                                 ? 'border-destructive focus:ring-destructive/20 focus:border-destructive'
                                                 : 'border-border focus:ring-primary/20 focus:border-primary'
@@ -576,7 +576,7 @@ function LoginForm() {
                                     />
                                 </div>
                                 {usernameError && (
-                                    <p className="text-[11px] text-destructive font-medium mt-1">
+                                    <p className="text-[11px] text-destructive font-medium mt-1 break-words leading-tight">
                                         {usernameErrorMessage || error || "Field cannot be empty"}
                                     </p>
                                 )}
@@ -584,7 +584,7 @@ function LoginForm() {
 
                             {/* Password */}
                             <div className="space-y-1">
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center justify-between gap-1.5 flex-wrap">
                                     <label htmlFor="password" className="block text-xs sm:text-sm font-semibold text-slate-700">
                                         Password
                                     </label>
@@ -596,12 +596,12 @@ function LoginForm() {
                                     </Link>
                                 </div>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none shrink-0" />
                                     <input
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
                                         required
-                                        className="w-full bg-background border border-border rounded-xl pl-9 pr-10 py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-base sm:text-sm min-h-[42px]"
+                                        className="w-full bg-background border border-border rounded-xl pl-9 pr-10 py-2 sm:py-2.5 text-foreground placeholder:text-muted-foreground focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all outline-none text-base sm:text-sm min-h-[40px] sm:min-h-[42px]"
                                         placeholder="••••••••"
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -637,11 +637,11 @@ function LoginForm() {
                                 whileHover={{ scale: 1.015 }}
                                 whileTap={{ scale: 0.985 }}
                                 transition={{ duration: 0.15 }}
-                                className="w-full mt-1 bg-primary hover:bg-primary/90 active:bg-[#2072a4] text-primary-foreground font-semibold py-2.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base cursor-pointer min-h-[44px]"
+                                className="w-full mt-1 bg-primary hover:bg-primary/90 active:bg-[#2072a4] text-primary-foreground font-semibold py-2.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base cursor-pointer min-h-[42px] sm:min-h-[44px]"
                             >
                                 {isLoading ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" />
+                                        <Loader2 className="w-4 h-4 animate-spin text-primary-foreground shrink-0" />
                                         <span>Signing in...</span>
                                     </>
                                 ) : (
@@ -651,15 +651,15 @@ function LoginForm() {
                         </form>
 
                         {/* Divider */}
-                        <div className="my-3.5 sm:my-4 border-t border-border" />
+                        <div className="my-3 sm:my-4 border-t border-border" />
 
                         {/* Footer text */}
                         <div className="text-center">
-                            <p className="text-xs sm:text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground break-words leading-snug">
                                 Don't have an account?{' '}
                                 <Link
                                     href="/auth/register"
-                                    className="text-primary font-semibold hover:text-primary/80 hover:underline transition"
+                                    className="text-primary font-semibold hover:text-primary/80 hover:underline transition inline-block"
                                 >
                                     Create account
                                 </Link>
@@ -673,11 +673,11 @@ function LoginForm() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.6, delay: 0.4 }}
-                    className="w-full pt-4 pb-2 flex items-center justify-center text-[11px] sm:text-xs text-muted-foreground text-center select-none"
+                    className="w-full pt-3 pb-2 flex items-center justify-center text-[10px] sm:text-xs text-muted-foreground text-center select-none"
                 >
-                    <div className="flex items-center justify-center gap-1.5 px-2">
+                    <div className="flex items-center justify-center gap-1.5 px-2 max-w-sm">
                         <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="leading-tight">This is a secure system. Unauthorized access is prohibited.</span>
+                        <span className="leading-tight break-words">This is a secure system. Unauthorized access is prohibited.</span>
                     </div>
                 </motion.div>
             </div>

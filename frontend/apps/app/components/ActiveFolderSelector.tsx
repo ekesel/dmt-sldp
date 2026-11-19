@@ -154,33 +154,33 @@ export const ActiveFolderSelector: React.FC<ActiveFolderSelectorProps> = ({
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={isLoadingFolders || isSaving}
-                className="flex items-center gap-2.5 sm:gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-3.5 sm:pr-4 rounded-2xl shadow-2xl transition-all duration-300 w-full sm:w-auto min-w-0 sm:min-w-[18rem] md:min-w-[19rem] xl:min-w-[21rem] text-left cursor-pointer"
+                className="flex items-center gap-2 sm:gap-3 bg-card border border-border hover:border-primary/40 p-2 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-300 w-full sm:w-auto min-w-0 sm:min-w-[18rem] md:min-w-[19rem] xl:min-w-[21rem] text-left cursor-pointer"
                 title={currentFolderName ? `Current Scope: ${currentFolderName}` : 'All Folders (Whole Project)'}
             >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
-                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Target size={18} className={currentFolderId ? 'text-accent' : 'text-primary'} />}
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Target size={16} className={currentFolderId ? 'text-accent' : 'text-primary'} />}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
                     <span className="text-[0.625rem] uppercase font-black tracking-widest text-muted-foreground leading-none mb-1">Scope</span>
                     <span
-                        className="font-bold text-sm text-foreground break-words leading-tight"
+                        className="font-bold text-xs sm:text-sm text-foreground break-words leading-tight"
                         title={isLoadingFolders ? 'Loading...' : (currentFolderName || 'All Folders (Whole Project)')}
                     >
                         {isLoadingFolders ? 'Loading...' : (currentFolderName || 'All Folders (Whole Project)')}
                     </span>
                 </div>
-                <Filter size={16} className="text-muted-foreground shrink-0" />
+                <Filter size={15} className="text-muted-foreground shrink-0" />
             </button>
 
             {isOpen && (
                 <div
-                    className={`absolute mt-2 z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-2xl shadow-[0_1.25rem_3.75rem_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
+                    className={`absolute mt-2 z-50 bg-popover/95 backdrop-blur-xl border border-border rounded-xl sm:rounded-2xl shadow-[0_1.25rem_3.75rem_rgba(0,0,0,0.6)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
                         dropdownAlign === 'left'
                             ? 'left-0'
                             : dropdownAlign === 'right'
                             ? 'right-0'
                             : 'left-0 sm:left-auto sm:right-0 xl:right-0'
-                    } w-full sm:w-80 md:w-96 xl:w-[26rem] min-w-full max-w-[calc(100vw-2rem)]`}
+                    } w-full sm:w-80 md:w-96 xl:w-[26rem] max-w-[calc(100vw-1.5rem)]`}
                 >
                     <div className="p-1.5 space-y-0.5 max-h-64 sm:max-h-80 overflow-y-auto">
                         <button

@@ -19,14 +19,14 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
     isManager
 }) => {
     return (
-        <div className="flex items-center justify-end gap-4">
+        <div className="flex items-center justify-start sm:justify-end gap-2 sm:gap-4 w-full">
             {/* Right: Layout & Actions */}
-            <div className="flex flex-wrap items-center gap-3.5 shrink-0 justify-end">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0 justify-start sm:justify-end w-full sm:w-auto">
                 {/* Direction auto-arrange */}
-                <div className="flex items-center bg-muted/80 p-1 rounded-xl border border-border/40 shrink-0">
+                <div className="flex items-center bg-muted/80 p-0.5 sm:p-1 rounded-xl border border-border/40 shrink-0">
                     <button
                         onClick={() => onAutoArrange('TB')}
-                        className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[0.7rem] sm:text-[0.75rem] font-bold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
                             currentDirection === 'TB'
                                 ? 'bg-background text-primary shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground'
@@ -34,11 +34,11 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                         title="Top to Bottom Layout"
                     >
                         <Layers className="w-3.5 h-3.5" />
-                        Vertical
+                        <span>Vertical</span>
                     </button>
                     <button
                         onClick={() => onAutoArrange('LR')}
-                        className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[0.7rem] sm:text-[0.75rem] font-bold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
                             currentDirection === 'LR'
                                 ? 'bg-background text-primary shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground'
@@ -46,18 +46,18 @@ export const OrgChartControls: React.FC<OrgChartControlsProps> = ({
                         title="Left to Right Layout"
                     >
                         <Grid className="w-3.5 h-3.5" />
-                        Horizontal
+                        <span>Horizontal</span>
                     </button>
                 </div>
 
                 {onResetChart && (
                     <button
                         onClick={onResetChart}
-                        className="px-2.5 py-1.5 rounded-xl text-[0.75rem] font-bold flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer border border-border/40 shrink-0"
+                        className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-[0.7rem] sm:text-[0.75rem] font-bold flex items-center gap-1 sm:gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer border border-border/40 shrink-0"
                         title="Reset Chart View"
                     >
                         <RotateCcw className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Reset</span>
+                        <span className="inline">Reset</span>
                     </button>
                 )}
             </div>
