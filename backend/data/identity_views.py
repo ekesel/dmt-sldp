@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from django.db.models import Count, Q
 from .models import UserIdentityMapping, WorkItem, PullRequest, Commit
 from .tasks import backfill_identity_merge
+from .analytics.identity_resolver import mapping_identities
 from django_tenants.utils import schema_context
 import logging
 
@@ -122,9 +123,7 @@ class UserIdentityMappingViewSet(viewsets.ModelViewSet):
             # 4. Existing mappings — must be inside schema_context
             merged_emails = {m.canonical_email.lower() for m in UserIdentityMapping.objects.all()}
             for m in UserIdentityMapping.objects.all():
-                for ident in m.source_identities:
-                    if ident.get('email'):
-                        merged_emails.add(ident['email'].lower())
+                merged_emails |= mapping_identities(m.source_identities)
 
             # Combine into name -> set(emails)
             identities: dict = {}

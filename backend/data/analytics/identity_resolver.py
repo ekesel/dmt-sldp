@@ -7,6 +7,23 @@ from django.db.models import Q
 logger = logging.getLogger(__name__)
 
 
+def mapping_identities(source_identities):
+    """Lowercased identities from either stored shape: [{'email': ...}, 'x'] or {'github_emails': [...], 'k': 'x'}."""
+    if isinstance(source_identities, dict):
+        values = []
+        for val in source_identities.values():
+            values.extend(val if isinstance(val, list) else [val])
+    else:
+        values = source_identities or []
+    found = set()
+    for item in values:
+        if isinstance(item, dict):
+            item = item.get('email')
+        if isinstance(item, str) and item.strip():
+            found.add(item.strip().lower())
+    return found
+
+
 class IdentityResolver:
     """
     Utility to resolve various source emails to a canonical email based on UserIdentityMapping.
@@ -26,24 +43,8 @@ class IdentityResolver:
         try:
             for mapping in UserIdentityMapping.objects.all():
                 canonical = mapping.canonical_email.lower()
-                all_identities = set()
-                
-                identities_data = mapping.source_identities or {}
-                if isinstance(identities_data, dict):
-                    for k, val in identities_data.items():
-                        if isinstance(val, list):
-                            for item in val:
-                                if isinstance(item, str):
-                                    all_identities.add(item.lower())
-                        elif isinstance(val, str):
-                            all_identities.add(val.lower())
-                elif isinstance(identities_data, list):
-                    for item in identities_data:
-                        if isinstance(item, dict) and item.get('email'):
-                            all_identities.add(item['email'].lower())
-                        elif isinstance(item, str):
-                            all_identities.add(item.lower())
-                
+                all_identities = mapping_identities(mapping.source_identities)
+
                 if mapping.canonical_name:
                     all_identities.add(mapping.canonical_name.lower())
 
