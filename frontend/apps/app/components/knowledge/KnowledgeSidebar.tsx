@@ -143,7 +143,7 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                         : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                     )}
                   >
-                    <span className="text-sm font-medium capitalize truncate">{category.name}</span>
+                    <span className="text-sm font-medium capitalize break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">{category.name}</span>
                   </button>
                 );
               })}
@@ -210,7 +210,7 @@ export const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({
                       : "text-muted-foreground font-semibold border-transparent hover:text-foreground hover:border-primary/40"
                   )}
                 >
-                  <span className="text-sm font-medium truncate mr-2">{item.name}</span>
+                  <span className="text-sm font-medium break-words [overflow-wrap:anywhere] whitespace-normal leading-snug mr-2">{item.name}</span>
                   {item.count !== undefined && (
                     <span
                       className={cn(

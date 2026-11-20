@@ -93,7 +93,7 @@ export const MetadataForm: React.FC<MetadataFormProps> = ({
           const selectedVal = metadataSelections[category.id] ?? "";
           return (
             <div key={category.id} className="space-y-1.5 sm:space-y-2">
-              <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em] capitalize truncate block">
+              <label className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.1em] capitalize break-words [overflow-wrap:anywhere] whitespace-normal block">
                 {category.name}
               </label>
               <div className="relative">

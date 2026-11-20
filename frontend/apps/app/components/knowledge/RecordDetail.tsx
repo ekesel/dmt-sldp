@@ -125,10 +125,10 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
           {/* Title and Description */}
           <div className="mb-6">
-            <h3 className="text-lg sm:text-xl font-semibold text-foreground leading-tight mb-2 break-words">
+            <h3 className="text-lg sm:text-xl font-semibold text-foreground leading-tight mb-2 break-words [overflow-wrap:anywhere] whitespace-normal">
               {record.title}
             </h3>
-            <p className="text-xs sm:text-[0.8125rem] text-muted-foreground leading-snug break-words">
+            <p className="text-xs sm:text-[0.8125rem] text-muted-foreground leading-relaxed break-words [overflow-wrap:anywhere] whitespace-pre-wrap">
               {record.description}
             </p>
           </div>
@@ -159,16 +159,16 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           <div className="pt-5 sm:pt-6 border-t border-border/40">
             <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Metadata</h3>
             <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0">Document ID</span>
-                <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-words">{record.uid}</span>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0 pt-0.5">Document ID</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-all [overflow-wrap:anywhere] max-w-[65%]">{record.uid}</span>
               </div>
 
               {/* Dynamically render all metadata entries from production */}
               {record.metadata.map((item, index) => (
-                <div key={`${item.category}-${index}`} className="flex items-center justify-between gap-2 pt-3 border-t border-border/20">
-                  <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0">{item.category_name}</span>
-                  <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-words max-w-[65%]">{item.value}</span>
+                <div key={`${item.category}-${index}`} className="flex items-start justify-between gap-2 pt-3 border-t border-border/20">
+                  <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0 pt-0.5">{item.category_name}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-words [overflow-wrap:anywhere] whitespace-normal max-w-[65%]">{item.value}</span>
                 </div>
               ))}
 
@@ -240,7 +240,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                             )}
                           </div>
                           <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-xs sm:text-[0.8125rem] font-semibold text-foreground break-words line-clamp-2 max-w-[12rem] sm:max-w-[14rem]">
+                            <span className="text-xs sm:text-[0.8125rem] font-semibold text-foreground break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
                               {asset.name}
                             </span>
                             <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-tight">

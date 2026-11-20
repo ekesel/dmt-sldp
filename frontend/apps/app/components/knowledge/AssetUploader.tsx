@@ -67,7 +67,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
               <Upload className="w-6 h-6 lg:w-8 lg:h-8" />
             )}
           </div>
-          <h3 className="text-base sm:text-xl lg:text-3xl font-black text-foreground mb-2 sm:mb-3 break-words line-clamp-2 max-w-[95%] sm:max-w-[90%] mx-auto">
+          <h3 className="text-base sm:text-xl lg:text-3xl font-black text-foreground mb-2 sm:mb-3 break-words [overflow-wrap:anywhere] whitespace-normal max-w-[95%] sm:max-w-[90%] mx-auto">
             {currentFile ? currentFile.name : mode === "edit" ? "Upload New Version" : "Drop files here"}
           </h3>
           <button className="text-xs sm:text-sm lg:text-lg font-black text-primary hover:underline transition-all">
@@ -95,7 +95,7 @@ export const AssetUploader: React.FC<AssetUploaderProps> = ({
                   <div className="flex items-center gap-3 sm:gap-4 lg:gap-6 min-w-0 flex-1">
                     <FileText className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground shrink-0" />
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-xs sm:text-sm lg:text-lg font-bold text-foreground break-words line-clamp-2 max-w-[12rem] sm:max-w-[20rem]">
+                      <span className="text-xs sm:text-sm lg:text-lg font-bold text-foreground break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
                         {asset.fileName}
                       </span>
                       <span className="text-[0.625rem] lg:text-sm font-medium text-muted-foreground/60 uppercase">

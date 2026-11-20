@@ -76,7 +76,7 @@ export const KnowledgeHeader: React.FC<KnowledgeHeaderProps> = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          <h2 className="text-[0.6875rem] sm:text-xs font-bold text-muted-foreground uppercase tracking-[0.15em] sm:tracking-[0.2em] truncate">
+          <h2 className="text-[0.6875rem] sm:text-xs font-bold text-muted-foreground uppercase tracking-[0.15em] sm:tracking-[0.2em] break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
             {query
               ? `Search Results for "${query}"`
               : activeItem

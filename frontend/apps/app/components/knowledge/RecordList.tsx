@@ -66,7 +66,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-            <h3 className="text-sm sm:text-base font-bold text-foreground break-words line-clamp-2 sm:line-clamp-1 group-hover:text-foreground/80 transition-colors duration-300">
+            <h3 className="text-sm sm:text-base font-bold text-foreground break-words [overflow-wrap:anywhere] whitespace-normal leading-snug group-hover:text-foreground/80 transition-colors duration-300">
               {record.title}
             </h3>
             <span className="text-[0.5625rem] lg:text-[0.625rem] font-bold px-1.5 py-0.5 bg-primary/10 text-primary/70 rounded border border-primary/20 uppercase tracking-tighter shrink-0">
@@ -75,11 +75,11 @@ const RecordCard: React.FC<RecordCardProps> = ({
           </div>
           <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-4 gap-y-1 text-[0.5625rem] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-muted-foreground truncate max-w-[6rem] sm:max-w-none">
+              <span className="text-muted-foreground break-words [overflow-wrap:anywhere]">
                 {record.date}
               </span>
               <span className="inline w-1 h-1 bg-border rounded-full shrink-0" />
-              <span className="text-muted-foreground truncate max-w-[6rem] sm:max-w-none">
+              <span className="text-muted-foreground break-words [overflow-wrap:anywhere]">
                 {authorName}
               </span>
             </div>
@@ -87,7 +87,7 @@ const RecordCard: React.FC<RecordCardProps> = ({
             <span className="flex items-center gap-1 min-w-0 max-w-full">
               <Paperclip className="w-3 h-3 shrink-0" />
               <span className="text-foreground/40 font-bold shrink-0">Files</span>
-              <span className="truncate normal-case tracking-normal max-w-[12rem] sm:max-w-none">
+              <span className="normal-case tracking-normal break-words [overflow-wrap:anywhere] min-w-0">
                 {record.filesPreview.total > 0
                   ? `${record.filesPreview.total} • ${record.filesPreview.firstFileName ?? "Attached"} • ${record.filesPreview.totalSize}`
                   : "No files"}

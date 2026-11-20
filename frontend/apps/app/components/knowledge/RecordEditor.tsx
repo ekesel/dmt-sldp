@@ -193,7 +193,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
                 <span className="text-foreground/60">Assets</span>
               </div>
             </div>
-            <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-foreground tracking-tight truncate">
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-foreground tracking-tight break-words [overflow-wrap:anywhere] whitespace-normal">
               {mode === "create" ? "New document" : "Edit document"}
             </h1>
           </div>
