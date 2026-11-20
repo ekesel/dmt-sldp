@@ -145,6 +145,13 @@ class IdentityMergeRelinksUserTest(TenantTestCase):
     """Bug 10570: merging a client email into the real one also moves items off the client-email user."""
 
     def test_backfill_repoints_resolved_assignee(self):
+        self._check_backfill(lambda alias: [{'email': alias}])
+
+    def test_backfill_reads_dict_shaped_mapping(self):
+        # Live mappings are stored as {"github_emails": [...]}; this used to crash the backfill.
+        self._check_backfill(lambda alias: {'github_emails': ['old@other.test', alias, 'b.presswala@samta.ai']})
+
+    def _check_backfill(self, identities):
         from unittest import mock
         from data.models import UserIdentityMapping, WorkItem
         from data.tasks import backfill_identity_merge
@@ -157,7 +164,7 @@ class IdentityMergeRelinksUserTest(TenantTestCase):
             WorkItem.objects.create(external_id=n, source_config_id=1, title=n, status='x', status_category='todo',
                                     created_at=now, updated_at=now, assignee_email=client.email, resolved_assignee=linked)
         mapping = UserIdentityMapping.objects.create(canonical_email=real.email, canonical_name='Burhanuddin',
-                                                     source_identities=[{'email': client.email}])
+                                                     source_identities=identities(client.email))
         from users.models import ExternalIdentity
         clickup = ExternalIdentity.objects.create(user=client, provider='clickup', external_id='89244146')
         with mock.patch('data.tasks.update_all_sprint_metrics.delay'):

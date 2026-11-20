@@ -747,12 +747,8 @@ class MetricService:
                 if user_mapping:
                     if user_mapping.canonical_name:
                         additional_identities.append(user_mapping.canonical_name)
-                    if user_mapping.source_identities:
-                        for v in user_mapping.source_identities.values():
-                            if isinstance(v, list):
-                                additional_identities.extend(v)
-                            elif isinstance(v, str):
-                                additional_identities.append(v)
+                    from .identity_resolver import mapping_identities
+                    additional_identities.extend(mapping_identities(user_mapping.source_identities))
                 if user_obj:
                     if user_obj.username:
                         additional_identities.append(user_obj.username)

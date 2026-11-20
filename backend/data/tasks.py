@@ -388,7 +388,8 @@ def backfill_identity_merge(mapping_id, schema_name=None):
         return f"Mapping {mapping_id} not found."
 
     canonical_email = mapping.canonical_email
-    aliases = [ident.get('email') for ident in mapping.source_identities if ident.get('email')]
+    from .analytics.identity_resolver import mapping_identities
+    aliases = [e for e in mapping_identities(mapping.source_identities) if '@' in e]
     # Include canonical email in the update set to ensure consistency
     all_emails = list(set([canonical_email] + aliases))
     
