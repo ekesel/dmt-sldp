@@ -48,17 +48,17 @@ export const KPICard = React.memo(({
   };
 
   return (
-    <Card className={cn("flex flex-col gap-2 sm:gap-3 p-3.5 sm:p-4 lg:p-5 transition-all duration-200 group bg-card border-border", className)}>
+    <Card className={cn("flex flex-col gap-2 sm:gap-3 p-3.5 sm:p-4 lg:p-5 transition-all duration-200 group bg-card border-border w-full min-w-0", className)}>
       <div className="flex items-center justify-between">
-        <h3 className={cn("text-muted-foreground text-xs sm:text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider flex items-center gap-1.5 sm:gap-2", labelClassName)}>
-          {label}
+        <h3 className={cn("text-muted-foreground text-xs sm:text-sm font-medium group-hover:text-foreground/80 transition-colors uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 break-words", labelClassName)}>
+          <span>{label}</span>
           {helpId && onHelpClick && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onHelpClick(helpId);
               }}
-              className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+              className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
               title="Learn more about this metric"
             >
               <HelpCircle size={15} />
@@ -66,27 +66,27 @@ export const KPICard = React.memo(({
           )}
         </h3>
       </div>
-      <div className="flex items-end gap-2 sm:gap-3 flex-wrap">
-        <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight ${valueClassName}`}>
+      <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+        <p className={`text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight break-words [overflow-wrap:anywhere] ${valueClassName}`}>
           {value}
         </p>
         {trend && (
           <div
-            className={`flex items-center gap-1.5 text-sm mb-1 font-bold ${getSentimentColor()}`}
+            className={`flex items-center gap-1 text-xs sm:text-sm mb-1 font-bold shrink-0 ${getSentimentColor()}`}
           >
             {trend.direction === "up" ? (
-              <TrendingUp size={16} />
+              <TrendingUp size={14} className="sm:w-4 sm:h-4" />
             ) : trend.direction === "down" ? (
-              <TrendingDown size={16} />
+              <TrendingDown size={14} className="sm:w-4 sm:h-4" />
             ) : (
-              <Minus size={16} />
+              <Minus size={14} className="sm:w-4 sm:h-4" />
             )}
             <span>{trend.value}</span>
           </div>
         )}
       </div>
       {description && (
-        <div className="text-muted-foreground text-xs mt-auto font-medium leading-relaxed border-t border-border pt-2">
+        <div className="text-muted-foreground text-[11px] sm:text-xs mt-auto font-medium leading-relaxed border-t border-border pt-2 break-words [overflow-wrap:anywhere]">
           {description}
         </div>
       )}

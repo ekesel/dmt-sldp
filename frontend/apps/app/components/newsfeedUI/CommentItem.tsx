@@ -116,9 +116,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
       avatar_url: resolvedUser.avatar_url || displayUser.avatar_url
     };
   } else if (typeof comment.user === 'object' && comment.user) {
+    const userObj = comment.user as { username?: string; avatar_url?: string; first_name?: string; last_name?: string };
     displayUser = {
-      username: getUserDisplayName(comment.user as any, displayUser.username),
-      avatar_url: (comment.user as any).avatar_url || displayUser.avatar_url
+      username: getUserDisplayName(userObj, displayUser.username),
+      avatar_url: userObj.avatar_url || displayUser.avatar_url
     };
   } else if (comment.user_name) {
     displayUser = {
@@ -143,19 +144,27 @@ const CommentItem: React.FC<CommentItemProps> = ({
   }
 
   return (
-    <div className={cn("flex flex-col gap-2 mt-4", depth > 0 && "ml-4 pl-4 border-l border-border/50")}>
-      <div className="flex items-start gap-3">
+    <div
+      className={cn(
+        "flex flex-col gap-1.5 sm:gap-2 mt-3 sm:mt-4 w-full min-w-0",
+        depth > 0 && cn(
+          "border-l border-border/50",
+          depth === 1 ? "ml-2 sm:ml-4 pl-2 sm:pl-3" : "ml-1 sm:ml-2 pl-1.5 sm:pl-2"
+        )
+      )}
+    >
+      <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
         <img
           src={getFileUrl(displayUser.avatar_url)}
           alt={displayUser.username}
-          className="w-8 h-8 rounded-full border border-border"
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border shrink-0 mt-0.5"
         />
-        <div className="flex-1 min-w-0 bg-muted/30 rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-bold text-foreground">
+        <div className="flex-1 min-w-0 bg-muted/30 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 overflow-hidden break-words">
+          <div className="flex items-baseline justify-between gap-1.5 sm:gap-2 mb-1 flex-wrap">
+            <span className="text-xs sm:text-sm font-bold text-foreground break-words [overflow-wrap:anywhere] [word-break:break-word] leading-tight min-w-0">
               {displayUser.username}
             </span>
-            <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
+            <span className="text-[10px] sm:text-[0.625rem] text-muted-foreground shrink-0 leading-tight">
               {comment.is_updated ? (
                 <>
                   Edited • {formatTimestamp(comment.updated_at, 'Just now', false)}
@@ -167,34 +176,34 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
 
           {isEditing ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full min-w-0">
               <textarea
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-background border border-border rounded-lg p-2 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-primary break-words [overflow-wrap:anywhere] resize-none"
                 rows={2}
               />
               <div className="flex items-center gap-2 justify-end">
-                <button onClick={() => setIsEditing(false)} className="p-1 hover:bg-muted rounded text-muted-foreground">
+                <button onClick={() => setIsEditing(false)} className="p-1 hover:bg-muted rounded text-muted-foreground cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
-                <button onClick={handleUpdate} className="p-1 hover:bg-primary/20 hover:text-primary rounded text-primary">
+                <button onClick={handleUpdate} className="p-1 hover:bg-primary/20 hover:text-primary rounded text-primary cursor-pointer">
                   <Check className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-foreground leading-relaxed break-words">
+            <p className="text-xs sm:text-sm text-foreground leading-relaxed break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap">
               {comment.comment_text}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-4 ml-11 text-xs text-muted-foreground">
+      <div className="flex items-center flex-wrap gap-2.5 sm:gap-4 ml-8 sm:ml-11 text-[11px] sm:text-xs text-muted-foreground">
         <button
           onClick={() => setIsReplying(!isReplying)}
-          className="hover:underline flex items-center gap-1 transition-colors"
+          className="hover:underline flex items-center gap-1 transition-colors cursor-pointer shrink-0"
         >
           <Reply className="w-3 h-3" /> Reply
         </button>
@@ -205,7 +214,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isDeleting}
-                className="hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50"
+                className="hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
               >
                 <Edit2 className="w-3 h-3" /> Edit
               </button>
@@ -223,7 +232,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 }
               }}
               disabled={isDeleting}
-              className="hover:text-destructive flex items-center gap-1 transition-colors disabled:opacity-50"
+              className="hover:text-destructive flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
             >
               {isDeleting ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -237,33 +246,33 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
 
       {isReplying && (
-        <div className="flex items-center gap-2 ml-11 mt-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-7 sm:ml-11 mt-1.5 sm:mt-2 min-w-0 max-w-full">
           <input
             autoFocus
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleReply()}
             placeholder="Write a reply..."
-            className="flex-1 bg-muted/50 border-none rounded-full px-4 py-1.5 text-xs focus:ring-1 focus:ring-primary"
+            className="flex-1 bg-muted/50 border-none rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs focus:ring-1 focus:ring-primary min-w-0"
           />
           <button
             disabled={!replyText.trim()}
             onClick={handleReply}
-            className="p-2 text-primary hover:bg-primary/10 rounded-full disabled:opacity-50"
+            className="p-1.5 sm:p-2 text-primary hover:bg-primary/10 rounded-full disabled:opacity-50 shrink-0 cursor-pointer"
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={() => setIsReplying(false)}
-            className="p-2 text-muted-foreground hover:bg-muted rounded-full"
+            className="p-1.5 sm:p-2 text-muted-foreground hover:bg-muted rounded-full shrink-0 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       )}
 
       {comment.replies && comment.replies.length > 0 && (
-        <div className="flex flex-col">
+        <div className="flex flex-col w-full min-w-0">
           {comment.replies.map((reply, idx) => (
             <CommentItem
               key={reply.comment_id || `reply-${idx}`}

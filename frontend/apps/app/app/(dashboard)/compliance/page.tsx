@@ -245,169 +245,193 @@ export default function CompliancePage() {
     );
 
     return (
-        <div className="h-full bg-background p-3 sm:p-4 lg:p-5 selection:bg-primary/30 overflow-hidden flex flex-col">
-            <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-2.5 sm:gap-3 min-h-0">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-2.5 sm:pb-3 gap-2.5 shrink-0">
-                    <div>
-                        
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-                            Compliance Flags
+        <div className="min-h-full w-full bg-background p-2.5 sm:p-4 lg:p-6 pb-12 sm:pb-16 selection:bg-primary/30 flex flex-col overflow-x-hidden">
+            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col gap-3 sm:gap-4 min-w-0">
+                <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border py-2.5 sm:py-3.5 px-2.5 sm:px-4 lg:px-6 -mx-2.5 sm:-mx-4 lg:-mx-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0 transition-all">
+                    <div className="min-w-0 w-full md:w-auto">
+                        <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+                            <span>Compliance Flags</span>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_rules'); }}
-                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer"
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                 title="Learn more about DMT compliance rules"
                             >
-                                <HelpCircle size={18} />
+                                <HelpCircle size={17} />
                             </button>
                         </h1>
-                        <p className="text-muted-foreground text-xs font-medium">Active DMT violations requiring attention across your projects.</p>
+                        <p className="text-muted-foreground text-[11px] sm:text-xs font-medium mt-0.5">Active DMT violations requiring attention across your projects.</p>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-start md:justify-end w-full md:w-auto shrink-0">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
                         {selectedProjectId !== null && (
-                            <SprintSelector
-                                projectId={selectedProjectId}
-                                selectedSprintId={selectedSprintId}
-                                onSelect={(sprintId) => {
-                                    setSelectedSprintId(sprintId);
-                                    setCurrentPage(1);
-                                }}
-                                autoSelectLatest={!workItemId && !paramSprintId}
-                            />
+                            <div className="w-full sm:w-auto min-w-0">
+                                <SprintSelector
+                                    projectId={selectedProjectId}
+                                    selectedSprintId={selectedSprintId}
+                                    onSelect={(sprintId) => {
+                                        setSelectedSprintId(sprintId);
+                                        setCurrentPage(1);
+                                    }}
+                                    autoSelectLatest={!workItemId && !paramSprintId}
+                                    className="w-full sm:w-48 text-xs sm:text-sm h-9 sm:h-10"
+                                    wrapperClassName="w-full sm:w-auto"
+                                    popoverAlign="left"
+                                />
+                            </div>
                         )}
-                        <ProjectSelector
-                            selectedProjectId={selectedProjectId}
-                            onSelect={handleProjectChange}
-                        />
+                        <div className="w-full sm:w-auto min-w-0">
+                            <ProjectSelector
+                                selectedProjectId={selectedProjectId}
+                                onSelect={handleProjectChange}
+                                className="w-full sm:w-auto"
+                                buttonClassName="w-full sm:w-56 h-9 sm:h-10 text-xs sm:text-sm"
+                            />
+                        </div>
                     </div>
                 </header>
 
                 {/* KPI Overview — all data from backend /api/compliance-summary/ */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
-                    <Card className="p-3 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <div className="w-8 h-8 rounded-lg bg-green/10 flex items-center justify-center text-green border border-green/20">
-                                <ShieldCheck size={16} />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 shrink-0 items-stretch">
+                    {/* Card 1: Overall Health */}
+                    <Card className="p-2.5 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl h-full min-h-[112px] sm:min-h-[120px] flex flex-col justify-between">
+                        <div className="flex items-start justify-between mb-1 gap-1 min-w-0 min-h-[26px] sm:min-h-[28px]">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-green/10 flex items-center justify-center text-green border border-green/20 shrink-0">
+                                <ShieldCheck size={15} />
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Overall Health</span>
+                            <div className="flex items-center gap-1 min-w-0 justify-end flex-wrap text-right">
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground text-right break-words whitespace-normal leading-tight">Overall Health</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleHelpClick('dmt_compliance'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                     title="Learn more about this metric"
                                 >
-                                    <HelpCircle size={14} />
+                                    <HelpCircle size={13} />
                                 </button>
                             </div>
                         </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-2xl font-black text-foreground">
-                                {summary?.overall_health ?? '—'}<span className="text-xs text-green/50 -ml-0.5">%</span>
-                            </div>
-                        )}
-                        <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">Project compliance rate</p>
+                        <div className="flex-1 flex items-center my-0.5">
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-xl sm:text-2xl font-black text-foreground">
+                                    {summary?.overall_health ?? '—'}<span className="text-xs text-green/50 -ml-0.5">%</span>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight min-h-[22px] flex items-center">
+                            Project compliance rate
+                        </p>
                     </Card>
 
+                    {/* Card 2: Critical */}
                     <div
                         onClick={() => toggleFilter('critical')}
-                        className="cursor-pointer select-none"
+                        className="cursor-pointer select-none h-full flex flex-col"
                     >
-                        <Card className={`p-3 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl ${activeFilter === 'critical'
+                        <Card className={`p-2.5 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl h-full min-h-[112px] sm:min-h-[120px] flex flex-col justify-between ${activeFilter === 'critical'
                             ? 'border-destructive ring-2 ring-destructive/30 shadow-md'
                             : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm'
                             }`}>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
-                                    <AlertCircle size={16} />
+                            <div className="flex items-start justify-between mb-1 gap-1 min-w-0 min-h-[26px] sm:min-h-[28px]">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20 shrink-0">
+                                    <AlertCircle size={15} />
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Critical</span>
+                                <div className="flex items-center gap-1 min-w-0 justify-end flex-wrap text-right">
+                                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground text-right break-words whitespace-normal leading-tight">Critical</span>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleHelpClick('critical_violations'); }}
-                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                         title="Learn more about this metric"
                                     >
-                                        <HelpCircle size={14} />
+                                        <HelpCircle size={13} />
                                     </button>
                                 </div>
                             </div>
-                            {summaryLoading ? <KpiSkeleton /> : (
-                                <div className="text-2xl font-black text-destructive">
-                                    {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
-                                </div>
-                            )}
-                            <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">
+                            <div className="flex-1 flex items-center my-0.5">
+                                {summaryLoading ? <KpiSkeleton /> : (
+                                    <div className="text-xl sm:text-2xl font-black text-destructive">
+                                        {summary?.critical_count ?? flags.filter(f => f.severity === 'critical').length}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight min-h-[22px] flex items-center">
                                 {activeFilter === 'critical' ? 'Click to clear filter' : 'Click to filter'}
                             </p>
                         </Card>
                     </div>
 
+                    {/* Card 3: Warnings */}
                     <div
                         onClick={() => toggleFilter('warning')}
-                        className="cursor-pointer select-none"
+                        className="cursor-pointer select-none h-full flex flex-col"
                     >
-                        <Card className={`p-3 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl ${activeFilter === 'warning'
+                        <Card className={`p-2.5 sm:p-3.5 bg-card transition-all duration-300 group rounded-xl h-full min-h-[112px] sm:min-h-[120px] flex flex-col justify-between ${activeFilter === 'warning'
                             ? 'border-warning ring-2 ring-warning/30 shadow-md'
                             : 'border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm'
                             }`}>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
-                                    <Activity size={16} />
+                            <div className="flex items-start justify-between mb-1 gap-1 min-w-0 min-h-[26px] sm:min-h-[28px]">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-warning/10 flex items-center justify-center text-warning border border-warning/20 shrink-0">
+                                    <Activity size={15} />
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Warnings</span>
+                                <div className="flex items-center gap-1 min-w-0 justify-end flex-wrap text-right">
+                                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground text-right break-words whitespace-normal leading-tight">Warnings</span>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleHelpClick('warnings'); }}
-                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                        className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                         title="Learn more about this metric"
                                     >
-                                        <HelpCircle size={14} />
+                                        <HelpCircle size={13} />
                                     </button>
                                 </div>
                             </div>
-                            {summaryLoading ? <KpiSkeleton /> : (
-                                <div className="text-2xl font-black text-warning">
-                                    {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
-                                </div>
-                            )}
-                            <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">
+                            <div className="flex-1 flex items-center my-0.5">
+                                {summaryLoading ? <KpiSkeleton /> : (
+                                    <div className="text-xl sm:text-2xl font-black text-warning">
+                                        {summary?.warning_count ?? flags.filter(f => f.severity === 'warning').length}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight min-h-[22px] flex items-center">
                                 {activeFilter === 'warning' ? 'Click to clear filter' : 'Click to filter'}
                             </p>
                         </Card>
                     </div>
 
-                    <Card className="p-3 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                                <CheckCircle2 size={16} />
+                    {/* Card 4: Compliant Items */}
+                    <Card className="p-2.5 sm:p-3.5 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all duration-300 group rounded-xl h-full min-h-[112px] sm:min-h-[120px] flex flex-col justify-between">
+                        <div className="flex items-start justify-between mb-1 gap-1 min-w-0 min-h-[26px] sm:min-h-[28px]">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                                <CheckCircle2 size={15} />
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Compliant Items</span>
+                            <div className="flex items-center gap-1 min-w-0 justify-end flex-wrap text-right">
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest text-muted-foreground text-right break-words whitespace-normal leading-tight">Compliant Items</span>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleHelpClick('compliant_items'); }}
-                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                    className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                     title="Learn more about this metric"
                                 >
-                                    <HelpCircle size={14} />
+                                    <HelpCircle size={13} />
                                 </button>
                             </div>
                         </div>
-                        {summaryLoading ? <KpiSkeleton /> : (
-                            <div className="text-2xl font-black text-foreground">
-                                {summary?.compliant_items ?? '—'}
-                                {summary && (
-                                    <span className="text-xs text-muted-foreground font-medium ml-1">/ {summary.total_items}</span>
-                                )}
-                            </div>
-                        )}
-                        <p className="text-[9px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">Work items passing DMT</p>
+                        <div className="flex-1 flex items-center my-0.5">
+                            {summaryLoading ? <KpiSkeleton /> : (
+                                <div className="text-xl sm:text-2xl font-black text-foreground flex items-baseline flex-wrap">
+                                    {summary?.compliant_items ?? '—'}
+                                    {summary && (
+                                        <span className="text-[11px] sm:text-xs text-muted-foreground font-medium ml-1 break-words whitespace-normal">/ {summary.total_items}</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tight sm:tracking-wider break-words whitespace-normal leading-tight min-h-[22px] flex items-center">
+                            Work items passing DMT
+                        </p>
                     </Card>
                 </div>
 
-                <div className="flex-1 min-h-0 flex flex-col gap-2">
-                    <div className="flex items-center justify-between shrink-0">
-                        <h2 className="text-base sm:text-lg font-black flex items-center gap-2 text-foreground/90">
-                            <Activity size={18} className="text-primary" />
-                            Active Violations
+                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                    <div className="flex items-center justify-between flex-wrap gap-2 shrink-0 pt-1">
+                        <h2 className="text-sm sm:text-base lg:text-lg font-black flex items-center gap-1.5 sm:gap-2 text-foreground/90 flex-wrap">
+                            <Activity size={16} className="text-primary shrink-0" />
+                            <span>Active Violations</span>
                             {activeFilter && (
                                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${activeFilter === 'critical'
                                     ? 'bg-destructive/10 text-destructive border-destructive/30'
@@ -418,7 +442,7 @@ export default function CompliancePage() {
                             )}
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleHelpClick('active_violations'); }}
-                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none"
+                                className="text-muted-foreground/50 hover:text-primary transition-colors focus:outline-none cursor-pointer shrink-0"
                                 title="Learn more about this section"
                             >
                                 <HelpCircle size={14} />
@@ -430,13 +454,13 @@ export default function CompliancePage() {
                                     setActiveFilter(null);
                                     setCurrentPage(1);
                                 }}
-                                className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1 rounded-md border border-border hover:border-foreground/30 bg-muted"
+                                className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1 rounded-md border border-border hover:border-foreground/30 bg-muted shrink-0 cursor-pointer"
                             >
                                 Clear filter
                             </button>
                         )}
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1.5 sm:pr-2">
+                    <div className="space-y-2.5">
                         {loading ? (
                             <div className="flex flex-col gap-2.5">
                                 {[1, 2, 3].map(i => (
@@ -461,49 +485,56 @@ export default function CompliancePage() {
                             )
                         ) : (() => {
                             return flags.map((flag) => (
-                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-3.5 sm:p-4 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all group rounded-xl">
-                                    <div className="space-y-2">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
+                                <Card key={flag.id} id={`work-item-${flag.work_item_id}-${flag.id}`} className="p-3 sm:p-4 bg-card border-2 border-primary hover:ring-2 hover:ring-inset hover:ring-primary shadow-sm transition-all group rounded-xl">
+                                    <div className="space-y-2.5">
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${flag.severity === 'critical' ? 'bg-destructive text-destructive-foreground' : 'bg-warning text-warning-foreground'
                                                 }`}>
                                                 {flag.severity}
                                             </span>
-                                            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border">
-                                                <Folder size={10} />
-                                                {flag.project_name}
+                                            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-black uppercase tracking-wider border border-border max-w-full break-words whitespace-normal text-left">
+                                                <Folder size={10} className="shrink-0" />
+                                                <span className="break-words">{flag.project_name}</span>
                                             </span>
-                                            <span className="flex items-center gap-1 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-2.5 py-0.5 rounded-full">
-                                                <Calendar size={11} className="text-primary" />
-                                                {formatDateTime(flag.created_at)}
+                                            <span className="flex items-center gap-1 text-muted-foreground text-[10px] font-bold uppercase tracking-tight bg-muted px-2.5 py-0.5 rounded-full shrink-0">
+                                                <Calendar size={11} className="text-primary shrink-0" />
+                                                <span>{formatDateTime(flag.created_at)}</span>
                                             </span>
                                             {flag.fixed_later && flag.violations_cleared_at && (
-                                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-2.5 py-0.5 rounded-full border border-green shadow-sm">
-                                                    <CheckCircle size={11} />
-                                                    Fixed: {formatDateTime(flag.violations_cleared_at)}
+                                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tight bg-green text-white px-2.5 py-0.5 rounded-full border border-green shadow-sm max-w-full break-words whitespace-normal text-left shrink-0">
+                                                    <CheckCircle size={11} className="shrink-0" />
+                                                    <span className="break-words">Fixed: {formatDateTime(flag.violations_cleared_at)}</span>
                                                 </span>
                                             )}
                                         </div>
-                                        <div>
-                                            <h3 className="text-base sm:text-lg font-black text-primary transition-colors tracking-tight leading-snug">{flag.work_item_title}</h3>
-                                            <p className="text-muted-foreground text-xs mt-1 font-medium flex items-center gap-1.5 flex-wrap">
-                                                Violation: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border">{FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}</span>
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm sm:text-base lg:text-lg font-black text-primary transition-colors tracking-tight leading-snug break-words whitespace-normal [overflow-wrap:anywhere]">
+                                                {flag.work_item_title}
+                                            </h3>
+                                            <p className="text-muted-foreground text-[11px] sm:text-xs font-medium flex items-center gap-1.5 flex-wrap leading-relaxed">
+                                                <span>Violation:</span>
+                                                <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded border border-border break-words whitespace-normal [overflow-wrap:anywhere]">
+                                                    {FLAG_TYPE_LABELS[flag.flag_type] || flag.flag_type}
+                                                </span>
                                             </p>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                             {(flag.assignee_names?.length ? flag.assignee_names : [flag.assignee_name]).map((name, i) => (
-                                                <div key={i} className="flex items-center gap-1.5 text-muted-foreground text-xs bg-muted/50 px-2.5 py-1 rounded-lg border border-border shadow-inner">
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-primary/20 flex items-center justify-center">
+                                                <div key={i} className="flex items-start sm:items-center gap-1.5 text-muted-foreground text-xs bg-muted/50 px-2 sm:px-2.5 py-1 rounded-lg border border-border shadow-inner max-w-full">
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                                                         <User size={9} className="text-primary" />
                                                     </div>
-                                                    <span className="font-bold text-foreground/80 text-[11px]">{name}</span>
+                                                    <span className="font-bold text-foreground/80 text-[10px] sm:text-[11px] break-words whitespace-normal leading-tight">{name}</span>
                                                 </div>
                                             ))}
                                             {flag.responsible_name && (
-                                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30 shadow-inner">
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                                <div className="flex items-start sm:items-center gap-1.5 text-muted-foreground text-xs bg-amber-500/10 px-2 sm:px-2.5 py-1 rounded-lg border border-amber-500/30 shadow-inner max-w-full">
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                                                         <User size={9} className="text-amber-500" />
                                                     </div>
-                                                    <span className="font-bold text-foreground/80 text-[11px]">Responsible {flag.responsible_role}: <span className="text-amber-600 dark:text-amber-400">{flag.responsible_name}</span></span>
+                                                    <span className="font-bold text-foreground/80 text-[10px] sm:text-[11px] break-words whitespace-normal leading-tight">
+                                                        Responsible {flag.responsible_role}: <span className="text-amber-600 dark:text-amber-400 break-words">{flag.responsible_name}</span>
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
@@ -516,31 +547,31 @@ export default function CompliancePage() {
 
                 {/* Pagination Controls */}
                 {!loading && (totalPages > 1 || totalCount > 10) && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-4 bg-card border border-border rounded-xl shadow-sm shrink-0">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">Rows per page</span>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-2.5 px-3 sm:px-4 bg-card border border-border rounded-xl shadow-sm shrink-0 mt-1">
+                        <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto text-xs">
+                            <span className="text-muted-foreground shrink-0">Rows per page</span>
                             <select
                                 value={pageSize}
                                 onChange={(e) => {
                                     setPageSize(Number(e.target.value));
                                     setCurrentPage(1);
                                 }}
-                                className="bg-muted border border-border text-foreground rounded-md px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                                className="bg-muted border border-border text-foreground rounded-md px-2 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition cursor-pointer"
                             >
                                 <option value={10}>10</option>
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span className="text-xs font-medium text-muted-foreground ml-2 border-l border-border pl-3">
+                            <span className="text-muted-foreground ml-1 sm:ml-2 border-l border-border pl-2 sm:pl-3 shrink-0">
                                 Total {totalCount} items
                             </span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1 w-full sm:w-auto flex-wrap">
                             <button
                                 onClick={() => setCurrentPage(1)}
                                 disabled={currentPage === 1}
-                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
+                                className="p-1 sm:p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition cursor-pointer disabled:cursor-not-allowed"
                                 title="First Page"
                             >
                                 <ChevronsLeft size={14} />
@@ -548,12 +579,12 @@ export default function CompliancePage() {
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
+                                className="p-1 sm:p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition cursor-pointer disabled:cursor-not-allowed"
                                 title="Previous Page"
                             >
                                 <ChevronLeft size={14} />
                             </button>
-                            <div className="flex items-center gap-1 px-1">
+                            <div className="flex items-center gap-1 px-0.5 sm:px-1">
                                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                     let pageNum = currentPage;
                                     if (totalPages <= 5) pageNum = i + 1;
@@ -567,7 +598,7 @@ export default function CompliancePage() {
                                         <button
                                             key={pageNum}
                                             onClick={() => setCurrentPage(pageNum)}
-                                            className={`min-w-[28px] h-7 px-1.5 rounded-full flex items-center justify-center text-xs font-bold transition border ${currentPage === pageNum ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'}`}
+                                            className={`min-w-[26px] sm:min-w-[28px] h-6 sm:h-7 px-1 sm:px-1.5 rounded-full flex items-center justify-center text-xs font-bold transition border cursor-pointer ${currentPage === pageNum ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'text-muted-foreground border-transparent hover:bg-muted hover:border-border'}`}
                                         >
                                             {pageNum}
                                         </button>
@@ -578,7 +609,7 @@ export default function CompliancePage() {
                                         <span className="text-muted-foreground px-0.5 text-xs font-bold">...</span>
                                         <button
                                             onClick={() => setCurrentPage(totalPages)}
-                                            className="min-w-[28px] h-7 px-1.5 rounded-full flex items-center justify-center text-xs font-bold text-muted-foreground border border-transparent hover:bg-muted hover:border-border transition"
+                                            className="min-w-[26px] sm:min-w-[28px] h-6 sm:h-7 px-1 sm:px-1.5 rounded-full flex items-center justify-center text-xs font-bold text-muted-foreground border border-transparent hover:bg-muted hover:border-border transition cursor-pointer"
                                         >
                                             {totalPages}
                                         </button>
@@ -589,7 +620,7 @@ export default function CompliancePage() {
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
+                                className="p-1 sm:p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition cursor-pointer disabled:cursor-not-allowed"
                                 title="Next Page"
                             >
                                 <ChevronRight size={14} />
@@ -597,7 +628,7 @@ export default function CompliancePage() {
                             <button
                                 onClick={() => setCurrentPage(totalPages)}
                                 disabled={currentPage === totalPages}
-                                className="p-1 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition"
+                                className="p-1 sm:p-1.5 bg-muted hover:bg-accent disabled:opacity-50 text-muted-foreground hover:text-foreground rounded-md transition cursor-pointer disabled:cursor-not-allowed"
                                 title="Last Page"
                             >
                                 <ChevronsRight size={14} />

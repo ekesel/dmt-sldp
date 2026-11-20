@@ -63,13 +63,13 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
   const handleSave = async () => {
     if (isSaving) return;
 
-    if (!formData.title.trim()) {
-      toast.error("Please enter a title.");
+    if (mode === "create" && !formData.file) {
+      toast.error("Please select a file to upload.");
       return;
     }
 
-    if (mode === "create" && !formData.file) {
-      toast.error("Please select a file to upload.");
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title.");
       return;
     }
 
@@ -148,18 +148,18 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
     <div className="relative w-full h-full flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden animate-in fade-in duration-300 scroll-smooth">
       {/* Left Sidebar - Metadata */}
       <aside className="w-full xl:w-64 bg-background border-b xl:border-b-0 xl:border-r border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] hover:text-primary transition-colors mb-12"
+            className="flex items-center gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] hover:text-primary transition-colors mb-6 sm:mb-8 xl:mb-12"
           >
             <ChevronLeft className="w-4 h-4" />
-            Back to Library
+            <span>Back to Library</span>
           </button>
 
-          <div className="space-y-10">
+          <div className="space-y-6 sm:space-y-10">
             <div>
-              <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Metadata</h3>
+              <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 sm:mb-6">Metadata</h3>
               <MetadataForm
                 title={formData.title}
                 onTitleChange={(val) => handleChange("title", val)}
@@ -175,33 +175,34 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-background xl:bg-transparent overflow-y-visible xl:overflow-y-auto overflow-x-hidden">
-        <header className="px-6 xl:px-10 py-4 sm:py-6 xl:py-8 flex flex-col sm:flex-row gap-4 sm:items-center justify-between bg-background border-b border-border/40 sticky top-0 z-10 transition-all">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
+        <header className="px-4 sm:px-6 xl:px-10 py-3 sm:py-5 xl:py-8 flex flex-row items-center justify-between gap-3 sm:gap-4 bg-background border-b border-border/40 sticky top-0 z-10 transition-all">
+          <div className="flex flex-col gap-1 sm:gap-2 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={onBack}
-                className="xl:hidden p-2 -ml-2 hover:bg-secondary rounded-lg text-muted-foreground transition-colors"
+                className="xl:hidden p-1.5 -ml-1.5 hover:bg-secondary rounded-lg text-muted-foreground transition-colors shrink-0"
                 title="Back to Library"
+                aria-label="Back"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                <Globe className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.15em] sm:tracking-[0.2em] truncate">
+                <Globe className="w-3 h-3 shrink-0" />
                 <span>{mode === "create" ? "Create" : "Edit"}</span>
                 <span className="text-border">/</span>
                 <span className="text-foreground/60">Assets</span>
               </div>
             </div>
-            <h1 className="text-2xl lg:text-4xl font-black text-foreground tracking-tight ml-0 lg:ml-0">
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-foreground tracking-tight break-words [overflow-wrap:anywhere] whitespace-normal">
               {mode === "create" ? "New document" : "Edit document"}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-3 xl:gap-4">
+          <div className="flex items-center gap-2 lg:gap-3 xl:gap-4 shrink-0">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 xl:px-8 py-2 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 xl:px-8 py-2 sm:py-2.5 xl:py-3 rounded-xl xl:rounded-2xl text-xs xl:text-sm font-bold transition-all shadow-lg active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -210,14 +211,14 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              {isSaving ? (mode === "create" ? "Publishing..." : "Saving...") : mode === "create" ? "Publish" : "Save"}
+              <span>{isSaving ? (mode === "create" ? "Publishing..." : "Saving...") : mode === "create" ? "Publish" : "Save"}</span>
             </button>
           </div>
         </header>
 
         <div className="flex-1 flex bg-background">
-          <div className="w-full flex flex-col min-h-[25rem] xl:min-h-[37.5rem] overflow-hidden">
-            <div className="p-4 lg:p-8">
+          <div className="w-full flex flex-col min-h-[20rem] sm:min-h-[25rem] xl:min-h-[37.5rem] overflow-hidden">
+            <div className="p-3 sm:p-4 lg:p-8">
               <AssetUploader
                 mode={mode}
                 recordId={record?.id || null}
@@ -232,7 +233,7 @@ export const RecordEditor: React.FC<RecordEditorProps> = ({ mode, record, onBack
 
       {/* Right Sidebar - Tags */}
       <aside className="w-full xl:w-60 bg-background border-t xl:border-t-0 xl:border-l border-border/40 flex flex-col shrink-0 no-scrollbar overflow-y-visible xl:overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <TagManager selectedTags={formData.tags} onChange={(tags) => handleChange("tags", tags)} />
         </div>
       </aside>

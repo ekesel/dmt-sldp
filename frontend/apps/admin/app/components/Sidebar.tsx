@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-muted-foreground/10 border-r border-border backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed left-0 top-[49px] sm:top-16 h-[calc(100vh-49px)] sm:h-[calc(100vh-4rem)] w-64 bg-muted-foreground/10 border-r border-border backdrop-blur-xl overflow-y-auto z-40 transition-transform duration-300 lg:static lg:z-0 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <nav className="p-4 space-y-2">

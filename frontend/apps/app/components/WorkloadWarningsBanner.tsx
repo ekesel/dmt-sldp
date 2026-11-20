@@ -46,15 +46,15 @@ export function WorkloadWarningsBanner({ warnings, className = '' }: Props) {
         return (
           <div
             key={`${w.code}-${idx}`}
-            className="flex items-start sm:items-center justify-between gap-3 p-3.5 sm:px-4 sm:py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs sm:text-sm font-medium animate-in fade-in duration-300 shadow-sm"
+            className="flex items-start sm:items-center justify-between gap-2.5 p-3 sm:px-4 sm:py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs sm:text-sm font-medium animate-in fade-in duration-300 shadow-sm"
           >
-            <div className="flex items-start sm:items-center gap-2.5 flex-1 min-w-0">
+            <div className="flex flex-wrap items-start sm:items-center gap-x-2 gap-y-1 flex-1 min-w-0">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-amber-500" />
-              <span className="text-foreground/90 font-medium leading-relaxed">{w.message}</span>
+              <span className="text-foreground/90 font-medium leading-relaxed break-words text-xs sm:text-sm">{w.message}</span>
               {link && (
                 <Link
                   href={link.href}
-                  className="inline-flex items-center gap-1 font-semibold text-amber-500 hover:text-amber-400 hover:underline shrink-0 ml-1"
+                  className="inline-flex items-center gap-1 font-semibold text-amber-500 hover:text-amber-400 hover:underline shrink-0 text-xs sm:text-sm"
                 >
                   {link.label}
                   <ExternalLink size={12} />

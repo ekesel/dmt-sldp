@@ -280,43 +280,43 @@ export const dmtTerms: DMTTerm[] = [
 
         <div>
           <h4 className="font-bold text-accent mb-2">Awards and Rules</h4>
-          <ul className="space-y-3">
-            <li id="velocity_king" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+          <ul className="space-y-2.5 sm:space-y-3">
+            <li id="velocity_king" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Velocity King</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest total Story Points completed.</p>
               <p><strong>How it is calculated:</strong> Add up all story points completed by each developer. The developer with the highest total completed story points is identified as the Velocity King.</p>
             </li>
-            <li id="quality_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="quality_champion" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Quality Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest compliance rate and best code quality.</p>
               <p><strong>How it is calculated:</strong> Calculate the average DMT compliance rate for each developer over the selected period. The developer with the highest average compliance rate is awarded the Quality Champion title.</p>
             </li>
-            <li id="top_reviewer" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="top_reviewer" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Top Reviewer</strong>
               <p className="mt-1 text-primary">Awarded to the person who reviewed the most Pull Requests (PRs) and helped teammates the most.</p>
               <p><strong>How it is calculated:</strong> Count the total number of pull requests reviewed by each developer during the selected period. The developer with the highest number of completed PR reviews is awarded the Top Reviewer title.</p>
             </li>
-            <li id="throughput_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="throughput_champion" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Throughput Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person who completed the most work items (tickets) regardless of size.</p>
               <p><strong>How it is calculated:</strong> Count the total number of work items marked as completed by each developer during the selected period. The developer with the highest number of completed work items is awarded the Throughput Champion title.</p>
             </li>
-            <li id="coverage_champion" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="coverage_champion" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Coverage Champion</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest average code coverage across their completed work items.</p>
               <p><strong>How it is calculated:</strong> Calculate the code coverage percentage for each completed work item of every developer. Then calculate the average code coverage for each developer. The developer with the highest average code coverage is awarded the Coverage Champion title.</p>
             </li>
-            <li id="ai_specialist" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="ai_specialist" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">AI Specialist</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest self-reported AI tool usage across their work items.</p>
               <p><strong>How it is calculated:</strong> Calculate the AI usage percentage for each developer's completed work items and then determine their average AI usage percentage. The developer with the highest average AI usage is awarded the AI Specialist title.</p>
             </li>
-            <li id="objective_ai_master" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="objective_ai_master" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Objective AI Master</strong>
               <p className="mt-1 text-primary">Awarded to the person with the highest PR-analyzed AI code contribution, measured automatically by scanning submitted code.</p>
               <p><strong>How it is calculated:</strong> Analyze the code submitted in each developer's pull requests using AI-detection and code-analysis tools. Calculate the AI contribution percentage for each PR and then determine the developer's average AI contribution percentage across all analyzed PRs. The developer with the highest average AI contribution percentage is awarded the Objective AI Master title.</p>
             </li>
-            <li id="clean_coder" className="bg-muted/30 p-3 rounded-lg transition-all duration-500 border border-border">
+            <li id="clean_coder" className="bg-muted/30 p-2.5 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-500 border border-border break-words">
               <strong className="text-accent">Clean Coder</strong>
               <p className="mt-1 text-primary">Awarded to the person with the fewest defects attributed to their work. Lower is better.</p>
               <p><strong>How it is calculated:</strong> Count the total number of defects attributed to each developer's completed work during the selected period. The developer with the fewest attributed defects is awarded the Clean Coder title.</p>

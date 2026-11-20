@@ -137,18 +137,20 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
     const maxTotal = Math.max(...sortedAssignees.map((a) => a.completed + a.in_progress), 1);
 
     return (
-        <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-4 sm:p-6">
+        <div className="bg-card/60 backdrop-blur border border-border rounded-xl sm:rounded-2xl p-3.5 sm:p-5 md:p-6 w-full min-w-0">
             {/* Header */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 sm:mb-5">
+                <div className="flex items-center gap-2 min-w-0">
                     <Users className="text-primary w-5 h-5 shrink-0" />
-                    <h2 className="text-lg sm:text-xl font-bold text-foreground">Team Workload</h2>
+                    <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">Team Workload</h2>
                 </div>
-                <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-[0.625rem] uppercase font-bold text-muted-foreground tracking-wider">{sprintRangeLabel}</span>
+                    <span className="text-xs text-muted-foreground">{uniqueAssignees.length} member{uniqueAssignees.length !== 1 ? 's' : ''}</span>
+                </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5 sm:space-y-4">
                 {sortedAssignees.map((person) => {
                     const color = avatarColor(person.name);
                     const visibleWork = person.completed + person.in_progress;
@@ -181,60 +183,61 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                     // null workload_status means the person has 0 items - show no badge.
 
                     return (
-                        <div key={person.email} className="group">
-                            <div className="flex items-center gap-3 mb-1.5">
-                                {/* Avatar */}
-                                <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold flex-shrink-0 shadow-md"
-                                    style={{ backgroundColor: color }}
-                                >
-                                    {getInitials(person.name)}
-                                </div>
-
-                                {/* Name + badges */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-sm font-medium text-foreground">{person.name}</span>
-                                        {seniorityBadge && (
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${seniorityBadge.className}`}>
-                                                {seniorityBadge.label}
-                                            </span>
-                                        )}
-                                        {workloadStatus && (
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${workloadStatus.className}`}>
-                                                {workloadStatus.label}
-                                            </span>
-                                        )}
-                                        {person.is_portal_user && (
-                                            <span title="Can log in to portal">
-                                                <UserCheck className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-                                            </span>
-                                        )}
-                                        {isZeroAllocation && (
-                                            <span
-                                                title={`0% allocation for ${person.allocation_period_label || 'this month'}`}
-                                                className="text-destructive inline-flex items-center cursor-default"
-                                            >
-                                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                                            </span>
-                                        )}
+                        <div key={person.email} className="group w-full min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-1.5">
+                                {/* Left: Avatar + Info */}
+                                <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                    <div
+                                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0 shadow-md mt-0.5 sm:mt-0"
+                                        style={{ backgroundColor: color }}
+                                    >
+                                        {getInitials(person.name)}
                                     </div>
-                                    <span className="text-xs text-muted-foreground">{person.email}</span>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-xs sm:text-sm font-medium text-foreground break-words leading-tight">{person.name}</span>
+                                            {seniorityBadge && (
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold shrink-0 ${seniorityBadge.className}`}>
+                                                    {seniorityBadge.label}
+                                                </span>
+                                            )}
+                                            {workloadStatus && (
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold shrink-0 ${workloadStatus.className}`}>
+                                                    {workloadStatus.label}
+                                                </span>
+                                            )}
+                                            {person.is_portal_user && (
+                                                <span title="Can log in to portal">
+                                                    <UserCheck className="w-3.5 h-3.5 text-accent shrink-0" />
+                                                </span>
+                                            )}
+                                            {isZeroAllocation && (
+                                                <span
+                                                    title={`0% allocation for ${person.allocation_period_label || 'this month'}`}
+                                                    className="text-destructive inline-flex items-center cursor-default shrink-0"
+                                                >
+                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[11px] sm:text-xs text-muted-foreground truncate block">{person.email}</span>
+                                    </div>
                                 </div>
 
-                                {/* Stats */}
-                                <div className="flex items-center gap-4 flex-shrink-0 text-sm font-semibold">
-                                    <span className="flex items-center gap-1.5 text-warning" title="In progress">
-                                        <Loader2 className="w-4 h-4" />
+                                {/* Right / Mobile subrow: Stats */}
+                                <div className="flex items-center gap-3 sm:gap-4 shrink-0 text-xs sm:text-sm font-semibold pl-10.5 sm:pl-0">
+                                    <span className="flex items-center gap-1 text-warning" title="In progress">
+                                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         {person.in_progress}
                                     </span>
-                                    <span className="flex items-center gap-1.5 text-green-500" title="Completed">
-                                        <CheckCircle2 className="w-4 h-4" />
+                                    <span className="flex items-center gap-1 text-green-500" title="Completed">
+                                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         {person.completed}
                                     </span>
                                     {person.avg_cycle_time_days !== null && (
-                                        <span className="flex items-center gap-1.5 text-primary" title="Avg cycle time">
-                                            <Clock className="w-4 h-4" />
+                                        <span className="flex items-center gap-1 text-primary" title="Avg cycle time">
+                                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                             {person.avg_cycle_time_days}d
                                         </span>
                                     )}
@@ -242,7 +245,7 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
                             </div>
 
                             {/* Workload bar */}
-                            <div className="ml-12 h-1.5 bg-border rounded-full overflow-hidden">
+                            <div className="ml-10.5 sm:ml-12 h-1.5 bg-border rounded-full overflow-hidden">
                                 <div
                                     className="h-full rounded-full transition-all duration-500"
                                     style={{
@@ -257,16 +260,16 @@ export function AssigneeDistributionCard({ assignees, loading, sprintRangeLabel 
             </div>
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center gap-5 mt-5 pt-4 border-t border-border text-sm font-bold text-foreground">
-                <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 text-warning" /> In Progress</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Completed</span>
-                <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Avg Cycle</span>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-5 mt-5 pt-4 border-t border-border text-xs sm:text-sm font-bold text-foreground">
+                <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 text-warning" /> In Progress</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> Completed</span>
+                <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> Avg Cycle</span>
                 {sortedAssignees.some(isPersonZeroAllocation) && (
                     <span className="flex items-center gap-1.5 text-destructive font-bold">
-                        <AlertTriangle className="w-4 h-4" /> 0% Allocation
+                        <AlertTriangle className="w-3.5 h-3.5" /> 0% Allocation
                     </span>
                 )}
-                <span className="flex items-center gap-1.5 ml-auto"><UserCheck className="w-4 h-4 text-accent" /> Portal access</span>
+                <span className="flex items-center gap-1.5 sm:ml-auto"><UserCheck className="w-3.5 h-3.5 text-accent" /> Portal access</span>
             </div>
         </div>
     );

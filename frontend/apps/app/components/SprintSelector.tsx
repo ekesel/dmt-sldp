@@ -20,6 +20,7 @@ export interface SprintSelectorProps {
     selectedSprintIds?: number[];
     onMultiSelect?: (sprintIds: number[], sprints: Sprint[]) => void;
     className?: string;
+    wrapperClassName?: string;
     autoSelectLatest?: boolean;
     allowAll?: boolean;
     allLabel?: string;
@@ -36,6 +37,7 @@ export const SprintSelector = React.memo(({
     selectedSprintIds = [],
     onMultiSelect,
     className,
+    wrapperClassName,
     autoSelectLatest = true,
     allowAll = false,
     allLabel = 'All Sprints',
@@ -137,13 +139,13 @@ export const SprintSelector = React.memo(({
     }
 
     if (loading) {
-        return <div className={cn("animate-pulse bg-muted rounded-lg w-48 h-10", className)} />;
+        return <div className={cn("animate-pulse bg-muted rounded-lg w-full sm:w-48 h-10", className)} />;
     }
 
     // Project selected mode: full interactive dropdown
     if (sprintList.length === 0) {
         return (
-            <div className={cn("flex items-center gap-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-48 text-sm font-medium px-4 py-2 h-10", className)}>
+            <div className={cn("flex items-center gap-2 rounded-lg bg-muted/40 text-muted-foreground border border-border/50 w-full sm:w-48 text-sm font-medium px-4 py-2 h-10", className)}>
                 <GitBranch size={14} className="text-muted-foreground" />
                 <span>No sprints</span>
             </div>
@@ -177,15 +179,15 @@ export const SprintSelector = React.memo(({
     }
 
     return (
-        <div ref={dropdownRef} className={cn("relative", isOpen && "z-40", className && className.includes('w-') ? "" : "w-full sm:w-auto")}>
+        <div ref={dropdownRef} className={cn("relative w-full sm:w-auto", isOpen && "z-40", wrapperClassName)}>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={cn("flex items-center gap-2 rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-full sm:w-48 justify-between px-4 py-2 h-10 cursor-pointer", className)}
+                className={cn("flex items-center gap-2 rounded-xl sm:rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-full sm:w-48 justify-between px-3 sm:px-4 py-2 min-h-10 h-auto cursor-pointer", className)}
             >
-                <div className="flex items-center gap-2 truncate min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     <GitBranch size={14} className={cn("flex-shrink-0", activeSelectedIds.length > 0 ? "text-primary" : "text-muted-foreground")} />
-                    <span className="truncate text-sm font-medium">
+                    <span className="text-xs sm:text-sm font-medium break-words whitespace-normal text-left leading-snug">
                         {displayText}
                     </span>
                 </div>
@@ -201,8 +203,8 @@ export const SprintSelector = React.memo(({
 
             {isOpen && (
                 <div className={cn(
-                    "absolute top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-xl shadow-2xl z-50 py-1 overflow-hidden backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-150",
-                    popoverAlign === 'left' ? 'left-0' : 'right-0'
+                    "absolute top-full mt-2 w-full sm:w-72 min-w-[260px] sm:min-w-0 max-w-[calc(100vw-1.5rem)] bg-popover border border-border rounded-xl shadow-2xl z-50 py-1 overflow-hidden backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-150",
+                    popoverAlign === 'left' ? 'left-0' : 'left-0 sm:left-auto sm:right-0'
                 )}>
                     {multiSelect ? (
                         <>
@@ -235,7 +237,7 @@ export const SprintSelector = React.memo(({
                             </div>
 
                             {/* Sprints List with Checkboxes */}
-                            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
+                            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 chart-scrollbar">
                                 {sprintList.map(sprint => {
                                     const isChecked = activeSelectedIds.some(id => String(id) === String(sprint.id));
                                     return (
@@ -254,13 +256,13 @@ export const SprintSelector = React.memo(({
                                                 onSelect?.(newIds.length === 1 ? newIds[0] : null, newSprints[0] || null);
                                             }}
                                             className={cn(
-                                                "w-full px-2.5 py-2 rounded-lg text-left text-sm flex items-center justify-between gap-2.5 transition-colors cursor-pointer group",
+                                                "w-full px-2.5 py-2 rounded-lg text-left text-xs sm:text-sm flex items-center justify-between gap-2.5 transition-colors cursor-pointer group",
                                                 isChecked
                                                     ? "bg-primary/10 text-foreground font-semibold"
                                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                             )}
                                         >
-                                            <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                                 <div className={cn(
                                                     "w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0",
                                                     isChecked
@@ -270,10 +272,10 @@ export const SprintSelector = React.memo(({
                                                     {isChecked && <Check size={11} strokeWidth={3} />}
                                                 </div>
                                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sprint.status === 'active' ? 'bg-accent' : 'bg-muted-foreground/40'}`} />
-                                                <span className="truncate">{sprint.name}</span>
+                                                <span className="break-words whitespace-normal text-left leading-snug">{sprint.name}</span>
                                             </div>
                                             {sprint.status === 'active' && (
-                                                <span className="text-[0.5625rem] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded shrink-0">
+                                                <span className="text-[0.5625rem] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded shrink-0 ml-1.5">
                                                     Active
                                                 </span>
                                             )}
@@ -317,7 +319,7 @@ export const SprintSelector = React.memo(({
                             </div>
                         </>
                     ) : (
-                        <div className="max-h-60 overflow-y-auto py-1">
+                        <div className="max-h-60 overflow-y-auto py-1 chart-scrollbar">
                             {allowAll && (
                                 <button
                                     type="button"
@@ -325,11 +327,11 @@ export const SprintSelector = React.memo(({
                                         onSelect?.(null, null);
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors cursor-pointer ${!selectedSprintId ? 'text-primary bg-accent/50 font-semibold' : 'text-muted-foreground'}`}
+                                    className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-xs sm:text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors cursor-pointer ${!selectedSprintId ? 'text-primary bg-accent/50 font-semibold' : 'text-muted-foreground'}`}
                                 >
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <GitBranch size={14} className="flex-shrink-0" />
-                                        <span className="truncate">{allLabel}</span>
+                                        <span className="break-words whitespace-normal text-left leading-snug">{allLabel}</span>
                                     </div>
                                 </button>
                             )}
@@ -341,14 +343,14 @@ export const SprintSelector = React.memo(({
                                         onSelect?.(sprint.id, sprint);
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors cursor-pointer ${String(selectedSprintId) === String(sprint.id) ? 'text-primary bg-accent/50 font-semibold' : 'text-muted-foreground'}`}
+                                    className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-xs sm:text-sm hover:bg-accent flex items-center justify-between gap-2 transition-colors cursor-pointer ${String(selectedSprintId) === String(sprint.id) ? 'text-primary bg-accent/50 font-semibold' : 'text-muted-foreground'}`}
                                 >
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sprint.status === 'active' ? 'bg-accent' : 'bg-muted-foreground'}`} />
-                                        <span className="truncate">{sprint.name}</span>
+                                        <span className="break-words whitespace-normal text-left leading-snug">{sprint.name}</span>
                                     </div>
                                     {sprint.status === 'active' && (
-                                        <span className="text-[0.5625rem] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded flex-shrink-0">
+                                        <span className="text-[0.5625rem] font-black uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded flex-shrink-0 ml-1.5">
                                             Active
                                         </span>
                                     )}

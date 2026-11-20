@@ -31,7 +31,7 @@ const ReactionUsersModal: React.FC<ReactionUsersModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity"
@@ -41,13 +41,13 @@ const ReactionUsersModal: React.FC<ReactionUsersModalProps> = ({
       {/* Modal Content */}
       <div className="relative w-full max-w-sm bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground flex-1 text-center">Reactions</h2>
+        <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-border">
+          <h2 className="text-base sm:text-lg font-bold text-foreground flex-1 text-center">Reactions</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground absolute right-4"
+            className="p-1.5 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground absolute right-3 sm:right-4 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
@@ -60,12 +60,12 @@ const ReactionUsersModal: React.FC<ReactionUsersModalProps> = ({
           ) : (
             <div className="flex flex-col">
               {reactions.map((reaction, idx) => (
-                <div key={reaction.reaction_id || idx} className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-lg transition-colors">
-                  <div className="relative">
+                <div key={reaction.reaction_id || idx} className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                  <div className="relative shrink-0">
                     <img
                       src={reaction.avatar_url ? getFileUrl(reaction.avatar_url) : "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80"}
                       alt={reaction.username || "User"}
-                      className="w-10 h-10 rounded-full object-cover border border-border"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border border-border"
                     />
                     <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
                       {reaction.reaction_type === 'like' && (

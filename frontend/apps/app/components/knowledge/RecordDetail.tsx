@@ -83,7 +83,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
       />
 
       <aside className={cn(
-        "fixed inset-y-0 right-0 z-50 w-full sm:w-[18.75rem] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0 relative",
+        "fixed inset-y-0 right-0 z-50 w-full sm:w-[22rem] md:w-[24rem] xl:w-[20rem] bg-background border-l border-border/40 flex flex-col h-full overflow-y-auto transition-transform duration-300 transform shadow-2xl xl:shadow-none xl:static xl:translate-x-0 xl:relative",
         record || isLoading ? "translate-x-0" : "translate-x-full"
       )}>
         {isLoading && (
@@ -94,18 +94,18 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
             </p>
           </div>
         )}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Mobile Close Button */}
           <button
             onClick={onClose}
             aria-label="Close record"
-            className="xl:hidden absolute top-4 right-4 p-2 hover:bg-secondary rounded-full text-muted-foreground mb-4"
+            className="xl:hidden absolute top-3 sm:top-4 right-3 sm:right-4 p-2 hover:bg-secondary rounded-full text-muted-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Top Label and Action Buttons */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 pr-8 xl:pr-0">
             <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">
               Document
             </span>
@@ -115,7 +115,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
               {isManager && (
                 <button
                   onClick={() => record && onEdit?.(record)}
-                  className="px-4 py-1.5 bg-secondary/50 hover:bg-secondary text-foreground rounded-lg border border-border/40 text-sm font-semibold transition-all active:scale-95 shadow-sm"
+                  className="px-3 sm:px-4 py-1.5 bg-secondary/50 hover:bg-secondary text-foreground rounded-lg border border-border/40 text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-sm"
                 >
                   Edit
                 </button>
@@ -125,50 +125,50 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
 
           {/* Title and Description */}
           <div className="mb-6">
-            <h3 className="text-xl font-semibold text-foreground leading-tight mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-foreground leading-tight mb-2 break-words [overflow-wrap:anywhere] whitespace-normal">
               {record.title}
             </h3>
-            <p className="text-[0.8125rem] text-muted-foreground leading-snug">
+            <p className="text-xs sm:text-[0.8125rem] text-muted-foreground leading-relaxed break-words [overflow-wrap:anywhere] whitespace-pre-wrap">
               {record.description}
             </p>
           </div>
 
           {/* Info Grid (Status, Updated, Type, Versions) */}
-          <div className="grid grid-cols-2 gap-x-12 gap-y-5 py-5 border-t border-border/40">
+          <div className="grid grid-cols-2 gap-x-6 sm:gap-x-12 gap-y-4 sm:gap-y-5 py-4 sm:py-5 border-t border-border/40">
             <div>
-              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-1 sm:mb-2 text-foreground/40">
                 {record.updatedAt ? "Updated" : "Created"}
               </h3>
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-xs sm:text-sm font-semibold text-foreground">
                 {new Date(record.updatedAt || record.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}
               </span>
             </div>
             <div>
-              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Author</h3>
-              <span className="text-sm font-semibold text-foreground block break-all">
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-1 sm:mb-2 text-foreground/40">Author</h3>
+              <span className="text-xs sm:text-sm font-semibold text-foreground block break-words">
                 {authorName}
               </span>
             </div>
             <div>
-              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-2 text-foreground/40">Versions</h3>
-              <span className="text-sm font-semibold text-foreground">{record.versionCount}</span>
+              <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-1 sm:mb-2 text-foreground/40">Versions</h3>
+              <span className="text-xs sm:text-sm font-semibold text-foreground">{record.versionCount}</span>
             </div>
           </div>
 
           {/* Metadata Section */}
-          <div className="pt-6 border-t border-border/40">
+          <div className="pt-5 sm:pt-6 border-t border-border/40">
             <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Metadata</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Document ID</span>
-                <span className="text-sm font-semibold text-foreground text-right">{record.uid}</span>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0 pt-0.5">Document ID</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-all [overflow-wrap:anywhere] max-w-[65%]">{record.uid}</span>
               </div>
 
               {/* Dynamically render all metadata entries from production */}
               {record.metadata.map((item, index) => (
-                <div key={`${item.category}-${index}`} className="flex items-center justify-between pt-3 border-t border-border/20">
-                  <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em]">{item.category_name}</span>
-                  <span className="text-sm font-semibold text-foreground text-right">{item.value}</span>
+                <div key={`${item.category}-${index}`} className="flex items-start justify-between gap-2 pt-3 border-t border-border/20">
+                  <span className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] shrink-0 pt-0.5">{item.category_name}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-foreground text-right break-words [overflow-wrap:anywhere] whitespace-normal max-w-[65%]">{item.value}</span>
                 </div>
               ))}
 
@@ -181,14 +181,14 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           </div>
 
           {/* Tags Section */}
-          <div className="mt-8 pt-6 border-t border-border/40">
+          <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-border/40">
             <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] mb-4 text-foreground/40">Tags</h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {record.tags.map(tag => (
                 <button
                   key={tag}
                   onClick={() => onTagClick?.({ id: tag, name: tag })}
-                  className="px-3 py-1 bg-background hover:bg-primary/5 hover:border-primary/40 text-[0.75rem] font-medium text-foreground hover:text-primary rounded-lg border border-border/60 transition-all active:scale-95 shadow-sm"
+                  className="px-2.5 sm:px-3 py-1 bg-background hover:bg-primary/5 hover:border-primary/40 text-[0.6875rem] sm:text-[0.75rem] font-medium text-foreground hover:text-primary rounded-lg border border-border/60 transition-all active:scale-95 shadow-sm break-all"
                 >
                   {tag}
                 </button>
@@ -197,7 +197,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
           </div>
 
           {/* Assets Section */}
-          <div className="mt-8 pt-6 border-t border-border/40">
+          <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-border/40">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-[0.2em] text-foreground/40">Assets</h3>
             </div>
@@ -224,13 +224,13 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                       <div
                         key={`${asset.url || 'asset'}-${asset.name}-${index}`}
                         className={cn(
-                          "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50",
+                          "group/asset flex items-center justify-between py-2 px-2 -mx-2 rounded-lg transition-all hover:bg-secondary/50 gap-2",
                           index !== combinedAssets.length - 1 && "mb-1"
                         )}
                       >
                         <div
                           onClick={() => !isDownloading && assetUrl && handleDownload(assetUrl, asset.name)}
-                          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 cursor-pointer"
                         >
                           <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center shrink-0">
                             {isDownloading ? (
@@ -239,8 +239,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                               <FileText className="w-4 h-4 text-muted-foreground group-hover/asset:text-primary transition-colors" />
                             )}
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[0.8125rem] font-semibold text-foreground truncate max-w-[11.25rem]">
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-xs sm:text-[0.8125rem] font-semibold text-foreground break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
                               {asset.name}
                             </span>
                             <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-tight">
@@ -248,7 +248,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({ record, onClose, onE
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover/asset:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover/asset:opacity-100 transition-opacity shrink-0">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -349,17 +349,17 @@ const VersionHistoryList: React.FC<{
                       const versionFileUrl = item.fileUrl;
                       if (!versionFileUrl) return null;
                       return (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/version:opacity-100 transition-opacity">
                           <button
                             onClick={() => onView?.(versionFileUrl)}
-                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
                             title="View version online"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDownload?.(versionFileUrl, `${item.version}_file`)}
-                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all opacity-0 group-hover/version:opacity-100"
+                            className="p-1 hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-md transition-all"
                             title="Download version"
                           >
                             <Download className="w-3.5 h-3.5" />

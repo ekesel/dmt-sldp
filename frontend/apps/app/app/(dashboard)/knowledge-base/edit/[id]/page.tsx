@@ -24,8 +24,8 @@ export default function EditRecordPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
+      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-background p-4">
+        <div className="flex flex-col items-center gap-4 text-center">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">Preparing Editor...</p>
         </div>
@@ -35,12 +35,12 @@ export default function EditRecordPage() {
 
   if (isError || !record) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center">
+      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-background p-4">
+        <div className="text-center max-w-sm mx-auto">
           <h2 className="text-xl font-bold text-foreground mb-2">Record Not Found</h2>
           <button 
             onClick={() => router.push("/knowledge-base")}
-            className="text-primary font-bold hover:underline"
+            className="text-primary font-bold hover:underline text-sm"
           >
             Back to Library
           </button>

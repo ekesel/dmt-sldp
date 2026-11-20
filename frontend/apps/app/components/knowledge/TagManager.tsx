@@ -60,27 +60,27 @@ export const TagManager: React.FC<TagManagerProps> = ({ selectedTags, onChange }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-[0.2em]">Tags</h3>
-        <Tag className="w-3 h-3 text-muted-foreground" />
+        <Tag className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Current Tags */}
         {selectedTags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {selectedTags.map((tag) => (
               <span
                 key={tag}
-                className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[0.5625rem] font-black uppercase tracking-widest shadow-sm"
+                className="flex items-center gap-1.5 px-2 py-1 bg-primary/5 text-primary border border-primary/20 rounded-lg text-[0.5625rem] font-black uppercase tracking-widest shadow-sm break-all"
               >
-                {tag}
+                <span>{tag}</span>
                 <button
                   type="button"
                   onClick={() => removeTag(tag)}
                   aria-label={`Remove ${tag}`}
-                  className="hover:text-foreground transition-colors"
+                  className="hover:text-foreground transition-colors shrink-0"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>

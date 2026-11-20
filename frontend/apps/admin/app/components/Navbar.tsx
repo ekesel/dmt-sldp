@@ -54,18 +54,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
 
     return (
         <nav className="bg-muted/95 border-b border-border backdrop-blur-xl sticky top-0 z-40 supports-[backdrop-filter]:bg-muted-foreground/20">
-            <div className="px-6 py-4 flex items-center justify-between">
+            <div className="px-2.5 sm:px-6 py-2 sm:py-4 flex items-center justify-between">
                 {/* Left Section */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 sm:gap-4">
                     <button
                         onClick={onMenuClick}
-                        className="p-2 hover:bg-accent rounded-lg transition lg:hidden"
+                        className="p-1 sm:p-2 hover:bg-accent rounded-lg transition lg:hidden"
                     >
                         <Menu className="w-5 h-5 text-muted-foreground" />
                     </button>
-                    <div className="flex items-center gap-2">
-                        <Shield className="w-6 h-6 text-primary" />
-                        <h1 className="text-lg font-bold text-foreground hidden sm:inline">Elevate</h1>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+                        <h1 className="text-base sm:text-lg font-bold text-foreground hidden sm:inline">Elevate</h1>
                     </div>
 
                     {/* Tenant Selector */}
@@ -146,16 +146,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                     </div>
 
                     {/* User Avatar */}
-                    <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                        <span className="text-primary-foreground font-semibold text-sm">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+                        <span className="text-primary-foreground font-semibold text-xs sm:text-sm">
                             {(user?.first_name?.[0] || user?.username?.[0] || 'A').toUpperCase()}
                         </span>
                     </div>
 
                     {/* Dropdown Menu */}
                     <div className="relative group">
-                        <button className="p-2 hover:bg-accent rounded-lg transition">
-                            <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition" />
+                        <button className="p-1 sm:p-2 hover:bg-accent rounded-lg transition">
+                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-foreground transition" />
                         </button>
 
                         {/* Dropdown Items */}
