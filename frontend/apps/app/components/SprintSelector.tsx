@@ -183,11 +183,11 @@ export const SprintSelector = React.memo(({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={cn("flex items-center gap-2 rounded-xl sm:rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-full sm:w-48 justify-between px-3 sm:px-4 py-2 min-h-10 h-auto cursor-pointer", className)}
+                className={cn("flex items-center gap-2 rounded-xl sm:rounded-lg bg-card text-foreground hover:bg-accent transition-all font-medium border border-border w-full sm:w-48 justify-between px-3 sm:px-4 py-2 h-10 overflow-hidden cursor-pointer", className)}
             >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     <GitBranch size={14} className={cn("flex-shrink-0", activeSelectedIds.length > 0 ? "text-primary" : "text-muted-foreground")} />
-                    <span className="text-xs sm:text-sm font-medium break-words whitespace-normal text-left leading-snug">
+                    <span className="text-xs sm:text-sm font-medium truncate text-left" title={displayText}>
                         {displayText}
                     </span>
                 </div>
