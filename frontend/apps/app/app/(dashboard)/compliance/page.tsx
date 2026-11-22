@@ -220,8 +220,8 @@ export default function CompliancePage() {
     // When project changes, SprintSelector auto-selects latest sprint via onSelect callback
     const handleProjectChange = useCallback((projectId: number | null) => {
         setSelectedProjectId(projectId);
+        setSelectedSprintId(null);
         setCurrentPage(1);
-        // Sprint will be reset by SprintSelector internally via onSelect
     }, []);
 
     const formatDateTime = (dateString: string) => {
@@ -245,9 +245,9 @@ export default function CompliancePage() {
     );
 
     return (
-        <div className="min-h-full w-full bg-background p-2.5 sm:p-4 lg:p-6 pb-12 sm:pb-16 selection:bg-primary/30 flex flex-col overflow-x-hidden">
-            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col gap-3 sm:gap-4 min-w-0">
-                <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border py-2.5 sm:py-3.5 px-2.5 sm:px-4 lg:px-6 -mx-2.5 sm:-mx-4 lg:-mx-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0 transition-all">
+        <div className="h-full w-full bg-background px-2.5 sm:px-4 lg:px-6 pt-0 pb-2 sm:pb-3 selection:bg-primary/30 flex flex-col overflow-y-auto md:overflow-hidden">
+            <div className="max-w-7xl mx-auto w-full md:h-full flex flex-col gap-3 sm:gap-4 min-w-0 md:min-h-0">
+                <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-border py-2.5 sm:py-3 px-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0 transition-all">
                     <div className="min-w-0 w-full md:w-auto">
                         <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
                             <span>Compliance Flags</span>
@@ -427,7 +427,7 @@ export default function CompliancePage() {
                     </Card>
                 </div>
 
-                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                <div className="flex-1 md:min-h-0 flex flex-col gap-2 min-w-0">
                     <div className="flex items-center justify-between flex-wrap gap-2 shrink-0 pt-1">
                         <h2 className="text-sm sm:text-base lg:text-lg font-black flex items-center gap-1.5 sm:gap-2 text-foreground/90 flex-wrap">
                             <Activity size={16} className="text-primary shrink-0" />
@@ -460,7 +460,7 @@ export default function CompliancePage() {
                             </button>
                         )}
                     </div>
-                    <div className="space-y-2.5">
+                    <div className="flex-1 md:min-h-0 overflow-y-auto space-y-2.5 pr-1 chart-scrollbar">
                         {loading ? (
                             <div className="flex flex-col gap-2.5">
                                 {[1, 2, 3].map(i => (

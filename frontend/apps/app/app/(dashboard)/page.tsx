@@ -566,35 +566,7 @@ export default function DashboardPage() {
                                 )}
                             </div>
                         )}
-                        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-                            <DatePicker
-                                label="From"
-                                value={startDate}
-                                min="2000-01-01"
-                                max={endDate && endDate <= todayStr ? endDate : todayStr}
-                                onChange={handleStartDateChange}
-                                className="flex-1 min-w-[7.5rem] sm:min-w-0 sm:flex-initial sm:w-auto"
-                            />
-                            <span className="text-muted-foreground text-xs sm:text-sm font-bold shrink-0">→</span>
-                            <DatePicker
-                                label="To"
-                                value={endDate}
-                                min={startDate || "2000-01-01"}
-                                max={todayStr}
-                                onChange={handleEndDateChange}
-                                popoverAlign="right"
-                                className="flex-1 min-w-[7.5rem] sm:min-w-0 sm:flex-initial sm:w-auto"
-                            />
-                            {(startDate || endDate) && (
-                                <button
-                                    onClick={handleClearDateFilter}
-                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border shrink-0 cursor-pointer"
-                                    title="Clear date filter"
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
+
                         <div className="flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto">
                             {selectedProjectId && (
                                 <button
