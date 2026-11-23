@@ -51,13 +51,13 @@ class CapacityWorkloadTests(SimpleTestCase):
         ranges = {k: (v['ideal_min'], v['ideal_max']) for k, v in r.items()}
         self.assertEqual(ranges, {
             'affan': (1, 1), 'niharika': (3, 4), 'pradhuman': (3, 4), 'ekansh': (4, 7),
-            'arun': (2, 3), 'sakshi': (3, 6), 'shashi': (4, 7),
+            'arun': (2, 3), 'sakshi': (3, 5), 'shashi': (4, 7),
         })
         self.assertEqual(r['affan']['capacity'], 0.21)
 
     def test_team_card_scales_by_sprints(self):
-        r = classify_workload({'a': 30, 'b': 31, 'c': 14}, {}, 5, DEFAULT_SETTINGS)
-        self.assertEqual((r['a']['ideal_min'], r['a']['ideal_max']), (15, 30))  # Max is inclusive
+        r = classify_workload({'a': 29, 'b': 30, 'c': 14}, {}, 5, DEFAULT_SETTINGS)
+        self.assertEqual((r['a']['ideal_min'], r['a']['ideal_max']), (15, 29))  # 5 x 6 = overload, max = 29
         self.assertEqual(statuses(r), {'a': 'Balanced', 'b': 'Overloaded', 'c': 'Underutilised'})
 
     def test_allocation_floor_and_missing(self):
@@ -75,8 +75,8 @@ class CapacityWorkloadTests(SimpleTestCase):
     def test_settings_override(self):
         cfg = merge_settings({'per_sprint_limits': {'over': 5}})
         self.assertEqual(cfg['per_sprint_limits'], {'under': 3, 'over': 5})
-        r = classify_workload({'a': 6, 'b': 5}, {}, 1, cfg)
-        self.assertEqual(statuses(r), {'a': 'Overloaded', 'b': 'Balanced'})  # Max 5 is inclusive
+        r = classify_workload({'a': 5, 'b': 4}, {}, 1, cfg)
+        self.assertEqual(statuses(r), {'a': 'Overloaded', 'b': 'Balanced'})  # Max 5 = overload, ideal max 4
 
 
 class PercentileGateTests(SimpleTestCase):
@@ -100,7 +100,7 @@ class PercentileGateTests(SimpleTestCase):
         r = classify_workload(OCS_SPRINT_5, {}, 1, PCT)
         self.assertEqual(r['pradhuman']['percentile'], 56.25)
         expected = {k: 'Balanced' for k in OCS_SPRINT_5}
-        expected.update(ekansh='Overloaded', abhijit='Underutilised')  # niharika's 6 = Max, inclusive
+        expected.update(ekansh='Overloaded', niharika='Overloaded', abhijit='Underutilised')  # 6 = Max = overload
         self.assertEqual(statuses(r), expected)
 
     def test_small_team_uses_fixed_limits(self):
@@ -163,7 +163,7 @@ class TeamWorkloadAllocationTest(TenantTestCase):
         self.assertEqual(got, {
             'affan@x.test': (0.21, 1, 1, 'Overloaded'),
             'shashi@x.test': (1.3, 4, 7, 'Underutilised'),
-            'sakshi@x.test': (1.0, 3, 6, 'Balanced'),
+            'sakshi@x.test': (1.0, 3, 5, 'Balanced'),
         })
 
     def test_cycle_time_skips_bugs_like_dashboard(self):
@@ -261,8 +261,8 @@ class EffectiveDatedCapacityTests(SimpleTestCase):
         days = [date(2026, 9, 1), date(2026, 9, 20)]
         cap, low, high = member_capacity(['a'], days, [], levels)['a']
         self.assertAlmostEqual(cap, 1.0 + 1.3)
-        self.assertAlmostEqual(low, 3 * 2.3)
-        self.assertAlmostEqual(high, 6 * 2.3)
+        self.assertEqual(low, 3 + 4)  # ceil(3 x 1.0) + ceil(3 x 1.3), each sprint rounded
+        self.assertEqual(high, 6 + 8)  # ceil(6 x 1.0) + ceil(6 x 1.3)
 
     def test_level_before_first_row_is_earliest_known(self):
         levels = {'a': [(date(2026, 9, 15), 'junior')]}
@@ -582,10 +582,10 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.allocate('both@x.test', x, 50)
         self.allocate('both@x.test', y, 50)
         rows = self.get()
-        self.assertEqual((rows['half@x.test']['ideal_min'], rows['half@x.test']['ideal_max']), (2, 3))  # 0.5 capacity
-        self.assertEqual((rows['both@x.test']['ideal_min'], rows['both@x.test']['ideal_max']), (3, 6))  # 0.5 + 0.5
-        self.assertEqual(rows['both@x.test']['workload_status'], 'Balanced')  # 6 items = Max, inclusive
-        self.assertEqual(rows['both@x.test']['workload_note'], 'Ideal 3–6 tasks · has 6')
+        self.assertEqual((rows['half@x.test']['ideal_min'], rows['half@x.test']['ideal_max']), (2, 2))  # 0.5 capacity: ceil 1.5 .. ceil 3 - 1
+        self.assertEqual((rows['both@x.test']['ideal_min'], rows['both@x.test']['ideal_max']), (4, 5))  # 2 + 2 .. 3 + 3 - 1
+        self.assertEqual(rows['both@x.test']['workload_status'], 'Overloaded')  # 6 items = overload
+        self.assertEqual(rows['both@x.test']['workload_note'], 'Ideal 4–5 tasks · has 6')
         self.assertEqual(rows['both@x.test']['allocation_note'], 'X 50% · Y 50%')
 
     def test_all_projects_skips_project_without_allocation(self):
@@ -756,3 +756,36 @@ class WorkingDaysTest(SimpleTestCase):
         self.assertEqual(MetricService.working_days(fri, tue, {date(2026, 11, 2)}), 1)
         self.assertEqual(MetricService.working_days(fri, fri, set()), 0)
         self.assertIsNone(MetricService.working_days(tue, fri, set()))
+
+
+class DocRulesTests(SimpleTestCase):
+    """Ranges and status split from the QA workload doc (Workload Calculations for Projects)."""
+
+    def test_ranges_match_doc(self):
+        from data.analytics.workload import ideal_range
+        cases = [  # (level weight, allocation, sprints) -> doc range
+            ((0.7, 0.8, 5), (10, 19)),  # Website Revamp, Divya
+            ((0.7, 0.8, 1), (2, 3)),
+            ((1.0, 0.5, 5), (10, 14)),  # CORA, Ankit
+            ((1.0, 0.6, 5), (10, 19)),  # CORA, Sumit
+            ((1.0, 0.8, 5), (15, 24)),  # CORA, Ashutosh
+            ((1.3, 1.0, 5), (20, 39)),  # OCS, Ekaansh
+            ((1.0, 1.0, 1), (3, 5)),
+        ]
+        for (w, alloc, n), expected in cases:
+            c = w * alloc
+            low = n * -(-round(3 * c, 6) // 1)
+            high = n * -(-round(6 * c, 6) // 1)
+            self.assertEqual(ideal_range(low, high), expected, (w, alloc, n))
+            level = {0.7: 'junior', 1.0: 'mid', 1.3: 'senior'}[w]
+            r = classify_workload({'a': 1}, {'a': level}, n, DEFAULT_SETTINGS, {'a': alloc})
+            self.assertEqual((r['a']['ideal_min'], r['a']['ideal_max']), expected, (w, alloc, n))
+
+    def test_status_split_by_name(self):
+        from data.analytics.workload import workload_bucket
+        for status in ('In Testing', 'In Review', 'QA', 'Blocked', 'On Hold', 'Reopened', 'Doing', 'In UAT'):
+            self.assertEqual(workload_bucket(status, 'done'), 'in_progress', status)
+        for status in ('Done', 'Completed', 'QA Verified', 'Deployed on Dev', 'Resolved', 'complete'):
+            self.assertEqual(workload_bucket(status, 'in_progress'), 'done', status)
+        self.assertEqual(workload_bucket('Dev Approved', 'done'), 'done')  # not listed: tool's category
+        self.assertEqual(workload_bucket('To Do', 'todo'), 'todo')
