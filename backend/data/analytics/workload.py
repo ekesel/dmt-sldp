@@ -53,7 +53,8 @@ def workload_items(qs, settings):
     return qs
 
 
-DONE_WORDS = ('done', 'complete', 'resolved', 'verified', 'fixed', 'released', 'deployed')
+# 'approved': ADO 'Dev Approved' is done for the PM, but sits in ADO's in-progress category (CORA, Website Revamp).
+DONE_WORDS = ('done', 'complete', 'resolved', 'verified', 'fixed', 'released', 'deployed', 'approved')
 IN_PROGRESS_WORDS = ('progress', 'doing', 'review', 'test', 'qa', 'uat', 'blocked', 'hold', 'reopen')
 
 
