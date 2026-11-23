@@ -785,7 +785,7 @@ class DocRulesTests(SimpleTestCase):
         from data.analytics.workload import workload_bucket
         for status in ('In Testing', 'In Review', 'QA', 'Blocked', 'On Hold', 'Reopened', 'Doing', 'In UAT'):
             self.assertEqual(workload_bucket(status, 'done'), 'in_progress', status)
-        for status in ('Done', 'Completed', 'QA Verified', 'Deployed on Dev', 'Resolved', 'complete'):
+        for status in ('Done', 'Completed', 'QA Verified', 'Deployed on Dev', 'Resolved', 'complete', 'Dev Approved'):
             self.assertEqual(workload_bucket(status, 'in_progress'), 'done', status)
-        self.assertEqual(workload_bucket('Dev Approved', 'done'), 'done')  # not listed: tool's category
+        self.assertEqual(workload_bucket('Ready for Deployment (Prod)', 'done'), 'done')  # not listed: tool's category
         self.assertEqual(workload_bucket('To Do', 'todo'), 'todo')
