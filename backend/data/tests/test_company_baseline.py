@@ -147,10 +147,10 @@ class CompanyBaselineViewTests(TenantTestCase):
         data = post({"kpis": {"velocity": 30}, "workload_settings": data_limits(5)})
         self.assertEqual([str(v['effective_from']) for v in data['workload_settings_history']], ['2026-01-01', '2999-01-01'])
         self.assertEqual(str(data['workload_settings_effective_from']), '2026-01-01')
-        # Min 3 / Max 5: Mid 3-5, Junior 0.7 -> 2.1 / 3.5 -> 3-3, Senior 1.3 -> 3.9 / 6.5 -> 4-6.
-        self.assertEqual(data['workload_ranges'], {'junior': {'min': 3, 'max': 3}, 'mid': {'min': 3, 'max': 5},
+        # Min 3 / Max 5 (Max = overload, ideal max = ceil - 1): Mid 3-4, Junior 2.1 / 3.5 -> 3-3, Senior 3.9 / 6.5 -> 4-6.
+        self.assertEqual(data['workload_ranges'], {'junior': {'min': 3, 'max': 3}, 'mid': {'min': 3, 'max': 4},
                                                    'senior': {'min': 4, 'max': 6}})
-        self.assertEqual(data['workload_settings_history'][1]['ranges']['mid'], {'min': 3, 'max': 8})
+        self.assertEqual(data['workload_settings_history'][1]['ranges']['mid'], {'min': 3, 'max': 7})
         # Same values on another date still start a version (Jan - Feb, Mar - ...).
         data = post({"workload_settings": data_limits(5), "workload_settings_effective_from": "2026-03-01"})
         self.assertEqual([(str(v['effective_from']), str(v['effective_to'])) for v in data['workload_settings_history']],

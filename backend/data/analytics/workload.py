@@ -3,7 +3,7 @@ Capacity-based workload status (Team Workload card + Individual workload).
 
 capacity    = seniority_weight * allocation   (share of time on the project: the sprint month's published %,
               else the person's nearest published month, else 1.0)
-ideal range = ceil(sum of under * capacity) .. floor(sum of over * capacity) items, summed over the sprints
+ideal range = sum of ceil(under * capacity) .. sum of ceil(over * capacity) - 1 items, each sprint rounded first
 Level, weights/limits and allocation are effective-dated: each sprint uses the values in effect on its start day.
   Overloaded    : items above the ideal range
   Underutilised : items below the ideal range
@@ -12,7 +12,7 @@ The team percentile of items / capacity is always returned as a rank. With use_p
 gates the status (above overload_percentile / at or below underutil_percentile) for teams of small_team_min+.
 """
 from bisect import bisect_left, bisect_right
-from math import ceil, floor
+from math import ceil
 
 DEFAULT_SETTINGS = {
     'sprint_window': 5,
@@ -51,6 +51,24 @@ def workload_items(qs, settings):
         ado = SourceConfiguration.objects.filter(source_type__in=['azure_devops', 'azure_boards']).values('id')
         qs = qs.filter(Q(parent__isnull=True) | Q(parent__item_type='epic') | Q(source_config_id__in=ado))
     return qs
+
+
+DONE_WORDS = ('done', 'complete', 'resolved', 'verified', 'fixed', 'released', 'deployed')
+IN_PROGRESS_WORDS = ('progress', 'doing', 'review', 'test', 'qa', 'uat', 'blocked', 'hold', 'reopen')
+
+
+def workload_bucket(status, status_category):
+    """
+    'todo' / 'in_progress' / 'done' for the workload split, by status name as the PM counts it: review / testing /
+    QA / blocked / on hold / reopened are still in progress even where the tool's category says done (ADO).
+    Names matching neither list keep the tool's category.
+    """
+    name = (status or '').lower()
+    if any(w in name for w in DONE_WORDS):
+        return 'done'
+    if any(w in name for w in IN_PROGRESS_WORDS):
+        return 'in_progress'
+    return status_category
 
 
 def co_assigned(qs):
@@ -407,8 +425,10 @@ def member_capacity(keys, days, settings_tl, levels, alloc_tl=None):
             alloc = min(max(alloc, s['min_allocation'] / 100), 1.0)
             c = (s['seniority_weights'].get(level_on(levels.get(k), day) or 'mid') or 1.0) * alloc
             cap += c
-            low += s['per_sprint_limits']['under'] * c
-            high += s['per_sprint_limits']['over'] * c
+            # Whole items per sprint, then summed (5 sprints = 5 x ceil(3 x capacity)), as the PM calculates it.
+            # Rounds first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
+            low += ceil(round(s['per_sprint_limits']['under'] * c, 6))
+            high += ceil(round(s['per_sprint_limits']['over'] * c, 6))
         out[k] = (cap, low, high)
     return out
 
@@ -456,19 +476,19 @@ def team_workload(counts, days, alloc_tl=None, settings_tl=None, resolver=None, 
 
 def ideal_range(low, high):
     """
-    Whole-item ideal range (min, max) for raw limits low = Min x capacity, high = Max x capacity:
-    min = ceil(low), max = floor(high) (Max is inclusive; never below min), Overloaded above max.
-    Rounds first so 3 * 0.7 = 2.0999... doesn't become 3 by float noise.
+    Whole-item ideal range (min, max) from low = sum of ceil(Min x capacity), high = sum of ceil(Max x capacity)
+    over the sprints: min = low, max = high - 1 (never below min); Overloaded from max + 1.
+    E.g. Junior 80% over 5 sprints: 5 x ceil(1.68) = 10 .. 5 x ceil(3.36) - 1 = 19.
     """
-    ideal_min = ceil(round(low, 6))
-    return ideal_min, max(floor(round(high, 6)), ideal_min)
+    ideal_min = round(low)
+    return ideal_min, max(round(high) - 1, ideal_min)
 
 
 def level_ranges(settings):
     """{level: {'min', 'max'}} ideal tasks per sprint at 100% allocation (Company Baseline preview)."""
     limits = settings['per_sprint_limits']
     return {
-        level: dict(zip(('min', 'max'), ideal_range(limits['under'] * w, limits['over'] * w)))
+        level: dict(zip(('min', 'max'), ideal_range(ceil(round(limits['under'] * w, 6)), ceil(round(limits['over'] * w, 6)))))
         for level, w in settings['seniority_weights'].items()
     }
 

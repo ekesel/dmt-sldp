@@ -653,7 +653,7 @@ def _inject_workload(data_list, resolved_id, project_id=None):
     from collections import defaultdict
     from .analytics.workload import (
         get_workload_settings, team_workload, workload_items, latest_sprint_ids_per_project, allocation_timeline,
-        sprint_day, settings_timeline,
+        sprint_day, settings_timeline, workload_bucket,
     )
     
     # 1. Fetch all linked email aliases (GitHub, Jira, etc.) of the developer
@@ -709,10 +709,11 @@ def _inject_workload(data_list, resolved_id, project_id=None):
         tasks = sprint_items.filter(assignee_email__in=developer_emails)
             
         # 4. Count tasks based on their status
-        total_tasks = tasks.count()
-        in_progress_count = tasks.filter(status_category='in_progress').count()
-        completed_count = tasks.filter(status_category='done').count()
-        todo_count = tasks.filter(status_category='todo').count()
+        buckets = [workload_bucket(s, c) for s, c in tasks.values_list('status', 'status_category')]
+        total_tasks = len(buckets)
+        in_progress_count = buckets.count('in_progress')
+        completed_count = buckets.count('done')
+        todo_count = buckets.count('todo')
         
         # 5. Workload status: items vs the developer's ideal range (level x allocation); percentile = rank.
         # Uses all assigned items (done + in progress + todo), so the day of the sprint doesn't matter.
@@ -1621,7 +1622,7 @@ class AssigneeDistributionView(APIView):
         from django.db.models import F
         from .analytics.workload import (
             get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
-            member_allocations, workload_note, allocation_note, allocation_gaps, with_carried_over,
+            member_allocations, workload_note, allocation_note, allocation_gaps, with_carried_over, workload_bucket,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
@@ -1720,9 +1721,10 @@ class AssigneeDistributionView(APIView):
             credited[row['id']].add(email)
             agg = aggregation[email]
             agg['total'] += 1
-            if row['status_category'] == 'in_progress':
+            bucket = workload_bucket(row['status'], row['status_category'])
+            if bucket == 'in_progress':
                 agg['in_progress'] += 1
-            elif row['status_category'] == 'done':
+            elif bucket == 'done':
                 agg['completed'] += 1
                 # Same rule as the dashboard: stories only, no start date = no cycle time, working days.
                 if row['id'] in cycle_ids and row['resolved_at'] and row['started_at']:
@@ -1731,7 +1733,7 @@ class AssigneeDistributionView(APIView):
                     if duration is not None:
                         agg['durations'].append(duration)
 
-        row_fields = ('id', 'status_category', 'resolved_at', 'started_at', MetricService.FIRST_RESOLUTION)
+        row_fields = ('id', 'status', 'status_category', 'resolved_at', 'started_at', MetricService.FIRST_RESOLUTION)
 
         # 1. Process Resolved Assignees
         resolved_rows = (
