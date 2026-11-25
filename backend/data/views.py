@@ -1623,6 +1623,7 @@ class AssigneeDistributionView(APIView):
         from .analytics.workload import (
             get_workload_settings, team_workload, workload_items, co_assigned, allocation_timeline, allocation_for, sprint_day,
             member_allocations, workload_note, allocation_note, allocation_gaps, with_carried_over, workload_bucket,
+            allocation_warning,
         )
         workload_settings = get_workload_settings()
         window = workload_settings['sprint_window']
@@ -1876,6 +1877,10 @@ class AssigneeDistributionView(APIView):
             unset = unset_project and use_allocation and not allocation_for(alloc_tl, r['email'], ref_day)
             r['allocation_gaps'] = gaps.get(r['email'], [])
             r['allocation_note'] = allocation_note(r['allocations'], unset_project if unset else None, r['allocation_gaps'])
+            # Missing-allocation icon: hover shows allocation_warning.
+            warning = allocation_warning(r['allocations'], unset_project if unset else None, r['allocation_gaps']) if use_allocation else None
+            r['has_allocation'] = warning is None
+            r['allocation_warning'] = warning
 
         # Sort by most total work first
         result.sort(key=lambda x: x['total'], reverse=True)

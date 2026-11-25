@@ -608,7 +608,12 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.assertEqual(rows['free@x.test']['capacity'], 1.0)
         self.assertEqual(rows['dev@x.test']['allocations'], [{'project_id': x.id, 'project': 'X', 'percent': 50}])
         self.assertEqual(rows['dev@x.test']['allocation_note'], 'X 50% · 50% unallocated')
+        self.assertFalse(rows['dev@x.test']['has_allocation'])
+        self.assertEqual(rows['dev@x.test']['allocation_warning'], 'Only 50% allocated. Workload status may not be accurate.')
         self.assertEqual(rows['free@x.test']['allocation_note'], 'No allocation set (counted at 100%)')
+        self.assertFalse(rows['free@x.test']['has_allocation'])
+        self.assertEqual(rows['free@x.test']['allocation_warning'],
+                         'No allocation set (counted at 100%). Workload status may not be accurate.')
         codes = {w['code']: w['message'] for w in workload_warnings()}
         self.assertIn('dev@x.test', codes['allocation_missing_project'])
         self.assertNotIn('free@x.test', codes['allocation_missing_project'])
@@ -698,6 +703,13 @@ class TeamWorkloadWindowTest(TenantTestCase):
         self.assertEqual(rows['aw@x.test']['allocation_gaps'], [{'project_id': ocs.id, 'project': 'OCS', 'month': month}])
         self.assertIn(f'No allocation in {month_abbr[last.month]} {last.year} (OCS)', rows['aw@x.test']['allocation_note'])
         self.assertEqual(rows['ok@x.test']['allocation_gaps'], [])
+        self.assertFalse(rows['aw@x.test']['has_allocation'])
+        self.assertEqual(rows['aw@x.test']['allocation_warning'],
+                         f'No allocation in {month_abbr[last.month]} {last.year} (OCS) but has work in these sprints · '
+                         'Only 50% allocated. '
+                         'Workload status may not be accurate.')
+        self.assertTrue(rows['ok@x.test']['has_allocation'])
+        self.assertIsNone(rows['ok@x.test']['allocation_warning'])
         message = {w['code']: w['message'] for w in workload_warnings(ocs.id)}['allocation_not_set']
         self.assertIn('aw@x.test', message)
         self.assertNotIn('ok@x.test', message)

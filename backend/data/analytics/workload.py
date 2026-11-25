@@ -396,6 +396,26 @@ def allocation_note(allocations, unset_project=None, gaps=None):
     return note
 
 
+def allocation_warning(allocations, unset_project=None, gaps=None):
+    """
+    Hover text for the missing-allocation icon, or None when the allocation behind the status is complete:
+    worked in viewed sprint months whose sheet lacks the person, no allocation (counted at 100%), or under 100% in all.
+    """
+    parts = []
+    if gaps:
+        parts.append(f'No allocation in {gaps_text(gaps)} but has work in these sprints')
+    if unset_project:
+        parts.append(f'No allocation on {unset_project} (counted at 100%)')
+    elif not allocations and not gaps:
+        parts.append('No allocation set (counted at 100%)')
+    total = sum(a['percent'] for a in allocations)
+    if allocations and total < 100:
+        parts.append(f'Only {total}% allocated')
+    if not parts:
+        return None
+    return ' · '.join(parts) + '. Workload status may not be accurate.'
+
+
 def _allocation_text(allocations, unset_project):
     if not allocations:
         return f'{unset_project} not set (counted at 100%)' if unset_project else 'No allocation set (counted at 100%)'
